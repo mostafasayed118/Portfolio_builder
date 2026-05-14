@@ -1,0 +1,444 @@
+Act as a senior full-stack architect, CMS product designer, and Next.js 16 engineer.
+
+I want you to design and implement a production-grade Admin Dashboard / CMS for my personal portfolio website.
+
+The goal is not just to display data.  
+The goal is to make the portfolio fully manageable from the dashboard, so I can change everything without editing source code manually.
+
+This dashboard must feel like a real premium CMS product.
+
+==================================================
+1. TECH STACK (MUST FOLLOW EXACTLY)
+==================================================
+
+Use exactly this stack:
+- Next.js 16 (App Router)
+- TypeScript
+- Convex
+- Tailwind CSS
+- shadcn/ui
+- next-themes
+- react-hook-form
+- zod
+- lucide-react
+
+Use clean architecture, scalable folder structure, strong typing, and reusable components.
+
+==================================================
+2. CORE PRODUCT GOAL
+==================================================
+
+Build a professional portfolio admin dashboard where I can manage:
+
+- Hero section
+- About section
+- Skills
+- Projects
+- Experience
+- Certifications
+- Contact info
+- Social links
+- SEO
+- Navbar / footer content
+- Theme settings
+- Typography settings
+- Layout settings
+- Section visibility and order
+- Uploaded assets (profile image, CV, project covers, OG image, logos)
+
+The dashboard must become the single source of truth for the frontend portfolio website.
+
+No important content should remain hardcoded in the frontend.
+
+==================================================
+3. MAIN REQUIREMENT
+==================================================
+
+I want to be able to control EVERYTHING from the dashboard, including:
+
+### Content Control
+- Add / edit / delete all content
+- Reorder content
+- Publish / unpublish content
+- Show / hide sections
+- Change section titles and subtitles
+- Edit CTA buttons and links
+- Update contact details and social media links
+- Manage SEO data
+
+### Design Control
+- Change primary color
+- Change accent color
+- Change background color
+- Change card/surface color
+- Change border color
+- Change muted text color
+- Change light theme and dark theme separately
+- Change body font
+- Change heading/display font
+- Change font sizes / scale
+- Change border radius
+- Change shadow style
+- Change spacing density
+- Change container width / section width
+- Change navbar style
+- Change button style presets
+
+### Media Control
+- Upload profile image
+- Upload resume / CV
+- Upload project images
+- Upload logos
+- Upload Open Graph image
+- Manage asset references cleanly
+
+==================================================
+4. DASHBOARD MODULES REQUIRED
+==================================================
+
+Create these modules/pages in the admin dashboard:
+
+1. Overview
+- stats cards
+- recent activity
+- quick actions
+- published vs drafts
+- messages summary
+
+2. Hero Manager
+- headline
+- highlighted text
+- subheadline
+- typewriter roles array
+- CTA buttons
+- profile image
+- availability badge
+- resume button
+- section visibility
+- publish status
+
+3. About Manager
+- short bio
+- long bio
+- years of experience
+- location
+- education data
+- language data
+- stats data
+- publish status
+
+4. Skills Manager
+- full CRUD
+- skill name
+- category
+- icon
+- proficiency
+- sort order
+- visible toggle
+
+5. Projects Manager
+- full CRUD
+- title
+- slug
+- short description
+- full description
+- cover image
+- gallery images
+- technologies
+- category
+- featured toggle
+- GitHub URL
+- live URL
+- metrics
+- project date
+- sort order
+- draft/published
+
+6. Experience Manager
+- full CRUD
+- company
+- role
+- location
+- employment type
+- period
+- current toggle
+- description
+- bullet points
+- technologies
+- logo
+- sort order
+- draft/published
+
+7. Certifications Manager
+- full CRUD
+- title
+- issuer
+- issuer logo
+- issue date
+- category
+- credential URL
+- sort order
+- publish toggle
+
+8. Contact Info Manager
+- email
+- phone
+- WhatsApp
+- address
+- map embed URL
+- GitHub
+- LinkedIn
+- other social links
+- availability status
+
+9. Messages Manager
+- all contact form submissions
+- mark as read/unread
+- delete message
+- search/filter
+- message details modal or drawer
+
+10. SEO Manager
+- site title
+- site description
+- meta keywords
+- OG title
+- OG description
+- OG image
+- canonical URL
+- twitter card settings
+- per-page SEO if possible
+
+11. Theme Manager
+This is extremely important.
+Create a full visual settings panel where I can control:
+- primary color
+- accent color
+- success/warning/error colors
+- background colors
+- card colors
+- border colors
+- muted text colors
+- chart colors
+- dark mode palette
+- light mode palette
+- live preview if possible
+
+12. Typography Manager
+This is also extremely important.
+Create a full typography settings panel where I can control:
+- body font family
+- heading/display font family
+- fallback fonts
+- font weight presets
+- heading scale
+- body size
+- line height
+- letter spacing
+- button text style
+
+13. Layout Manager
+Create a layout settings panel where I can control:
+- section spacing
+- content container width
+- card border radius
+- button radius
+- navbar height
+- card shadow level
+- grid density
+- section max width
+- hero layout variant
+- general UI density
+
+14. Section Visibility & Order Manager
+- enable/disable any section
+- reorder homepage sections with drag and drop
+- save order to database
+- frontend must render based on saved order
+
+15. Site Settings
+- site name
+- footer text
+- copyright text
+- favicon
+- logo
+- default theme
+- default language
+- branding data
+
+==================================================
+5. FRONTEND INTEGRATION REQUIREMENT
+==================================================
+
+The public portfolio frontend must consume data from Convex instead of hardcoded local constants.
+
+That means:
+- dashboard updates must be reflected on the portfolio site
+- section order must be dynamic
+- visibility toggles must affect rendering
+- theme settings must affect the portfolio appearance
+- typography settings must affect the frontend typography
+- SEO settings must be usable by the frontend app
+
+==================================================
+6. CONVEX DATA MODELING
+==================================================
+
+Design proper Convex collections for:
+- siteSettings
+- themeSettings
+- typographySettings
+- layoutSettings
+- sectionSettings
+- heroSection
+- aboutSection
+- skills
+- projects
+- experience
+- certifications
+- contactInfo
+- messages
+- seoSettings
+- mediaAssets
+
+For each model:
+- define strong validation
+- add createdAt
+- add updatedAt
+- add sortOrder where needed
+- add isPublished / isVisible where needed
+- make schema scalable and clean
+
+==================================================
+7. PROFESSIONAL UX REQUIREMENTS
+==================================================
+
+This dashboard must feel premium and polished.
+
+Include:
+- sticky sidebar
+- top header
+- theme toggle
+- search field
+- quick actions
+- beautiful stat cards
+- strong spacing system
+- data tables
+- filters
+- sorting
+- drag-and-drop reorder
+- loading skeletons
+- empty states
+- confirmation dialogs
+- success/error toasts
+- form validation
+- unsaved changes protection
+- responsive design
+- mobile-friendly admin experience
+
+Avoid generic AI-looking layouts.
+Make it feel like a premium SaaS admin panel.
+
+==================================================
+8. IMPLEMENTATION RULES
+==================================================
+
+- Use App Router only
+- Use TypeScript everywhere
+- Use reusable shadcn/ui-based forms
+- Use Convex queries and mutations for all persistence
+- Do not leave core features as TODO
+- Do not fake CRUD with local state
+- Do not hardcode major content in frontend
+- Write production-quality code
+- Keep code modular and maintainable
+- Use clear naming
+- Follow best practices for server/client boundaries
+
+==================================================
+9. OUTPUT FORMAT (VERY IMPORTANT)
+==================================================
+
+Work in this exact order:
+
+### Phase 1 — Architecture
+1. Explain the full folder structure
+2. Explain all dashboard routes
+3. Explain Convex schema design
+4. Explain reusable components architecture
+5. Explain how frontend portfolio will consume dashboard settings and content
+
+### Phase 2 — File Tree
+Generate the complete file tree first.
+
+### Phase 3 — Backend
+Generate full files for:
+- convex/schema.ts
+- convex/* module files
+- seed data
+- all queries/mutations/actions
+
+### Phase 4 — Dashboard Foundation
+Generate full files for:
+- app dashboard layout
+- providers
+- sidebar
+- header
+- navigation
+- shared dashboard UI shells
+
+### Phase 5 — Feature Modules
+Generate each module one by one as full files:
+- overview
+- hero
+- about
+- skills
+- projects
+- experience
+- certifications
+- contact
+- messages
+- SEO
+- theme
+- typography
+- layout
+- section order
+- site settings
+
+### Phase 6 — Frontend Integration
+Generate the changes required so the public portfolio frontend reads from Convex and respects:
+- dynamic content
+- dynamic section order
+- dynamic visibility
+- dynamic theme settings
+- dynamic typography settings
+
+### Phase 7 — Verification
+At the end, provide:
+- missing env variables
+- setup steps
+- migration steps from old static data
+- test checklist
+- final verification checklist
+
+==================================================
+10. IMPORTANT QUALITY BAR
+==================================================
+
+This is not a toy dashboard.
+This is a real admin control panel for a production portfolio.
+
+I want it to be:
+- visually premium
+- scalable
+- maintainable
+- fully editable
+- CMS-like
+- design-configurable
+- content-configurable
+- future-proof
+
+If any important module is missing, add it proactively.
+
+Start now with Phase 1 only.
+Do not jump to code before architecture.

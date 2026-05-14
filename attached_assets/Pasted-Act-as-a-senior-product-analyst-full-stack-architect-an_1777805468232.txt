@@ -1,0 +1,109 @@
+Act as a senior product analyst, full-stack architect, and codebase auditor.
+
+I want you to inspect the entire ClinicOS codebase and extract every feature that already exists in the system.
+
+Important:
+- Do NOT invent features
+- Do NOT list planned features unless they are clearly marked as incomplete or stubbed in code
+- Base your answer only on what is actually implemented in the codebase, routes, pages, API handlers, database schema, hooks, forms, dialogs, and business logic
+- Treat this as a feature inventory and product documentation task
+- Think like both a product manager and a senior engineer
+
+Your task:
+Explore the full monorepo and identify all implemented features in ClinicOS.
+
+You must inspect:
+- frontend pages
+- reusable UI components
+- route structure
+- API route files
+- database schema
+- validation schemas
+- React Query hooks / generated client
+- auth and RBAC logic
+- audit logging
+- reporting logic
+- background/automation flows if any
+- exports/imports
+- notifications/integrations
+- tenant and role behavior
+
+For every detected feature, determine:
+- feature name
+- module/category
+- user-facing or internal
+- who can access it (roles)
+- which pages/screens use it
+- which backend endpoints support it
+- which database tables are involved
+- whether it is fully implemented, partially implemented, or stubbed
+- important business rules attached to it
+
+Feature categories to check:
+1. Authentication
+2. Tenant management
+3. User/staff management
+4. RBAC and permissions
+5. Patients
+6. Doctors
+7. Branches
+8. Appointments
+9. Queue management
+10. Consultations
+11. Prescriptions
+12. Billing and invoices
+13. Payments
+14. Inventory
+15. Reports and analytics
+16. Audit logs
+17. Notifications
+18. Settings
+19. Data export/import
+20. Search and filtering
+21. Dashboard/KPIs
+22. Real-time or auto-refresh features
+23. Validation and error handling
+24. Compliance and security features
+25. Admin-only tools
+26. Internal automation/business workflows
+
+Required output format:
+1. Executive summary of what ClinicOS currently does
+2. Complete feature inventory grouped by module
+3. For each module:
+   - implemented features
+   - partial/stubbed features
+   - roles that can access them
+   - related pages
+   - related API endpoints
+   - related database tables
+   - key business logic
+4. Cross-module workflows
+   - e.g. appointment → queue → consultation → prescription → invoice → payment
+5. Security and admin capabilities
+6. Reporting and operational capabilities
+7. Export/integration capabilities
+8. Incomplete or placeholder features detected in code
+9. Hidden/internal features not obvious from UI
+10. Final product capability summary
+
+Instructions for accuracy:
+- If a feature appears in the UI but has no backend support, mark it as UI-only or partial
+- If a backend endpoint exists but no UI is connected, mark it as backend-only capability
+- If a database table exists without active usage, mark it as schema-only / not confirmed active
+- If a feature is inferred from code paths but not fully verifiable, mark it as unverified
+- Do not merge separate features into vague summaries; list them distinctly
+- Be exhaustive
+
+Extra documentation requirement:
+At the end, create a clean “ClinicOS Features Master List” with:
+- feature name
+- status: implemented / partial / stubbed / unverified
+- roles
+- module
+- notes
+
+Optional but preferred:
+Also generate:
+- a short “What can this product sell today?” summary
+- a short “What’s missing to make the feature set feel complete?” summary

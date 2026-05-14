@@ -1,0 +1,26 @@
+{
+  "name": "@workspace/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./hero-content": "./src/heroContent.ts",
+    "./about-content": "./src/aboutContent.ts",
+    "./skills": "./src/skills.ts",
+    "./projects": "./src/projects.ts",
+    "./experience": "./src/experience.ts",
+    "./certifications": "./src/certifications.ts",
+    "./contact-info": "./src/contactInfo.ts",
+    "./messages": "./src/messages.ts",
+    "./theme-settings": "./src/themeSettings.ts",
+    "./typography-settings": "./src/typographySettings.ts",
+    "./seo-settings": "./src/seoSettings.ts",
+    "./section-settings": "./src/sectionSettings.ts",
+    "./site-settings": "./src/siteSettings.ts",
+    "./cv-settings": "./src/cvSettings.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2",
+    "@workspace/supabase": "workspace:*"
+  }
+}

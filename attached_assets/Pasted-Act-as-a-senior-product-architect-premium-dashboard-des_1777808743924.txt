@@ -1,0 +1,281 @@
+Act as a senior product architect, premium dashboard designer, and Next.js 16 + Convex engineer.
+
+I already have a portfolio admin dashboard / CMS.
+I do NOT want you to rebuild it from scratch.
+
+Your job is to upgrade it with a set of premium differentiating features that make it feel like a high-end brand control studio, not just a normal admin panel.
+
+Use the existing stack and architecture as much as possible.
+
+==================================================
+1. STACK (MUST KEEP)
+==================================================
+
+Keep and extend this stack:
+- Next.js 16
+- TypeScript
+- Convex
+- Tailwind CSS
+- shadcn/ui
+- next-themes
+- react-hook-form
+- zod
+- lucide-react
+
+Do not replace the stack unless absolutely necessary.
+
+==================================================
+2. GOAL
+==================================================
+
+Transform the current portfolio dashboard into a premium system with standout features that make it visually impressive, operationally powerful, and more unique than a standard CMS.
+
+I want the new work to focus on differentiation, polish, control, and premium UX.
+
+==================================================
+3. FEATURES TO ADD (HIGH PRIORITY)
+==================================================
+
+Add the following premium features:
+
+### A. Live Preview Studio
+Create a real-time preview mode where I can edit content, theme, typography, and layout settings from the dashboard and instantly see the effect on a live portfolio preview.
+
+Requirements:
+- split view: editor panel + preview panel
+- desktop / tablet / mobile preview modes
+- instant visual updates when changing settings
+- preview must reflect real frontend rendering logic
+- preview should support section visibility and section order changes
+- preview should support light and dark mode
+- no fake preview screenshots; use actual live rendered components
+
+### B. Theme Preset System
+Create a professional theme preset manager.
+
+Requirements:
+- save named visual presets
+- duplicate preset
+- delete preset
+- apply preset instantly
+- one preset can be active
+- presets should include:
+  - colors
+  - border radius
+  - shadows
+  - surface styles
+  - button styles
+  - UI density
+- include a few default presets such as:
+  - Minimal
+  - Glass
+  - Editorial
+  - Tech
+  - Luxury
+
+### C. Typography Preset System
+Create a typography manager with reusable presets.
+
+Requirements:
+- body font
+- heading font
+- font scale
+- weight presets
+- line-height
+- letter spacing
+- save named typography presets
+- preview typography live
+- apply typography settings to the public portfolio frontend
+
+### D. Version History / Rollback
+This is critical.
+
+Add full content and settings version history.
+
+Requirements:
+- track edits to important collections
+- show who changed what and when
+- allow viewing previous versions
+- allow rollback to a previous version
+- include history for:
+  - hero
+  - about
+  - projects
+  - theme settings
+  - typography settings
+  - layout settings
+  - SEO settings
+- make this production-safe
+
+If useful, implement this using a Convex-compatible table history / audit-log pattern.
+
+### E. Section Variants
+Allow multiple design/layout variants for important sections.
+
+Requirements:
+- Hero can have multiple variants
+- Projects section can have multiple layout variants
+- About section can have multiple variants
+- CTA block can have multiple styles
+- choose the active variant from the dashboard
+- preview the chosen variant instantly
+
+### F. Analytics Panel
+Create a lightweight portfolio analytics dashboard.
+
+Track things like:
+- total portfolio views
+- most viewed project
+- CTA clicks
+- CV download clicks
+- contact form submissions
+- top traffic pages if applicable
+- active theme preset
+- recently updated sections
+
+Keep it lightweight and practical.
+
+### G. Content Health Checker
+Create a smart quality-check panel that scans portfolio content and finds issues.
+
+Examples:
+- project without cover image
+- missing GitHub URL
+- empty SEO description
+- missing Open Graph image
+- hidden section accidentally unpublished
+- duplicate sort orders
+- missing credential URL
+- broken social links
+- inconsistent typography settings
+
+Return issues grouped by severity:
+- critical
+- warning
+- suggestion
+
+### H. Command Palette
+Add a professional command palette for the dashboard.
+
+Examples:
+- Go to Projects
+- Create new project
+- Open theme settings
+- Switch theme preset
+- Search content
+- Open preview
+- Toggle dark mode
+
+### I. Multi-language Ready Architecture
+Prepare the dashboard and frontend to support Arabic and English content in the future.
+
+Requirements:
+- make content models locale-friendly
+- make section titles/descriptions translatable
+- support RTL readiness in dashboard UI where relevant
+- do not fully implement all translations unless necessary, but architect for it correctly
+
+==================================================
+4. NICE-TO-HAVE DIFFERENTIATORS
+==================================================
+
+If architecture allows, also add:
+
+- reusable block system for homepage sections
+- scheduled publishing
+- “what changed” summary after save
+- quick duplicate project action
+- keyboard shortcuts
+- media library with tagging
+- style token export/import
+- public shareable preview link
+- theme reset to default
+- animation settings panel for motion intensity
+
+==================================================
+5. IMPLEMENTATION REQUIREMENTS
+==================================================
+
+- keep everything production-grade
+- do not create fake placeholder panels
+- every important panel must persist data in Convex
+- all new settings must affect the public portfolio frontend
+- follow clean TypeScript architecture
+- use reusable shadcn/ui components
+- keep dark/light mode working correctly
+- maintain good performance
+- avoid unnecessary complexity if a simpler robust solution exists
+
+==================================================
+6. DESIGN DIRECTION
+==================================================
+
+The dashboard should feel like:
+- premium
+- minimal
+- modern SaaS
+- strong hierarchy
+- elegant spacing
+- excellent forms
+- refined tables
+- polished settings UX
+
+Avoid generic AI-looking dashboard layouts.
+
+==================================================
+7. OUTPUT FORMAT
+==================================================
+
+Work in this order:
+
+### Phase 1 — Feature Upgrade Plan
+Explain:
+- what will be added
+- why each feature matters
+- dependencies and architecture impact
+- recommended build order
+
+### Phase 2 — Data Model Changes
+Show:
+- new Convex collections / schema changes
+- versioning strategy
+- preset storage strategy
+- preview rendering strategy
+
+### Phase 3 — File Tree Changes
+Show the new files and modified files.
+
+### Phase 4 — Implementation
+Generate the code module by module as full files, not snippets.
+
+Start with:
+1. version history / audit foundation
+2. theme preset system
+3. typography preset system
+4. live preview studio
+5. section variants
+6. content health checker
+7. analytics
+8. command palette
+9. frontend integration updates
+
+### Phase 5 — Verification
+At the end provide:
+- setup steps
+- migration steps
+- test checklist
+- risks / edge cases
+- final QA checklist
+
+==================================================
+8. IMPORTANT RULES
+==================================================
+
+- Do not rebuild unrelated parts
+- Extend the current system intelligently
+- Be specific and production-minded
+- Prefer real working architecture over flashy but fake features
+- If a feature is too heavy, propose a lightweight v1 and an advanced v2
+- If a feature needs a tradeoff, explain it clearly
+
+Start now with Phase 1 only.

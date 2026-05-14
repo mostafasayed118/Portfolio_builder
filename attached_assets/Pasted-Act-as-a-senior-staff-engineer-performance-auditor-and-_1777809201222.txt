@@ -1,0 +1,253 @@
+Act as a senior staff engineer, performance auditor, and code quality reviewer.
+
+I want you to perform a deep read-only audit of my entire codebase.
+
+Your task is NOT to implement features yet.
+Your task is to inspect the codebase carefully and produce a professional engineering audit focused on:
+
+1. Code quality
+2. Performance
+3. Best practices
+4. Architecture cleanliness
+5. Maintainability
+6. Accessibility
+7. Security basics
+8. Production readiness
+
+==================================================
+AUDIT GOALS
+==================================================
+
+Review the project like a strict senior reviewer before production deployment.
+
+You must inspect the real codebase and identify:
+- bad patterns
+- code smells
+- unnecessary complexity
+- weak performance decisions
+- incorrect React / Next.js usage
+- poor file organization
+- missing error handling
+- weak typing
+- duplicated logic
+- accessibility issues
+- maintainability risks
+- anything not following modern best practices
+
+This is a READ-ONLY audit.
+Do not change code yet.
+
+==================================================
+WHAT TO REVIEW
+==================================================
+
+Audit the entire codebase across these categories:
+
+### 1. Architecture & Structure
+- Is the folder structure clean and scalable?
+- Are concerns separated correctly?
+- Is business logic mixed inside UI components?
+- Are reusable utilities extracted properly?
+- Are components too large or too coupled?
+- Are there files in the wrong place?
+- Are naming conventions clear and consistent?
+
+### 2. Code Quality
+- TypeScript quality
+- any `any` abuse
+- poor inferred types
+- duplicated code
+- dead code
+- unreachable code
+- overcomplicated logic
+- poor state handling
+- inconsistent patterns
+- missing loading / empty / error states
+- risky assumptions in code
+
+### 3. React / Next.js Best Practices
+- server vs client component boundaries
+- unnecessary `"use client"`
+- improper hooks usage
+- excessive client-side rendering
+- poor data fetching patterns
+- bad route organization
+- unnecessary rerenders
+- bad prop drilling
+- missing memoization where justified
+- incorrect use of dynamic imports
+- improper image handling
+- improper font loading
+- metadata / SEO best practices
+- caching and rendering strategy issues
+
+### 4. Performance Review
+Audit for performance issues including:
+- unnecessary rerenders
+- large bundle risks
+- heavy client components
+- large dependencies imported globally
+- poor code splitting
+- poor lazy loading
+- blocking scripts
+- unoptimized images
+- missing dimensions causing layout shift
+- expensive computations in render
+- unnecessary effects
+- event listener cleanup issues
+- memory leaks
+- poor table/list rendering
+- animation performance issues
+- expensive libraries where lighter alternatives exist
+
+### 5. Core Web Vitals Mindset
+Review likely issues affecting:
+- LCP
+- CLS
+- INP / responsiveness
+- TTFB where relevant
+
+Check for patterns known to hurt Core Web Vitals, such as:
+- large above-the-fold payloads
+- unoptimized media
+- unstable layout
+- excessive JS on first load
+- poor loading strategy for third-party scripts
+
+### 6. Accessibility
+Check for:
+- semantic HTML issues
+- missing labels
+- poor keyboard support
+- weak focus states
+- contrast concerns if visible in code
+- bad aria usage
+- inaccessible dialogs/forms/tables
+- reduced motion concerns
+- screen-reader issues
+
+### 7. Security / Reliability Basics
+Check for:
+- unsafe rendering
+- user input assumptions
+- missing validation
+- weak form handling
+- unsafe external links
+- weak error handling
+- missing fallback states
+- bad environment variable handling
+- sensitive data exposure risks
+
+### 8. Styling / UI System Quality
+Check whether:
+- design tokens are consistent
+- styling is scalable
+- class usage is maintainable
+- there is unnecessary duplication in styles
+- dark mode is implemented safely
+- theme logic is robust
+- component variants are consistent
+
+==================================================
+NEXT.JS / PERFORMANCE-SPECIFIC CHECKLIST
+==================================================
+
+Pay extra attention to:
+- App Router best practices
+- route-level rendering strategy
+- bundle size risks
+- first-load JS concerns
+- dynamic imports for heavy client components
+- next/image usage when appropriate
+- next/font usage when appropriate
+- metadata API usage
+- script loading strategy
+- caching patterns
+- large icon imports
+- charts, editors, maps, and other heavy UI libraries
+
+When useful, mention likely impact on Core Web Vitals and developer experience. Next.js guidance commonly emphasizes Lighthouse/Core Web Vitals, `next/image`, dynamic imports, optimized font loading, and careful handling of heavy client dependencies. [web:33][web:37][web:39]
+
+==================================================
+OUTPUT FORMAT
+==================================================
+
+Return the audit in this exact structure:
+
+## 1. Executive Summary
+- Overall code quality score: /10
+- Overall performance score: /10
+- Overall architecture score: /10
+- Production readiness verdict: YES / NO / PARTIAL
+- Short explanation
+
+## 2. Top Critical Issues
+List the most important issues first.
+
+For each issue, include:
+- Category
+- Severity: Critical / High / Medium / Low
+- File path
+- Line number(s) if possible
+- Problem
+- Why it matters
+- Recommended fix
+- Expected impact
+
+## 3. Detailed Findings by Category
+Use categories:
+- Architecture
+- Code Quality
+- Performance
+- Next.js / React Best Practices
+- Accessibility
+- Security / Reliability
+- Styling / UI System
+
+For every finding:
+- precise location
+- clear explanation
+- recommended correction
+
+## 4. Performance Risks Summary
+Summarize the main risks affecting:
+- bundle size
+- rerenders
+- image optimization
+- code splitting
+- loading behavior
+- Core Web Vitals
+
+## 5. Refactoring Priorities
+Create a prioritized action plan:
+- Phase 1: critical fixes
+- Phase 2: high-value improvements
+- Phase 3: polish / optional improvements
+
+## 6. Quick Wins
+List the easiest improvements with strong impact.
+
+## 7. Final Verdict
+Give a direct engineering verdict:
+- what is strong
+- what is weak
+- what must be fixed before calling this production-grade
+
+==================================================
+IMPORTANT RULES
+==================================================
+
+- Be strict and honest
+- Do not praise weak code
+- Do not give generic advice
+- Base everything on the actual codebase
+- Be specific with file names and code patterns
+- Prefer actionable findings over vague comments
+- Do not modify files yet
+- If something looks good, say why briefly
+- If something is missing, call it out clearly
+
+At the end, add:
+"Top 10 fixes to do first"
+
+Now begin the audit.
