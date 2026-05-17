@@ -93,7 +93,7 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
             <ExternalLink className="mr-2 h-4 w-4" />
             View Portfolio
           </CommandItem>
-          <CommandItem onSelect={() => run(() => window.open("/api/v1/cv", "_blank"))}>
+            <CommandItem onSelect={() => run(() => window.open(`${import.meta.env.VITE_API_URL ?? ""}/api/v1/cv`, "_blank"))}>
             <Download className="mr-2 h-4 w-4" />
             Download CV
           </CommandItem>

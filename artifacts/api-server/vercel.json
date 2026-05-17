@@ -1,5 +1,5 @@
 {
-  "framework": "node-server",
+  "framework": "node",
   "buildCommand": "pnpm run build",
   "outputDirectory": "dist",
   "installCommand": "pnpm install --no-frozen-lockfile",

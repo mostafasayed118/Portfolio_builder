@@ -200,7 +200,7 @@ export default function HeroSection() {
               {t.hero.viewProjects}
             </button>
             <a
-              href="/api/v1/cv"
+              href={`${import.meta.env.VITE_API_URL ?? ""}/api/v1/cv`}
               download
               title="Download CV — includes QR code linking to this portfolio"
               className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl border border-primary/40 bg-primary/8 text-primary font-semibold text-sm hover:opacity-70 transition-opacity"
