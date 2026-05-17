@@ -15,7 +15,7 @@ export async function getTypographySettings(
 
 export async function upsertTypographySettings(
   supabase: SupabaseClient,
-  args: Partial<InsertTypographySettings>,
+  args: Omit<Partial<InsertTypographySettings>, 'id' | 'created_at'>,
 ): Promise<string> {
   const existing = await getTypographySettings(supabase);
   const now = new Date().toISOString();

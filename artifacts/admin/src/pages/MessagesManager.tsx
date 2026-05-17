@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -22,8 +23,10 @@ import {
   Reply,
   Archive,
   Inbox,
+  AlertCircle,
+  RefreshCw,
 } from "lucide-react";
-import { getSupabase, isSupabaseConfigured } from "@/lib/convex";
+import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
 import {
   listMessages,
   unreadCount,
@@ -121,7 +124,7 @@ function MessagesUI({
         )}
       </div>
 
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-2 overflow-x-auto flex-nowrap md:flex-wrap pb-1">
         {STATUS_FILTERS.map(({ key, label, icon: Icon }) => {
           const count =
             key === "all"
@@ -304,7 +307,7 @@ function MessagesUI({
 export default function MessagesManager() {
   const { toast } = useToast();
   const supabase = getSupabase();
-  const { data: messages, isLoading } = useQuery({
+  const { data: messages, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["messages"],
     queryFn: () => listMessages(supabase),
     enabled: isSupabaseConfigured,
@@ -354,7 +357,7 @@ export default function MessagesManager() {
     toast({ title: "Reply opened in email app" });
   };
 
-  if (isLoading || !isSupabaseConfigured) {
+  if (!isSupabaseConfigured) {
     return (
       <div className="max-w-3xl mx-auto space-y-6">
         <h1 className="text-2xl font-bold">Messages</h1>
@@ -363,6 +366,34 @@ export default function MessagesManager() {
             Loading messages...
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="p-6 space-y-4">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-10 w-full" />
+        <div className="space-y-2">
+          {[1,2,3,4,5].map(i => (
+            <Skeleton key={i} className="h-16 w-full rounded-lg" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="p-6 flex flex-col items-center justify-center min-h-64 gap-4">
+        <AlertCircle className="h-12 w-12 text-destructive" />
+        <p className="text-destructive font-medium">Failed to load data</p>
+        <p className="text-muted-foreground text-sm">{error?.message}</p>
+        <Button onClick={() => refetch()} variant="outline">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Try Again
+        </Button>
       </div>
     );
   }

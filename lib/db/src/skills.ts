@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Skill, InsertSkill } from "@workspace/supabase/types";
+import type { Skill as DbSkill, InsertSkill } from "@workspace/supabase/types";
+
+export type Skill = DbSkill;
 
 export async function listSkills(
   supabase: SupabaseClient,
@@ -58,7 +60,7 @@ export async function createSkill(
 export async function updateSkill(
   supabase: SupabaseClient,
   id: string,
-  args: Partial<InsertSkill>,
+  args: Omit<Partial<InsertSkill>, 'id' | 'created_at'>,
 ): Promise<void> {
   const { error } = await supabase
     .from("skills")

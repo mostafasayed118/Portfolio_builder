@@ -8,8 +8,8 @@ import Overview from "@/pages/Overview";
 
 const ThemeManager = lazy(() => import("@/pages/ThemeManager"));
 const TypographyManager = lazy(() => import("@/pages/TypographyManager"));
-const HeroManager = lazy(() => import("@/pages/HeroManager"));
-const AboutManager = lazy(() => import("@/pages/AboutManager"));
+const HeroEditor = lazy(() => import("@/pages/HeroEditor"));
+const AboutEditor = lazy(() => import("@/pages/AboutEditor"));
 const SkillsManager = lazy(() => import("@/pages/SkillsManager"));
 const ProjectsManager = lazy(() => import("@/pages/ProjectsManager"));
 const ExperienceManager = lazy(() => import("@/pages/ExperienceManager"));
@@ -22,7 +22,15 @@ const SiteSettingsManager = lazy(() => import("@/pages/SiteSettingsManager"));
 const CvManager = lazy(() => import("@/pages/CvManager"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5,
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 function PageFallback() {
   return (
@@ -43,8 +51,8 @@ function App() {
                 <Route path="/" component={Overview} />
                 <Route path="/theme" component={ThemeManager} />
                 <Route path="/typography" component={TypographyManager} />
-                <Route path="/hero" component={HeroManager} />
-                <Route path="/about" component={AboutManager} />
+                <Route path="/hero" component={HeroEditor} />
+                <Route path="/about" component={AboutEditor} />
                 <Route path="/skills" component={SkillsManager} />
                 <Route path="/projects" component={ProjectsManager} />
                 <Route path="/experience" component={ExperienceManager} />

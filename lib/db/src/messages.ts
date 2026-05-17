@@ -26,25 +26,8 @@ export async function unreadCount(
 export async function sendMessage(
   supabase: SupabaseClient,
   args: { name: string; email: string; message: string },
-): Promise<string> {
-  // Rate limiting: check if the same email sent in the last 5 minutes
-  const fiveMinAgo = new Date(Date.now() - 300_000).toISOString();
-  const { data: recent, error: recentError } = await supabase
-    .from("messages")
-    .select("id, email, created_at")
-    .eq("email", args.email)
-    .gte("created_at", fiveMinAgo)
-    .order("created_at", { ascending: false })
-    .limit(1);
-  if (recentError) throw recentError;
-
-  if (recent && recent.length > 0) {
-    throw new Error(
-      "You can only send one message every 5 minutes. Please wait before sending again.",
-    );
-  }
-
-  const { data, error } = await supabase
+): Promise<void> {
+  const { error } = await supabase
     .from("messages")
     .insert({
       name: args.name,
@@ -52,11 +35,8 @@ export async function sendMessage(
       message: args.message,
       status: "unread",
       created_at: new Date().toISOString(),
-    })
-    .select("id")
-    .single();
+    });
   if (error) throw error;
-  return data.id;
 }
 
 export async function markMessageRead(

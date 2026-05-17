@@ -11,95 +11,72 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Package manager**: pnpm
 - **TypeScript version**: 5.9
 - **API framework**: Express 5
-- **Database**: PostgreSQL + Drizzle ORM + **Convex** (optional real-time backend for CMS)
-- **Validation**: Zod v3, drizzle-orm
-- **API codegen**: Orval (from OpenAPI spec)
-- **Build**: esbuild
+- **Database**: Supabase (PostgreSQL) — database + storage
+- **Auth**: Clerk (admin CMS only)
+- **Data access**: `@workspace/db` (14 data modules)
+- **Validation**: Zod v3
+- **Build**: esbuild (api-server), Vite (portfolio + admin)
 
 ## Key Commands
 
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- `npx convex deploy` — deploy Convex functions and get deployment URL
+- `pnpm run test` — run all tests via vitest
 
-See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
+## Environment Variables
+
+| Variable | Used By | Description |
+|----------|---------|-------------|
+| `VITE_SUPABASE_URL` | portfolio, admin | Supabase project URL |
+| `VITE_SUPABASE_ANON_KEY` | portfolio, admin | Anon/publishable key for client-side queries |
+| `VITE_SUPABASE_SERVICE_ROLE_KEY` | admin | Service role key for admin operations |
+| `SUPABASE_URL` | api-server | Supabase project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | api-server | Service role key for server operations |
+| `VITE_CLERK_PUBLISHABLE_KEY` | admin | Clerk publishable key for admin auth |
+| `VITE_ADMIN_EMAILS` | admin | Comma-separated list of admin email addresses |
 
 ## Artifacts
 
 ### Portfolio (`artifacts/portfolio`) — `/`
 
-- React + Vite + TailwindCSS v4 + wouter + lucide-react + shadcn/ui
-- Reads theme/typography dynamically from Convex when `VITE_CONVEX_URL` is set
-- Falls back to static CSS vars if Convex is not configured
-- Contact form POSTs to `/api/contact` when Convex is not configured
-- `src/lib/convex-provider.tsx` — optional ConvexProvider wrapper
-- `src/hooks/useConvexTheme.ts` — applies Convex theme tokens as CSS vars live
-- `src/components/ConvexThemeSync.tsx` — mounts the theme sync hook
+- React 19 + Vite 7 + TailwindCSS v4 + wouter + shadcn/ui
+- Reads content dynamically from Supabase via `@tanstack/react-query`
+- Falls back to static data in `src/data/portfolio.ts` when Supabase is not configured
+- Contact form submits directly to Supabase (public INSERT policy)
 
 ### Admin CMS (`artifacts/admin`) — `/admin/`
 
-- React + Vite + TailwindCSS v4 + wouter + shadcn/ui
-- Full Convex-backed CMS with 14 management pages
-- Shows "Convex Setup Required" screen when `VITE_CONVEX_URL` is missing
-- MessagesManager works with BOTH Convex (real-time) and the REST API (`/api/contact/messages`)
-- All 14 pages: Overview, ThemeManager, TypographyManager, HeroManager, AboutManager,
-  SkillsManager, ProjectsManager, ExperienceManager, CertificationsManager,
-  ContactManager, MessagesManager, SeoManager, SectionOrderManager, SiteSettingsManager
+- React 19 + Vite 7 + TailwindCSS v4 + wouter + shadcn/ui
+- Clerk authentication with email whitelist
+- 15 management pages: Overview, Theme, Typography, Hero, About, Skills,
+  Projects, Experience, Certifications, Contact, Messages, SEO,
+  Section Order, Site Settings, CV Manager
+- All data operations use the Supabase service role key (bypasses RLS)
 
 ### API Server (`artifacts/api-server`) — `/api`
 
-- Express 5 + Drizzle ORM + PostgreSQL
-- `POST /api/contact` — saves contact form submissions to the DB
-- `GET /api/contact/messages` — lists all contact messages (newest first)
-- `PATCH /api/contact/messages/:id/read` — marks a message as read
-- `DELETE /api/contact/messages/:id` — deletes a message
+- Express 5
+- `GET /api/cv` — serves the CV PDF as a download
+- `GET /api/cv/settings` — returns CV metadata
+- `PUT /api/cv/settings` — updates CV metadata
 - `GET /api/healthz` — health check
 
-## Database
+## Supabase Setup
 
-- PostgreSQL provisioned via Replit
-- Schema: `contact_messages` table (`lib/db/src/schema/contact_messages.ts`)
-- Run `pnpm --filter @workspace/db run push` after schema changes
+1. Create a Supabase project
+2. Copy the project URL and anon key to `.env` and `artifacts/*/.env.local`
+3. Run `supabase/migrations/001_init.sql` against your Supabase SQL editor
+4. (Optional) Run `supabase/migrations/002_fix_rls_policies.sql` if RLS policies need updating
+5. For admin access, add `VITE_SUPABASE_SERVICE_ROLE_KEY` and `VITE_CLERK_PUBLISHABLE_KEY`
+   to `artifacts/admin/.env.local`
 
-## Convex Setup (Optional — for real-time CMS)
+## Database Schema (Supabase)
 
-All Convex function files are in `/convex/`:
+18 tables migrated from Convex:
+- 8 singleton tables: `theme_settings`, `typography_settings`, `site_settings`,
+  `seo_settings`, `hero_content`, `about_content`, `contact_info`, `cv_settings`
+- 10 collection tables: `skills`, `projects`, `experience`, `certifications`,
+  `messages`, `section_settings`, `content_snapshots`, `section_variants`,
+  `analytics_events`, `content_health_reports`
 
-- `schema.ts` — all table definitions (15 tables)
-- `themeSettings.ts`, `typographySettings.ts` — appearance
-- `heroContent.ts`, `aboutContent.ts`, `skills.ts`, `projects.ts`, `experience.ts`,
-  `certifications.ts`, `contactInfo.ts`, `messages.ts` — content
-- `seoSettings.ts`, `sectionSettings.ts`, `siteSettings.ts` — site config
-- `seed.ts` — seed all tables with Mustafa's default data
-
-**To activate Convex with Clerk authentication:**
-
-1. Create a project at [convex.dev](https://convex.dev)
-2. Run `npx convex deploy` in the workspace root
-3. Add `VITE_CONVEX_URL` secret in Replit (the deployment URL from step 2)
-4. Set up Clerk authentication:
-   - Sign up for Clerk at [clerk.com](https://clerk.com)
-   - Create a new application in Clerk Dashboard
-   - Activate the Convex integration in Clerk Dashboard (https://dashboard.clerk.com/apps/setup/convex)
-   - Copy your Clerk Frontend API URL (format: `https://verb-noun-00.clerk.accounts.dev`)
-   - Add `CLERK_JWT_ISSUER_DOMAIN` environment variable in Convex Dashboard with your Clerk Frontend API URL
-   - Copy your Clerk Publishable Key from Clerk Dashboard API keys page
-   - Add `VITE_CLERK_PUBLISHABLE_KEY` environment variable in Replit with your Clerk Publishable Key
-5. Both admin and portfolio will automatically connect and use real-time Convex data with Clerk authentication
-6. Run "Seed Data" from the Admin Overview to populate initial content
-
-`convex/_generated/` contains stub files that let the apps build without Convex connected.
-The real generated files replace these when `npx convex deploy` is run.
-
-**Environment Variables for Development:**
-
-- `VITE_CONVEX_URL`: Your Convex deployment URL (from `npx convex deploy`)
-- `VITE_CLERK_PUBLISHABLE_KEY`: Your Clerk Publishable Key (starts with `pk_test_` for development)
-
-**Environment Variables for Production:**
-
-- `VITE_CONVEX_URL`: Your Convex deployment URL
-- `VITE_CLERK_PUBLISHABLE_KEY`: Your Clerk Publishable Key (starts with `pk_live_` for production)
-- `CLERK_JWT_ISSUER_DOMAIN`: Set in Convex Dashboard (your Clerk Frontend API URL)
+Storage bucket: `cv` (private, served via signed URL proxy)

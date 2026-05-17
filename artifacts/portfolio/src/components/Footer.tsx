@@ -1,37 +1,69 @@
-import { Github, Linkedin, Mail, Heart } from "lucide-react";
+import { Github, Linkedin, Mail, Heart, ArrowUp } from "lucide-react";
 import { HERO } from "@/data/portfolio";
+import { useState } from "react";
+import { useBranding } from "@/lib/branding";
+import { useThrottledScroll } from "@/hooks/use-throttled-scroll";
+import { useLanguage } from "@/lib/language";
 
 export default function Footer() {
+  const { siteName } = useBranding();
+  const { t } = useLanguage();
+  const [showBackToTop, setShowBackToTop] = useState(false);
+
+  useThrottledScroll(() => {
+    setShowBackToTop(window.scrollY > 600);
+  }, 100);
+
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
+
   return (
-    <footer className="py-10 px-6 border-t border-border/50 bg-muted/10">
-      <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <span className="font-display font-bold text-primary text-sm">MS</span>
-          <span className="text-xs text-muted-foreground">
-            — Mustafa Sayed · Data Engineer · Cairo, Egypt
-          </span>
+    <footer className="relative py-12 px-6 border-t border-border/50 bg-muted/10">
+      {showBackToTop && (
+        <button
+          onClick={scrollToTop}
+          className="absolute -top-5 left-1/2 -translate-x-1/2 h-10 w-10 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:opacity-90 transition-all animate-fade-in"
+          aria-label="Back to top"
+        >
+          <ArrowUp className="h-4 w-4" />
+        </button>
+      )}
+
+      <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+            <span className="font-display font-bold text-primary text-sm">
+              {siteName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+            </span>
+          </div>
+          <div>
+            <span className="text-sm font-medium text-foreground">{siteName}</span>
+            <span className="block text-xs text-muted-foreground">Data Engineer · Cairo, Egypt</span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <a href={HERO.github} target="_blank" rel="noopener noreferrer"
-            className="h-8 w-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all"
-            aria-label="GitHub" data-testid="footer-link-github">
-            <Github className="h-3.5 w-3.5" />
-          </a>
-          <a href={HERO.linkedin} target="_blank" rel="noopener noreferrer"
-            className="h-8 w-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all"
-            aria-label="LinkedIn" data-testid="footer-link-linkedin">
-            <Linkedin className="h-3.5 w-3.5" />
-          </a>
-          <a href={`mailto:${HERO.email}`}
-            className="h-8 w-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all"
-            aria-label="Email" data-testid="footer-link-email">
-            <Mail className="h-3.5 w-3.5" />
-          </a>
+        <div className="flex items-center gap-2">
+          {[
+            { href: HERO.github, icon: Github, label: "GitHub" },
+            { href: HERO.linkedin, icon: Linkedin, label: "LinkedIn" },
+            { href: `mailto:${HERO.email}`, icon: Mail, label: "Email" },
+          ].map(({ href, icon: Icon, label }) => (
+            <a
+              key={label}
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="h-9 w-9 flex items-center justify-center rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all border border-transparent hover:border-primary/20"
+              aria-label={label}
+              data-testid={`footer-link-${label.toLowerCase()}`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+            </a>
+          ))}
         </div>
 
         <p className="text-xs text-muted-foreground flex items-center gap-1">
-          Built with <Heart className="h-3 w-3 text-red-400" /> in Cairo, Egypt · 2025
+          {t.footer.madeWith} <Heart className="h-3 w-3 text-red-400 fill-red-400/30" /> Cairo
+          <span className="hidden sm:inline"> · {new Date().getFullYear()}</span>
         </p>
       </div>
     </footer>

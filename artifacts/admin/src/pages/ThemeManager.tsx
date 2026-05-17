@@ -6,11 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
-import { Save, RefreshCw, Sun, Moon, Eye } from "lucide-react";
-import { getSupabase, isSupabaseConfigured } from "@/lib/convex";
+import { Save, RefreshCw, Sun, Moon, Eye, AlertCircle } from "lucide-react";
+import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
 import { getThemeSettings, upsertThemeSettings } from "@workspace/db/theme-settings";
+import { logError } from "@/lib/logger";
 
 type ThemeData = {
   mode: "light" | "dark";
@@ -91,6 +93,7 @@ function ColorField({ label, value, onChange }: ColorFieldProps) {
         value={hex}
         onChange={e => onChange(hexToHsl(e.target.value))}
         className="w-8 h-8 rounded cursor-pointer border border-border p-0.5 bg-transparent shrink-0"
+        aria-label={label}
       />
       <Input
         value={value}
@@ -172,7 +175,7 @@ function PreviewPalette({ theme, mode }: { theme: ThemeData; mode: "light" | "da
 export default function ThemeManager() {
   const { toast } = useToast();
   const supabase = isSupabaseConfigured ? getSupabase() : null;
-  const { data: themeData, isLoading } = useQuery({
+  const { data: themeData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["themeSettings"],
     queryFn: () => getThemeSettings(supabase!),
     enabled: isSupabaseConfigured,
@@ -238,7 +241,7 @@ export default function ThemeManager() {
       });
       toast({ title: "Theme saved", description: "Portfolio will reflect changes live." });
     } catch (err) {
-      console.error(err);
+      logError("Failed to save theme settings", err, "ThemeManager");
       toast({ title: "Save failed", variant: "destructive" });
     } finally {
       setSaving(false);
@@ -251,6 +254,34 @@ export default function ThemeManager() {
   };
 
   const radiusNum = parseFloat(theme.radius) * 16;
+
+  if (isLoading) {
+    return (
+      <div className="p-6 space-y-4">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-10 w-full" />
+        <div className="space-y-2">
+          {[1,2,3,4,5].map(i => (
+            <Skeleton key={i} className="h-16 w-full rounded-lg" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="p-6 flex flex-col items-center justify-center min-h-64 gap-4">
+        <AlertCircle className="h-12 w-12 text-destructive" />
+        <p className="text-destructive font-medium">Failed to load data</p>
+        <p className="text-muted-foreground text-sm">{error?.message}</p>
+        <Button onClick={() => refetch()} variant="outline">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Try Again
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -269,14 +300,6 @@ export default function ThemeManager() {
           </Button>
         </div>
       </div>
-
-      {(isLoading || themeData === undefined) && (
-        <Card>
-          <CardContent className="py-8 text-center text-muted-foreground text-sm">
-            Loading…
-          </CardContent>
-        </Card>
-      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-6">
@@ -334,6 +357,10 @@ export default function ThemeManager() {
                   <div
                     key={px}
                     onClick={() => set("radius", `${(px / 16).toFixed(3)}rem`)}
+                    onKeyDown={(e) => e.key === "Enter" && set("radius", `${(px / 16).toFixed(3)}rem`)}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Border radius: ${px}px`}
                     className="w-8 h-8 bg-primary/20 border-2 border-primary/30 cursor-pointer hover:border-primary transition-colors"
                     style={{ borderRadius: `${px}px` }}
                     title={`${px}px`}

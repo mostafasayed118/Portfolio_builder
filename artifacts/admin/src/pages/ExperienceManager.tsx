@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getSupabase, isSupabaseConfigured } from "@/lib/convex";
+import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
 import { listExperience, createExperience, updateExperience, deleteExperience } from "@workspace/db/experience";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,8 +10,10 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, X } from "lucide-react";
+import { Plus, Pencil, Trash2, X, AlertCircle, RefreshCw } from "lucide-react";
+import { logError } from "@/lib/logger";
 
 type ExpType = "internship" | "certification" | "volunteer";
 type ExpRow = {
@@ -28,7 +30,7 @@ const BLANK: EditForm = { title: "", company: "", location: "", period: "", desc
 
 export default function ExperienceManager() {
   const { toast } = useToast();
-  const { data: items } = useQuery({
+  const { data: items, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["experience"],
     queryFn: () => listExperience(getSupabase()),
     enabled: isSupabaseConfigured,
@@ -63,9 +65,37 @@ export default function ExperienceManager() {
       else await updateExperience(getSupabase(), editId!, data);
       toast({ title: isNew ? "Created" : "Updated" });
       setEditing(null);
-    } catch (err) { console.error(err); toast({ title: "Failed", variant: "destructive" }); }
+    } catch (err) { logError("Failed to save experience", err, "ExperienceManager"); toast({ title: "Failed", variant: "destructive" }); }
     finally { setSaving(false); }
   };
+
+  if (isLoading) {
+    return (
+      <div className="p-6 space-y-4">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-10 w-full" />
+        <div className="space-y-2">
+          {[1,2,3,4,5].map(i => (
+            <Skeleton key={i} className="h-16 w-full rounded-lg" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="p-6 flex flex-col items-center justify-center min-h-64 gap-4">
+        <AlertCircle className="h-12 w-12 text-destructive" />
+        <p className="text-destructive font-medium">Failed to load data</p>
+        <p className="text-muted-foreground text-sm">{error?.message}</p>
+        <Button onClick={() => refetch()} variant="outline">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Try Again
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -88,8 +118,8 @@ export default function ExperienceManager() {
                 <div className="text-xs text-muted-foreground mt-0.5">{item.period} · {item.location}</div>
               </div>
               <div className="flex gap-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { const { current: _, ...rest } = item; openEdit({ ...rest, sort_order: item.sort_order ?? 0, is_published: item.is_published ?? false }); }}><Pencil size={13} /></Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { if (confirm("Delete?")) { await deleteExperience(getSupabase(), item.id); toast({ title: "Deleted" }); } }}><Trash2 size={13} /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { const { current: _, order_num: __, created_at: ___, updated_at: ____, ...rest } = item; openEdit({ ...rest, sort_order: item.sort_order ?? 0, is_published: item.is_published ?? false }); }}><Pencil size={13} /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { if (!confirm("Delete?")) return; try { await deleteExperience(getSupabase(), item.id); toast({ title: "Deleted" }); } catch (err) { logError("Failed to delete experience", err, "ExperienceManager"); toast({ title: "Delete failed", variant: "destructive" }); } }}><Trash2 size={13} /></Button>
               </div>
             </CardContent>
           </Card>

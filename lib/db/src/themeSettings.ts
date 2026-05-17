@@ -15,7 +15,7 @@ export async function getThemeSettings(
 
 export async function upsertThemeSettings(
   supabase: SupabaseClient,
-  args: Partial<InsertThemeSettings>,
+  args: Omit<Partial<InsertThemeSettings>, 'id' | 'created_at'>,
 ): Promise<string> {
   const existing = await getThemeSettings(supabase);
   const now = new Date().toISOString();

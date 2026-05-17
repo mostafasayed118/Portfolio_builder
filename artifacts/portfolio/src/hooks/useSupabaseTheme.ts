@@ -97,26 +97,26 @@ export function useSupabaseTypography() {
   useEffect(() => {
     if (!typoData) return;
     const root = document.documentElement;
-    if (typoData.body_font_url) {
-      const existing = document.querySelector(`link[data-font="body"]`);
-      if (!existing) {
-        const link = document.createElement("link");
-        link.rel = "stylesheet";
-        link.href = typoData.body_font_url;
-        link.setAttribute("data-font", "body");
-        document.head.appendChild(link);
+
+    const loadFont = (key: "body" | "display", url: string | null) => {
+      const existing = document.querySelector(`link[data-font="${key}"]`);
+      if (url) {
+        if (existing) {
+          (existing as HTMLLinkElement).href = url;
+        } else {
+          const link = document.createElement("link");
+          link.rel = "stylesheet";
+          link.href = url;
+          link.setAttribute("data-font", key);
+          document.head.appendChild(link);
+        }
+      } else if (existing) {
+        existing.remove();
       }
-    }
-    if (typoData.display_font_url) {
-      const existing = document.querySelector(`link[data-font="display"]`);
-      if (!existing) {
-        const link = document.createElement("link");
-        link.rel = "stylesheet";
-        link.href = typoData.display_font_url;
-        link.setAttribute("data-font", "display");
-        document.head.appendChild(link);
-      }
-    }
+    };
+
+    loadFont("body", typoData.body_font_url);
+    loadFont("display", typoData.display_font_url);
     root.style.setProperty("--font-display", typoData.display_font);
     root.style.setProperty("--font-body", typoData.body_font);
     root.style.setProperty("font-size", typoData.base_font_size);

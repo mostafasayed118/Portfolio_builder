@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLanguage } from "@/lib/language";
 import {
   Mail,
   Phone,
@@ -7,16 +8,21 @@ import {
   Linkedin,
   Send,
   CheckCircle,
+  Loader2,
 } from "lucide-react";
 import { CONTACT } from "@/data/portfolio";
 import { useReveal } from "@/hooks/use-reveal";
 import { useQuery } from "@tanstack/react-query";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
 import { getContactInfo } from "@workspace/db/contact-info";
-import { sendMessage } from "@workspace/db/messages";
+import { insertContactMessage } from "@workspace/db/contact-messages";
+import { trackEvent } from "@workspace/db/analytics";
+import { useFormValidation } from "@/hooks/useFormValidation";
+import { contactFormSchema } from "@workspace/validation/schemas";
 
 export default function ContactSection() {
   const { ref, revealed } = useReveal();
+  const { t } = useLanguage();
   const { data: contactData } = useQuery({
     queryKey: ["contactInfo"],
     queryFn: () => getContactInfo(getSupabase()),
@@ -61,56 +67,48 @@ export default function ContactSection() {
     },
   ];
 
-  const [form, setForm] = useState({ name: "", email: "", message: "" });
-  const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
-  const [sending, setSending] = useState(false);
-
-  const validate = () => {
-    const e: Record<string, string> = {};
-    if (!form.name || form.name.length < 2)
-      e.name = "Name must be at least 2 characters";
-    if (!form.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
-      e.email = "Please enter a valid email";
-    if (!form.message || form.message.length < 10)
-      e.message = "Message must be at least 10 characters";
-    return e;
-  };
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const form = useFormValidation(
+    { name: "", email: "", message: "" },
+    contactFormSchema,
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const errs = validate();
-    if (Object.keys(errs).length > 0) {
-      setErrors(errs);
-      return;
-    }
-    setErrors({});
-    setSending(true);
+    if (!form.validateAll()) return;
+    form.setIsSubmitting(true);
+    setSubmitError(null);
+
     try {
-      if (isSupabaseConfigured) {
-        await sendMessage(getSupabase(), {
-          name: form.name,
-          email: form.email,
-          message: form.message,
-        });
-      } else {
-        setErrors({
-          message: "Messaging is unavailable. Please try again later.",
-        });
-        setSending(false);
+      if (!isSupabaseConfigured) {
+        setSubmitError(t.contact.errorMessage);
         return;
       }
-      setSubmitted(true);
-      setForm({ name: "", email: "", message: "" });
-    } catch (err) {
-      setErrors({
-        message:
-          err instanceof Error
-            ? err.message
-            : "Failed to send. Please try again.",
+
+      const supabase = getSupabase();
+      if (!supabase) {
+        setSubmitError(t.contact.errorMessage);
+        return;
+      }
+
+      const result = await insertContactMessage(supabase, {
+        name: form.values.name,
+        email: form.values.email,
+        message: form.values.message,
       });
+
+      if (!result.success) {
+        setSubmitError(result.error || t.contact.errorMessage);
+        return;
+      }
+
+      setSubmitted(true);
+      form.reset();
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : t.contact.errorMessage);
     } finally {
-      setSending(false);
+      form.setIsSubmitting(false);
     }
   };
 
@@ -118,15 +116,19 @@ export default function ContactSection() {
     <section
       id="contact"
       ref={ref as React.RefObject<HTMLElement>}
-      className="py-24 px-6"
+      className="relative py-24 px-6 overflow-hidden"
     >
-      <div className="max-w-5xl mx-auto">
+      <div aria-hidden="true" className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/3 right-1/4 w-72 h-72 bg-accent/5 rounded-full blur-[100px]" />
+        <div className="absolute bottom-1/4 left-1/4 w-80 h-80 bg-primary/5 rounded-full blur-[120px]" />
+      </div>
+      <div className="max-w-5xl mx-auto relative z-10">
         <div className="text-center mb-14">
           <div className="inline-flex items-center gap-2 text-xs font-semibold tracking-widest uppercase text-primary bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-full mb-4">
-            Contact
+            {t.contact.title}
           </div>
           <h2 className="font-display font-bold text-3xl md:text-4xl text-foreground mb-3">
-            Get In Touch
+            {t.contact.title}
           </h2>
           <p className="text-muted-foreground text-sm max-w-xl mx-auto">
             Have a project in mind or want to discuss data engineering? I'd love
@@ -153,6 +155,12 @@ export default function ContactSection() {
                         rel="noopener noreferrer"
                         className="text-sm font-medium text-foreground hover:text-primary transition-colors truncate block"
                         data-testid={`link-contact-${label.toLowerCase()}`}
+                        onClick={() => {
+                          const type = label.toLowerCase();
+                          if (isSupabaseConfigured && (type === "email" || type === "github" || type === "linkedin")) {
+                            trackEvent(getSupabase(), "contact_click", "/", { type });
+                          }
+                        }}
                       >
                         {value}
                       </a>
@@ -183,11 +191,10 @@ export default function ContactSection() {
                   <CheckCircle className="h-7 w-7 text-green-500" />
                 </div>
                 <h3 className="font-display font-semibold text-lg text-foreground mb-2">
-                  Message Sent!
+                  {t.contact.successTitle}
                 </h3>
                 <p className="text-muted-foreground text-sm">
-                  Thank you for reaching out. I'll get back to you as soon as
-                  possible.
+                  {t.contact.successMessage}
                 </p>
                 <button
                   onClick={() => setSubmitted(false)}
@@ -208,22 +215,24 @@ export default function ContactSection() {
                     className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block"
                     htmlFor="contact-name"
                   >
-                    Your Name
+                    {t.contact.name}
                   </label>
                   <input
                     id="contact-name"
                     type="text"
-                    value={form.name}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, name: e.target.value }))
-                    }
+                    autoComplete="name"
+                    value={form.values.name}
+                    onChange={(e) => form.setField("name", e.target.value)}
+                    onBlur={() => form.handleBlur("name")}
                     placeholder="Mustafa Sayed"
-                    className="w-full rounded-lg px-4 py-2.5 text-sm bg-muted/50 border border-border focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all text-foreground placeholder:text-muted-foreground"
+                    maxLength={100}
+                    aria-describedby={form.errors.name && form.touched.name ? "error-name" : undefined}
+                    className={`w-full rounded-lg px-4 py-2.5 text-sm bg-muted/50 border focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all text-foreground placeholder:text-muted-foreground ${form.errors.name && form.touched.name ? "border-red-500" : "border-border"}`}
                     data-testid="input-name"
                   />
-                  {errors.name && (
-                    <p className="text-xs text-destructive mt-1">
-                      {errors.name}
+                  {form.errors.name && form.touched.name && (
+                    <p id="error-name" className="text-xs text-destructive mt-1" role="alert">
+                      {form.errors.name}
                     </p>
                   )}
                 </div>
@@ -233,22 +242,23 @@ export default function ContactSection() {
                     className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block"
                     htmlFor="contact-email"
                   >
-                    Email Address
+                    {t.contact.email}
                   </label>
                   <input
                     id="contact-email"
                     type="email"
-                    value={form.email}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, email: e.target.value }))
-                    }
+                    autoComplete="email"
+                    value={form.values.email}
+                    onChange={(e) => form.setField("email", e.target.value)}
+                    onBlur={() => form.handleBlur("email")}
                     placeholder="you@example.com"
-                    className="w-full rounded-lg px-4 py-2.5 text-sm bg-muted/50 border border-border focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all text-foreground placeholder:text-muted-foreground"
+                    aria-describedby={form.errors.email && form.touched.email ? "error-email" : undefined}
+                    className={`w-full rounded-lg px-4 py-2.5 text-sm bg-muted/50 border focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all text-foreground placeholder:text-muted-foreground ${form.errors.email && form.touched.email ? "border-red-500" : "border-border"}`}
                     data-testid="input-email"
                   />
-                  {errors.email && (
-                    <p className="text-xs text-destructive mt-1">
-                      {errors.email}
+                  {form.errors.email && form.touched.email && (
+                    <p id="error-email" className="text-xs text-destructive mt-1" role="alert">
+                      {form.errors.email}
                     </p>
                   )}
                 </div>
@@ -258,34 +268,43 @@ export default function ContactSection() {
                     className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block"
                     htmlFor="contact-message"
                   >
-                    Message
+                    {t.contact.message}
                   </label>
                   <textarea
                     id="contact-message"
                     rows={5}
-                    value={form.message}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, message: e.target.value }))
-                    }
+                    autoComplete="off"
+                    value={form.values.message}
+                    onChange={(e) => form.setField("message", e.target.value)}
+                    onBlur={() => form.handleBlur("message")}
                     placeholder="Tell me about your project or just say hello..."
-                    className="w-full rounded-lg px-4 py-2.5 text-sm bg-muted/50 border border-border focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all text-foreground placeholder:text-muted-foreground resize-none"
+                    maxLength={2000}
+                    aria-describedby={form.errors.message && form.touched.message ? "error-message" : undefined}
+                    className={`w-full rounded-lg px-4 py-2.5 text-sm bg-muted/50 border focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all text-foreground placeholder:text-muted-foreground resize-none ${form.errors.message && form.touched.message ? "border-red-500" : "border-border"}`}
                     data-testid="input-message"
                   />
-                  {errors.message && (
-                    <p className="text-xs text-destructive mt-1">
-                      {errors.message}
+                  {form.errors.message && form.touched.message && (
+                    <p id="error-message" className="text-xs text-destructive mt-1" role="alert">
+                      {form.errors.message}
                     </p>
                   )}
                 </div>
 
+                {submitError && (
+                  <p className="text-xs text-destructive mt-1">{submitError}</p>
+                )}
                 <button
                   type="submit"
-                  disabled={sending}
+                  disabled={form.isSubmitting}
                   className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-all shadow-[var(--shadow-float)] disabled:opacity-60"
                   data-testid="btn-send-message"
                 >
-                  <Send className="h-4 w-4" />
-                  {sending ? "Sending…" : "Send Message"}
+                  {form.isSubmitting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                  {form.isSubmitting ? t.contact.sending : t.contact.send}
                 </button>
               </form>
             )}

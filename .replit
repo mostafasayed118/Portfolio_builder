@@ -11,6 +11,10 @@ env = { "CI" = "true" }
 [workflows]
 runButton = "Project"
 
+[run]
+command = ["pnpm", "--filter", "@workspace/admin", "run", "dev"]
+port = 5173
+
 [agent]
 stack = "PNPM_WORKSPACE"
 expertMode = true
@@ -36,6 +40,3 @@ localPort = 23744
 externalPort = 3001
 
 [userenv]
-
-[userenv.shared]
-VITE_CONVEX_URL = "https://proficient-bass-377.convex.cloud"

@@ -1,35 +1,44 @@
 import { useState } from "react";
+import { Code2, Zap } from "lucide-react";
+import EmptyState from "./EmptyState";
 import {
-  SKILL_CATEGORIES,
   type Skill,
   type SkillLevel,
+  SKILL_CATEGORIES,
 } from "@/data/portfolio";
 import { useReveal } from "@/hooks/use-reveal";
-import { useQuery } from "@tanstack/react-query";
-import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
-import { listSkills } from "@workspace/db/skills";
+import { useSkills, groupSkillsByCategory } from "@/hooks/use-portfolio-data";
+import { useLanguage } from "@/lib/language";
+import type { TranslationKeys } from "@/i18n";
+
+function levelLabel(lvl: SkillLevel, t?: TranslationKeys): string {
+  if (!t) return lvl;
+  const map: Record<SkillLevel, keyof typeof t.skills.levels> = {
+    Expert: "expert",
+    Advanced: "advanced",
+    Intermediate: "intermediate",
+    Familiar: "beginner",
+  };
+  return t.skills.levels[map[lvl]];
+}
 
 const LEVEL_CONFIG: Record<
   SkillLevel,
-  { label: string; dot: string; badge: string }
+  { dot: string; badge: string }
 > = {
   Expert: {
-    label: "Expert",
     dot: "bg-primary",
     badge: "bg-primary/15 text-primary border-primary/25",
   },
   Advanced: {
-    label: "Advanced",
     dot: "bg-accent",
     badge: "bg-accent/15 text-accent border-accent/25",
   },
   Intermediate: {
-    label: "Intermediate",
     dot: "bg-chart-3",
     badge: "bg-chart-3/15 text-chart-3 border-chart-3/25",
   },
   Familiar: {
-    label: "Familiar",
     dot: "bg-muted-foreground",
     badge: "bg-muted text-muted-foreground border-border",
   },
@@ -42,9 +51,10 @@ function levelFromPct(p: number): SkillLevel {
   return "Familiar";
 }
 
-function SkillTag({ skill, index }: { skill: Skill; index: number }) {
+function SkillTag({ skill, index, t }: { skill: Skill; index: number; t?: TranslationKeys }) {
   const [hovered, setHovered] = useState(false);
   const cfg = LEVEL_CONFIG[skill.level];
+  const lvlLabel = levelLabel(skill.level, t);
 
   const sizeClass =
     skill.proficiency >= 90
@@ -58,11 +68,18 @@ function SkillTag({ skill, index }: { skill: Skill; index: number }) {
       className="relative group"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onClick={() => setHovered(v => !v)}
+      onFocus={() => setHovered(true)}
+      onBlur={() => setHovered(false)}
+      onKeyDown={(e) => e.key === "Enter" && setHovered(v => !v)}
+      role="button"
+      tabIndex={0}
+      aria-label={`${skill.name}, ${lvlLabel}, ${skill.proficiency}% proficiency`}
       data-testid={`skill-tag-${skill.name.toLowerCase().replace(/\s+/g, "-")}`}
     >
-      <button
+      <div
         className={`
-          flex items-center gap-1.5 rounded-full border font-medium transition-all duration-200
+          flex items-center gap-1.5 rounded-full border font-medium transition-all duration-200 cursor-pointer active:scale-[0.97]
           glass hover:scale-105 hover:shadow-[var(--shadow-float)] hover:border-primary/30
           ${sizeClass}
           ${skill.proficiency >= 90 ? "font-semibold" : ""}
@@ -75,15 +92,18 @@ function SkillTag({ skill, index }: { skill: Skill; index: number }) {
           </span>
         )}
         <span>{skill.name}</span>
+        <span className="md:hidden text-[10px] text-muted-foreground ml-1">
+          {lvlLabel} · {skill.proficiency}%
+        </span>
         <span
           className={`h-1.5 w-1.5 rounded-full shrink-0 ${cfg.dot}`}
           aria-hidden
         />
-      </button>
+      </div>
 
       {hovered && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-20 pointer-events-none animate-fade-up">
-          <div className="glass rounded-xl border px-3 py-2 min-w-[120px] shadow-lg">
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none animate-fade-up">
+          <div className="glass rounded-xl border px-3 py-2 min-w-[130px] shadow-lg">
             <div className="flex items-center justify-between gap-3 mb-1.5">
               <span className="text-xs font-semibold text-foreground whitespace-nowrap">
                 {skill.name}
@@ -91,7 +111,7 @@ function SkillTag({ skill, index }: { skill: Skill; index: number }) {
               <span
                 className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${cfg.badge}`}
               >
-                {cfg.label}
+                {lvlLabel}
               </span>
             </div>
             <div className="h-1 rounded-full bg-muted overflow-hidden">
@@ -110,37 +130,50 @@ function SkillTag({ skill, index }: { skill: Skill; index: number }) {
   );
 }
 
+function SkillsSkeleton() {
+  return (
+    <section id="skills" className="py-24 px-6">
+      <div className="max-w-5xl mx-auto">
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center gap-2 text-xs font-semibold tracking-widest uppercase text-primary bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-full mb-4">
+            Skills
+          </div>
+          <div className="h-10 w-40 bg-muted rounded mx-auto mb-3 animate-pulse" />
+          <div className="h-4 w-64 bg-muted rounded mx-auto mb-6 animate-pulse" />
+          <div className="flex flex-wrap gap-2 justify-center">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-8 w-20 bg-muted rounded-full animate-pulse" />
+            ))}
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-3 justify-center">
+          {Array.from({ length: 32 }).map((_, i) => (
+            <div key={i} className="h-8 w-24 bg-muted rounded-full animate-pulse" />
+          ))}
+        </div>
+        <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-3">
+          {Object.entries(LEVEL_CONFIG).map(([lvl]) => (
+            <div key={lvl} className="glass rounded-xl p-4 border text-center h-16 animate-pulse" />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function SkillsSection() {
   const [activeCategory, setActiveCategory] = useState("all");
   const { ref, revealed } = useReveal();
-  const { data: supabaseSkills } = useQuery({
-    queryKey: ["skills"],
-    queryFn: () => listSkills(getSupabase()),
-    enabled: isSupabaseConfigured,
-  });
+  const { data: supabaseSkills, isLoading } = useSkills();
+  const { t } = useLanguage();
+
+  if (isLoading) {
+    return <SkillsSkeleton />;
+  }
 
   const categories =
     supabaseSkills && supabaseSkills.length > 0
-      ? (() => {
-          const grouped: Record<string, Skill[]> = {};
-          for (const s of supabaseSkills) {
-            if (s.is_visible === false) continue;
-            const cat = s.category || "Other";
-            if (!grouped[cat]) grouped[cat] = [];
-            grouped[cat].push({
-              name: s.name,
-              proficiency: s.proficiency,
-              level: levelFromPct(s.proficiency),
-              icon: s.icon ?? undefined,
-            });
-          }
-          return Object.entries(grouped).map(([key, skills]) => ({
-            key: key.toLowerCase().replace(/\s+/g, "-"),
-            label: key,
-            color: "blue",
-            skills: skills.sort((a, b) => b.proficiency - a.proficiency),
-          }));
-        })()
+      ? groupSkillsByCategory(supabaseSkills)
       : SKILL_CATEGORIES;
 
   const allSkills = categories.flatMap((c) => c.skills);
@@ -161,10 +194,10 @@ export default function SkillsSection() {
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 text-xs font-semibold tracking-widest uppercase text-primary bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-full mb-4">
-            Skills
+            {t.skills.title}
           </div>
           <h2 className="font-display font-bold text-3xl md:text-4xl text-foreground mb-3">
-            Tech Stack
+            {t.skills.title}
           </h2>
           <p className="text-muted-foreground text-sm max-w-xl mx-auto mb-6">
             {allSkills.length} skills across {categories.length} domains —&nbsp;
@@ -181,7 +214,7 @@ export default function SkillsSection() {
                   : "bg-card text-muted-foreground border-border hover:border-primary/40 hover:text-foreground"
               }`}
             >
-              All ({allSkills.length})
+              {t.projects.all} ({allSkills.length})
             </button>
             {categories.map((cat) => (
               <button
@@ -200,13 +233,22 @@ export default function SkillsSection() {
           </div>
         </div>
 
-        <div className={`section-reveal ${revealed ? "revealed" : ""}`}>
-          <div className="flex flex-wrap gap-3 justify-center">
-            {displaySkills.map((skill, i) => (
-              <SkillTag key={skill.name} skill={skill} index={i} />
-            ))}
+        {allSkills.length === 0 ? (
+          <EmptyState
+            icon={Zap}
+            title="No skills listed yet"
+            description="Skills data will appear here once added."
+            compact
+          />
+        ) : (
+          <div className={`section-reveal ${revealed ? "revealed" : ""}`}>
+            <div className="flex flex-wrap gap-3 justify-center">
+              {displaySkills.map((skill, i) => (
+                <SkillTag key={skill.name} skill={skill} index={i} t={t} />
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-3">
           {Object.entries(LEVEL_CONFIG).map(([lvl, cfg]) => {
@@ -222,7 +264,7 @@ export default function SkillsSection() {
                 <div className="font-display font-bold text-lg text-foreground">
                   {count}
                 </div>
-                <div className="text-xs text-muted-foreground">{cfg.label}</div>
+                <div className="text-xs text-muted-foreground">{levelLabel(lvl as SkillLevel, t)}</div>
               </div>
             );
           })}

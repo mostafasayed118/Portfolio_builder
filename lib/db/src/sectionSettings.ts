@@ -15,7 +15,7 @@ export async function listSectionSettings(
 export async function updateSectionSetting(
   supabase: SupabaseClient,
   id: string,
-  args: Partial<InsertSectionSetting>,
+  args: Omit<Partial<InsertSectionSetting>, 'id' | 'created_at'>,
 ): Promise<void> {
   const { error } = await supabase
     .from("section_settings")
@@ -29,11 +29,18 @@ export async function reorderSectionSettings(
   items: { id: string; sort_order: number }[],
 ): Promise<void> {
   const now = new Date().toISOString();
+  const errors: { id: string; error: string }[] = [];
   for (const { id, sort_order } of items) {
     const { error } = await supabase
       .from("section_settings")
       .update({ sort_order, updated_at: now })
       .eq("id", id);
-    if (error) throw error;
+    if (error) {
+      errors.push({ id, error: error.message });
+    }
+  }
+  if (errors.length > 0) {
+    const summary = errors.map(e => `${e.id}: ${e.error}`).join("; ");
+    throw new Error(`${errors.length} of ${items.length} section order updates failed: ${summary}`);
   }
 }

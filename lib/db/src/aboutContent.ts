@@ -15,7 +15,7 @@ export async function getAboutContent(
 
 export async function upsertAboutContent(
   supabase: SupabaseClient,
-  args: Partial<InsertAboutContent>,
+  args: Omit<Partial<InsertAboutContent>, 'id' | 'created_at'>,
 ): Promise<string> {
   const existing = await getAboutContent(supabase);
   const now = new Date().toISOString();

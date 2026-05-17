@@ -8,15 +8,6 @@ export default defineConfig({
   test: {
     projects: [
       {
-        name: "convex",
-        test: {
-          root: path.resolve(dirname, "convex"),
-          environment: "node",
-          include: ["**/*.test.ts"],
-          exclude: ["_generated/**", "node_modules/**"],
-        },
-      },
-      {
         name: "portfolio",
         test: {
           root: path.resolve(dirname, "artifacts/portfolio"),
@@ -25,6 +16,10 @@ export default defineConfig({
           setupFiles: ["./src/test/setup.ts"],
           include: ["src/**/*.test.{ts,tsx}"],
           css: true,
+          env: {
+            VITE_SUPABASE_URL: "http://test.supabase.co",
+            VITE_SUPABASE_ANON_KEY: "test-anon-key",
+          },
         },
         esbuild: {
           jsx: "automatic",

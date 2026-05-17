@@ -1,0 +1,11 @@
+{
+  "name": "@workspace/validation",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./rules": "./src/rules.ts",
+    "./validate": "./src/validate.ts",
+    "./schemas": "./src/schemas.ts"
+  }
+}

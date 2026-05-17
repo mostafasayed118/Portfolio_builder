@@ -3,13 +3,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
-
-const rawPort = process.env.PORT || "5173";
-const port = Number(rawPort);
-
-if (Number.isNaN(port) || port <= 0) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
-}
+import { visualizer } from "rollup-plugin-visualizer";
 
 const basePath = process.env.BASE_PATH || "/";
 
@@ -32,6 +26,13 @@ export default defineConfig({
           ),
         ]
       : []),
+    visualizer({
+      filename: "dist/bundle-analysis.html",
+      open: process.env.VISUALIZER_OPEN === "true",
+      gzipSize: true,
+      brotliSize: true,
+      template: "treemap",
+    }),
   ],
   resolve: {
     alias: {
@@ -49,19 +50,48 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id: string) {
+          if (!id.includes("node_modules")) return;
+          if (id.includes("/node_modules/react-dom") || id.includes("/node_modules/react/")) return "vendor-react";
+          if (id.includes("framer-motion")) return "vendor-motion";
+          if (id.includes("recharts")) return "vendor-charts";
+          if (id.includes("@supabase")) return "vendor-supabase";
+          if (id.includes("lucide-react")) return "vendor-icons";
+          if (id.includes("@tanstack/react-query")) return "vendor-query";
+          if (id.includes("wouter")) return "vendor-router";
+        },
+      },
+    },
+    chunkSizeWarningLimit: 600,
   },
   server: {
-    port,
+    port: 5173,
     strictPort: true,
     host: "0.0.0.0",
     allowedHosts: true,
+    headers: {
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY",
+      "X-XSS-Protection": "1; mode=block",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
+      "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+      "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+    },
+    proxy: {
+      "/api": {
+        target: "http://localhost:3001",
+        changeOrigin: true,
+      },
+    },
     fs: {
       strict: false,
       allow: [path.resolve(import.meta.dirname, "../..")],
     },
   },
   preview: {
-    port,
+    port: 5173,
     host: "0.0.0.0",
     allowedHosts: true,
   },

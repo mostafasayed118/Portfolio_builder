@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Save, RefreshCw, Eye } from "lucide-react";
-import { getSupabase, isSupabaseConfigured } from "@/lib/convex";
+import { Save, RefreshCw, Eye, AlertCircle } from "lucide-react";
+import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
 import { getTypographySettings, upsertTypographySettings } from "@workspace/db/typography-settings";
+import { logError } from "@/lib/logger";
 
 type TypoData = {
   body_font: string;
@@ -47,7 +49,7 @@ const PRESET_PAIRS = [
 
 export default function TypographyManager() {
   const { toast } = useToast();
-  const { data: typoData } = useQuery({
+  const { data: typoData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["typographySettings"],
     queryFn: () => getTypographySettings(getSupabase()),
     enabled: isSupabaseConfigured,
@@ -90,8 +92,8 @@ export default function TypographyManager() {
       await upsertTypographySettings(getSupabase(), {
         body_font: typo.body_font,
         display_font: typo.display_font,
-        body_font_url: typo.body_font_url || undefined,
-        display_font_url: typo.display_font_url || undefined,
+        body_font_url: typo.body_font_url || null,
+        display_font_url: typo.display_font_url || null,
         base_font_size: typo.base_font_size,
         line_height: typo.line_height,
         letter_spacing: typo.letter_spacing,
@@ -101,7 +103,7 @@ export default function TypographyManager() {
       });
       toast({ title: "Typography saved", description: "Changes live on the portfolio." });
     } catch (err) {
-      console.error(err);
+      logError("Failed to save typography settings", err, "TypographyManager");
       toast({ title: "Save failed", variant: "destructive" });
     } finally {
       setSaving(false);
@@ -110,6 +112,34 @@ export default function TypographyManager() {
 
   const baseSize = parseFloat(typo.base_font_size);
   const scale = parseFloat(typo.heading_scale);
+
+  if (isLoading) {
+    return (
+      <div className="p-6 space-y-4">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-10 w-full" />
+        <div className="space-y-2">
+          {[1,2,3,4,5].map(i => (
+            <Skeleton key={i} className="h-16 w-full rounded-lg" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="p-6 flex flex-col items-center justify-center min-h-64 gap-4">
+        <AlertCircle className="h-12 w-12 text-destructive" />
+        <p className="text-destructive font-medium">Failed to load data</p>
+        <p className="text-muted-foreground text-sm">{error?.message}</p>
+        <Button onClick={() => refetch()} variant="outline">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Try Again
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">

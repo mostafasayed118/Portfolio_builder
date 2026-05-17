@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ContactInfo, InsertContactInfo } from "@workspace/supabase/types";
+import { sanitizeUrl } from "./utils";
 
 export async function getContactInfo(
   supabase: SupabaseClient,
@@ -15,7 +16,7 @@ export async function getContactInfo(
 
 export async function upsertContactInfo(
   supabase: SupabaseClient,
-  args: Partial<InsertContactInfo>,
+  args: Omit<Partial<InsertContactInfo>, 'id' | 'created_at'>,
 ): Promise<string> {
   const existing = await getContactInfo(supabase);
   const now = new Date().toISOString();
@@ -33,10 +34,10 @@ export async function upsertContactInfo(
       email: args.email ?? "mustafasayedsaeed@outlook.com",
       phone: args.phone ?? "+20 100 000 0000",
       location: args.location ?? "Cairo, Egypt",
-      github: args.github ?? "https://github.com/mustafasayed",
-      linkedin: args.linkedin ?? "https://linkedin.com/in/mustafasayed",
+      github: sanitizeUrl(args.github) ?? "https://github.com/mustafasayed",
+      linkedin: sanitizeUrl(args.linkedin) ?? "https://linkedin.com/in/mustafasayed",
       whatsapp: args.whatsapp ?? null,
-      map_embed_url: args.map_embed_url ?? null,
+      map_embed_url: sanitizeUrl(args.map_embed_url),
       availability_status: args.availability_status ?? "Open to opportunities",
       updated_at: now,
     })

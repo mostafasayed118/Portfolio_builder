@@ -1,68 +1,119 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { GripVertical, Save, Eye, EyeOff } from "lucide-react";
-import { getSupabase, isSupabaseConfigured } from "@/lib/convex";
+import { GripVertical, Save, RotateCcw, Eye, EyeOff, AlertCircle, RefreshCw } from "lucide-react";
+import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
 import { listSectionSettings, updateSectionSetting, reorderSectionSettings } from "@workspace/db/section-settings";
+import { logError } from "@/lib/logger";
 
 type Section = { id: string; key: string; label: string; is_visible: boolean; sort_order: number };
 
 export default function SectionOrderManager() {
   const { toast } = useToast();
-  const { data } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["sectionSettings"],
     queryFn: () => listSectionSettings(getSupabase()),
     enabled: isSupabaseConfigured,
   });
   const [sections, setSections] = useState<Section[]>([]);
-  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [dragId, setDragId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const originalDataRef = useRef<Section[]>([]);
 
   useEffect(() => {
-    if (data) setSections([...data].sort((a, b) => a.sort_order - b.sort_order));
+    if (data && originalDataRef.current.length === 0) {
+      const sorted = [...data].sort((a, b) => a.sort_order - b.sort_order);
+      setSections(sorted);
+      originalDataRef.current = sorted;
+    }
   }, [data]);
 
   const toggleVisible = (id: string, val: boolean) => {
     setSections(s => s.map(x => x.id === id ? { ...x, is_visible: val } : x));
   };
 
-  const handleDragStart = (i: number) => setDragIdx(i);
-  const handleDragOver = (e: React.DragEvent, i: number) => {
+  const handleDragStart = (_i: number, id: string) => setDragId(id);
+  const handleDragOver = (e: React.DragEvent, targetIdx: number) => {
     e.preventDefault();
-    if (dragIdx === null || dragIdx === i) return;
+    if (!dragId) return;
     setSections(s => {
+      const fromIdx = s.findIndex(x => x.id === dragId);
+      if (fromIdx === -1 || fromIdx === targetIdx) return s;
       const arr = [...s];
-      const [item] = arr.splice(dragIdx, 1);
-      arr.splice(i, 0, item);
+      const [item] = arr.splice(fromIdx, 1);
+      arr.splice(targetIdx, 0, item);
       return arr;
     });
-    setDragIdx(i);
   };
 
   const handleSave = async () => {
     setSaving(true);
     try {
       const items = sections.map(({ id }, i) => ({ id, sort_order: i + 1 }));
+      const visChanges = sections
+        .filter(s => originalDataRef.current.find(o => o.id === s.id)?.is_visible !== s.is_visible)
+        .map(s => ({ id: s.id, is_visible: s.is_visible }));
+
       await reorderSectionSettings(getSupabase(), items);
-      for (const s of sections) {
-        const orig = data?.find(d => d.id === s.id);
-        if (orig && orig.is_visible !== s.is_visible) {
-          await updateSectionSetting(getSupabase(), s.id, { is_visible: s.is_visible });
-        }
+      for (const v of visChanges) {
+        await updateSectionSetting(getSupabase(), v.id, { is_visible: v.is_visible });
       }
+
+      originalDataRef.current = [...sections];
       toast({ title: "Section order saved" });
-    } catch (err) { console.error(err); toast({ title: "Save failed", variant: "destructive" }); }
+    } catch (err) { logError("Failed to save section order", err, "SectionOrderManager"); toast({ title: "Save failed", variant: "destructive" }); }
     finally { setSaving(false); }
   };
+
+  const handleReset = () => {
+    if (originalDataRef.current.length > 0) {
+      setSections([...originalDataRef.current]);
+      toast({ title: "Reset to saved state" });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="p-6 space-y-4">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-10 w-full" />
+        <div className="space-y-2">
+          {[1,2,3,4,5].map(i => (
+            <Skeleton key={i} className="h-16 w-full rounded-lg" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="p-6 flex flex-col items-center justify-center min-h-64 gap-4">
+        <AlertCircle className="h-12 w-12 text-destructive" />
+        <p className="text-destructive font-medium">Failed to load data</p>
+        <p className="text-muted-foreground text-sm">{error?.message}</p>
+        <Button onClick={() => refetch()} variant="outline">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Try Again
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div><h1 className="text-2xl font-bold">Section Order</h1><p className="text-sm text-muted-foreground mt-0.5">Drag to reorder. Toggle to show/hide.</p></div>
-        <Button size="sm" onClick={handleSave} disabled={saving}><Save size={14} className="mr-1.5" />{saving ? "Saving…" : "Save Order"}</Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={handleReset} disabled={saving || sections.length === 0}>
+            <RotateCcw size={14} className="mr-1.5" />Reset
+          </Button>
+          <Button size="sm" onClick={handleSave} disabled={saving}><Save size={14} className="mr-1.5" />{saving ? "Saving…" : "Save Order"}</Button>
+        </div>
       </div>
 
       <Card>
@@ -75,11 +126,11 @@ export default function SectionOrderManager() {
             <div
               key={section.id}
               draggable
-              onDragStart={() => handleDragStart(i)}
+              onDragStart={() => handleDragStart(i, section.id)}
               onDragOver={e => handleDragOver(e, i)}
-              onDragEnd={() => setDragIdx(null)}
+              onDragEnd={() => setDragId(null)}
               className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-grab active:cursor-grabbing select-none ${
-                dragIdx === i ? "border-primary bg-accent shadow-md" : "border-border bg-muted/20 hover:bg-muted/40"
+                dragId === section.id ? "border-primary bg-accent shadow-md" : "border-border bg-muted/20 hover:bg-muted/40"
               } ${!section.is_visible ? "opacity-50" : ""}`}
             >
               <GripVertical size={16} className="text-muted-foreground shrink-0" />

@@ -8,11 +8,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Plus, Trash2 } from "lucide-react";
-import { getSupabase, isSupabaseConfigured } from "@/lib/convex";
+import { Save, Plus, Trash2, AlertCircle, RefreshCw } from "lucide-react";
+import { logError } from "@/lib/logger";
+import { Skeleton } from "@/components/ui/skeleton";
+import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
 import { getAboutContent, upsertAboutContent } from "@workspace/db/about-content";
 
-type Lang = { lang: string; level: string; pct: number };
+type Lang = { name: string; level: number };
 type AboutData = {
   bio1: string; bio2: string; location: string; yearsOfExperience: number;
   degree: string; school: string; grade: string; educationYears: string;
@@ -23,13 +25,13 @@ const DEFAULTS: AboutData = {
   bio1: "", bio2: "", location: "Cairo, Egypt", yearsOfExperience: 1,
   degree: "B.Sc. Statistics & Computer Science", school: "Ain Shams University",
   grade: "Very Good", educationYears: "2020 – 2024",
-  languages: [{ lang: "Arabic", level: "Native", pct: 100 }],
+  languages: [{ name: "Arabic", level: 100 }],
   isPublished: true,
 };
 
 export default function AboutManager() {
   const { toast } = useToast();
-  const { data } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["aboutContent"],
     queryFn: () => getAboutContent(getSupabase()),
     enabled: isSupabaseConfigured,
@@ -42,7 +44,7 @@ export default function AboutManager() {
       bio1: data.bio1, bio2: data.bio2, location: data.location,
       yearsOfExperience: data.years_of_experience, degree: data.degree,
       school: data.school, grade: data.grade, educationYears: data.education_years,
-      languages: data.languages as Lang[] ?? [], isPublished: data.is_published,
+      languages: Array.isArray(data.languages) ? data.languages as Lang[] : [], isPublished: data.is_published,
     });
   }, [data]);
 
@@ -52,7 +54,7 @@ export default function AboutManager() {
   const updateLang = (i: number, field: keyof Lang, value: string | number) =>
     set("languages", form.languages.map((l, idx) => idx === i ? { ...l, [field]: value } : l));
 
-  const addLang = () => set("languages", [...form.languages, { lang: "", level: "", pct: 50 }]);
+  const addLang = () => set("languages", [...form.languages, { name: "", level: 50 }]);
   const removeLang = (i: number) => set("languages", form.languages.filter((_, idx) => idx !== i));
 
   const handleSave = async () => {
@@ -71,9 +73,37 @@ export default function AboutManager() {
         is_published: form.isPublished,
       });
       toast({ title: "About saved" });
-    } catch (err) { console.error(err); toast({ title: "Save failed", variant: "destructive" }); }
+    } catch (err) { logError("Failed to save about content", err, "AboutManager"); toast({ title: "Save failed", variant: "destructive" }); }
     finally { setSaving(false); }
   };
+
+  if (isLoading) {
+    return (
+      <div className="p-6 space-y-4">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-10 w-full" />
+        <div className="space-y-2">
+          {[1,2,3,4,5].map(i => (
+            <Skeleton key={i} className="h-16 w-full rounded-lg" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="p-6 flex flex-col items-center justify-center min-h-64 gap-4">
+        <AlertCircle className="h-12 w-12 text-destructive" />
+        <p className="text-destructive font-medium">Failed to load data</p>
+        <p className="text-muted-foreground text-sm">{error?.message}</p>
+        <Button onClick={() => refetch()} variant="outline">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Try Again
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -132,13 +162,12 @@ export default function AboutManager() {
           {form.languages.map((lang, i) => (
             <div key={i} className="space-y-2 p-3 rounded-lg border border-border bg-muted/30">
               <div className="flex gap-2 items-center">
-                <Input value={lang.lang} onChange={e => updateLang(i, "lang", e.target.value)} placeholder="Language" className="h-8 text-sm flex-1" />
-                <Input value={lang.level} onChange={e => updateLang(i, "level", e.target.value)} placeholder="Level" className="h-8 text-sm flex-1" />
+                <Input value={lang.name} onChange={e => updateLang(i, "name", e.target.value)} placeholder="Language" className="h-8 text-sm flex-1" />
                 <button onClick={() => removeLang(i)} className="text-muted-foreground hover:text-destructive"><Trash2 size={14} /></button>
               </div>
               <div className="flex items-center gap-3">
-                <Slider value={[lang.pct]} min={0} max={100} step={5} onValueChange={([v]) => updateLang(i, "pct", v)} className="flex-1" />
-                <span className="text-xs font-mono text-muted-foreground w-8 text-right">{lang.pct}%</span>
+                <Slider value={[lang.level]} min={0} max={100} step={5} onValueChange={([v]) => updateLang(i, "level", v)} className="flex-1" />
+                <span className="text-xs font-mono text-muted-foreground w-8 text-right">{lang.level}%</span>
               </div>
             </div>
           ))}

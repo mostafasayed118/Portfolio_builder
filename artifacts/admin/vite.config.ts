@@ -4,13 +4,6 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
-const rawPort = process.env.PORT || "5173";
-const port = Number(rawPort);
-
-if (Number.isNaN(port) || port <= 0) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
-}
-
 const basePath = process.env.BASE_PATH || "/";
 
 export default defineConfig({
@@ -51,17 +44,23 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
-    port,
+    port: 5174,
     strictPort: true,
     host: "0.0.0.0",
     allowedHosts: true,
+    proxy: {
+      "/api": {
+        target: "http://localhost:3001",
+        changeOrigin: true,
+      },
+    },
     fs: {
       strict: false,
       allow: [path.resolve(import.meta.dirname, "../..")],
     },
   },
   preview: {
-    port,
+    port: 5174,
     host: "0.0.0.0",
     allowedHosts: true,
   },

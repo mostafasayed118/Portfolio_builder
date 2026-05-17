@@ -1,0 +1,439 @@
+[
+  {
+    "id": "TC001",
+    "title": "Browse the full portfolio homepage",
+    "description": "This verifies that a visitor can load the public portfolio and see all core sections of the homepage content.",
+    "category": "View Portfolio",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Scroll through the portfolio sections"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the hero, about, skills, projects, experience, certifications, and contact content are displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC002",
+    "title": "Sign in to the admin dashboard",
+    "description": "This verifies that an admin can sign in with email and password and reach the private dashboard.",
+    "category": "Admin Login",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /admin/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the admin dashboard is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC003",
+    "title": "Submit a valid contact message",
+    "description": "This verifies that a visitor can send a valid message from the contact form and see a success confirmation.",
+    "category": "Contact Form",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the contact section"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the name field with Alex Rivera"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with alex.rivera@example.com"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the message field with a valid inquiry about the portfolio"
+      },
+      {
+        "type": "action",
+        "description": "Submit the contact form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a success confirmation is visible"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC004",
+    "title": "Open a project from the portfolio and return home",
+    "description": "This verifies that a visitor can open a project from the homepage, review its detail page, and navigate back to the public portfolio.",
+    "category": "View Portfolio",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the projects section"
+      },
+      {
+        "type": "action",
+        "description": "Open a project from the projects section"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the project detail page displays the project description, tech stack, metrics, and related projects"
+      },
+      {
+        "type": "action",
+        "description": "Return to the portfolio homepage"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the public portfolio homepage is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC005",
+    "title": "Navigate between admin content managers",
+    "description": "This verifies that an authenticated admin can move between the dashboard and the main content management sections.",
+    "category": "Admin Login",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /admin/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the projects manager"
+      },
+      {
+        "type": "action",
+        "description": "Open the skills manager"
+      },
+      {
+        "type": "action",
+        "description": "Open the experience manager"
+      },
+      {
+        "type": "action",
+        "description": "Open the certifications manager"
+      },
+      {
+        "type": "action",
+        "description": "Open the hero editor"
+      },
+      {
+        "type": "action",
+        "description": "Open the about editor"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the selected admin management pages are accessible"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC006",
+    "title": "View project details from a direct project URL",
+    "description": "This verifies that a visitor can access a project detail page directly and see the full project information.",
+    "category": "View Portfolio",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /projects/:slug"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the project detail page displays the project description, tech stack, metrics, and related projects"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC007",
+    "title": "Edit and save hero content",
+    "description": "This verifies that an authenticated admin can update the hero section, save changes, and see the updated content on the public site after refresh.",
+    "category": "Admin Login",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /admin/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the hero editor"
+      },
+      {
+        "type": "action",
+        "description": "Update the hero content with a new test value"
+      },
+      {
+        "type": "action",
+        "description": "Save the changes"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Refresh the page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the updated hero content is displayed on the public homepage"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC008",
+    "title": "Edit and save about content",
+    "description": "This verifies that an authenticated admin can update the about section, save changes, and see the updated content on the public site after refresh.",
+    "category": "Admin Login",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /admin/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the about editor"
+      },
+      {
+        "type": "action",
+        "description": "Update the about content with a new test value"
+      },
+      {
+        "type": "action",
+        "description": "Save the changes"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Refresh the page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the updated about content is displayed on the public homepage"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC009",
+    "title": "View incoming contact messages in the admin area",
+    "description": "This verifies that an authenticated admin can open the messages viewer and see submitted public contact messages.",
+    "category": "Admin Login",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /admin/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "action",
+        "description": "Open the messages viewer"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify incoming contact messages are displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC010",
+    "title": "Show validation errors for an incomplete contact form",
+    "description": "This verifies that the contact form blocks submission and shows inline validation feedback when required fields are missing or invalid.",
+    "category": "Contact Form",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the contact section"
+      },
+      {
+        "type": "action",
+        "description": "Submit the contact form without entering required details"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify inline validation errors are visible"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC011",
+    "title": "Access is blocked for protected admin routes without signing in",
+    "description": "This verifies that a public visitor cannot open protected admin pages without an authenticated session.",
+    "category": "Admin Login",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /admin"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the admin login page is displayed"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /admin/messages"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the admin login page is displayed"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC012",
+    "title": "Show validation errors for malformed contact input",
+    "description": "This verifies that the contact form rejects malformed visitor input and keeps the user on the form with validation feedback.",
+    "category": "Contact Form",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the contact section"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the name field with A"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with invalid-email"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the message field with Hi"
+      },
+      {
+        "type": "action",
+        "description": "Submit the contact form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify inline validation errors are visible"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC013",
+    "title": "Reject invalid admin credentials",
+    "description": "This verifies that the admin login form shows an error when the entered credentials are not valid.",
+    "category": "Admin Login",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /admin/login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with invalid@example.com"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with wrong-password"
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a login error message is visible"
+      }
+    ],
+    "priority": "Low"
+  }
+]

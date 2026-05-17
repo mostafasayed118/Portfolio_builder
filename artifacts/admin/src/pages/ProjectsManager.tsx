@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getSupabase, isSupabaseConfigured } from "@/lib/convex";
+import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
 import { listProjects, createProject, updateProject, deleteProject } from "@workspace/db/projects";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +11,10 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, X, Star } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Star, Image as ImageIcon, AlertCircle, RefreshCw } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import ImageUploader from "@/components/ImageUploader";
+import { logError } from "@/lib/logger";
 
 type Project = {
   id: string; title: string; description: string; tech_stack: string[];
@@ -26,7 +29,7 @@ const BLANK = {
 
 export default function ProjectsManager() {
   const { toast } = useToast();
-  const { data: projects } = useQuery({
+  const { data: projects, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["projects"],
     queryFn: () => listProjects(getSupabase()),
     enabled: isSupabaseConfigured,
@@ -36,6 +39,7 @@ export default function ProjectsManager() {
   const [saving, setSaving] = useState(false);
   const [techInput, setTechInput] = useState("");
   const [metricInput, setMetricInput] = useState("");
+  const [projectImages, setProjectImages] = useState<{ id: string; url: string }[]>([]);
 
   const openNew = () => { setIsNew(true); setEditing({ ...BLANK }); setTechInput(""); setMetricInput(""); };
   const openEdit = (p: Project) => {
@@ -58,14 +62,43 @@ export default function ProjectsManager() {
     setSaving(true);
     try {
       const { id: editId, ...rest } = editing;
-      const payload = { ...rest, live_url: rest.live_url || undefined, metrics: rest.metrics?.length ? rest.metrics : undefined };
+      const slug = rest.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const payload = { ...rest, slug, live_url: rest.live_url || null, metrics: rest.metrics?.length ? rest.metrics : undefined };
       if (isNew) await createProject(getSupabase(), payload);
       else await updateProject(getSupabase(), editId!, payload);
       toast({ title: isNew ? "Project created" : "Project updated" });
       setEditing(null);
-    } catch (err) { console.error(err); toast({ title: "Failed", variant: "destructive" }); }
+    } catch (err) { logError("Failed to save project", err, "ProjectsManager"); toast({ title: "Failed", variant: "destructive" }); }
     finally { setSaving(false); }
   };
+
+  if (isLoading) {
+    return (
+      <div className="p-6 space-y-4">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-10 w-full" />
+        <div className="space-y-2">
+          {[1,2,3,4,5].map(i => (
+            <Skeleton key={i} className="h-16 w-full rounded-lg" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="p-6 flex flex-col items-center justify-center min-h-64 gap-4">
+        <AlertCircle className="h-12 w-12 text-destructive" />
+        <p className="text-destructive font-medium">Failed to load data</p>
+        <p className="text-muted-foreground text-sm">{error?.message}</p>
+        <Button onClick={() => refetch()} variant="outline">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Try Again
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -96,7 +129,7 @@ export default function ProjectsManager() {
               </div>
               <div className="flex gap-1 shrink-0">
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { const { slug: _, image_url: __, tags: ___, created_at: ____, updated_at: _____, ...rest } = p; openEdit({ ...rest, category: p.category ?? "", featured: p.featured ?? false, is_published: p.is_published ?? false, github_url: p.github_url ?? "", live_url: p.live_url ?? undefined, metrics: p.metrics ?? [], sort_order: p.sort_order ?? 0 }); }}><Pencil size={13} /></Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { if (confirm("Delete?")) { await deleteProject(getSupabase(), p.id); toast({ title: "Deleted" }); } }}><Trash2 size={13} /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { if (!confirm("Delete?")) return; try { await deleteProject(getSupabase(), p.id); toast({ title: "Deleted" }); } catch (err) { logError("Failed to delete project", err, "ProjectsManager"); toast({ title: "Delete failed", variant: "destructive" }); } }}><Trash2 size={13} /></Button>
               </div>
             </CardContent>
           </Card>
@@ -112,6 +145,16 @@ export default function ProjectsManager() {
                 <Input value={editing.title} onChange={e => setEditing(x => ({ ...x!, title: e.target.value }))} className="h-9" /></div>
               <div className="space-y-1.5"><Label className="text-xs">Description</Label>
                 <Textarea value={editing.description} onChange={e => setEditing(x => ({ ...x!, description: e.target.value }))} rows={3} /></div>
+              <div className="space-y-2">
+                <Label className="text-xs flex items-center gap-1.5"><ImageIcon size={12} /> Project Images</Label>
+                <ImageUploader
+                  entityType="project"
+                  entityId={editing.id}
+                  maxFiles={5}
+                  existingImages={projectImages}
+                  onUploadComplete={(imgs) => setProjectImages(imgs)}
+                />
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5"><Label className="text-xs">Category</Label>
                   <Input value={editing.category} onChange={e => setEditing(x => ({ ...x!, category: e.target.value }))} className="h-8" /></div>

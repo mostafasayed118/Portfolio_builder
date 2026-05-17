@@ -6,7 +6,7 @@ import {
   FolderKanban, Award, Mail, MessageSquare, Search, Layers,
   Settings, ChevronRight, X, Zap, FileText
 } from "lucide-react";
-import { getSupabase, isSupabaseConfigured } from "@/lib/convex";
+import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
 import { unreadCount } from "@workspace/db/messages";
 
 interface NavItem {
@@ -42,15 +42,17 @@ interface Props {
 }
 
 function UnreadBadge() {
-  const { data: count } = useQuery({
+  const { data: count, isError } = useQuery({
     queryKey: ["unreadCount"],
     queryFn: () => unreadCount(getSupabase()),
     enabled: isSupabaseConfigured,
+    retry: 1,
   });
-  if (!count) return null;
+  const n = isError ? 0 : (count ?? 0);
+  if (!n) return null;
   return (
     <span className="ml-auto min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center px-1 leading-none">
-      {count > 99 ? "99+" : count}
+      {n > 99 ? "99+" : n}
     </span>
   );
 }
@@ -97,7 +99,7 @@ export default function Sidebar({ open, onClose }: Props) {
           </button>
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-5">
+        <nav aria-label="Admin navigation" className="flex-1 overflow-y-auto py-4 px-3 space-y-5">
           {GROUPS.map((group) => {
             const items = NAV.filter(n => n.group === group);
             if (!items.length) return null;
@@ -111,11 +113,12 @@ export default function Sidebar({ open, onClose }: Props) {
                     <li key={path}>
                       <Link
                         href={path}
+                        aria-label={label}
                         className={cn(
                           "flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors group",
                           isActive(path)
-                            ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                            : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                            ? "bg-sidebar-primary text-sidebar-primary-foreground border-l-[3px] border-sidebar-primary-foreground/30"
+                            : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground border-l-[3px] border-transparent"
                         )}
                       >
                         <Icon size={15} className="shrink-0" />
@@ -136,7 +139,7 @@ export default function Sidebar({ open, onClose }: Props) {
 
         <div className="px-4 py-3 border-t border-sidebar-border shrink-0">
           <a
-            href="/"
+            href={import.meta.env.VITE_PORTFOLIO_URL as string || "/"}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 text-xs text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors"

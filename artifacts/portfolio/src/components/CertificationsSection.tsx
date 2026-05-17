@@ -1,19 +1,11 @@
 import { useState } from "react";
-import { ExternalLink, Award } from "lucide-react";
+import { useLanguage } from "@/lib/language";
+import type { TranslationKeys } from "@/i18n";
+import { ExternalLink, Award, ScrollText } from "lucide-react";
+import EmptyState from "./EmptyState";
 import { CERTIFICATIONS, type Certificate } from "@/data/portfolio";
 import { useReveal } from "@/hooks/use-reveal";
-import { useQuery } from "@tanstack/react-query";
-import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
-import { listCertifications } from "@workspace/db/certifications";
-
-const FILTERS = [
-  { key: "all", label: "All" },
-  { key: "python", label: "Python" },
-  { key: "data-engineering", label: "Data Engineering" },
-  { key: "ai", label: "AI & Data Science" },
-  { key: "cloud", label: "Cloud" },
-  { key: "database", label: "Database" },
-];
+import { useCertifications } from "@/hooks/use-portfolio-data";
 
 const VALID_CATEGORIES = new Set([
   "python",
@@ -22,6 +14,17 @@ const VALID_CATEGORIES = new Set([
   "database",
   "ai",
 ]);
+
+function getFilters(t: TranslationKeys) {
+  return [
+    { key: "all", label: t.certifications.all },
+    { key: "python", label: "Python" },
+    { key: "data-engineering", label: "Data Engineering" },
+    { key: "ai", label: "AI & Data Science" },
+    { key: "cloud", label: "Cloud" },
+    { key: "database", label: "Database" },
+  ];
+}
 
 const CATEGORY_COLORS: Record<Certificate["category"], string> = {
   python: "bg-blue-500/10 text-blue-500 border-blue-500/20",
@@ -48,7 +51,7 @@ const ISSUER_COLORS: Record<string, string> = {
   Maharatech: "bg-orange-500/10 text-orange-500 border-orange-500/20",
 };
 
-function CertCard({ cert, index }: { cert: Certificate; index: number }) {
+function CertCard({ cert, index, t }: { cert: Certificate; index: number; t: TranslationKeys }) {
   const { ref, revealed } = useReveal(0.05);
 
   return (
@@ -80,7 +83,7 @@ function CertCard({ cert, index }: { cert: Certificate; index: number }) {
                 <span
                   className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${ISSUER_COLORS[cert.issuer] ?? "bg-muted text-muted-foreground border-border"}`}
                 >
-                  {cert.issuerLogo} {cert.issuer}
+                  {cert.issuer}
                 </span>
                 <span
                   className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${CATEGORY_COLORS[cert.category]}`}
@@ -102,7 +105,7 @@ function CertCard({ cert, index }: { cert: Certificate; index: number }) {
                 aria-label={`View ${cert.title} credential`}
                 data-testid={`cert-link-${cert.id}`}
               >
-                View <ExternalLink className="h-3 w-3" />
+                {t.certifications.viewCertificate} <ExternalLink className="h-3 w-3" />
               </a>
             </div>
           </div>
@@ -112,35 +115,78 @@ function CertCard({ cert, index }: { cert: Certificate; index: number }) {
   );
 }
 
+function CertificationsSkeleton() {
+  return (
+    <section id="certifications" className="py-24 px-6">
+      <div className="max-w-5xl mx-auto">
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center gap-2 text-xs font-semibold tracking-widest uppercase text-primary bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-full mb-4 animate-pulse">
+            <Award className="h-3.5 w-3.5" />
+            Certifications
+          </div>
+          <div className="h-10 w-56 bg-muted rounded mx-auto mb-3 animate-pulse" />
+          <div className="h-4 w-64 bg-muted rounded mx-auto mb-8 animate-pulse" />
+          <div className="flex flex-wrap gap-2 justify-center">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-8 w-28 bg-muted rounded-full animate-pulse" />
+            ))}
+          </div>
+        </div>
+        <div className="relative ml-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="mb-6">
+              <div className="flex gap-4 items-start pb-6">
+                <div className="h-9 w-9 rounded-full bg-muted animate-pulse shrink-0" />
+                <div className="flex-1 glass rounded-xl border p-4 animate-pulse">
+                  <div className="h-5 w-3/4 bg-muted rounded mb-2" />
+                  <div className="flex gap-2">
+                    <div className="h-5 w-20 bg-muted rounded" />
+                    <div className="h-5 w-24 bg-muted rounded" />
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-2 shrink-0">
+                  <div className="h-3 w-16 bg-muted rounded" />
+                  <div className="h-3 w-12 bg-muted rounded" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function CertificationsSection() {
+  const { t, lang } = useLanguage();
   const [active, setActive] = useState("all");
   const { ref, revealed } = useReveal();
-  const { data: certsData } = useQuery({
-    queryKey: ["certifications"],
-    queryFn: () => listCertifications(getSupabase()),
-    enabled: isSupabaseConfigured,
-  });
+  const { data: certsData, isLoading } = useCertifications();
+  const FILTERS = getFilters(t);
+
+  if (isLoading) {
+    return <CertificationsSkeleton />;
+  }
 
   const allCerts: Certificate[] =
     certsData && certsData.length > 0
       ? [...certsData]
-          .filter((c) => c.is_published !== false)
           .sort((a, b) => {
-            const aSort = a.date_sort ?? a.date;
-            const bSort = b.date_sort ?? b.date;
+            const aSort = a.date;
+            const bSort = b.date;
             return bSort.localeCompare(aSort);
           })
           .map((c, i) => ({
             id: i + 1,
             title: c.title,
             issuer: c.issuer,
-            issuerLogo: c.issuer_logo ?? "🎓",
+            issuerLogo: c.image_url ?? "🎓",
             date: c.date,
-            dateSort: c.date_sort ?? c.date,
+            dateSort: c.date,
             category: (VALID_CATEGORIES.has(c.category ?? "")
               ? c.category
               : "python") as Certificate["category"],
-            credentialUrl: c.credential_url ?? "#",
+            credentialUrl: c.cert_url ?? "#",
           }))
       : CERTIFICATIONS;
 
@@ -149,7 +195,8 @@ export default function CertificationsSection() {
 
   const grouped = filtered.reduce<Record<string, Certificate[]>>(
     (acc, cert) => {
-      const key = cert.dateSort.slice(0, 7);
+      const raw = cert.dateSort;
+      const key = /^\d{4}-\d{2}/.test(raw) ? raw.slice(0, 7) : raw;
       if (!acc[key]) acc[key] = [];
       acc[key].push(cert);
       return acc;
@@ -162,9 +209,14 @@ export default function CertificationsSection() {
   );
 
   const monthLabel = (key: string) => {
-    const [y, m] = key.split("-");
-    const date = new Date(Number(y), Number(m) - 1);
-    return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    if (/^\d{4}-\d{2}/.test(key)) {
+      const [y, m] = key.split("-");
+      const date = new Date(Number(y), Number(m) - 1);
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US", { month: "long", year: "numeric" });
+      }
+    }
+    return key;
   };
 
   return (
@@ -177,10 +229,10 @@ export default function CertificationsSection() {
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 text-xs font-semibold tracking-widest uppercase text-primary bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-full mb-4">
             <Award className="h-3.5 w-3.5" />
-            Certifications
+            {t.certifications.title}
           </div>
           <h2 className="font-display font-bold text-3xl md:text-4xl text-foreground mb-3">
-            Credentials & Learning
+            {t.certifications.title}
           </h2>
           <p className="text-muted-foreground text-sm max-w-xl mx-auto mb-8">
             {allCerts.length} verified certifications from IBM, DataCamp,
@@ -211,6 +263,14 @@ export default function CertificationsSection() {
           </div>
         </div>
 
+        {allCerts.length === 0 ? (
+          <EmptyState
+            icon={ScrollText}
+            title="No certifications yet"
+            description="Certifications will appear here once added."
+            compact
+          />
+        ) : (
         <div
           className={`md:grid md:grid-cols-2 md:gap-x-12 section-reveal ${revealed ? "revealed" : ""}`}
         >
@@ -226,11 +286,12 @@ export default function CertificationsSection() {
                 </span>
               </div>
               {certs.map((cert, i) => (
-                <CertCard key={cert.id} cert={cert} index={i} />
+                <CertCard key={cert.id} cert={cert} index={i} t={t} />
               ))}
             </div>
           ))}
         </div>
+        )}
 
         <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-3">
           {[

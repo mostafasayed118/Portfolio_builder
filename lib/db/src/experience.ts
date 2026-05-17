@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Experience, InsertExperience } from "@workspace/supabase/types";
+import type { Experience as DbExperience, InsertExperience } from "@workspace/supabase/types";
+
+export type Experience = DbExperience;
 
 export async function listExperience(
   supabase: SupabaseClient,
@@ -17,13 +19,14 @@ export async function createExperience(
   args: {
     title: string;
     company: string;
-    location: string;
-    period: string;
-    description: string[];
-    technologies: string[];
-    type: "internship" | "certification" | "volunteer";
-    sort_order: number;
-    is_published: boolean;
+    location?: string;
+    period?: string;
+    description?: string[];
+    technologies?: string[];
+    type?: "internship" | "certification" | "volunteer";
+    sort_order?: number;
+    is_published?: boolean;
+    current?: boolean;
   },
 ): Promise<string> {
   const now = new Date().toISOString();
@@ -32,13 +35,14 @@ export async function createExperience(
     .insert({
       title: args.title,
       company: args.company,
-      location: args.location,
-      period: args.period,
-      description: args.description,
-      technologies: args.technologies,
-      type: args.type,
-      sort_order: args.sort_order,
-      is_published: args.is_published,
+      location: args.location ?? "",
+      period: args.period ?? "",
+      description: args.description ?? [],
+      technologies: args.technologies ?? [],
+      type: args.type ?? "internship",
+      sort_order: args.sort_order ?? 0,
+      is_published: args.is_published ?? true,
+      current: args.current ?? false,
       created_at: now,
       updated_at: now,
     })
@@ -51,7 +55,18 @@ export async function createExperience(
 export async function updateExperience(
   supabase: SupabaseClient,
   id: string,
-  args: Partial<InsertExperience>,
+  args: {
+    title?: string;
+    company?: string;
+    location?: string;
+    period?: string;
+    description?: string[];
+    technologies?: string[];
+    type?: "internship" | "certification" | "volunteer";
+    sort_order?: number;
+    is_published?: boolean;
+    current?: boolean;
+  },
 ): Promise<void> {
   const { error } = await supabase
     .from("experience")

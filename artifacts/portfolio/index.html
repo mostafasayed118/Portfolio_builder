@@ -34,20 +34,32 @@
     <meta name="twitter:creator" content="@mustafasayed" />
 
     <!-- ─── Theme & Appearance ──────────────────────────────────────── -->
-    <meta name="theme-color" content="#0284c7" />
+    <meta name="theme-color" content="#0a0f1e" />
     <meta name="color-scheme" content="light dark" />
-    <meta name="msapplication-TileColor" content="#0284c7" />
+    <meta name="msapplication-TileColor" content="#0a0f1e" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
-    <!-- ─── Favicon ─────────────────────────────────────────────────── -->
+    <!-- ─── Favicon & PWA ────────────────────────────────────────────── -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
 
-    <!-- ─── Fonts ───────────────────────────────────────────────────── -->
+    <!-- ─── Preload Critical Assets ─────────────────────────────────────── -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@400;500;600;700&family=Unbounded:wght@500;600;700;800&display=swap" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@400;500;600;700&family=Unbounded:wght@500;600;700;800&display=swap" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@400;500;600;700&family=Unbounded:wght@500;600;700;800&display=swap" media="print" onload="this.media='all'" />
+    <link rel="preconnect" href="https://txnuvpxhghxiwynhtbvo.supabase.co" />
+    <link rel="dns-prefetch" href="https://txnuvpxhghxiwynhtbvo.supabase.co" />
+    <link rel="dns-prefetch" href="https://github.com" />
+    <link rel="dns-prefetch" href="https://linkedin.com" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- ─── Fonts (non-render-blocking) ─────────────────────────────────── -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@400;500;600;700&family=Unbounded:wght@500;600;700;800&family=Cairo:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all'" />
     <noscript>
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@400;500;600;700&family=Unbounded:wght@500;600;700;800&display=swap" />
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@400;500;600;700&family=Unbounded:wght@500;600;700;800&family=Cairo:wght@400;500;600;700;800&display=swap" />
     </noscript>
   </head>
   <body>

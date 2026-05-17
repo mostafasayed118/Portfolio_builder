@@ -15,7 +15,7 @@ export async function getHeroContent(
 
 export async function upsertHeroContent(
   supabase: SupabaseClient,
-  args: Partial<InsertHeroContent>,
+  args: Omit<Partial<InsertHeroContent>, 'id' | 'created_at'>,
 ): Promise<string> {
   const existing = await getHeroContent(supabase);
   if (existing) {
@@ -39,6 +39,10 @@ export async function upsertHeroContent(
       linkedin_url: args.linkedin_url ?? "https://linkedin.com/in/mustafasayed",
       email: args.email ?? "mustafasayedsaeed@outlook.com",
       available: args.available ?? true,
+      site_name: args.site_name ?? null,
+      logo_url: args.logo_url ?? null,
+      favicon_url: args.favicon_url ?? null,
+      tagline: args.tagline ?? null,
       cv_file_name: args.cv_file_name ?? "Mustafa_Sayed_Resume.pdf",
       is_published: args.is_published ?? true,
       updated_at: new Date().toISOString(),

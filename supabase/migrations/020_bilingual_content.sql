@@ -1,0 +1,34 @@
+-- Add Arabic content columns to all content tables
+
+ALTER TABLE projects
+  ADD COLUMN IF NOT EXISTS title_ar TEXT,
+  ADD COLUMN IF NOT EXISTS description_ar TEXT,
+  ADD COLUMN IF NOT EXISTS full_description_ar TEXT,
+  ADD COLUMN IF NOT EXISTS challenges_ar TEXT,
+  ADD COLUMN IF NOT EXISTS outcome_ar TEXT;
+
+ALTER TABLE skills
+  ADD COLUMN IF NOT EXISTS category_ar TEXT;
+
+ALTER TABLE experience
+  ADD COLUMN IF NOT EXISTS title_ar TEXT,
+  ADD COLUMN IF NOT EXISTS company_ar TEXT,
+  ADD COLUMN IF NOT EXISTS description_ar TEXT,
+  ADD COLUMN IF NOT EXISTS location_ar TEXT;
+
+ALTER TABLE certifications
+  ADD COLUMN IF NOT EXISTS title_ar TEXT,
+  ADD COLUMN IF NOT EXISTS issuer_ar TEXT;
+
+ALTER TABLE hero_content
+  ADD COLUMN IF NOT EXISTS name_ar TEXT,
+  ADD COLUMN IF NOT EXISTS description_ar TEXT,
+  ADD COLUMN IF NOT EXISTS heading_ar TEXT;
+
+ALTER TABLE about_content
+  ADD COLUMN IF NOT EXISTS bio1_ar TEXT,
+  ADD COLUMN IF NOT EXISTS bio2_ar TEXT,
+  ADD COLUMN IF NOT EXISTS bio_ar TEXT,
+  ADD COLUMN IF NOT EXISTS education_ar JSONB DEFAULT '[]',
+  ADD COLUMN IF NOT EXISTS languages_ar JSONB DEFAULT '[]',
+  ADD COLUMN IF NOT EXISTS interests_ar JSONB DEFAULT '[]';

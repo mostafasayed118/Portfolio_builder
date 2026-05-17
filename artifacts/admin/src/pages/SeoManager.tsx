@@ -1,40 +1,46 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Search, Globe } from "lucide-react";
-import { getSupabase, isSupabaseConfigured } from "@/lib/convex";
+import { Save, Search, Globe, AlertCircle, RefreshCw } from "lucide-react";
+import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
 import { getSeoSettings, upsertSeoSettings } from "@workspace/db/seo-settings";
+import { logError } from "@/lib/logger";
 
 type SeoData = { title: string; description: string; keywords: string; og_title: string; og_description: string; og_image: string; canonical_url: string; twitterCard: string; twitter_creator: string };
 const DEFAULTS: SeoData = { title: "", description: "", keywords: "", og_title: "", og_description: "", og_image: "", canonical_url: "", twitterCard: "summary_large_image", twitter_creator: "" };
 
 export default function SeoManager() {
   const { toast } = useToast();
-  const { data } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["seoSettings"],
     queryFn: () => getSeoSettings(getSupabase()),
     enabled: isSupabaseConfigured,
   });
   const [form, setForm] = useState<SeoData>(DEFAULTS);
   const [saving, setSaving] = useState(false);
+  const initialLoadDone = useRef(false);
 
   useEffect(() => {
-    if (data) setForm({
-      title: data.title ?? "",
-      description: data.description ?? "",
-      keywords: data.keywords ?? "",
-      og_title: data.og_title ?? "",
-      og_description: data.og_description ?? "",
-      og_image: data.og_image ?? "",
-      canonical_url: data.canonical_url ?? "",
-      twitterCard: data.twitter_card ?? "summary_large_image",
-      twitter_creator: data.twitter_creator ?? "",
-    });
+    if (data && !initialLoadDone.current) {
+      initialLoadDone.current = true;
+      setForm({
+        title: data.title ?? "",
+        description: data.description ?? "",
+        keywords: data.keywords ?? "",
+        og_title: data.og_title ?? "",
+        og_description: data.og_description ?? "",
+        og_image: data.og_image ?? "",
+        canonical_url: data.canonical_url ?? "",
+        twitterCard: data.twitter_card ?? "summary_large_image",
+        twitter_creator: data.twitter_creator ?? "",
+      });
+    }
   }, [data]);
 
   const set = (k: keyof SeoData, v: string) => setForm(f => ({ ...f, [k]: v }));
@@ -42,11 +48,49 @@ export default function SeoManager() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await upsertSeoSettings(getSupabase(), { ...form, og_image: form.og_image || undefined, twitter_creator: form.twitter_creator || undefined });
+      await upsertSeoSettings(getSupabase(), {
+        title: form.title,
+        description: form.description,
+        keywords: form.keywords,
+        og_title: form.og_title,
+        og_description: form.og_description,
+        og_image: form.og_image || null,
+        canonical_url: form.canonical_url,
+        twitter_card: form.twitterCard,
+        twitter_creator: form.twitter_creator || null,
+      });
       toast({ title: "SEO settings saved" });
-    } catch (err) { console.error(err); toast({ title: "Save failed", variant: "destructive" }); }
+    } catch (err) { logError("Failed to save SEO settings", err, "SeoManager"); toast({ title: "Save failed", variant: "destructive" }); }
     finally { setSaving(false); }
   };
+
+  if (isLoading) {
+    return (
+      <div className="p-6 space-y-4">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-10 w-full" />
+        <div className="space-y-2">
+          {[1,2,3,4,5].map(i => (
+            <Skeleton key={i} className="h-16 w-full rounded-lg" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="p-6 flex flex-col items-center justify-center min-h-64 gap-4">
+        <AlertCircle className="h-12 w-12 text-destructive" />
+        <p className="text-destructive font-medium">Failed to load data</p>
+        <p className="text-muted-foreground text-sm">{error?.message}</p>
+        <Button onClick={() => refetch()} variant="outline">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Try Again
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">

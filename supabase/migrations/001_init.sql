@@ -10,16 +10,25 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- ============================================================================
 -- ENUM types
 -- ============================================================================
-CREATE TYPE theme_mode AS ENUM ('light', 'dark');
-CREATE TYPE msg_status AS ENUM ('unread', 'read', 'archived');
-CREATE TYPE exp_type AS ENUM ('internship', 'certification', 'volunteer');
+DO $$ BEGIN
+  CREATE TYPE theme_mode AS ENUM ('light', 'dark');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+DO $$ BEGIN
+  CREATE TYPE msg_status AS ENUM ('unread', 'read', 'archived');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+DO $$ BEGIN
+  CREATE TYPE exp_type AS ENUM ('internship', 'certification', 'volunteer');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- ============================================================================
 -- 2b. Tables (in dependency order)
 -- ============================================================================
 
 -- 1. theme_settings (singleton)
-CREATE TABLE theme_settings (
+CREATE TABLE IF NOT EXISTS theme_settings (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   mode theme_mode NOT NULL DEFAULT 'light',
   light_primary TEXT NOT NULL DEFAULT '204 92% 42%',
@@ -46,7 +55,7 @@ CREATE TABLE theme_settings (
 );
 
 -- 2. typography_settings (singleton)
-CREATE TABLE typography_settings (
+CREATE TABLE IF NOT EXISTS typography_settings (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   body_font TEXT NOT NULL DEFAULT 'Spline Sans',
   display_font TEXT NOT NULL DEFAULT 'Unbounded',
@@ -63,7 +72,7 @@ CREATE TABLE typography_settings (
 );
 
 -- 3. site_settings (singleton)
-CREATE TABLE site_settings (
+CREATE TABLE IF NOT EXISTS site_settings (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   site_name TEXT NOT NULL DEFAULT 'Mustafa Sayed',
   site_tagline TEXT NOT NULL DEFAULT 'Data Engineer',
@@ -76,7 +85,7 @@ CREATE TABLE site_settings (
 );
 
 -- 4. seo_settings (singleton)
-CREATE TABLE seo_settings (
+CREATE TABLE IF NOT EXISTS seo_settings (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   title TEXT NOT NULL DEFAULT 'Mustafa Sayed — Data Engineer',
   description TEXT NOT NULL DEFAULT 'Data Engineer specializing in ETL pipelines, data warehouses, and BI dashboards. Based in Cairo, Egypt.',
@@ -92,7 +101,7 @@ CREATE TABLE seo_settings (
 );
 
 -- 5. hero_content (singleton)
-CREATE TABLE hero_content (
+CREATE TABLE IF NOT EXISTS hero_content (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   heading TEXT NOT NULL DEFAULT 'Hi, I''m',
   name TEXT NOT NULL DEFAULT 'Mustafa Sayed',
@@ -109,7 +118,7 @@ CREATE TABLE hero_content (
 );
 
 -- 6. about_content (singleton)
-CREATE TABLE about_content (
+CREATE TABLE IF NOT EXISTS about_content (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   bio1 TEXT NOT NULL DEFAULT 'Data Engineer with 1+ years of hands-on experience building production ETL pipelines, data warehouses, and BI dashboards.',
   bio2 TEXT NOT NULL DEFAULT 'Skilled in transforming complex data into actionable insights using modern data stack tools.',
@@ -126,7 +135,7 @@ CREATE TABLE about_content (
 );
 
 -- 7. contact_info (singleton)
-CREATE TABLE contact_info (
+CREATE TABLE IF NOT EXISTS contact_info (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   email TEXT,
   phone TEXT,
@@ -144,7 +153,7 @@ CREATE TABLE contact_info (
 );
 
 -- 8. cv_settings (singleton)
-CREATE TABLE cv_settings (
+CREATE TABLE IF NOT EXISTS cv_settings (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   object_path TEXT NOT NULL,
   file_name TEXT NOT NULL,
@@ -153,7 +162,7 @@ CREATE TABLE cv_settings (
 );
 
 -- 9. skills (collection)
-CREATE TABLE skills (
+CREATE TABLE IF NOT EXISTS skills (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
   category TEXT NOT NULL,
@@ -166,7 +175,7 @@ CREATE TABLE skills (
 );
 
 -- 10. projects (collection)
-CREATE TABLE projects (
+CREATE TABLE IF NOT EXISTS projects (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   title TEXT NOT NULL,
   description TEXT NOT NULL,
@@ -186,7 +195,7 @@ CREATE TABLE projects (
 );
 
 -- 11. experience (collection)
-CREATE TABLE experience (
+CREATE TABLE IF NOT EXISTS experience (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   title TEXT NOT NULL,
   company TEXT NOT NULL,
@@ -204,7 +213,7 @@ CREATE TABLE experience (
 );
 
 -- 12. certifications (collection)
-CREATE TABLE certifications (
+CREATE TABLE IF NOT EXISTS certifications (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   title TEXT NOT NULL,
   issuer TEXT NOT NULL,
@@ -222,7 +231,7 @@ CREATE TABLE certifications (
 );
 
 -- 13. messages (collection)
-CREATE TABLE messages (
+CREATE TABLE IF NOT EXISTS messages (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
   email TEXT NOT NULL,
@@ -234,7 +243,7 @@ CREATE TABLE messages (
 );
 
 -- 14. section_settings (collection)
-CREATE TABLE section_settings (
+CREATE TABLE IF NOT EXISTS section_settings (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   key TEXT NOT NULL UNIQUE,
   label TEXT NOT NULL,
@@ -245,7 +254,7 @@ CREATE TABLE section_settings (
 );
 
 -- 15. content_snapshots (collection)
-CREATE TABLE content_snapshots (
+CREATE TABLE IF NOT EXISTS content_snapshots (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   entity_type TEXT NOT NULL,
   entity_id TEXT NOT NULL,
@@ -256,7 +265,7 @@ CREATE TABLE content_snapshots (
 );
 
 -- 16. section_variants (collection)
-CREATE TABLE section_variants (
+CREATE TABLE IF NOT EXISTS section_variants (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   section_key TEXT NOT NULL,
   variant_key TEXT NOT NULL,
@@ -269,7 +278,7 @@ CREATE TABLE section_variants (
 );
 
 -- 17. analytics_events (collection)
-CREATE TABLE analytics_events (
+CREATE TABLE IF NOT EXISTS analytics_events (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   type TEXT NOT NULL,
   path TEXT,
@@ -282,7 +291,7 @@ CREATE TABLE analytics_events (
 );
 
 -- 18. content_health_reports (collection)
-CREATE TABLE content_health_reports (
+CREATE TABLE IF NOT EXISTS content_health_reports (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   scope TEXT NOT NULL,
   issues JSONB NOT NULL DEFAULT '[]',
@@ -295,22 +304,22 @@ CREATE TABLE content_health_reports (
 -- ============================================================================
 -- 2c. Indexes
 -- ============================================================================
-CREATE INDEX idx_skills_category ON skills(category);
-CREATE INDEX idx_messages_status ON messages(status);
-CREATE INDEX idx_messages_created_at ON messages(created_at DESC);
-CREATE INDEX idx_section_settings_key ON section_settings(key);
-CREATE INDEX idx_section_settings_sort ON section_settings(sort_order);
-CREATE INDEX idx_analytics_type ON analytics_events(type);
-CREATE INDEX idx_analytics_created ON analytics_events(created_at DESC);
-CREATE INDEX idx_content_snapshots_entity ON content_snapshots(entity_type, entity_id);
-CREATE INDEX idx_content_snapshots_version ON content_snapshots(entity_type, entity_id, version DESC);
-CREATE INDEX idx_section_variants_section ON section_variants(section_key);
-CREATE INDEX idx_section_variants_active ON section_variants(section_key, is_active);
-CREATE INDEX idx_content_health_scope ON content_health_reports(scope);
-CREATE INDEX idx_content_health_generated ON content_health_reports(generated_at DESC);
-CREATE INDEX idx_experience_sort ON experience(sort_order);
-CREATE INDEX idx_projects_sort ON projects(sort_order);
-CREATE INDEX idx_certifications_sort ON certifications(sort_order);
+CREATE INDEX IF NOT EXISTS idx_skills_category ON skills(category);
+CREATE INDEX IF NOT EXISTS idx_messages_status ON messages(status);
+CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_section_settings_key ON section_settings(key);
+CREATE INDEX IF NOT EXISTS idx_section_settings_sort ON section_settings(sort_order);
+CREATE INDEX IF NOT EXISTS idx_analytics_type ON analytics_events(type);
+CREATE INDEX IF NOT EXISTS idx_analytics_created ON analytics_events(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_content_snapshots_entity ON content_snapshots(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_content_snapshots_version ON content_snapshots(entity_type, entity_id, version DESC);
+CREATE INDEX IF NOT EXISTS idx_section_variants_section ON section_variants(section_key);
+CREATE INDEX IF NOT EXISTS idx_section_variants_active ON section_variants(section_key, is_active);
+CREATE INDEX IF NOT EXISTS idx_content_health_scope ON content_health_reports(scope);
+CREATE INDEX IF NOT EXISTS idx_content_health_generated ON content_health_reports(generated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_experience_sort ON experience(sort_order);
+CREATE INDEX IF NOT EXISTS idx_projects_sort ON projects(sort_order);
+CREATE INDEX IF NOT EXISTS idx_certifications_sort ON certifications(sort_order);
 
 -- ============================================================================
 -- 2d. updated_at auto-update trigger
@@ -324,32 +333,46 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Apply trigger to every table that has updated_at column
+DROP TRIGGER IF EXISTS trg_theme_settings_updated_at ON theme_settings;
 CREATE TRIGGER trg_theme_settings_updated_at
   BEFORE UPDATE ON theme_settings FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+DROP TRIGGER IF EXISTS trg_typography_settings_updated_at ON typography_settings;
 CREATE TRIGGER trg_typography_settings_updated_at
   BEFORE UPDATE ON typography_settings FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+DROP TRIGGER IF EXISTS trg_site_settings_updated_at ON site_settings;
 CREATE TRIGGER trg_site_settings_updated_at
   BEFORE UPDATE ON site_settings FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+DROP TRIGGER IF EXISTS trg_seo_settings_updated_at ON seo_settings;
 CREATE TRIGGER trg_seo_settings_updated_at
   BEFORE UPDATE ON seo_settings FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+DROP TRIGGER IF EXISTS trg_hero_content_updated_at ON hero_content;
 CREATE TRIGGER trg_hero_content_updated_at
   BEFORE UPDATE ON hero_content FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+DROP TRIGGER IF EXISTS trg_about_content_updated_at ON about_content;
 CREATE TRIGGER trg_about_content_updated_at
   BEFORE UPDATE ON about_content FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+DROP TRIGGER IF EXISTS trg_contact_info_updated_at ON contact_info;
 CREATE TRIGGER trg_contact_info_updated_at
   BEFORE UPDATE ON contact_info FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+DROP TRIGGER IF EXISTS trg_cv_settings_updated_at ON cv_settings;
 CREATE TRIGGER trg_cv_settings_updated_at
   BEFORE UPDATE ON cv_settings FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+DROP TRIGGER IF EXISTS trg_skills_updated_at ON skills;
 CREATE TRIGGER trg_skills_updated_at
   BEFORE UPDATE ON skills FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+DROP TRIGGER IF EXISTS trg_projects_updated_at ON projects;
 CREATE TRIGGER trg_projects_updated_at
   BEFORE UPDATE ON projects FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+DROP TRIGGER IF EXISTS trg_experience_updated_at ON experience;
 CREATE TRIGGER trg_experience_updated_at
   BEFORE UPDATE ON experience FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+DROP TRIGGER IF EXISTS trg_certifications_updated_at ON certifications;
 CREATE TRIGGER trg_certifications_updated_at
   BEFORE UPDATE ON certifications FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+DROP TRIGGER IF EXISTS trg_section_settings_updated_at ON section_settings;
 CREATE TRIGGER trg_section_settings_updated_at
   BEFORE UPDATE ON section_settings FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+DROP TRIGGER IF EXISTS trg_section_variants_updated_at ON section_variants;
 CREATE TRIGGER trg_section_variants_updated_at
   BEFORE UPDATE ON section_variants FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
@@ -373,92 +396,107 @@ $$ LANGUAGE plpgsql STABLE;
 
 -- hero_content
 ALTER TABLE hero_content ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "public_read_hero" ON hero_content FOR SELECT USING (true);
-CREATE POLICY "admin_all_hero" ON hero_content FOR ALL USING (is_admin());
+DROP POLICY IF EXISTS "public_read_hero" ON hero_content; CREATE POLICY "public_read_hero" ON hero_content FOR SELECT USING (true);
+DROP POLICY IF EXISTS "admin_all_hero" ON hero_content; CREATE POLICY "admin_all_hero" ON hero_content FOR ALL USING (is_admin());
 
 -- about_content
 ALTER TABLE about_content ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "public_read_about" ON about_content FOR SELECT USING (true);
-CREATE POLICY "admin_all_about" ON about_content FOR ALL USING (is_admin());
+DROP POLICY IF EXISTS "public_read_about" ON about_content; CREATE POLICY "public_read_about" ON about_content FOR SELECT USING (true);
+DROP POLICY IF EXISTS "admin_all_about" ON about_content; CREATE POLICY "admin_all_about" ON about_content FOR ALL USING (is_admin());
 
 -- skills
 ALTER TABLE skills ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "public_read_skills" ON skills FOR SELECT USING (true);
-CREATE POLICY "admin_all_skills" ON skills FOR ALL USING (is_admin());
+DROP POLICY IF EXISTS "public_read_skills" ON skills; CREATE POLICY "public_read_skills" ON skills FOR SELECT USING (true);
+DROP POLICY IF EXISTS "admin_all_skills" ON skills; CREATE POLICY "admin_all_skills" ON skills FOR ALL USING (is_admin());
 
 -- projects
 ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "public_read_projects" ON projects FOR SELECT USING (true);
-CREATE POLICY "admin_all_projects" ON projects FOR ALL USING (is_admin());
+DROP POLICY IF EXISTS "public_read_projects" ON projects; CREATE POLICY "public_read_projects" ON projects FOR SELECT USING (true);
+DROP POLICY IF EXISTS "admin_all_projects" ON projects; CREATE POLICY "admin_all_projects" ON projects FOR ALL USING (is_admin());
 
 -- experience
 ALTER TABLE experience ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "public_read_experience" ON experience FOR SELECT USING (true);
-CREATE POLICY "admin_all_experience" ON experience FOR ALL USING (is_admin());
+DROP POLICY IF EXISTS "public_read_experience" ON experience; CREATE POLICY "public_read_experience" ON experience FOR SELECT USING (true);
+DROP POLICY IF EXISTS "admin_all_experience" ON experience; CREATE POLICY "admin_all_experience" ON experience FOR ALL USING (is_admin());
 
 -- certifications
 ALTER TABLE certifications ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "public_read_certifications" ON certifications FOR SELECT USING (true);
-CREATE POLICY "admin_all_certifications" ON certifications FOR ALL USING (is_admin());
+DROP POLICY IF EXISTS "public_read_certifications" ON certifications; CREATE POLICY "public_read_certifications" ON certifications FOR SELECT USING (true);
+DROP POLICY IF EXISTS "admin_all_certifications" ON certifications; CREATE POLICY "admin_all_certifications" ON certifications FOR ALL USING (is_admin());
 
 -- contact_info
 ALTER TABLE contact_info ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "public_read_contact" ON contact_info FOR SELECT USING (true);
-CREATE POLICY "admin_all_contact" ON contact_info FOR ALL USING (is_admin());
+DROP POLICY IF EXISTS "public_read_contact" ON contact_info; CREATE POLICY "public_read_contact" ON contact_info FOR SELECT USING (true);
+DROP POLICY IF EXISTS "admin_all_contact" ON contact_info; CREATE POLICY "admin_all_contact" ON contact_info FOR ALL USING (is_admin());
 
 -- theme_settings
 ALTER TABLE theme_settings ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "public_read_theme" ON theme_settings FOR SELECT USING (true);
-CREATE POLICY "admin_all_theme" ON theme_settings FOR ALL USING (is_admin());
+DROP POLICY IF EXISTS "public_read_theme" ON theme_settings; CREATE POLICY "public_read_theme" ON theme_settings FOR SELECT USING (true);
+DROP POLICY IF EXISTS "admin_all_theme" ON theme_settings; CREATE POLICY "admin_all_theme" ON theme_settings FOR ALL USING (is_admin());
 
 -- typography_settings
 ALTER TABLE typography_settings ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "public_read_typography" ON typography_settings FOR SELECT USING (true);
-CREATE POLICY "admin_all_typography" ON typography_settings FOR ALL USING (is_admin());
+DROP POLICY IF EXISTS "public_read_typography" ON typography_settings; CREATE POLICY "public_read_typography" ON typography_settings FOR SELECT USING (true);
+DROP POLICY IF EXISTS "admin_all_typography" ON typography_settings; CREATE POLICY "admin_all_typography" ON typography_settings FOR ALL USING (is_admin());
 
 -- site_settings
 ALTER TABLE site_settings ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "public_read_site" ON site_settings FOR SELECT USING (true);
-CREATE POLICY "admin_all_site" ON site_settings FOR ALL USING (is_admin());
+DROP POLICY IF EXISTS "public_read_site" ON site_settings; CREATE POLICY "public_read_site" ON site_settings FOR SELECT USING (true);
+DROP POLICY IF EXISTS "admin_all_site" ON site_settings; CREATE POLICY "admin_all_site" ON site_settings FOR ALL USING (is_admin());
 
 -- seo_settings
 ALTER TABLE seo_settings ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "public_read_seo" ON seo_settings FOR SELECT USING (true);
-CREATE POLICY "admin_all_seo" ON seo_settings FOR ALL USING (is_admin());
+DROP POLICY IF EXISTS "public_read_seo" ON seo_settings; CREATE POLICY "public_read_seo" ON seo_settings FOR SELECT USING (true);
+DROP POLICY IF EXISTS "admin_all_seo" ON seo_settings; CREATE POLICY "admin_all_seo" ON seo_settings FOR ALL USING (is_admin());
 
 -- section_settings
 ALTER TABLE section_settings ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "public_read_sections" ON section_settings FOR SELECT USING (true);
-CREATE POLICY "admin_all_sections" ON section_settings FOR ALL USING (is_admin());
+DROP POLICY IF EXISTS "public_read_sections" ON section_settings; CREATE POLICY "public_read_sections" ON section_settings FOR SELECT USING (true);
+DROP POLICY IF EXISTS "admin_all_sections" ON section_settings; CREATE POLICY "admin_all_sections" ON section_settings FOR ALL USING (is_admin());
 
 -- section_variants
 ALTER TABLE section_variants ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "public_read_variants" ON section_variants FOR SELECT USING (true);
-CREATE POLICY "admin_all_variants" ON section_variants FOR ALL USING (is_admin());
+DROP POLICY IF EXISTS "public_read_variants" ON section_variants; CREATE POLICY "public_read_variants" ON section_variants FOR SELECT USING (true);
+DROP POLICY IF EXISTS "admin_all_variants" ON section_variants; CREATE POLICY "admin_all_variants" ON section_variants FOR ALL USING (is_admin());
 
 -- Admin-only tables (no public read)
 
 -- messages
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "admin_all_messages" ON messages FOR ALL USING (is_admin());
-CREATE POLICY "public_insert_messages" ON messages FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "admin_select_messages" ON messages; CREATE POLICY "admin_select_messages" ON messages FOR SELECT USING (is_admin());
+DROP POLICY IF EXISTS "admin_insert_messages" ON messages; CREATE POLICY "admin_insert_messages" ON messages FOR INSERT WITH CHECK (is_admin());
+DROP POLICY IF EXISTS "admin_update_messages" ON messages; CREATE POLICY "admin_update_messages" ON messages FOR UPDATE USING (is_admin());
+DROP POLICY IF EXISTS "admin_delete_messages" ON messages; CREATE POLICY "admin_delete_messages" ON messages FOR DELETE USING (is_admin());
+DROP POLICY IF EXISTS "public_insert_messages" ON messages; CREATE POLICY "public_insert_messages" ON messages FOR INSERT WITH CHECK (true);
 
 -- cv_settings
 ALTER TABLE cv_settings ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "admin_all_cv" ON cv_settings FOR ALL USING (is_admin());
+DROP POLICY IF EXISTS "admin_select_cv" ON cv_settings; CREATE POLICY "admin_select_cv" ON cv_settings FOR SELECT USING (is_admin());
+DROP POLICY IF EXISTS "admin_insert_cv" ON cv_settings; CREATE POLICY "admin_insert_cv" ON cv_settings FOR INSERT WITH CHECK (is_admin());
+DROP POLICY IF EXISTS "admin_update_cv" ON cv_settings; CREATE POLICY "admin_update_cv" ON cv_settings FOR UPDATE USING (is_admin());
+DROP POLICY IF EXISTS "admin_delete_cv" ON cv_settings; CREATE POLICY "admin_delete_cv" ON cv_settings FOR DELETE USING (is_admin());
 
 -- content_snapshots
 ALTER TABLE content_snapshots ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "admin_all_snapshots" ON content_snapshots FOR ALL USING (is_admin());
+DROP POLICY IF EXISTS "admin_select_snapshots" ON content_snapshots; CREATE POLICY "admin_select_snapshots" ON content_snapshots FOR SELECT USING (is_admin());
+DROP POLICY IF EXISTS "admin_insert_snapshots" ON content_snapshots; CREATE POLICY "admin_insert_snapshots" ON content_snapshots FOR INSERT WITH CHECK (is_admin());
+DROP POLICY IF EXISTS "admin_update_snapshots" ON content_snapshots; CREATE POLICY "admin_update_snapshots" ON content_snapshots FOR UPDATE USING (is_admin());
+DROP POLICY IF EXISTS "admin_delete_snapshots" ON content_snapshots; CREATE POLICY "admin_delete_snapshots" ON content_snapshots FOR DELETE USING (is_admin());
 
 -- analytics_events
 ALTER TABLE analytics_events ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "admin_all_analytics" ON analytics_events FOR ALL USING (is_admin());
-CREATE POLICY "public_insert_analytics" ON analytics_events FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "admin_select_analytics" ON analytics_events; CREATE POLICY "admin_select_analytics" ON analytics_events FOR SELECT USING (is_admin());
+DROP POLICY IF EXISTS "admin_insert_analytics" ON analytics_events; CREATE POLICY "admin_insert_analytics" ON analytics_events FOR INSERT WITH CHECK (is_admin());
+DROP POLICY IF EXISTS "admin_update_analytics" ON analytics_events; CREATE POLICY "admin_update_analytics" ON analytics_events FOR UPDATE USING (is_admin());
+DROP POLICY IF EXISTS "admin_delete_analytics" ON analytics_events; CREATE POLICY "admin_delete_analytics" ON analytics_events FOR DELETE USING (is_admin());
+DROP POLICY IF EXISTS "public_insert_analytics" ON analytics_events; CREATE POLICY "public_insert_analytics" ON analytics_events FOR INSERT WITH CHECK (true);
 
 -- content_health_reports
 ALTER TABLE content_health_reports ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "admin_all_health" ON content_health_reports FOR ALL USING (is_admin());
+DROP POLICY IF EXISTS "admin_select_health" ON content_health_reports; CREATE POLICY "admin_select_health" ON content_health_reports FOR SELECT USING (is_admin());
+DROP POLICY IF EXISTS "admin_insert_health" ON content_health_reports; CREATE POLICY "admin_insert_health" ON content_health_reports FOR INSERT WITH CHECK (is_admin());
+DROP POLICY IF EXISTS "admin_update_health" ON content_health_reports; CREATE POLICY "admin_update_health" ON content_health_reports FOR UPDATE USING (is_admin());
+DROP POLICY IF EXISTS "admin_delete_health" ON content_health_reports; CREATE POLICY "admin_delete_health" ON content_health_reports FOR DELETE USING (is_admin());
 
 -- ============================================================================
 -- 2f. Seed defaults
@@ -518,16 +556,23 @@ VALUES ('cv', 'cv', false)
 ON CONFLICT (id) DO NOTHING;
 
 -- Allow authenticated admins to upload CV files
+DROP POLICY IF EXISTS "admin_upload_cv" ON storage.objects;
 CREATE POLICY "admin_upload_cv" ON storage.objects FOR INSERT
 WITH CHECK (bucket_id = 'cv' AND auth.role() = 'authenticated');
 
 -- Allow anyone to download CV files
+DROP POLICY IF EXISTS "public_download_cv" ON storage.objects;
 CREATE POLICY "public_download_cv" ON storage.objects FOR SELECT
 USING (bucket_id = 'cv');
 
 -- Allow authenticated admins to update/delete CV files
+DROP POLICY IF EXISTS "admin_update_cv" ON storage.objects;
 CREATE POLICY "admin_update_cv" ON storage.objects FOR UPDATE
 USING (bucket_id = 'cv' AND auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "admin_delete_cv" ON storage.objects;
 CREATE POLICY "admin_delete_cv" ON storage.objects FOR DELETE
 USING (bucket_id = 'cv' AND auth.role() = 'authenticated');
+
+
+

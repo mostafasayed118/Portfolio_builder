@@ -15,7 +15,7 @@ export async function getSeoSettings(
 
 export async function upsertSeoSettings(
   supabase: SupabaseClient,
-  args: Partial<InsertSeoSettings>,
+  args: Omit<Partial<InsertSeoSettings>, 'id' | 'created_at'>,
 ): Promise<string> {
   const existing = await getSeoSettings(supabase);
   const now = new Date().toISOString();

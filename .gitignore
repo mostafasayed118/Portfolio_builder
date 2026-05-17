@@ -50,3 +50,7 @@ Thumbs.db
 
 .env.local
 .env
+
+# TestSprite
+testsprite_tests/tmp/
+testsprite_tests/*.log

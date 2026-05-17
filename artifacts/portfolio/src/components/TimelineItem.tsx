@@ -11,6 +11,7 @@ interface TimelineItemProps {
   technologies: string[];
   type: "internship" | "certification" | "volunteer";
   index: number;
+  isLast?: boolean;
 }
 
 const TYPE_CONFIG = {
@@ -37,7 +38,7 @@ const TYPE_CONFIG = {
   },
 };
 
-const TimelineItem = memo(function TimelineItem({ title, company, location, period, description, technologies, type, index }: TimelineItemProps) {
+const TimelineItem = memo(function TimelineItem({ title, company, location, period, description, technologies, type, index, isLast }: TimelineItemProps) {
   const { ref, revealed } = useReveal(0.1);
   const config = TYPE_CONFIG[type] || TYPE_CONFIG.internship;
   const { Icon } = config;
@@ -53,7 +54,7 @@ const TimelineItem = memo(function TimelineItem({ title, company, location, peri
         <div className={`h-9 w-9 rounded-full ${config.bg} border ${config.border} flex items-center justify-center shrink-0 z-10`}>
           <Icon className={`h-4 w-4 ${config.color}`} />
         </div>
-        {index < 2 && (
+        {!isLast && (
           <div className="flex-1 w-px bg-gradient-to-b from-primary/30 to-transparent mt-2" />
         )}
       </div>

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getSupabase, isSupabaseConfigured } from "@/lib/convex";
+import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
 import { getContactInfo, upsertContactInfo } from "@workspace/db/contact-info";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,15 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Save } from "lucide-react";
+import { Save, AlertCircle, RefreshCw } from "lucide-react";
+import { logError } from "@/lib/logger";
 
 type ContactData = { email: string; phone: string; location: string; github: string; linkedin: string; whatsapp: string; mapEmbedUrl: string; availabilityStatus: string };
 const DEFAULTS: ContactData = { email: "", phone: "", location: "", github: "", linkedin: "", whatsapp: "", mapEmbedUrl: "", availabilityStatus: "Open to opportunities" };
 
 export default function ContactManager() {
   const { toast } = useToast();
-  const { data } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["contactInfo"],
     queryFn: () => getContactInfo(getSupabase()),
     enabled: isSupabaseConfigured,
@@ -42,13 +44,17 @@ export default function ContactManager() {
     setSaving(true);
     try {
       await upsertContactInfo(getSupabase(), {
-        ...form,
-        map_embed_url: form.mapEmbedUrl || undefined,
-        availability_status: form.availabilityStatus || undefined,
-        whatsapp: form.whatsapp || undefined,
+        email: form.email || null,
+        phone: form.phone || null,
+        location: form.location || null,
+        github: form.github || null,
+        linkedin: form.linkedin || null,
+        whatsapp: form.whatsapp || null,
+        map_embed_url: form.mapEmbedUrl || null,
+        availability_status: form.availabilityStatus || null,
       });
       toast({ title: "Contact info saved" });
-    } catch (err) { console.error(err); toast({ title: "Save failed", variant: "destructive" }); }
+    } catch (err) { logError("Failed to save contact info", err, "ContactManager"); toast({ title: "Save failed", variant: "destructive" }); }
     finally { setSaving(false); }
   };
 
@@ -61,6 +67,34 @@ export default function ContactManager() {
     ["whatsapp", "WhatsApp Number (optional)", "+201000000000"],
     ["availabilityStatus", "Availability Status", "Open to opportunities"],
   ];
+
+  if (isLoading) {
+    return (
+      <div className="p-6 space-y-4">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-10 w-full" />
+        <div className="space-y-2">
+          {[1,2,3,4,5].map(i => (
+            <Skeleton key={i} className="h-16 w-full rounded-lg" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="p-6 flex flex-col items-center justify-center min-h-64 gap-4">
+        <AlertCircle className="h-12 w-12 text-destructive" />
+        <p className="text-destructive font-medium">Failed to load data</p>
+        <p className="text-muted-foreground text-sm">{error?.message}</p>
+        <Button onClick={() => refetch()} variant="outline">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Try Again
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">

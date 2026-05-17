@@ -2,9 +2,10 @@ import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, FileText, CheckCircle, ExternalLink, Trash2 } from "lucide-react";
+import { Upload, FileText, CheckCircle, ExternalLink, Trash2, Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { getSupabase, isSupabaseConfigured } from "@/lib/convex";
+import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
+import { logError } from "@/lib/logger";
 
 interface CvSettings {
   objectPath: string | null;
@@ -22,7 +23,7 @@ export default function CvManager() {
   const [dragging, setDragging] = useState(false);
 
   useEffect(() => {
-    fetch("/api/cv/settings")
+    fetch("/api/v1/cv/settings")
       .then((r) => r.json() as Promise<CvSettings>)
       .then(setSettings)
       .catch(() => {});
@@ -52,15 +53,16 @@ export default function CvManager() {
 
       setProgress(100);
 
-      const saveRes = await fetch("/api/cv/settings", {
+      const saveRes = await fetch("/api/v1/cv/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ objectPath, fileName: file.name }),
       });
       if (!saveRes.ok) {
+        const errBody = await saveRes.text().catch(() => "");
         // Cleanup storage on save failure
         await supabase.storage.from("cv").remove([objectPath]);
-        throw new Error("Failed to save CV settings");
+        throw new Error(`Failed to save CV settings (${saveRes.status}): ${errBody.slice(0, 200)}`);
       }
       const saved = await saveRes.json() as CvSettings;
       setSettings(saved);
@@ -92,16 +94,22 @@ export default function CvManager() {
 
   const handleRemove = async () => {
     if (!confirm("Remove the current CV? The Download CV button will show a 'not found' error until a new file is uploaded.")) return;
-    if (settings?.objectPath) {
-      await getSupabase().storage.from("cv").remove([settings.objectPath]);
+    try {
+      if (settings?.objectPath) {
+        await getSupabase().storage.from("cv").remove([settings.objectPath]);
+      }
+      const res = await fetch("/api/v1/cv/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ objectPath: "", fileName: "" }),
+      });
+      if (!res.ok) throw new Error("Failed to update CV settings");
+      setSettings((s) => s ? { ...s, objectPath: null, fileName: null } : null);
+      toast({ title: "CV removed" });
+    } catch (err) {
+      logError("Failed to save CV settings", err, "CvManager");
+      toast({ title: "Remove failed", variant: "destructive", description: err instanceof Error ? err.message : undefined });
     }
-    await fetch("/api/cv/settings", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ objectPath: "", fileName: "" }),
-    });
-    setSettings((s) => s ? { ...s, objectPath: null, fileName: null } : null);
-    toast({ title: "CV removed" });
   };
 
   const fmt = (iso: string) =>
@@ -115,7 +123,7 @@ export default function CvManager() {
         <h1 className="text-2xl font-bold mb-1">CV / Resume</h1>
         <p className="text-sm text-muted-foreground">
           Upload your resume PDF. It will be served at{" "}
-          <code className="bg-muted px-1 py-0.5 rounded text-xs">/api/cv</code> and linked from the portfolio's Download CV button.
+          <code className="bg-muted px-1 py-0.5 rounded text-xs">/api/v1/cv</code> and linked from the portfolio's Download CV button.
         </p>
       </div>
 
@@ -140,7 +148,7 @@ export default function CvManager() {
                   size="sm"
                   variant="outline"
                   className="h-8 gap-1.5 text-xs"
-                  onClick={() => window.open("/api/cv", "_blank")}
+                  onClick={() => window.open("/api/v1/cv", "_blank")}
                 >
                   <ExternalLink size={12} />
                   Preview
@@ -216,8 +224,25 @@ export default function CvManager() {
           <div className="flex items-start gap-3">
             <CheckCircle size={16} className="text-primary mt-0.5 shrink-0" />
             <div className="text-sm text-muted-foreground space-y-1">
-              <p>Once uploaded, visitors can download your CV at <strong className="text-foreground">/api/cv</strong>.</p>
+              <p>Visitors can download your CV at <strong className="text-foreground">/api/v1/cv</strong>.</p>
               <p>The Download CV button on the portfolio hero section already points to this endpoint.</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="pt-5 pb-4">
+          <div className="flex items-start gap-3">
+            <Info size={16} className="text-primary mt-0.5 shrink-0" />
+            <div className="text-sm text-muted-foreground space-y-1">
+              <p>
+                The generated CV PDF includes a QR code linking to:{' '}
+                <code className="text-primary bg-primary/10 px-1 py-0.5 rounded text-xs">
+                  {import.meta.env.VITE_SITE_URL ?? 'https://mustafasayed.replit.app'}
+                </code>
+              </p>
+              <p>The QR code appears in the top-right corner of the first page.</p>
             </div>
           </div>
         </CardContent>

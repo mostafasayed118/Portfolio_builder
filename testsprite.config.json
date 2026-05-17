@@ -1,0 +1,19 @@
+{
+  "baseUrl": "http://localhost:5173",
+  "apps": {
+    "portfolio": {
+      "url": "http://localhost:5173",
+      "startCommand": "cd artifacts/portfolio && npm run dev"
+    },
+    "admin": {
+      "url": "http://localhost:5174",
+      "startCommand": "cd artifacts/admin && npm run dev"
+    }
+  },
+  "env": {
+    "VITE_SUPABASE_URL": "${VITE_SUPABASE_URL}",
+    "VITE_SUPABASE_ANON_KEY": "${VITE_SUPABASE_ANON_KEY}"
+  },
+  "waitForSelector": "#root:not(:empty)",
+  "timeout": 30000
+}

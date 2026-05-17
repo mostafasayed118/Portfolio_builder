@@ -1,148 +1,106 @@
-# How to Use Portfolio-Fixer
+# Portfolio-Fixer — How to Use
 
 ## Quick Start
 
 ```bash
 pnpm install
 pnpm run typecheck
+pnpm run test
 pnpm run build
 ```
 
-## Modes of Operation
-
-The portfolio operates in **3 modes** — each unlocks more features:
-
-| Mode | Setup Required | Features |
-|---|---|---|
-| **Static** | Nothing | Fully functional portfolio with hardcoded data |
-| **+ REST API** | PostgreSQL + `.env` | Contact form submissions, message management |
-| **+ Convex CMS** | Convex + Clerk | Real-time content editing via Admin panel |
-
----
-
-## Mode 1: Static Portfolio (Zero Setup)
-
-The portfolio works out of the box with no backend. Edit `artifacts/portfolio/src/data/portfolio.ts` to customize content. Run the dev server:
+## Development
 
 ```bash
+# Portfolio (public site)
 pnpm --filter @workspace/portfolio run dev
-```
 
-## Mode 2: Enable Contact Form (REST API)
+# Admin CMS
+pnpm --filter @workspace/admin run dev
 
-### 1. Set up PostgreSQL
-Ensure a PostgreSQL database is available (Replit provisions one automatically). The connection string is read from `DATABASE_URL` env var.
-
-### 2. Push the schema
-```bash
-pnpm --filter @workspace/db run push
-```
-
-### 3. Set environment variables
-Create `artifacts/api-server/.env`:
-```
-DATABASE_URL=postgresql://...
-PORT=3001
-```
-
-### 4. Start the API server
-```bash
+# API Server
 pnpm --filter @workspace/api-server run dev
 ```
 
-### 5. Start the portfolio
-```bash
-pnpm --filter @workspace/portfolio run dev
-```
+## Architecture Overview
 
-The contact form will now POST to `/api/contact`.
-
-## Mode 3: Full CMS with Convex + Clerk (Real-time)
-
-### 1. Deploy Convex backend
-```bash
-npx convex deploy
-```
-Save the deployment URL (e.g. `https://happy-otter-123.convex.cloud`).
-
-### 2. Set up Clerk auth
-1. Sign up at [clerk.com](https://clerk.com) and create an application
-2. Enable the **Convex integration** in Clerk Dashboard
-3. Copy your **Clerk Frontend API URL** (`https://noun-verb-00.clerk.accounts.dev`)
-4. Copy your **Clerk Publishable Key** (starts with `pk_test_`)
-
-### 3. Configure environment variables
-In your deployment platform (Replit secrets or `.env`):
-```
-VITE_CONVEX_URL=https://happy-otter-123.convex.cloud
-VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
-```
-
-In **Convex Dashboard** → Environment Variables:
-```
-CLERK_JWT_ISSUER_DOMAIN=https://noun-verb-00.clerk.accounts.dev
-```
-
-### 4. Run the admin CMS
-```bash
-pnpm --filter @workspace/admin run dev
-```
-
-### 5. Seed initial data
-Open the Admin panel → Overview → click **"Seed Data"**.
-
-### 6. Log in with Clerk
-Click **Sign In** in the admin panel. Only these emails can manage content:
-- `mustafasayedsaeed@outlook.com`
-- `mustafasayed20002@gmail.com`
-
----
-
-## Development Commands
-
-| Command | Description |
-|---|---|
-| `pnpm run typecheck` | Type-check all packages |
-| `pnpm run build` | Type-check + build everything |
-| `pnpm --filter @workspace/portfolio run dev` | Start portfolio dev server |
-| `pnpm --filter @workspace/admin run dev` | Start admin CMS dev server |
-| `pnpm --filter @workspace/api-server run dev` | Start REST API dev server |
-| `pnpm --filter @workspace/mockup-sandbox run dev` | Start UI sandbox |
-| `pnpm --filter @workspace/api-spec run codegen` | Regenerate API client from OpenAPI spec |
-
-## Project Structure
+Three apps sharing a common data layer:
 
 ```
+packages/lib/
+  supabase/          # Supabase client configuration (client, server, admin)
+    src/client.ts    # Browser client (anon key)
+    src/server.ts    # Server client (service role key)
+    src/admin.ts     # Admin client (service role key)
+    src/types.ts     # Full Database type definitions (18 tables)
+  db/                # Data access layer (14 modules)
+    src/skills.ts    # listSkills, createSkill, updateSkill, deleteSkill
+    src/projects.ts  # listProjects, listPublishedProjects, createProject, ...
+    src/messages.ts  # listMessages, sendMessage, markRead, deleteMessage, ...
+    ...              # 14 modules total (one per entity)
+
 artifacts/
-  portfolio/     # Public portfolio site (React + Vite + Tailwind)
-  admin/         # Admin CMS (14 management pages)
-  api-server/    # Express 5 REST API (Drizzle + PostgreSQL)
-  mockup-sandbox/ # UI prototyping sandbox
-convex/          # Convex serverless functions & schema (20+ tables)
-lib/
-  api-spec/          # OpenAPI spec (source of truth for API)
-  api-zod/           # Generated Zod schemas
-  api-client-react/  # Generated React Query hooks
-  object-storage-web/ # Uppy file upload components
-scripts/         # Build/deploy scripts
+  portfolio/         # React 19 + Vite 7 — public portfolio site
+    src/components/  # HeroSection, AboutSection, SkillsSection, etc.
+    src/hooks/       # useSupabaseTheme, useTypewriter, useReveal
+    src/data/        # Static fallback data
+  admin/             # React 19 + Vite 7 — CMS
+    src/pages/       # 15 manager pages (Hero, Skills, Projects, etc.)
+    src/lib/auth.tsx # Clerk auth with email whitelist
+  api-server/        # Express 5 — CV download proxy
+    src/routes/cv.ts # GET /api/cv (proxied download)
 ```
 
-## Customizing Portfolio Content (Static Mode)
+## Environment Variables
 
-Edit `artifacts/portfolio/src/data/portfolio.ts`:
+Copy `.env.example` to `.env` and fill in your Supabase credentials:
 
-- **Hero**: `name`, `roles[]`, social URLs, CV filename
-- **About**: bio, education, languages, stats
-- **Skills**: 35+ skills with categories, proficiency levels
-- **Projects**: 8 projects with tech stacks, metrics, links
-- **Experience**: 3 timeline entries
-- **Certifications**: 11 certifications
-- **Contact**: email, phone, location, social links
-- **Theme**: dark/light colors, glassmorphism, fonts
-- **SEO**: OG tags, JSON-LD, meta tags
+| Variable | Required For | Description |
+|----------|-------------|-------------|
+| `VITE_SUPABASE_URL` | All apps | Supabase project URL |
+| `VITE_SUPABASE_ANON_KEY` | portfolio, admin | Public anon key |
+| `VITE_SUPABASE_SERVICE_ROLE_KEY` | admin, api-server | Admin key (secret — never commit) |
+| `SUPABASE_URL` | api-server | Same as VITE_SUPABASE_URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | api-server | Server-side service role key |
+| `VITE_CLERK_PUBLISHABLE_KEY` | admin | Clerk key for admin auth |
+| `VITE_ADMIN_EMAILS` | admin | Comma-separated admin emails |
+| `PORT` | dev | Dev server port (default 5173) |
 
-## Deployment
+## Database Setup
 
-The project is designed for **Replit**. Deploy by pushing to a Replit repo and configuring the build command as `pnpm run build` and run command to start all artifacts.
+1. Create a Supabase project at [supabase.com](https://supabase.com)
+2. Go to SQL Editor → paste `supabase/migrations/001_init.sql` → Run
+3. (Optional advanced fix) Run `supabase/migrations/002_fix_rls_policies.sql`
 
-For other platforms (Vercel, Netlify, etc.), each `artifacts/*` app can be deployed independently as a static site (portfolio, admin) or Node server (api-server).
+This creates 18 tables with RLS policies, indexes, triggers, and seed data.
+
+## Key Commands
+
+```bash
+pnpm run typecheck        # Full typecheck (5 projects)
+pnpm run test             # Run all tests (47 tests)
+pnpm run build            # Typecheck + build all
+pnpm --filter @workspace/portfolio run dev   # Portfolio on :5173
+pnpm --filter @workspace/admin run dev       # Admin on :5173
+```
+
+## Static Data Fallback
+
+When `VITE_SUPABASE_URL` is not set, the portfolio renders with hardcoded data:
+
+```
+artifacts/portfolio/src/data/portfolio.ts
+```
+
+This file contains `HERO`, `ABOUT`, `SKILLS`, `PROJECTS`, `EXPERIENCE`, `CERTIFICATIONS`, `CONTACT` — mirroring the Supabase schema. Edit this to customize without a database.
+
+## Contact Form
+
+The contact form submits directly to Supabase via the `public_insert_messages` RLS policy. No API server needed. Rate limiting is handled by Supabase. Messages are viewable in the Admin CMS → Messages manager.
+
+## CV Upload Flow
+
+1. Admin CMS → CV Manager → upload PDF
+2. File goes directly to Supabase Storage bucket `cv` (via service role key)
+3. Metadata saved to `cv_settings` table via API server PUT endpoint
+4. Portfolio Download CV button → API server GET → proxies file with download headers

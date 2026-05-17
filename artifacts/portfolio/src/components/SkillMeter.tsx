@@ -33,7 +33,10 @@ const SkillMeter = memo(function SkillMeter({ label, value }: SkillMeterProps) {
       </div>
       <div className="h-1.5 rounded-full bg-muted overflow-hidden">
         <div
-          className={`h-full rounded-full bg-gradient-to-r from-primary to-accent skill-bar-fill${animated ? " revealed" : ""}`}
+          className="h-full rounded-full bg-gradient-to-r from-primary to-accent transition-all duration-1000 ease-out"
+          style={{
+            width: animated ? `${value}%` : "0%",
+          }}
         />
       </div>
     </div>

@@ -1,3 +1,7 @@
 User-agent: *
 Allow: /
+
+Disallow: /admin/
+Disallow: /admin/*
+
 Sitemap: https://mustafasayed.replit.app/sitemap.xml

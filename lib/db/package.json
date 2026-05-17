@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./hero": "./src/hero.ts",
+    "./about": "./src/about.ts",
     "./hero-content": "./src/heroContent.ts",
     "./about-content": "./src/aboutContent.ts",
     "./skills": "./src/skills.ts",
@@ -12,12 +14,16 @@
     "./certifications": "./src/certifications.ts",
     "./contact-info": "./src/contactInfo.ts",
     "./messages": "./src/messages.ts",
+    "./contact-messages": "./src/contactMessages.ts",
     "./theme-settings": "./src/themeSettings.ts",
     "./typography-settings": "./src/typographySettings.ts",
     "./seo-settings": "./src/seoSettings.ts",
     "./section-settings": "./src/sectionSettings.ts",
     "./site-settings": "./src/siteSettings.ts",
-    "./cv-settings": "./src/cvSettings.ts"
+    "./cv-settings": "./src/cvSettings.ts",
+    "./storage": "./src/storage.ts",
+    "./analytics": "./src/analytics.ts",
+    "./reorder": "./src/reorder.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2",

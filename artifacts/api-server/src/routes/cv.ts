@@ -1,5 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { createClient } from "@supabase/supabase-js";
+import { validateBody, cvSettingsUpdateSchema } from "../middleware/validate";
+import { generateCvPdf } from "../utils/cv-generator";
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -15,38 +17,60 @@ function getServerSupabase() {
 const router: IRouter = Router();
 
 router.get("/cv", async (req: Request, res: Response) => {
-  const supabase = getServerSupabase();
-  const { data: settings, error } = await supabase
-    .from("cv_settings")
-    .select("object_path, file_name")
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    req.log.error({ err: error }, "Error fetching CV settings");
-    res.status(500).json({ error: "Failed to fetch CV settings." });
-    return;
-  }
-
-  if (!settings?.object_path) {
-    res.status(404).json({ error: "No CV has been uploaded yet." });
-    return;
-  }
+  const portfolioUrl = process.env.VITE_SITE_URL ?? "https://mustafasayed.replit.app";
 
   try {
-    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-      .from("cv")
-      .createSignedUrl(settings.object_path, 60);
+    const supabase = getServerSupabase();
+    const pdfBytes = await generateCvPdf(supabase, portfolioUrl);
+    const fileName = "Mustafa_Sayed_CV.pdf";
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+    res.setHeader("Content-Length", pdfBytes.length.toString());
+    res.status(200);
+    res.end(Buffer.from(pdfBytes));
+    return;
+  } catch (err) {
+    req.log.warn({ err }, "Dynamic CV generation failed, falling back to uploaded file");
+  }
 
-    if (signedUrlError || !signedUrlData) {
-      req.log.error({ err: signedUrlError }, "Error creating signed URL for CV");
-      res.status(500).json({ error: "Failed to generate download URL." });
+  // Fallback: serve uploaded PDF from storage
+  try {
+    const supabase = getServerSupabase();
+    const { data: settings, error } = await supabase
+      .from("cv_settings")
+      .select("object_path, file_name")
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      req.log.error({ err: error }, "Error fetching CV settings");
+      res.status(500).json({ error: "Failed to fetch CV settings." });
+      return;
+    }
+
+    if (!settings?.object_path) {
+      res.status(404).json({ error: "No CV has been uploaded yet." });
       return;
     }
 
     const fileName = settings.file_name ?? "Mustafa_Sayed_Resume.pdf";
-    res.redirect(signedUrlData.signedUrl);
+    const { data: fileData, error: downloadError } = await supabase.storage
+      .from("cv")
+      .download(settings.object_path);
+
+    if (downloadError || !fileData) {
+      req.log.error({ err: downloadError }, "Error downloading CV from storage");
+      res.status(500).json({ error: "Failed to download CV file." });
+      return;
+    }
+
+    const buffer = Buffer.from(await fileData.arrayBuffer());
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
+    res.setHeader("Content-Length", buffer.length.toString());
+    res.status(200);
+    res.end(buffer);
   } catch (err) {
     req.log.error({ err }, "Error serving CV");
     res.status(500).json({ error: "Failed to serve CV." });
@@ -74,17 +98,9 @@ router.get("/cv/settings", async (_req: Request, res: Response) => {
   });
 });
 
-router.put("/cv/settings", async (req: Request, res: Response) => {
+router.put("/cv/settings", validateBody(cvSettingsUpdateSchema), async (req: Request, res: Response) => {
   const supabase = getServerSupabase();
-  const { objectPath, fileName } = req.body as {
-    objectPath?: string;
-    fileName?: string;
-  };
-
-  if (!objectPath || !fileName) {
-    res.status(400).json({ error: "objectPath and fileName are required." });
-    return;
-  }
+  const { objectPath, fileName } = (req as Request & { validatedBody: { objectPath: string; fileName: string } }).validatedBody;
 
   const { data: existing } = await supabase
     .from("cv_settings")
