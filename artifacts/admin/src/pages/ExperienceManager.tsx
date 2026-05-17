@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
-import { listExperience, createExperience, updateExperience, deleteExperience } from "@workspace/db/experience";
+import { api } from "@/lib/api-client";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,8 +31,11 @@ export default function ExperienceManager() {
   const { toast } = useToast();
   const { data: items, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["experience"],
-    queryFn: () => listExperience(getSupabase()),
-    enabled: isSupabaseConfigured,
+    queryFn: async () => {
+      const res = await api.experience.list();
+      if (!res.success) throw new Error(res.message);
+      return res.data;
+    },
   });
   const [editing, setEditing] = useState<EditForm | null>(null);
   const [isNew, setIsNew] = useState(false);
@@ -61,8 +63,10 @@ export default function ExperienceManager() {
     setSaving(true);
     try {
       const { id: editId, ...data } = editing;
-      if (isNew) await createExperience(getSupabase(), data);
-      else await updateExperience(getSupabase(), editId!, data);
+      let res;
+      if (isNew) res = await api.experience.create(data);
+      else res = await api.experience.update(editId!, data);
+      if (!res.success) throw new Error(res.message);
       toast({ title: isNew ? "Created" : "Updated" });
       setEditing(null);
     } catch (err) { logError("Failed to save experience", err, "ExperienceManager"); toast({ title: "Failed", variant: "destructive" }); }
@@ -119,7 +123,7 @@ export default function ExperienceManager() {
               </div>
               <div className="flex gap-1">
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { const { current: _, order_num: __, created_at: ___, updated_at: ____, ...rest } = item; openEdit({ ...rest, sort_order: item.sort_order ?? 0, is_published: item.is_published ?? false }); }}><Pencil size={13} /></Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { if (!confirm("Delete?")) return; try { await deleteExperience(getSupabase(), item.id); toast({ title: "Deleted" }); } catch (err) { logError("Failed to delete experience", err, "ExperienceManager"); toast({ title: "Delete failed", variant: "destructive" }); } }}><Trash2 size={13} /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { if (!confirm("Delete?")) return; try { const res = await api.experience.delete(item.id); if (!res.success) throw new Error(res.message); toast({ title: "Deleted" }); } catch (err) { logError("Failed to delete experience", err, "ExperienceManager"); toast({ title: "Delete failed", variant: "destructive" }); } }}><Trash2 size={13} /></Button>
               </div>
             </CardContent>
           </Card>

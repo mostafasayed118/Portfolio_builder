@@ -12,10 +12,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
-import { unreadCount } from "@workspace/db/messages";
-import { listSkills } from "@workspace/db/skills";
-import { listProjects } from "@workspace/db/projects";
+import { isSupabaseConfigured } from "@/lib/supabase";
+import { api } from "@/lib/api-client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { seedFromStaticData, type SeedProgress } from "@/lib/seed";
 
@@ -40,17 +38,29 @@ const GROUPS = ["Appearance", "Content", "Inbox", "Site"];
 function StatsBar() {
   const { data: unread, isLoading: unreadLoading, isError: unreadError, error: unreadErrorObj, refetch: refetchUnread } = useQuery({
     queryKey: ["unreadCount"],
-    queryFn: () => unreadCount(getSupabase()),
+    queryFn: async () => {
+      const res = await api.messages.unreadCount();
+      if (!res.success) throw new Error(res.message);
+      return res.data;
+    },
     enabled: isSupabaseConfigured,
   });
   const { data: skills, isLoading: skillsLoading, isError: skillsError, error: skillsErrorObj, refetch: refetchSkills } = useQuery({
     queryKey: ["skills"],
-    queryFn: () => listSkills(getSupabase()),
+    queryFn: async () => {
+      const res = await api.skills.list();
+      if (!res.success) throw new Error(res.message);
+      return res.data;
+    },
     enabled: isSupabaseConfigured,
   });
   const { data: projects, isLoading: projectsLoading, isError: projectsError, error: projectsErrorObj, refetch: refetchProjects } = useQuery({
     queryKey: ["projects"],
-    queryFn: () => listProjects(getSupabase()),
+    queryFn: async () => {
+      const res = await api.projects.list();
+      if (!res.success) throw new Error(res.message);
+      return res.data;
+    },
     enabled: isSupabaseConfigured,
   });
 

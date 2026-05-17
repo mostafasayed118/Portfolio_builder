@@ -15,10 +15,11 @@ import { useReveal } from "@/hooks/use-reveal";
 import { useQuery } from "@tanstack/react-query";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
 import { getContactInfo } from "@workspace/db/contact-info";
-import { insertContactMessage } from "@workspace/db/contact-messages";
 import { trackEvent } from "@workspace/db/analytics";
 import { useFormValidation } from "@/hooks/useFormValidation";
 import { contactFormSchema } from "@workspace/validation/schemas";
+
+const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 
 export default function ContactSection() {
   const { ref, revealed } = useReveal();
@@ -81,25 +82,19 @@ export default function ContactSection() {
     setSubmitError(null);
 
     try {
-      if (!isSupabaseConfigured) {
-        setSubmitError(t.contact.errorMessage);
-        return;
-      }
-
-      const supabase = getSupabase();
-      if (!supabase) {
-        setSubmitError(t.contact.errorMessage);
-        return;
-      }
-
-      const result = await insertContactMessage(supabase, {
-        name: form.values.name,
-        email: form.values.email,
-        message: form.values.message,
+      const res = await fetch(`${API_BASE}/api/v1/admin/contact`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.values.name,
+          email: form.values.email,
+          message: form.values.message,
+        }),
       });
 
+      const result = await res.json();
       if (!result.success) {
-        setSubmitError(result.error || t.contact.errorMessage);
+        setSubmitError(result.message || result.errors?._root || t.contact.errorMessage);
         return;
       }
 
@@ -158,7 +153,7 @@ export default function ContactSection() {
                         onClick={() => {
                           const type = label.toLowerCase();
                           if (isSupabaseConfigured && (type === "email" || type === "github" || type === "linkedin")) {
-                            trackEvent(getSupabase(), "contact_click", "/", { type });
+                            trackEvent(getSupabase(), "contact_click", "/", { type }).catch(() => {});
                           }
                         }}
                       >

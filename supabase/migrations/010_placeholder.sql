@@ -1,0 +1,3 @@
+-- Placeholder file — migration 010 was not created (skipped).
+-- History: 009 created storage buckets, 011 initializes sort_order values.
+-- This file exists only to maintain sequential numbering for migration tools.

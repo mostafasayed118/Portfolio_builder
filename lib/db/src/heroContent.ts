@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { HeroContent, InsertHeroContent } from "@workspace/supabase/types";
 
+export type { HeroContent };
+
 export async function getHeroContent(
   supabase: SupabaseClient,
 ): Promise<HeroContent | null> {
@@ -52,6 +54,8 @@ export async function upsertHeroContent(
   if (error) throw error;
   return data.id;
 }
+
+export const fetchHeroContent = getHeroContent;
 
 export async function seedDefaultHeroContent(
   supabase: SupabaseClient,

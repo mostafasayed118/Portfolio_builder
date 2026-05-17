@@ -207,7 +207,7 @@ export default function HeroSection() {
               data-testid="btn-download-cv"
               onClick={() => {
                 if (isSupabaseConfigured) {
-                  trackEvent(getSupabase(), "cv_download", "/", { source: "hero" });
+                  trackEvent(getSupabase(), "cv_download", "/", { source: "hero" }).catch(() => {});
                 }
               }}
             >

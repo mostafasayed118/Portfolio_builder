@@ -20,11 +20,15 @@ vi.mock("@/lib/supabase", () => ({
   isSupabaseConfigured: true,
 }));
 
-vi.mock("@workspace/db/certifications", () => ({
-  listCertificationRows: mockListCertificationRows,
-  createCertificationRow: mockCreateCertificationRow,
-  updateCertificationRow: mockUpdateCertificationRow,
-  deleteCertification: mockDeleteCertification,
+vi.mock("@/lib/api-client", () => ({
+  api: {
+    certifications: {
+      list: mockListCertificationRows,
+      create: mockCreateCertificationRow,
+      update: mockUpdateCertificationRow,
+      delete: mockDeleteCertification,
+    },
+  },
 }));
 
 vi.mock("@/hooks/use-toast", () => ({
@@ -74,13 +78,10 @@ const mockCertifications = [
 describe("CertificationsManager", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockListCertificationRows.mockResolvedValue(mockCertifications);
-    mockCreateCertificationRow.mockResolvedValue({
-      ...mockCertifications[0],
-      id: "new-id",
-    });
-    mockUpdateCertificationRow.mockResolvedValue(mockCertifications[0]);
-    mockDeleteCertification.mockResolvedValue(undefined);
+    mockListCertificationRows.mockResolvedValue({ success: true, data: mockCertifications });
+    mockCreateCertificationRow.mockResolvedValue({ success: true, data: { ...mockCertifications[0], id: "new-id" } });
+    mockUpdateCertificationRow.mockResolvedValue({ success: true, data: mockCertifications[0] });
+    mockDeleteCertification.mockResolvedValue({ success: true });
   });
 
   it("renders certifications grid", async () => {
@@ -112,7 +113,6 @@ describe("CertificationsManager", () => {
 
     await waitFor(() => {
       expect(mockCreateCertificationRow).toHaveBeenCalledWith(
-        expect.anything(),
         expect.objectContaining({
           title: "New Cert",
           issuer: "Test Org",
@@ -134,7 +134,7 @@ describe("CertificationsManager", () => {
 
     await waitFor(() => {
       expect(confirmSpy).toHaveBeenCalledWith("Delete?");
-      expect(mockDeleteCertification).toHaveBeenCalledWith({}, "1");
+      expect(mockDeleteCertification).toHaveBeenCalledWith("1");
     });
 
     confirmSpy.mockRestore();

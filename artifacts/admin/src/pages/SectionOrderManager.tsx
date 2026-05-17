@@ -6,8 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { GripVertical, Save, RotateCcw, Eye, EyeOff, AlertCircle, RefreshCw } from "lucide-react";
-import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
-import { listSectionSettings, updateSectionSetting, reorderSectionSettings } from "@workspace/db/section-settings";
+import { api } from "@/lib/api-client";
 import { logError } from "@/lib/logger";
 
 type Section = { id: string; key: string; label: string; is_visible: boolean; sort_order: number };
@@ -16,8 +15,11 @@ export default function SectionOrderManager() {
   const { toast } = useToast();
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["sectionSettings"],
-    queryFn: () => listSectionSettings(getSupabase()),
-    enabled: isSupabaseConfigured,
+    queryFn: async () => {
+      const res = await api.sectionSettings.list();
+      if (!res.success) throw new Error(res.message);
+      return res.data;
+    },
   });
   const [sections, setSections] = useState<Section[]>([]);
   const [dragId, setDragId] = useState<string | null>(null);
@@ -58,9 +60,11 @@ export default function SectionOrderManager() {
         .filter(s => originalDataRef.current.find(o => o.id === s.id)?.is_visible !== s.is_visible)
         .map(s => ({ id: s.id, is_visible: s.is_visible }));
 
-      await reorderSectionSettings(getSupabase(), items);
+      const reorderRes = await api.sectionSettings.reorder(items);
+      if (!reorderRes.success) throw new Error(reorderRes.message);
       for (const v of visChanges) {
-        await updateSectionSetting(getSupabase(), v.id, { is_visible: v.is_visible });
+        const updateRes = await api.sectionSettings.update(v.id, { is_visible: v.is_visible });
+        if (!updateRes.success) throw new Error(updateRes.message);
       }
 
       originalDataRef.current = [...sections];

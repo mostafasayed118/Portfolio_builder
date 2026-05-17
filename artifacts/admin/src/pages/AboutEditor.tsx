@@ -8,8 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
-import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
-import { fetchAboutContent, upsertAboutContent, type AboutContent } from "@workspace/db/about";
+import { api } from "@/lib/api-client";
 import { toast } from "sonner";
 
 type AboutFormData = {
@@ -159,10 +158,13 @@ function LivePreview({ data }: { data: LivePreviewData }) {
 
 export default function AboutEditor() {
   const queryClient = useQueryClient();
-  const { data: aboutData, isLoading, error, refetch } = useQuery<AboutContent | null>({
+  const { data: aboutData, isLoading, error, refetch } = useQuery<any>({
     queryKey: ["about"],
-    queryFn: () => fetchAboutContent(getSupabase()),
-    enabled: isSupabaseConfigured,
+    queryFn: async () => {
+      const res = await api.about.get();
+      if (!res.success) throw new Error(res.message);
+      return res.data ?? null;
+    },
   });
 
   const { register, control, handleSubmit, reset, formState: { isDirty } } = useForm<AboutFormData>({
@@ -200,13 +202,14 @@ export default function AboutEditor() {
 
   const saveMutation = useMutation({
     mutationFn: async (data: AboutFormData) => {
-      const result = await upsertAboutContent(getSupabase(), {
+      const res = await api.about.update({
         bio: data.bio,
         education: data.education,
         languages: data.languages,
         interests: data.interests,
       });
-      return result;
+      if (!res.success) throw new Error(res.message);
+      return res.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["about"] });

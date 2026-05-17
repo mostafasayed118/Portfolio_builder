@@ -7,6 +7,14 @@ import SectionLabel from "./SectionLabel";
 import { useLanguage } from "@/lib/language";
 import { useLocalized } from "@/hooks/use-localized";
 
+function getLevelLabel(level: number): string {
+  if (level >= 90) return "Native";
+  if (level >= 70) return "Fluent";
+  if (level >= 50) return "Intermediate";
+  if (level >= 30) return "Basic";
+  return "Beginner";
+}
+
 function AboutSkeleton() {
   return (
     <section id="about" className="py-24 px-6 bg-muted/20">
@@ -88,7 +96,11 @@ export default function AboutSection() {
           years: supabaseAbout.education_years,
         },
         languages: Array.isArray(supabaseAbout.languages)
-          ? (supabaseAbout.languages as unknown as Array<{lang: string; level: string; pct: number}>)
+          ? supabaseAbout.languages.map(l => ({
+              lang: l.name,
+              level: getLevelLabel(l.level),
+              pct: Math.min(l.level, 100),
+            }))
           : [],
       }
     : ABOUT;

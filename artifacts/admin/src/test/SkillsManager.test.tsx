@@ -16,11 +16,15 @@ vi.mock("@/lib/supabase", () => ({
   isSupabaseConfigured: true,
 }));
 
-vi.mock("@workspace/db/skills", () => ({
-  listSkills: mockListSkills,
-  createSkill: mockCreateSkill,
-  updateSkill: mockUpdateSkill,
-  deleteSkill: mockDeleteSkill,
+vi.mock("@/lib/api-client", () => ({
+  api: {
+    skills: {
+      list: mockListSkills,
+      create: mockCreateSkill,
+      update: mockUpdateSkill,
+      delete: mockDeleteSkill,
+    },
+  },
 }));
 
 vi.mock("@/hooks/use-toast", () => ({
@@ -62,9 +66,9 @@ const mockSkills = [
 describe("SkillsManager", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockListSkills.mockResolvedValue(mockSkills);
-    mockCreateSkill.mockResolvedValue("new-id");
-    mockDeleteSkill.mockResolvedValue(undefined);
+    mockListSkills.mockResolvedValue({ success: true, data: mockSkills });
+    mockCreateSkill.mockResolvedValue({ success: true });
+    mockDeleteSkill.mockResolvedValue({ success: true });
   });
 
   it("renders skills grouped by category", async () => {
@@ -95,7 +99,6 @@ describe("SkillsManager", () => {
 
     await waitFor(() => {
       expect(mockCreateSkill).toHaveBeenCalledWith(
-        expect.anything(),
         expect.objectContaining({
           name: "Rust",
           category: "Languages",
@@ -117,7 +120,7 @@ describe("SkillsManager", () => {
 
     await waitFor(() => {
       expect(confirmSpy).toHaveBeenCalledWith("Delete this skill?");
-      expect(mockDeleteSkill).toHaveBeenCalledWith({}, "1");
+      expect(mockDeleteSkill).toHaveBeenCalledWith("1");
     });
 
     confirmSpy.mockRestore();

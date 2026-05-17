@@ -10,8 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
 import { Save, RefreshCw, Sun, Moon, Eye, AlertCircle } from "lucide-react";
-import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
-import { getThemeSettings, upsertThemeSettings } from "@workspace/db/theme-settings";
+import { api } from "@/lib/api-client";
 import { logError } from "@/lib/logger";
 
 type ThemeData = {
@@ -174,11 +173,13 @@ function PreviewPalette({ theme, mode }: { theme: ThemeData; mode: "light" | "da
 
 export default function ThemeManager() {
   const { toast } = useToast();
-  const supabase = isSupabaseConfigured ? getSupabase() : null;
   const { data: themeData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["themeSettings"],
-    queryFn: () => getThemeSettings(supabase!),
-    enabled: isSupabaseConfigured,
+    queryFn: async () => {
+      const res = await api.themeSettings.get();
+      if (!res.success) throw new Error(res.message);
+      return res.data;
+    },
   });
   const [theme, setTheme] = useState<ThemeData>(DEFAULTS);
   const [saving, setSaving] = useState(false);
@@ -217,7 +218,7 @@ export default function ThemeManager() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await upsertThemeSettings(getSupabase(), {
+      const res = await api.themeSettings.update({
         mode: theme.mode,
         light_primary: theme.lightPrimary,
         light_accent: theme.lightAccent,
@@ -239,6 +240,7 @@ export default function ThemeManager() {
         dark_ring: theme.darkRing,
         radius: theme.radius,
       });
+      if (!res.success) throw new Error(res.message);
       toast({ title: "Theme saved", description: "Portfolio will reflect changes live." });
     } catch (err) {
       logError("Failed to save theme settings", err, "ThemeManager");

@@ -7,9 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
-import { fetchHeroContent, type HeroContent } from "@workspace/db/hero";
-import { upsertHeroContent } from "@workspace/db/hero-content";
+import { api } from "@/lib/api-client";
 import { toast } from "sonner";
 
 type HeroFormData = {
@@ -139,10 +137,13 @@ function LivePreview({ data }: { data: Partial<HeroFormData> }) {
 
 export default function HeroEditor() {
   const queryClient = useQueryClient();
-  const { data: heroData, isLoading, error, refetch } = useQuery<HeroContent | null>({
+  const { data: heroData, isLoading, error, refetch } = useQuery<any>({
     queryKey: ["hero"],
-    queryFn: () => fetchHeroContent(getSupabase()),
-    enabled: isSupabaseConfigured,
+    queryFn: async () => {
+      const res = await api.hero.get();
+      if (!res.success) throw new Error(res.message);
+      return res.data ?? null;
+    },
   });
 
   const { register, control, handleSubmit, reset, formState: { isDirty } } = useForm<HeroFormData>({
@@ -184,7 +185,7 @@ export default function HeroEditor() {
 
   const saveMutation = useMutation({
     mutationFn: async (data: HeroFormData) => {
-      const result = await upsertHeroContent(getSupabase(), {
+      const res = await api.hero.update({
         name: data.name,
         roles: data.typewriter_lines.filter(l => l.trim()),
         heading: data.subtitle,
@@ -197,7 +198,8 @@ export default function HeroEditor() {
         email: data.social_links.email || undefined,
         stats: data.stats,
       });
-      return result;
+      if (!res.success) throw new Error(res.message);
+      return res.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["hero"] });

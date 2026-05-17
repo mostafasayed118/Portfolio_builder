@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
-import { getContactInfo, upsertContactInfo } from "@workspace/db/contact-info";
+import { api } from "@/lib/api-client";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,8 +18,11 @@ export default function ContactManager() {
   const { toast } = useToast();
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["contactInfo"],
-    queryFn: () => getContactInfo(getSupabase()),
-    enabled: isSupabaseConfigured,
+    queryFn: async () => {
+      const res = await api.contactInfo.get();
+      if (!res.success) throw new Error(res.message);
+      return res.data;
+    },
   });
   const [form, setForm] = useState<ContactData>(DEFAULTS);
   const [saving, setSaving] = useState(false);
@@ -43,7 +45,7 @@ export default function ContactManager() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await upsertContactInfo(getSupabase(), {
+      const res = await api.contactInfo.update({
         email: form.email || null,
         phone: form.phone || null,
         location: form.location || null,
@@ -53,6 +55,7 @@ export default function ContactManager() {
         map_embed_url: form.mapEmbedUrl || null,
         availability_status: form.availabilityStatus || null,
       });
+      if (!res.success) throw new Error(res.message);
       toast({ title: "Contact info saved" });
     } catch (err) { logError("Failed to save contact info", err, "ContactManager"); toast({ title: "Save failed", variant: "destructive" }); }
     finally { setSaving(false); }

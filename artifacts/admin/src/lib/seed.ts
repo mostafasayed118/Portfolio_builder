@@ -5,7 +5,7 @@ import { listSkills, createSkill } from "@workspace/db/skills";
 import { listExperience, createExperience } from "@workspace/db/experience";
 import { listCertifications, createCertificationRow } from "@workspace/db/certifications";
 import { listProjects, createProject } from "@workspace/db/projects";
-import { fetchAboutContent, upsertAboutContent } from "@workspace/db/about";
+import { fetchAboutContent, upsertAboutContent } from "@workspace/db/about-content";
 import type { InsertSkill, InsertExperience, InsertCertification, InsertProject } from "@workspace/supabase/types";
 
 const HERO = {
