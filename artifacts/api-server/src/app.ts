@@ -53,6 +53,8 @@ app.use(cors({
     "http://localhost:5173",
     "http://localhost:5174",
     process.env.VITE_SITE_URL ?? "",
+    process.env.VITE_ADMIN_URL ?? "",
+    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "",
   ].filter(Boolean),
   credentials: true,
 }));
