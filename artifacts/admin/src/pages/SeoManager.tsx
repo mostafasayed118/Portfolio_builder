@@ -8,8 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Save, Search, Globe, AlertCircle, RefreshCw } from "lucide-react";
-import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
-import { getSeoSettings, upsertSeoSettings } from "@workspace/db/seo-settings";
+import { api } from "@/lib/api-client";
 import { logError } from "@/lib/logger";
 
 type SeoData = { title: string; description: string; keywords: string; og_title: string; og_description: string; og_image: string; canonical_url: string; twitterCard: string; twitter_creator: string };
@@ -19,8 +18,11 @@ export default function SeoManager() {
   const { toast } = useToast();
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["seoSettings"],
-    queryFn: () => getSeoSettings(getSupabase()),
-    enabled: isSupabaseConfigured,
+    queryFn: async () => {
+      const res = await api.seoSettings.get();
+      if (!res.success) throw new Error(res.message);
+      return res.data;
+    },
   });
   const [form, setForm] = useState<SeoData>(DEFAULTS);
   const [saving, setSaving] = useState(false);
@@ -48,7 +50,7 @@ export default function SeoManager() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await upsertSeoSettings(getSupabase(), {
+      const res = await api.seoSettings.update({
         title: form.title,
         description: form.description,
         keywords: form.keywords,
@@ -59,6 +61,7 @@ export default function SeoManager() {
         twitter_card: form.twitterCard,
         twitter_creator: form.twitter_creator || null,
       });
+      if (!res.success) throw new Error(res.message);
       toast({ title: "SEO settings saved" });
     } catch (err) { logError("Failed to save SEO settings", err, "SeoManager"); toast({ title: "Save failed", variant: "destructive" }); }
     finally { setSaving(false); }

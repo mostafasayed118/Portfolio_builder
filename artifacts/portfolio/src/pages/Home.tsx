@@ -34,7 +34,7 @@ export default function Home() {
     if (isSupabaseConfigured) {
       const supabase = getSupabase();
       if (supabase) {
-        trackEvent(supabase, "page_view", "/");
+        trackEvent(supabase, "page_view", "/").catch(() => {});
       }
     }
   }, []);

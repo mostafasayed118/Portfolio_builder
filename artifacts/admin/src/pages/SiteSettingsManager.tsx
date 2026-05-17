@@ -11,9 +11,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Save, AlertCircle, RefreshCw, Globe, Check, X, AlertTriangle } from "lucide-react";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
-import { getSiteSettings, upsertSiteSettings, updateLanguageSettings } from "@workspace/db/site-settings";
+import { api } from "@/lib/api-client";
 import { logError } from "@/lib/logger";
-import type { LanguageMode } from "@workspace/db/site-settings";
+
+type LanguageMode = "en_only" | "ar_only" | "both";
 
 type SiteData = { site_name: string; site_tagline: string; footer_text: string; copyright_text: string; logo_text: string; default_theme: "light" | "dark" };
 const DEFAULTS: SiteData = { site_name: "Mustafa Sayed", site_tagline: "Data Engineer", footer_text: "", copyright_text: "", logo_text: "MS", default_theme: "dark" };
@@ -85,7 +86,11 @@ export default function SiteSettingsManager() {
   const { toast } = useToast();
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["siteSettings"],
-    queryFn: () => getSiteSettings(getSupabase()),
+    queryFn: async () => {
+      const res = await api.siteSettings.get();
+      if (!res.success) throw new Error(res.message);
+      return res.data;
+    },
     enabled: isSupabaseConfigured,
   });
   const [form, setForm] = useState<SiteData>(DEFAULTS);
@@ -117,7 +122,8 @@ export default function SiteSettingsManager() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await upsertSiteSettings(getSupabase(), form);
+      const res = await api.siteSettings.update(form);
+      if (!res.success) throw new Error(res.message);
       toast({ title: "Site settings saved" });
     } catch (err) {
       logError("Failed to save site settings", err, "SiteSettingsManager");
@@ -130,12 +136,12 @@ export default function SiteSettingsManager() {
   const handleSaveLanguage = async () => {
     setSavingLang(true);
     try {
-      const result = await updateLanguageSettings(getSupabase(), langForm);
+      const result = await api.siteSettings.updateLanguage(langForm);
       if (result.success) {
         toast({ title: "Language settings saved" });
         queryClient.invalidateQueries({ queryKey: ["siteSettings"] });
       } else {
-        toast({ title: result.error ?? "Save failed", variant: "destructive" });
+        toast({ title: result.message ?? "Save failed", variant: "destructive" });
       }
     } catch (err) {
       logError("Failed to save language settings", err, "SiteSettingsManager");

@@ -16,11 +16,15 @@ vi.mock("@/lib/supabase", () => ({
   isSupabaseConfigured: true,
 }));
 
-vi.mock("@workspace/db/projects", () => ({
-  listProjects: mockListProjects,
-  createProject: mockCreateProject,
-  updateProject: mockUpdateProject,
-  deleteProject: mockDeleteProject,
+vi.mock("@/lib/api-client", () => ({
+  api: {
+    projects: {
+      list: mockListProjects,
+      create: mockCreateProject,
+      update: mockUpdateProject,
+      delete: mockDeleteProject,
+    },
+  },
 }));
 
 vi.mock("@/hooks/use-toast", () => ({
@@ -68,10 +72,10 @@ const mockProjects = [
 describe("ProjectsManager", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockListProjects.mockResolvedValue(mockProjects);
-    mockCreateProject.mockResolvedValue("new-id");
-    mockUpdateProject.mockResolvedValue(undefined);
-    mockDeleteProject.mockResolvedValue(undefined);
+    mockListProjects.mockResolvedValue({ success: true, data: mockProjects });
+    mockCreateProject.mockResolvedValue({ success: true });
+    mockUpdateProject.mockResolvedValue({ success: true });
+    mockDeleteProject.mockResolvedValue({ success: true });
   });
 
   it("renders projects table", async () => {
@@ -107,7 +111,7 @@ describe("ProjectsManager", () => {
 
     await waitFor(() => {
       expect(mockCreateProject).toHaveBeenCalled();
-      const payload = mockCreateProject.mock.calls[0][1];
+      const payload = mockCreateProject.mock.calls[0][0];
       expect(payload.slug).toBe("my-amazing-project");
     });
   });
@@ -127,7 +131,7 @@ describe("ProjectsManager", () => {
 
     await waitFor(() => {
       expect(mockCreateProject).toHaveBeenCalled();
-      const payload = mockCreateProject.mock.calls[0][1];
+      const payload = mockCreateProject.mock.calls[0][0];
       expect(payload.title).toBe("Test Project");
       expect(payload.slug).toBe("test-project");
     });
@@ -148,7 +152,6 @@ describe("ProjectsManager", () => {
 
     await waitFor(() => {
       expect(mockCreateProject).toHaveBeenCalledWith(
-        expect.anything(),
         expect.objectContaining({
           title: "New Project",
           slug: "new-project",
@@ -170,7 +173,7 @@ describe("ProjectsManager", () => {
 
     await waitFor(() => {
       expect(confirmSpy).toHaveBeenCalledWith("Delete?");
-      expect(mockDeleteProject).toHaveBeenCalledWith({}, "1");
+      expect(mockDeleteProject).toHaveBeenCalledWith("1");
     });
 
     confirmSpy.mockRestore();

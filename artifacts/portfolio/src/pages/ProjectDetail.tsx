@@ -110,7 +110,7 @@ export default function ProjectDetail({ slug }: ProjectDetailProps) {
       trackEvent(getSupabase(), "project_view", `/projects/${project.slug}`, {
         project_slug: project.slug,
         title: project.title,
-      });
+      }).catch(() => {});
     }
   }, [project?.slug]);
 

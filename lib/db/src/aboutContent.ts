@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AboutContent, InsertAboutContent } from "@workspace/supabase/types";
 
+export type { AboutContent };
+
 export async function getAboutContent(
   supabase: SupabaseClient,
 ): Promise<AboutContent | null> {
@@ -12,6 +14,8 @@ export async function getAboutContent(
   if (error) throw error;
   return data;
 }
+
+export const fetchAboutContent = getAboutContent;
 
 export async function upsertAboutContent(
   supabase: SupabaseClient,

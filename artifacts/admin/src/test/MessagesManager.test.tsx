@@ -6,15 +6,11 @@ import MessagesManager from "@/pages/MessagesManager";
 const {
   mockListMessages,
   mockMarkMessageRead,
-  mockMarkAllMessagesRead,
   mockDeleteMessage,
-  mockReplyToMessage,
 } = vi.hoisted(() => ({
   mockListMessages: vi.fn(),
   mockMarkMessageRead: vi.fn(),
-  mockMarkAllMessagesRead: vi.fn(),
   mockDeleteMessage: vi.fn(),
-  mockReplyToMessage: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase", () => ({
@@ -22,12 +18,15 @@ vi.mock("@/lib/supabase", () => ({
   isSupabaseConfigured: true,
 }));
 
-vi.mock("@workspace/db/messages", () => ({
-  listMessages: mockListMessages,
-  markMessageRead: mockMarkMessageRead,
-  markAllMessagesRead: mockMarkAllMessagesRead,
-  deleteMessage: mockDeleteMessage,
-  replyToMessage: mockReplyToMessage,
+vi.mock("@/lib/api-client", () => ({
+  api: {
+    messages: {
+      list: mockListMessages,
+      unreadCount: vi.fn(),
+      markRead: mockMarkMessageRead,
+      delete: mockDeleteMessage,
+    },
+  },
 }));
 
 vi.mock("@/hooks/use-toast", () => ({
@@ -69,9 +68,9 @@ const mockMessages = [
 describe("MessagesViewer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockListMessages.mockResolvedValue(mockMessages);
-    mockMarkMessageRead.mockResolvedValue(undefined);
-    mockDeleteMessage.mockResolvedValue(undefined);
+    mockListMessages.mockResolvedValue({ success: true, data: mockMessages });
+    mockMarkMessageRead.mockResolvedValue({ success: true });
+    mockDeleteMessage.mockResolvedValue({ success: true });
   });
 
   it("renders messages table", async () => {
@@ -113,7 +112,7 @@ describe("MessagesViewer", () => {
     await userEvent.click(markReadBtn);
 
     await waitFor(() => {
-      expect(mockMarkMessageRead).toHaveBeenCalledWith(expect.anything(), "1");
+      expect(mockMarkMessageRead).toHaveBeenCalledWith("1");
     });
   });
 
@@ -128,14 +127,14 @@ describe("MessagesViewer", () => {
 
     await waitFor(() => {
       expect(confirmSpy).toHaveBeenCalledWith("Delete message?");
-      expect(mockDeleteMessage).toHaveBeenCalledWith(expect.anything(), "1");
+      expect(mockDeleteMessage).toHaveBeenCalledWith("1");
     });
 
     confirmSpy.mockRestore();
   });
 
   it("shows empty state when no messages", async () => {
-    mockListMessages.mockResolvedValue([]);
+    mockListMessages.mockResolvedValue({ success: true, data: [] });
 
     renderWithProviders(<MessagesManager />);
 

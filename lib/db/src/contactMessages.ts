@@ -17,16 +17,28 @@ export interface ContactMessageInput {
   message: string;
 }
 
+function mapRow(row: any): ContactMessage {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    subject: row.subject ?? null,
+    message: row.message,
+    is_read: row.status === "unread",
+    created_at: row.created_at,
+  };
+}
+
 export async function insertContactMessage(
   supabase: SupabaseClient,
   data: ContactMessageInput,
 ): Promise<{ success: boolean; error?: string }> {
-  const { error } = await supabase.from("contact_messages").insert({
+  const { error } = await supabase.from("messages").insert({
     name: data.name,
     email: data.email,
     subject: data.subject ?? null,
     message: data.message,
-    is_read: false,
+    status: "unread",
     created_at: new Date().toISOString(),
   });
 
@@ -41,21 +53,21 @@ export async function listContactMessages(
   supabase: SupabaseClient,
 ): Promise<ContactMessage[]> {
   const { data, error } = await supabase
-    .from("contact_messages")
+    .from("messages")
     .select("*")
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []).map(mapRow);
 }
 
 export async function unreadContactMessageCount(
   supabase: SupabaseClient,
 ): Promise<number> {
   const { count, error } = await supabase
-    .from("contact_messages")
+    .from("messages")
     .select("*", { count: "exact", head: true })
-    .eq("is_read", false);
+    .eq("status", "unread");
 
   if (error) throw error;
   return count ?? 0;
@@ -66,8 +78,8 @@ export async function markContactMessageRead(
   id: string,
 ): Promise<void> {
   const { error } = await supabase
-    .from("contact_messages")
-    .update({ is_read: true })
+    .from("messages")
+    .update({ status: "read" })
     .eq("id", id);
 
   if (error) throw error;
@@ -78,7 +90,7 @@ export async function deleteContactMessage(
   id: string,
 ): Promise<void> {
   const { error } = await supabase
-    .from("contact_messages")
+    .from("messages")
     .delete()
     .eq("id", id);
 
@@ -90,8 +102,8 @@ export async function markContactMessageUnread(
   id: string,
 ): Promise<void> {
   const { error } = await supabase
-    .from("contact_messages")
-    .update({ is_read: false })
+    .from("messages")
+    .update({ status: "unread" })
     .eq("id", id);
 
   if (error) throw error;
@@ -102,7 +114,7 @@ export async function bulkDeleteContactMessages(
   ids: string[],
 ): Promise<void> {
   const { error } = await supabase
-    .from("contact_messages")
+    .from("messages")
     .delete()
     .in("id", ids);
 

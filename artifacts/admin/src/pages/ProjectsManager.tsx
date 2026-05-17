@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
-import { listProjects, createProject, updateProject, deleteProject } from "@workspace/db/projects";
+import { api } from "@/lib/api-client";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,8 +30,11 @@ export default function ProjectsManager() {
   const { toast } = useToast();
   const { data: projects, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["projects"],
-    queryFn: () => listProjects(getSupabase()),
-    enabled: isSupabaseConfigured,
+    queryFn: async () => {
+      const res = await api.projects.list();
+      if (!res.success) throw new Error(res.message);
+      return res.data;
+    },
   });
   const [editing, setEditing] = useState<typeof BLANK & { id?: string } | null>(null);
   const [isNew, setIsNew] = useState(false);
@@ -62,10 +64,15 @@ export default function ProjectsManager() {
     setSaving(true);
     try {
       const { id: editId, ...rest } = editing;
-      const slug = rest.title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const baseSlug = rest.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const slug = projects?.some(p => p.id !== editId && (p as any).slug === baseSlug)
+        ? `${baseSlug}-${Date.now().toString(36)}`
+        : baseSlug;
       const payload = { ...rest, slug, live_url: rest.live_url || null, metrics: rest.metrics?.length ? rest.metrics : undefined };
-      if (isNew) await createProject(getSupabase(), payload);
-      else await updateProject(getSupabase(), editId!, payload);
+      let res;
+      if (isNew) res = await api.projects.create(payload);
+      else res = await api.projects.update(editId!, payload);
+      if (!res.success) throw new Error(res.message);
       toast({ title: isNew ? "Project created" : "Project updated" });
       setEditing(null);
     } catch (err) { logError("Failed to save project", err, "ProjectsManager"); toast({ title: "Failed", variant: "destructive" }); }
@@ -123,13 +130,13 @@ export default function ProjectsManager() {
                 </div>
                 <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{p.description}</p>
                 <div className="flex flex-wrap gap-1 mt-2">
-                  {p.tech_stack.slice(0, 5).map(t => <Badge key={t} variant="secondary" className="text-xs px-1.5 py-0">{t}</Badge>)}
+                  {p.tech_stack.slice(0, 5).map((t: string) => <Badge key={t} variant="secondary" className="text-xs px-1.5 py-0">{t}</Badge>)}
                   {p.tech_stack.length > 5 && <Badge variant="secondary" className="text-xs px-1.5 py-0">+{p.tech_stack.length - 5}</Badge>}
                 </div>
               </div>
               <div className="flex gap-1 shrink-0">
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { const { slug: _, image_url: __, tags: ___, created_at: ____, updated_at: _____, ...rest } = p; openEdit({ ...rest, category: p.category ?? "", featured: p.featured ?? false, is_published: p.is_published ?? false, github_url: p.github_url ?? "", live_url: p.live_url ?? undefined, metrics: p.metrics ?? [], sort_order: p.sort_order ?? 0 }); }}><Pencil size={13} /></Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { if (!confirm("Delete?")) return; try { await deleteProject(getSupabase(), p.id); toast({ title: "Deleted" }); } catch (err) { logError("Failed to delete project", err, "ProjectsManager"); toast({ title: "Delete failed", variant: "destructive" }); } }}><Trash2 size={13} /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { if (!confirm("Delete?")) return; try { const res = await api.projects.delete(p.id); if (!res.success) throw new Error(res.message); toast({ title: "Deleted" }); } catch (err) { logError("Failed to delete project", err, "ProjectsManager"); toast({ title: "Delete failed", variant: "destructive" }); } }}><Trash2 size={13} /></Button>
               </div>
             </CardContent>
           </Card>

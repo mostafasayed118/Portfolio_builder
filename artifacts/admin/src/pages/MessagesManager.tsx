@@ -26,15 +26,7 @@ import {
   AlertCircle,
   RefreshCw,
 } from "lucide-react";
-import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
-import {
-  listMessages,
-  unreadCount,
-  markMessageRead,
-  markAllMessagesRead,
-  deleteMessage,
-  replyToMessage,
-} from "@workspace/db/messages";
+import { api } from "@/lib/api-client";
 
 type MsgStatus = "unread" | "read" | "archived";
 type Msg = {
@@ -306,11 +298,13 @@ function MessagesUI({
 
 export default function MessagesManager() {
   const { toast } = useToast();
-  const supabase = getSupabase();
   const { data: messages, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["messages"],
-    queryFn: () => listMessages(supabase),
-    enabled: isSupabaseConfigured,
+    queryFn: async () => {
+      const res = await api.messages.list();
+      if (!res.success) throw new Error(res.message);
+      return res.data;
+    },
   });
 
   const [replyTo, setReplyTo] = useState<Msg | null>(null);
@@ -350,25 +344,15 @@ export default function MessagesManager() {
 
   const sendReply = async () => {
     if (!replyTo) return;
-    const mailto = await replyToMessage(replyTo.email, subject, body);
+    const mailto = `mailto:${replyTo.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.location.href = mailto;
-    if (replyTo.id) await markMessageRead(supabase, replyTo.id);
+    if (replyTo.id) {
+      const res = await api.messages.markRead(replyTo.id);
+      if (!res.success) throw new Error(res.message);
+    }
     setReplyTo(null);
     toast({ title: "Reply opened in email app" });
   };
-
-  if (!isSupabaseConfigured) {
-    return (
-      <div className="max-w-3xl mx-auto space-y-6">
-        <h1 className="text-2xl font-bold">Messages</h1>
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground text-sm">
-            Loading messages...
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   if (isLoading) {
     return (
@@ -415,15 +399,20 @@ export default function MessagesManager() {
       sendReply={sendReply}
       setReplyTo={setReplyTo}
       onMarkRead={async (msg) => {
-        if (msg.id) await markMessageRead(supabase, msg.id);
+        if (msg.id) {
+          const res = await api.messages.markRead(msg.id);
+          if (!res.success) throw new Error(res.message);
+        }
       }}
       onMarkAllRead={async () => {
-        await markAllMessagesRead(supabase);
+        const msgs = (messages as Msg[]) || [];
+        await Promise.all(msgs.filter(m => isUnread(m)).map(m => api.messages.markRead(m.id)));
         toast({ title: "All marked as read" });
       }}
       onDelete={async (msg) => {
         if (msg.id && confirm("Delete message?")) {
-          await deleteMessage(supabase, msg.id);
+          const res = await api.messages.delete(msg.id);
+          if (!res.success) throw new Error(res.message);
           toast({ title: "Deleted" });
         }
       }}

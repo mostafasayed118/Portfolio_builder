@@ -4,8 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./hero": "./src/hero.ts",
-    "./about": "./src/about.ts",
+
     "./hero-content": "./src/heroContent.ts",
     "./about-content": "./src/aboutContent.ts",
     "./skills": "./src/skills.ts",

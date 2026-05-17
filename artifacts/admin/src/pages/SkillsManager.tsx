@@ -11,8 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Code2, AlertCircle, RefreshCw } from "lucide-react";
-import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
-import { listSkills, createSkill, updateSkill, deleteSkill } from "@workspace/db/skills";
+import { api } from "@/lib/api-client";
 import { logError } from "@/lib/logger";
 
 type SkillRow = { id: string; name: string; category: string; proficiency: number; is_visible: boolean; sort_order: number };
@@ -21,7 +20,7 @@ const BLANK = { name: "", category: "", proficiency: 75, is_visible: true, sort_
 
 export default function SkillsManager() {
   const { toast } = useToast();
-  const { data: skills, isLoading, isError, error, refetch } = useQuery({ queryKey: ["skills"], queryFn: () => listSkills(getSupabase()), enabled: isSupabaseConfigured });
+  const { data: skills, isLoading, isError, error, refetch } = useQuery({ queryKey: ["skills"], queryFn: async () => { const res = await api.skills.list(); if (!res.success) throw new Error(res.message); return res.data; } });
 
   const [editing, setEditing] = useState<Partial<SkillRow> | null>(null);
   const [isNew, setIsNew] = useState(false);
@@ -45,11 +44,13 @@ export default function SkillsManager() {
     }
     setSaving(true);
     try {
+      let res;
       if (isNew) {
-        await createSkill(getSupabase(), { name: editing.name!, category: editing.category!, proficiency: editing.proficiency!, is_visible: editing.is_visible!, sort_order: editing.sort_order! });
+        res = await api.skills.create({ name: editing.name!, category: editing.category!, proficiency: editing.proficiency!, is_visible: editing.is_visible!, sort_order: editing.sort_order! });
       } else {
-        await updateSkill(getSupabase(), editing.id!, editing);
+        res = await api.skills.update(editing.id!, editing);
       }
+      if (!res.success) throw new Error(res.message);
       toast({ title: isNew ? "Skill created" : "Skill updated" });
       setEditing(null);
     } catch (err) { logError("Failed to save skill", err, "SkillsManager"); toast({ title: "Failed", variant: "destructive" }); }
@@ -59,7 +60,8 @@ export default function SkillsManager() {
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this skill?")) return;
     try {
-      await deleteSkill(getSupabase(), id);
+      const res = await api.skills.delete(id);
+      if (!res.success) throw new Error(res.message);
       toast({ title: "Skill deleted" });
     } catch (err) {
       logError("Failed to delete skill", err, "SkillsManager");

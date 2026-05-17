@@ -6,8 +6,8 @@ import {
   FolderKanban, Award, Mail, MessageSquare, Search, Layers,
   Settings, ChevronRight, X, Zap, FileText
 } from "lucide-react";
-import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
-import { unreadCount } from "@workspace/db/messages";
+import { isSupabaseConfigured } from "@/lib/supabase";
+import { api } from "@/lib/api-client";
 
 interface NavItem {
   path: string;
@@ -44,8 +44,11 @@ interface Props {
 function UnreadBadge() {
   const { data: count, isError } = useQuery({
     queryKey: ["unreadCount"],
-    queryFn: () => unreadCount(getSupabase()),
-    enabled: isSupabaseConfigured,
+    queryFn: async () => {
+      const res = await api.messages.unreadCount();
+      if (!res.success) throw new Error(res.message);
+      return res.data;
+    },
     retry: 1,
   });
   const n = isError ? 0 : (count ?? 0);

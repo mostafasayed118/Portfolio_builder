@@ -54,3 +54,6 @@ Thumbs.db
 # TestSprite
 testsprite_tests/tmp/
 testsprite_tests/*.log
+testsprite_tests/.env
+
+.vercel

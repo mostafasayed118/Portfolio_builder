@@ -2,10 +2,10 @@ import { doubleCsrf } from "csrf-csrf";
 import type { Request } from "express";
 
 const CSRF_SECRET = process.env.CSRF_SECRET;
-if (!CSRF_SECRET && process.env.NODE_ENV === "production") {
-  throw new Error("CSRF_SECRET environment variable is required in production");
+if (!CSRF_SECRET) {
+  throw new Error("CSRF_SECRET environment variable is required");
 }
-const getSecret = (): string | string[] => CSRF_SECRET ?? "dev-secret-do-not-use-in-production";
+const getSecret = (): string | string[] => CSRF_SECRET;
 
 export const {
   generateCsrfToken,

@@ -8,8 +8,7 @@ import { Slider } from "@/components/ui/slider";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Save, RefreshCw, Eye, AlertCircle } from "lucide-react";
-import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
-import { getTypographySettings, upsertTypographySettings } from "@workspace/db/typography-settings";
+import { api } from "@/lib/api-client";
 import { logError } from "@/lib/logger";
 
 type TypoData = {
@@ -51,8 +50,11 @@ export default function TypographyManager() {
   const { toast } = useToast();
   const { data: typoData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["typographySettings"],
-    queryFn: () => getTypographySettings(getSupabase()),
-    enabled: isSupabaseConfigured,
+    queryFn: async () => {
+      const res = await api.typographySettings.get();
+      if (!res.success) throw new Error(res.message);
+      return res.data;
+    },
   });
   const [typo, setTypo] = useState<TypoData>(DEFAULTS);
   const [saving, setSaving] = useState(false);
@@ -89,7 +91,7 @@ export default function TypographyManager() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await upsertTypographySettings(getSupabase(), {
+      const res = await api.typographySettings.update({
         body_font: typo.body_font,
         display_font: typo.display_font,
         body_font_url: typo.body_font_url || null,
@@ -101,6 +103,7 @@ export default function TypographyManager() {
         font_weight_body: typo.font_weight_body,
         font_weight_heading: typo.font_weight_heading,
       });
+      if (!res.success) throw new Error(res.message);
       toast({ title: "Typography saved", description: "Changes live on the portfolio." });
     } catch (err) {
       logError("Failed to save typography settings", err, "TypographyManager");

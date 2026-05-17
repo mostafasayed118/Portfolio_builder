@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
-import { listCertificationRows, createCertificationRow, updateCertificationRow, deleteCertification, type CertificationRow } from "@workspace/db/certifications";
+import { api } from "@/lib/api-client";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,7 +13,24 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, AlertCircle, RefreshCw } from "lucide-react";
 import { logError } from "@/lib/logger";
 
-type Cert = CertificationRow;
+type Cert = {
+  id: string;
+  title: string;
+  issuer: string;
+  title_ar: string | null;
+  issuer_ar: string | null;
+  issuer_logo: string | null;
+  date: string;
+  date_sort: string | null;
+  category: string | null;
+  credential_url: string | null;
+  sort_order: number;
+  is_published: boolean;
+  credential_id: string | null;
+  created_at: string;
+  updated_at: string;
+  skills: string[];
+};
 
 const EMPTY_CERT: Cert = { 
   id: "", 
@@ -37,10 +53,13 @@ const EMPTY_CERT: Cert = {
 
 export default function CertificationsManager() {
   const { toast } = useToast();
-  const { data: items, isLoading, isError, error, refetch } = useQuery<CertificationRow[]>({
+  const { data: items, isLoading, isError, error, refetch } = useQuery<any>({
     queryKey: ["certifications"],
-    queryFn: () => listCertificationRows(getSupabase()),
-    enabled: isSupabaseConfigured,
+    queryFn: async () => {
+      const res = await api.certifications.list();
+      if (!res.success) throw new Error(res.message);
+      return res.data;
+    },
   });
   const [editing, setEditing] = useState<Cert | null>(null);
   const [isNew, setIsNew] = useState(false);
@@ -65,18 +84,20 @@ export default function CertificationsManager() {
         is_published: editing.is_published ?? true,
         credential_id: editing.credential_id || null,
       };
+      let res;
       if (isNew) {
-        await createCertificationRow(getSupabase(), rowData);
+        res = await api.certifications.create(rowData);
       } else {
-        await updateCertificationRow(getSupabase(), editing.id!, rowData);
+        res = await api.certifications.update(editing.id!, rowData);
       }
+      if (!res.success) throw new Error(res.message);
       toast({ title: isNew ? "Created" : "Updated" });
       setEditing(null);
     } catch (err) { logError("Failed to save certification", err, "CertificationsManager"); toast({ title: "Failed", variant: "destructive" }); }
     finally { setSaving(false); }
   };
 
-  const cats = [...new Set(items?.map(c => c.category) ?? [])];
+  const cats = [...new Set(items?.map((c: any) => c.category) ?? [])] as string[];
 
   if (isLoading) {
     return (
@@ -117,7 +138,7 @@ export default function CertificationsManager() {
         <div key={cat}>
           <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">{cat}</h2>
           <div className="space-y-2">
-            {items?.filter(c => c.category === cat).map(cert => (
+            {items?.filter((c: any) => c.category === cat).map((cert: any) => (
               <Card key={cert.id} className={!cert.is_published ? "opacity-60" : ""}>
                 <CardContent className="pt-3 pb-3 flex items-center gap-3">
                   <span className="text-2xl">{cert.issuer_logo ?? ""}</span>
@@ -127,7 +148,7 @@ export default function CertificationsManager() {
                   </div>
                   <div className="flex gap-1">
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(cert)}><Pencil size={12} /></Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={async () => { if (!confirm("Delete?")) return; try { await deleteCertification(getSupabase(), cert.id); toast({ title: "Deleted" }); } catch (err) { logError("Failed to delete certification", err, "CertificationsManager"); toast({ title: "Delete failed", variant: "destructive" }); } }}><Trash2 size={12} /></Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={async () => { if (!confirm("Delete?")) return; try { const res = await api.certifications.delete(cert.id); if (!res.success) throw new Error(res.message); toast({ title: "Deleted" }); } catch (err) { logError("Failed to delete certification", err, "CertificationsManager"); toast({ title: "Delete failed", variant: "destructive" }); } }}><Trash2 size={12} /></Button>
                   </div>
                 </CardContent>
               </Card>

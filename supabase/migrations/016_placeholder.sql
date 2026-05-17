@@ -1,0 +1,3 @@
+-- Placeholder file — migration 016 was not created (skipped).
+-- History: 015 created indexes, 020 adds bilingual content columns.
+-- This file exists only to maintain sequential numbering for migration tools.

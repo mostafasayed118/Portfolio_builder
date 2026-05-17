@@ -17,12 +17,13 @@ vi.mock("@/lib/supabase", () => ({
   isSupabaseConfigured: true,
 }));
 
-vi.mock("@workspace/db/hero", () => ({
-  fetchHeroContent: mockFetchHeroContent,
-}));
-
-vi.mock("@workspace/db/hero-content", () => ({
-  upsertHeroContent: mockUpsertHeroContent,
+vi.mock("@/lib/api-client", () => ({
+  api: {
+    hero: {
+      get: mockFetchHeroContent,
+      update: mockUpsertHeroContent,
+    },
+  },
 }));
 
 vi.mock("sonner", () => ({
@@ -55,8 +56,8 @@ const mockHeroData = {
 describe("HeroEditor", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockFetchHeroContent.mockResolvedValue(mockHeroData);
-    mockUpsertHeroContent.mockResolvedValue("1");
+    mockFetchHeroContent.mockResolvedValue({ success: true, data: mockHeroData });
+    mockUpsertHeroContent.mockResolvedValue({ success: true });
   });
 
   it("renders form fields correctly", async () => {
