@@ -27,9 +27,13 @@ vi.mock("@/lib/api-client", () => ({
   },
 }));
 
-vi.mock("@/hooks/use-toast", () => ({
-  useToast: () => ({ toast: vi.fn() }),
-}));
+vi.mock("@workspace/ui", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@workspace/ui")>();
+  return {
+    ...actual,
+    useToast: () => ({ toast: vi.fn() }),
+  };
+});
 
 function renderWithProviders(ui: React.ReactElement) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -108,21 +112,18 @@ describe("SkillsManager", () => {
   });
 
   it("confirms before deleting skill", async () => {
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
-    const { container } = renderWithProviders(<SkillsManager />);
+    renderWithProviders(<SkillsManager />);
 
     await screen.findByText("Skills Manager");
 
-    const deleteBtn = container.querySelector(
-      "button.text-destructive",
-    ) as HTMLElement;
-    await userEvent.click(deleteBtn);
+    const deleteBtns = screen.getAllByRole("button", { name: /delete skill/i });
+    await userEvent.click(deleteBtns[0]);
+
+    const dialog = await screen.findByRole("alertdialog");
+    await userEvent.click(within(dialog).getByText("Delete"));
 
     await waitFor(() => {
-      expect(confirmSpy).toHaveBeenCalledWith("Delete this skill?");
       expect(mockDeleteSkill).toHaveBeenCalledWith("1");
     });
-
-    confirmSpy.mockRestore();
   });
 });

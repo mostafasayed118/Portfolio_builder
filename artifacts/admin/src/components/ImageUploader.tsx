@@ -1,7 +1,7 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Upload, X, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@workspace/ui";
+import { Button } from "@workspace/ui";
 
 interface UploadedImage {
   id: string;
@@ -19,6 +19,8 @@ interface ImageUploaderProps {
   existingImages?: { id: string; url: string }[];
 }
 
+const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
+
 export default function ImageUploader({
   entityType,
   entityId,
@@ -30,12 +32,17 @@ export default function ImageUploader({
 }: ImageUploaderProps) {
   const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
+  const xhrRef = useRef<XMLHttpRequest | null>(null);
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [uploaded, setUploaded] = useState<UploadedImage[]>([]);
   const [error, setError] = useState<string | null>(null);
   const dragCounter = useRef(0);
+
+  useEffect(() => {
+    return () => { xhrRef.current?.abort(); };
+  }, []);
 
   const currentCount = (existingImages?.length ?? 0) + uploaded.length;
 
@@ -78,7 +85,8 @@ export default function ImageUploader({
           }
         };
         xhr.onerror = () => reject(new Error("Network error"));
-        xhr.open("POST", "/api/v1/images/upload");
+        xhr.open("POST", `${API_BASE}/api/v1/images/upload`);
+        xhrRef.current = xhr;
         xhr.send(formData);
       });
 
@@ -181,19 +189,19 @@ export default function ImageUploader({
 
       {/* Uploaded images */}
       {uploaded.length > 0 && (
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
           {uploaded.map((img, i) => (
             <div key={img.id} className="relative group aspect-square rounded-lg overflow-hidden border bg-muted">
               <img src={img.url} alt="" className="w-full h-full object-cover" />
               <button
                 onClick={() => removeUploaded(i)}
-                className="absolute top-1 right-1 h-6 w-6 rounded-full bg-background/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute top-1 right-1 h-8 w-8 rounded-full bg-background/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                 aria-label="Remove image"
               >
-                <X size={12} />
+                <X size={14} />
               </button>
               <div className="absolute bottom-1 left-1">
-                <CheckCircle size={14} className="text-green-500" />
+                <CheckCircle size={14} className="text-emerald-500" />
               </div>
             </div>
           ))}
@@ -202,7 +210,7 @@ export default function ImageUploader({
 
       {/* Existing images */}
       {existingImages && existingImages.length > 0 && (
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
           {existingImages.map((img) => (
             <div key={img.id} className="aspect-square rounded-lg overflow-hidden border bg-muted">
               <img src={img.url} alt="" className="w-full h-full object-cover" />

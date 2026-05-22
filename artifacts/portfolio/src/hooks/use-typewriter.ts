@@ -17,13 +17,20 @@ export function useTypewriter(
   const rafRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(0);
 
+  const phaseRef = useRef(phase);
+  const textIndexRef = useRef(textIndex);
+  const charIndexRef = useRef(charIndex);
+  phaseRef.current = phase;
+  textIndexRef.current = textIndex;
+  charIndexRef.current = charIndex;
+
   useEffect(() => {
     if (!texts.length) return;
 
     const tick = (now: number) => {
       const elapsed = now - lastTimeRef.current;
       const delay =
-        phase === "pausing" ? pauseMs : phase === "typing" ? typingSpeed : deletingSpeed;
+        phaseRef.current === "pausing" ? pauseMs : phaseRef.current === "typing" ? typingSpeed : deletingSpeed;
 
       if (elapsed < delay) {
         rafRef.current = requestAnimationFrame(tick);
@@ -31,20 +38,20 @@ export function useTypewriter(
       }
       lastTimeRef.current = now;
 
-      const currentText = texts[textIndex];
+      const currentText = texts[textIndexRef.current];
 
-      if (phase === "typing") {
-        if (charIndex < currentText.length) {
-          setDisplayed(currentText.slice(0, charIndex + 1));
+      if (phaseRef.current === "typing") {
+        if (charIndexRef.current < currentText.length) {
+          setDisplayed(currentText.slice(0, charIndexRef.current + 1));
           setCharIndex((c) => c + 1);
         } else {
           setPhase("pausing");
         }
-      } else if (phase === "pausing") {
+      } else if (phaseRef.current === "pausing") {
         setPhase("deleting");
       } else {
-        if (charIndex > 0) {
-          setDisplayed(currentText.slice(0, charIndex - 1));
+        if (charIndexRef.current > 0) {
+          setDisplayed(currentText.slice(0, charIndexRef.current - 1));
           setCharIndex((c) => c - 1);
         } else {
           setTextIndex((i) => (i + 1) % texts.length);
@@ -59,7 +66,7 @@ export function useTypewriter(
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [texts, phase, textIndex, charIndex, typingSpeed, deletingSpeed, pauseMs]);
+  }, [texts, typingSpeed, deletingSpeed, pauseMs]);
 
   return displayed;
 }

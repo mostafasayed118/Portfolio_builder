@@ -1,0 +1,391 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2026-05-20T00:00:00.000Z" agent="OpenClaude" version="24.0.0">
+  <diagram id="portfolio-fixer-arch" name="Portfolio Fixer Architecture">
+    <mxGraphModel dx="1422" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ==================== TITLE ==================== -->
+        <mxCell id="title" value="&lt;font style=&quot;font-size:24px;&quot;&gt;&lt;b&gt;Portfolio Fixer — System Architecture&lt;/b&gt;&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="500" y="20" width="500" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== EXTERNAL SERVICES ==================== -->
+        <mxCell id="ext-label" value="&lt;b&gt;External Services&lt;/b&gt;" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=14;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="40" y="70" width="200" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Supabase -->
+        <mxCell id="supabase" value="&lt;b&gt;Supabase&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;&quot;&gt;PostgreSQL + Storage + Auth&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3ECF8E;fontColor=#ffffff;strokeColor=#2FA37A;arcSize=20;" vertex="1" parent="1">
+          <mxGeometry x="620" y="480" width="180" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Clerk -->
+        <mxCell id="clerk" value="&lt;b&gt;Clerk&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;&quot;&gt;Identity &amp;amp; JWT Auth&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#6C47FF;fontColor=#ffffff;strokeColor=#5538CC;arcSize=20;" vertex="1" parent="1">
+          <mxGeometry x="380" y="480" width="180" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Vercel -->
+        <mxCell id="vercel" value="&lt;b&gt;Vercel&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;&quot;&gt;Static Hosting&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#000000;fontColor=#ffffff;strokeColor=#333333;arcSize=20;" vertex="1" parent="1">
+          <mxGeometry x="620" y="560" width="180" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Render -->
+        <mxCell id="render" value="&lt;b&gt;Render&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;&quot;&gt;API Server Hosting&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#46E3B7;fontColor=#ffffff;strokeColor=#38B895;arcSize=20;" vertex="1" parent="1">
+          <mxGeometry x="140" y="560" width="180" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== BROWSERS ==================== -->
+        <mxCell id="browsers-label" value="&lt;b&gt;Users&lt;/b&gt;" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=14;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="40" y="100" width="200" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Visitor Browser -->
+        <mxCell id="visitor" value="&lt;b&gt;Visitor Browser&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;&quot;&gt;Public Portfolio&lt;/font&gt;" style="shape=mxgraph.cisco.computers_and_peripherals.web_browser;html=1;whiteSpace=wrap;fontColor=#333333;strokeColor=#666666;fillColor=#dae8fc;" vertex="1" parent="1">
+          <mxGeometry x="60" y="150" width="80" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Admin Browser -->
+        <mxCell id="admin_browser" value="&lt;b&gt;Admin Browser&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;&quot;&gt;CMS Dashboard&lt;/font&gt;" style="shape=mxgraph.cisco.computers_and_peripherals.web_browser;html=1;whiteSpace=wrap;fontColor=#333333;strokeColor=#666666;fillColor=#fff2cc;" vertex="1" parent="1">
+          <mxGeometry x="1220" y="150" width="80" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== DEPLOYMENT BOXES ==================== -->
+
+        <!-- Vercel Deployment Box -->
+        <mxCell id="vercel-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cccccc;dashed=1;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="440" y="120" width="720" height="340" as="geometry" />
+        </mxCell>
+        <mxCell id="vercel-label" value="&lt;b&gt;Vercel (Static SPA Hosting)&lt;/b&gt;" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=12;fontColor=#999999;" vertex="1" parent="1">
+          <mxGeometry x="450" y="125" width="250" height="25" as="geometry" />
+        </mxCell>
+
+        <!-- Render Deployment Box -->
+        <mxCell id="render-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cccccc;dashed=1;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="120" width="370" height="340" as="geometry" />
+        </mxCell>
+        <mxCell id="render-label" value="&lt;b&gt;Render (Server Hosting)&lt;/b&gt;" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=12;fontColor=#999999;" vertex="1" parent="1">
+          <mxGeometry x="50" y="125" width="250" height="25" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== PORTFOLIO SPA ==================== -->
+        <mxCell id="portfolio-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="860" y="155" width="280" height="290" as="geometry" />
+        </mxCell>
+        <mxCell id="portfolio-title" value="&lt;b&gt;Portfolio SPA&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;&quot;&gt;artifacts/portfolio — :5173&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=13;fontColor=#2c5282;" vertex="1" parent="1">
+          <mxGeometry x="880" y="160" width="240" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Portfolio Tech Stack -->
+        <mxCell id="portfolio-tech" value="&lt;font style=&quot;font-size:11px;&quot;&gt;React 19 • Vite • wouter&lt;br&gt;TailwindCSS v4 • TanStack Query&lt;br&gt;framer-motion • i18n&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontColor=#555555;" vertex="1" parent="1">
+          <mxGeometry x="880" y="195" width="240" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Portfolio Sections -->
+        <mxCell id="portfolio-sections" value="&lt;b&gt;Sections&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;&quot;&gt;Hero • About • Projects • Skills&lt;br&gt;Experience • Certifications • Contact&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="885" y="255" width="230" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Portfolio Data Flow -->
+        <mxCell id="portfolio-data" value="&lt;b&gt;Data Access&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;&quot;&gt;Supabase anon key → RLS&lt;br&gt;Static fallback in data/portfolio.ts&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="885" y="325" width="230" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Portfolio Routes -->
+        <mxCell id="portfolio-routes" value="&lt;b&gt;Routes&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;&quot;&gt;/ (Home) • /projects/:slug • 404&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="885" y="390" width="230" height="45" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== ADMIN SPA ==================== -->
+        <mxCell id="admin-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="460" y="155" width="380" height="290" as="geometry" />
+        </mxCell>
+        <mxCell id="admin-title" value="&lt;b&gt;Admin CMS Dashboard&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;&quot;&gt;artifacts/admin — :5174&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=13;fontColor=#b7791f;" vertex="1" parent="1">
+          <mxGeometry x="480" y="160" width="340" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Admin Tech Stack -->
+        <mxCell id="admin-tech" value="&lt;font style=&quot;font-size:11px;&quot;&gt;React 19 • Vite • wouter • Clerk Auth&lt;br&gt;TailwindCSS v4 • TanStack Query&lt;br&gt;react-hook-form • Zod • Uppy&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontColor=#555555;" vertex="1" parent="1">
+          <mxGeometry x="480" y="195" width="340" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Admin Auth Flow -->
+        <mxCell id="admin-auth" value="&lt;b&gt;Auth Flow&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;&quot;&gt;ClerkProvider → ClerkAuthBridge&lt;br&gt;ProtectedRoute (role check)&lt;br&gt;superadmin / admin / visitor&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="485" y="255" width="165" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Admin Pages -->
+        <mxCell id="admin-pages" value="&lt;b&gt;Pages&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;&quot;&gt;Overview • Hero • About&lt;br&gt;Projects • Skills • Experience&lt;br&gt;Certifications • Messages&lt;br&gt;CV • SEO • Theme • Settings&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="660" y="255" width="165" height="105" as="geometry" />
+        </mxCell>
+
+        <!-- Admin Data -->
+        <mxCell id="admin-data" value="&lt;b&gt;Data Access&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;&quot;&gt;Supabase service-role key (bypasses RLS)&lt;br&gt;@workspace/db for all CRUD&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="485" y="345" width="340" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== API SERVER ==================== -->
+        <mxCell id="api-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5f5e3;strokeColor=#82c991;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="60" y="155" width="330" height="290" as="geometry" />
+        </mxCell>
+        <mxCell id="api-title" value="&lt;b&gt;API Server&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;&quot;&gt;artifacts/api-server — :3001&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=13;fontColor=#276749;" vertex="1" parent="1">
+          <mxGeometry x="80" y="160" width="290" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- API Tech Stack -->
+        <mxCell id="api-tech" value="&lt;font style=&quot;font-size:11px;&quot;&gt;Express 5 • esbuild • pino logger&lt;br&gt;helmet • CORS • CSRF • rate-limit&lt;br&gt;multer • jspdf • qrcode&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontColor=#555555;" vertex="1" parent="1">
+          <mxGeometry x="80" y="195" width="290" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- API Middleware -->
+        <mxCell id="api-middleware" value="&lt;b&gt;Middleware&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;&quot;&gt;helmet → pino-http → CORS&lt;br&gt;cookie-parser → compression&lt;br&gt;rate-limiter → CSRF → adminAuth&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82c991;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="85" y="255" width="280" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- API Routes -->
+        <mxCell id="api-routes" value="&lt;b&gt;Routes&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;&quot;&gt;/api/v1/healthz&lt;br&gt;/api/v1/contact (public, rate-limited)&lt;br&gt;/api/v1/admin/* (JWT protected)&lt;br&gt;/api/v1/images • /api/v1/cv&lt;br&gt;/api/v1/csrf-token&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82c991;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="85" y="335" width="280" height="95" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== SHARED LIBRARIES ==================== -->
+        <mxCell id="lib-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f9f0ff;strokeColor=#b794f4;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="660" width="1250" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="lib-title" value="&lt;b&gt;Shared Libraries (lib/)&lt;/b&gt;" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=14;fontColor=#553e96;" vertex="1" parent="1">
+          <mxGeometry x="50" y="665" width="250" height="25" as="geometry" />
+        </mxCell>
+
+        <!-- lib/supabase -->
+        <mxCell id="lib-supabase" value="&lt;b&gt;@workspace/supabase&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;&quot;&gt;client.ts (anon)&lt;br&gt;server.ts (service)&lt;br&gt;admin.ts (service)&lt;br&gt;types.ts&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b794f4;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="55" y="695" width="145" height="95" as="geometry" />
+        </mxCell>
+
+        <!-- lib/db -->
+        <mxCell id="lib-db" value="&lt;b&gt;@workspace/db&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;&quot;&gt;21 query modules&lt;br&gt;17 test files&lt;br&gt;Full CRUD for all entities&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b794f4;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="210" y="695" width="145" height="95" as="geometry" />
+        </mxCell>
+
+        <!-- lib/auth -->
+        <mxCell id="lib-auth" value="&lt;b&gt;@workspace/auth&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;&quot;&gt;AuthContextProvider&lt;br&gt;useAuthUser hook&lt;br&gt;Role-based access&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b794f4;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="365" y="695" width="145" height="95" as="geometry" />
+        </mxCell>
+
+        <!-- lib/ui -->
+        <mxCell id="lib-ui" value="&lt;b&gt;@workspace/ui&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;&quot;&gt;26+ Radix UI primitives&lt;br&gt;shadcn/ui pattern&lt;br&gt;TailwindCSS styled&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b794f4;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="520" y="695" width="145" height="95" as="geometry" />
+        </mxCell>
+
+        <!-- lib/validation -->
+        <mxCell id="lib-validation" value="&lt;b&gt;@workspace/validation&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;&quot;&gt;Zod schemas&lt;br&gt;Rules &amp;amp; validators&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b794f4;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="675" y="695" width="145" height="95" as="geometry" />
+        </mxCell>
+
+        <!-- lib/api-spec -->
+        <mxCell id="lib-api-spec" value="&lt;b&gt;@workspace/api-spec&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;&quot;&gt;OpenAPI 3.1 spec&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b794f4;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="830" y="695" width="145" height="95" as="geometry" />
+        </mxCell>
+
+        <!-- lib/api-zod -->
+        <mxCell id="lib-api-zod" value="&lt;b&gt;@workspace/api-zod&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;&quot;&gt;Shared Zod schemas&lt;br&gt;(API validation)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b794f4;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="985" y="695" width="145" height="95" as="geometry" />
+        </mxCell>
+
+        <!-- lib/api-client-react -->
+        <mxCell id="lib-api-client" value="&lt;b&gt;@workspace/api-client&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;&quot;&gt;React hooks&lt;br&gt;API client wrappers&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b794f4;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1140" y="695" width="145" height="95" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== DATABASE SCHEMA ==================== -->
+        <mxCell id="db-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff5f5;strokeColor=#fc8181;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="830" width="1250" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="db-title" value="&lt;b&gt;Supabase PostgreSQL — Database Schema (39 migrations)&lt;/b&gt;" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=14;fontColor=#c53030;" vertex="1" parent="1">
+          <mxGeometry x="50" y="835" width="400" height="25" as="geometry" />
+        </mxCell>
+
+        <!-- Content Tables -->
+        <mxCell id="db-content" value="&lt;b&gt;Content&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;&quot;&gt;hero_content&lt;br&gt;about_content&lt;br&gt;projects&lt;br&gt;skills&lt;br&gt;experience&lt;br&gt;certifications&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#fc8181;arcSize=10;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="55" y="865" width="145" height="115" as="geometry" />
+        </mxCell>
+
+        <!-- Communication -->
+        <mxCell id="db-comm" value="&lt;b&gt;Communication&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;&quot;&gt;contact_messages&lt;br&gt;analytics_events&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#fc8181;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="210" y="865" width="145" height="75" as="geometry" />
+        </mxCell>
+
+        <!-- Media -->
+        <mxCell id="db-media" value="&lt;b&gt;Media&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;&quot;&gt;image_metadata&lt;br&gt;Storage: images, cv&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#fc8181;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="365" y="865" width="145" height="75" as="geometry" />
+        </mxCell>
+
+        <!-- Settings -->
+        <mxCell id="db-settings" value="&lt;b&gt;Settings&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;&quot;&gt;settings (theme, typography,&lt;br&gt;SEO, contact, CV config)&lt;br&gt;section_variants&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#fc8181;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="520" y="865" width="170" height="75" as="geometry" />
+        </mxCell>
+
+        <!-- Versioning -->
+        <mxCell id="db-version" value="&lt;b&gt;Versioning&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;&quot;&gt;content_snapshots (JSONB)&lt;br&gt;content_health_reports&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#fc8181;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="700" y="865" width="175" height="75" as="geometry" />
+        </mxCell>
+
+        <!-- Auth -->
+        <mxCell id="db-auth" value="&lt;b&gt;Auth&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;&quot;&gt;users (roles)&lt;br&gt;RLS policies&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#fc8181;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="885" y="865" width="145" height="75" as="geometry" />
+        </mxCell>
+
+        <!-- Common Columns -->
+        <mxCell id="db-common" value="&lt;b&gt;Common Columns (all content tables)&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:10px;&quot;&gt;is_published • sort_order • deleted_at (soft-delete) • created_at • updated_at&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff5f5;strokeColor=#fc8181;arcSize=10;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="865" width="235" height="65" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== TESTING ==================== -->
+        <mxCell id="test-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0fff4;strokeColor=#68d391;arcSize=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="1010" width="1250" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="test-title" value="&lt;b&gt;Testing&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size:11px;&quot;&gt;Vitest (139 unit tests) • Playwright (E2E) • supertest (API) • Testing Library&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontColor=#276749;" vertex="1" parent="1">
+          <mxGeometry x="400" y="1015" width="500" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== CONNECTIONS ==================== -->
+
+        <!-- Visitor → Portfolio SPA -->
+        <mxCell id="edge-visitor-portfolio" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#6c8ebf;strokeWidth=2;" edge="1" source="visitor" target="portfolio-box" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-visitor-portfolio-label" value="&lt;font style=&quot;font-size:10px;&quot;&gt;GET /&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="350" y="185" width="50" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Admin Browser → Admin SPA -->
+        <mxCell id="edge-adminbrowser-admin" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#d6b656;strokeWidth=2;" edge="1" source="admin_browser" target="admin-box" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-admin-label" value="&lt;font style=&quot;font-size:10px;&quot;&gt;Clerk JWT&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="1100" y="185" width="70" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Admin → API Server -->
+        <mxCell id="edge-admin-api" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#82c991;strokeWidth=2;" edge="1" source="admin-box" target="api-box" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-admin-api-label" value="&lt;font style=&quot;font-size:10px;&quot;&gt;/api/v1/admin/*&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontColor=#276749;" vertex="1" parent="1">
+          <mxGeometry x="300" y="260" width="80" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Portfolio → Supabase (anon) -->
+        <mxCell id="edge-portfolio-supabase" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#3ECF8E;strokeWidth=2;dashed=1;" edge="1" source="portfolio-data" target="supabase" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-portfolio-supabase-label" value="&lt;font style=&quot;font-size:10px;&quot;&gt;anon key (RLS)&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontColor=#3ECF8E;" vertex="1" parent="1">
+          <mxGeometry x="740" y="440" width="80" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Admin → Supabase (service) -->
+        <mxCell id="edge-admin-supabase" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#3ECF8E;strokeWidth=2;" edge="1" source="admin-data" target="supabase" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-admin-supabase-label" value="&lt;font style=&quot;font-size:10px;&quot;&gt;service-role key&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontColor=#3ECF8E;" vertex="1" parent="1">
+          <mxGeometry x="720" y="455" width="80" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- API → Supabase -->
+        <mxCell id="edge-api-supabase" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#3ECF8E;strokeWidth=2;" edge="1" source="api-box" target="supabase" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-api-supabase-label" value="&lt;font style=&quot;font-size:10px;&quot;&gt;service-role key&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontColor=#3ECF8E;" vertex="1" parent="1">
+          <mxGeometry x="530" y="500" width="80" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Admin → Clerk -->
+        <mxCell id="edge-admin-clerk" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#6C47FF;strokeWidth=2;" edge="1" source="admin-auth" target="clerk" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- API → Clerk (JWT verification) -->
+        <mxCell id="edge-api-clerk" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#6C47FF;strokeWidth=2;dashed=1;" edge="1" source="api-routes" target="clerk" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-api-clerk-label" value="&lt;font style=&quot;font-size:10px;&quot;&gt;JWT verify&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontColor=#6C47FF;" vertex="1" parent="1">
+          <mxGeometry x="290" y="490" width="70" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Visitor → API (contact form) -->
+        <mxCell id="edge-visitor-api" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#82c991;strokeWidth=2;dashed=1;" edge="1" source="visitor" target="api-routes" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-visitor-api-label" value="&lt;font style=&quot;font-size:10px;&quot;&gt;/api/v1/contact&lt;/font&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontColor=#276749;" vertex="1" parent="1">
+          <mxGeometry x="155" y="340" width="80" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Portfolio → Vercel -->
+        <mxCell id="edge-portfolio-vercel" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#999999;strokeWidth=1;dashed=1;" edge="1" source="portfolio-box" target="vercel" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Admin → Vercel -->
+        <mxCell id="edge-admin-vercel" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#999999;strokeWidth=1;dashed=1;" edge="1" source="admin-box" target="vercel" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- API → Render -->
+        <mxCell id="edge-api-render" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#999999;strokeWidth=1;dashed=1;" edge="1" source="api-box" target="render" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Shared libs connections (implicit) -->
+        <mxCell id="edge-libs-api" value="&lt;font style=&quot;font-size:10px;color:#999;&quot;&gt;shared deps&lt;/font&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#b794f4;strokeWidth=1;dashed=1;" edge="1" source="api-box" target="lib-box" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-libs-admin" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#b794f4;strokeWidth=1;dashed=1;" edge="1" source="admin-box" target="lib-box" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-libs-portfolio" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#b794f4;strokeWidth=1;dashed=1;" edge="1" source="portfolio-box" target="lib-box" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Supabase → DB Schema -->
+        <mxCell id="edge-supabase-db" style="edgeStyle=orthogonalEdgeStyle;rounded=1;strokeColor=#fc8181;strokeWidth=2;" edge="1" source="supabase" target="db-box" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Legend -->
+        <mxCell id="legend-box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fafafa;strokeColor=#dddddd;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="1330" y="100" width="180" height="300" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-title" value="&lt;b&gt;Legend&lt;/b&gt;" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="1380" y="105" width="80" height="25" as="geometry" />
+        </mxCell>
+
+        <mxCell id="legend-portfolio" value="&lt;font style=&quot;font-size:11px;&quot;&gt;■ Portfolio SPA&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontColor=#2c5282;" vertex="1" parent="1">
+          <mxGeometry x="1345" y="135" width="150" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-admin" value="&lt;font style=&quot;font-size:11px;&quot;&gt;■ Admin CMS&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontColor=#b7791f;" vertex="1" parent="1">
+          <mxGeometry x="1345" y="160" width="150" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-api" value="&lt;font style=&quot;font-size:11px;&quot;&gt;■ API Server&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontColor=#276749;" vertex="1" parent="1">
+          <mxGeometry x="1345" y="185" width="150" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-shared" value="&lt;font style=&quot;font-size:11px;&quot;&gt;■ Shared Libraries&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontColor=#553e96;" vertex="1" parent="1">
+          <mxGeometry x="1345" y="210" width="150" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-db" value="&lt;font style=&quot;font-size:11px;&quot;&gt;■ Database Schema&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontColor=#c53030;" vertex="1" parent="1">
+          <mxGeometry x="1345" y="235" width="150" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-external" value="&lt;font style=&quot;font-size:11px;&quot;&gt;■ External Services&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="1345" y="260" width="150" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-solid" value="&lt;font style=&quot;font-size:10px;&quot;&gt;—  Solid: direct connection&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontColor=#999999;" vertex="1" parent="1">
+          <mxGeometry x="1345" y="290" width="155" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-dashed" value="&lt;font style=&quot;font-size:10px;&quot;&gt;- - Dashed: indirect/async&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontColor=#999999;" vertex="1" parent="1">
+          <mxGeometry x="1345" y="315" width="155" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-mono" value="&lt;font style=&quot;font-size:10px;&quot;&gt;pnpm monorepo (13 packages)&lt;/font&gt;" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontColor=#999999;" vertex="1" parent="1">
+          <mxGeometry x="1345" y="345" width="155" height="20" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

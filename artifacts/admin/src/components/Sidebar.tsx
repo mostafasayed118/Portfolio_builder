@@ -1,40 +1,12 @@
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import {
-  LayoutDashboard, Palette, Type, User, Briefcase, Code2,
-  FolderKanban, Award, Mail, MessageSquare, Search, Layers,
-  Settings, ChevronRight, X, Zap, FileText
-} from "lucide-react";
+import { ChevronRight, X, LogOut } from "lucide-react";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { api } from "@/lib/api-client";
-
-interface NavItem {
-  path: string;
-  label: string;
-  icon: React.ElementType;
-  group?: string;
-}
-
-const NAV: NavItem[] = [
-  { path: "/", label: "Overview", icon: LayoutDashboard, group: "Dashboard" },
-  { path: "/theme", label: "Theme", icon: Palette, group: "Appearance" },
-  { path: "/typography", label: "Typography", icon: Type, group: "Appearance" },
-  { path: "/sections", label: "Section Order", icon: Layers, group: "Appearance" },
-  { path: "/hero", label: "Hero", icon: Zap, group: "Content" },
-  { path: "/about", label: "About", icon: User, group: "Content" },
-  { path: "/skills", label: "Skills", icon: Code2, group: "Content" },
-  { path: "/projects", label: "Projects", icon: FolderKanban, group: "Content" },
-  { path: "/experience", label: "Experience", icon: Briefcase, group: "Content" },
-  { path: "/certifications", label: "Certifications", icon: Award, group: "Content" },
-  { path: "/contact", label: "Contact", icon: Mail, group: "Content" },
-  { path: "/messages", label: "Messages", icon: MessageSquare, group: "Inbox" },
-  { path: "/cv", label: "CV / Resume", icon: FileText, group: "Site" },
-  { path: "/seo", label: "SEO", icon: Search, group: "Site" },
-  { path: "/settings", label: "Site Settings", icon: Settings, group: "Site" },
-];
-
-const GROUPS = ["Dashboard", "Appearance", "Content", "Inbox", "Site"];
+import { usePrefetch } from "@/hooks/usePrefetchRoutes";
+import { useAuthUser } from "@workspace/auth";
+import { NAV_ITEMS, NAV_GROUPS } from "@/lib/nav-config";
 
 interface Props {
   open: boolean;
@@ -63,10 +35,15 @@ function UnreadBadge() {
 export default function Sidebar({ open, onClose }: Props) {
   const [location] = useLocation();
   const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+  const { prefetch } = usePrefetch();
+  const { signOut } = useAuthUser();
+
+  const handleMouseEnter = (path: string) => {
+    prefetch(path.replace(/^\//, ""));
+  };
 
   const isActive = (path: string) => {
     const full = base + path;
-    if (path === "/") return location === full || location === base || location === base + "/";
     return location.startsWith(full);
   };
 
@@ -96,15 +73,16 @@ export default function Sidebar({ open, onClose }: Props) {
           </div>
           <button
             onClick={onClose}
-            className="lg:hidden text-sidebar-foreground/60 hover:text-sidebar-foreground"
+            className="lg:hidden text-sidebar-foreground/60 hover:text-sidebar-foreground min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md"
+            aria-label="Close sidebar"
           >
-            <X size={16} />
+            <X size={18} />
           </button>
         </div>
 
         <nav aria-label="Admin navigation" className="flex-1 overflow-y-auto py-4 px-3 space-y-5">
-          {GROUPS.map((group) => {
-            const items = NAV.filter(n => n.group === group);
+          {NAV_GROUPS.map((group) => {
+            const items = NAV_ITEMS.filter(n => n.group === group);
             if (!items.length) return null;
             return (
               <div key={group}>
@@ -116,12 +94,14 @@ export default function Sidebar({ open, onClose }: Props) {
                     <li key={path}>
                       <Link
                         href={path}
-                        aria-label={label}
+                        aria-current={isActive(path) ? "page" : undefined} // FIX: UX-029
+                        data-preload="true"
+                        onMouseEnter={() => handleMouseEnter(path)}
                         className={cn(
-                          "flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition-colors group",
+                          "flex items-center gap-2.5 px-3 py-2.5 min-h-[44px] rounded-md text-sm font-medium transition-colors group",
                           isActive(path)
-                            ? "bg-sidebar-primary text-sidebar-primary-foreground border-l-[3px] border-sidebar-primary-foreground/30"
-                            : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground border-l-[3px] border-transparent"
+                            ? "bg-sidebar-primary text-sidebar-primary-foreground border-s-[3px] border-sidebar-primary-foreground/30"
+                            : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground border-s-[3px] border-transparent"
                         )}
                       >
                         <Icon size={15} className="shrink-0" />
@@ -140,7 +120,7 @@ export default function Sidebar({ open, onClose }: Props) {
           })}
         </nav>
 
-        <div className="px-4 py-3 border-t border-sidebar-border shrink-0">
+        <div className="px-4 py-3 border-t border-sidebar-border shrink-0 space-y-2">
           <a
             href={import.meta.env.VITE_PORTFOLIO_URL as string || "/"}
             target="_blank"
@@ -150,6 +130,13 @@ export default function Sidebar({ open, onClose }: Props) {
             <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
             View Live Portfolio
           </a>
+          <button
+            onClick={() => signOut()}
+            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent rounded-md transition-colors"
+          >
+            <LogOut size={15} />
+            Logout
+          </button>
         </div>
       </aside>
     </>

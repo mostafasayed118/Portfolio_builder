@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Code2, Zap } from "lucide-react";
+import SectionLabel from "./SectionLabel";
 import EmptyState from "./EmptyState";
 import {
   type Skill,
@@ -44,13 +45,6 @@ const LEVEL_CONFIG: Record<
   },
 };
 
-function levelFromPct(p: number): SkillLevel {
-  if (p >= 90) return "Expert";
-  if (p >= 75) return "Advanced";
-  if (p >= 60) return "Intermediate";
-  return "Familiar";
-}
-
 function SkillTag({ skill, index, t }: { skill: Skill; index: number; t?: TranslationKeys }) {
   const [hovered, setHovered] = useState(false);
   const cfg = LEVEL_CONFIG[skill.level];
@@ -71,7 +65,12 @@ function SkillTag({ skill, index, t }: { skill: Skill; index: number; t?: Transl
       onClick={() => setHovered(v => !v)}
       onFocus={() => setHovered(true)}
       onBlur={() => setHovered(false)}
-      onKeyDown={(e) => e.key === "Enter" && setHovered(v => !v)}
+      onKeyDown={(e) => { {/* FIX: UX-036 */}
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          setHovered(v => !v);
+        }
+      }}
       role="button"
       tabIndex={0}
       aria-label={`${skill.name}, ${lvlLabel}, ${skill.proficiency}% proficiency`}
@@ -193,9 +192,7 @@ export default function SkillsSection() {
     >
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 text-xs font-semibold tracking-widest uppercase text-primary bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-full mb-4">
-            {t.skills.title}
-          </div>
+          <SectionLabel>{t.skills.title}</SectionLabel> {/* FIX: UX-002 */}
           <h2 className="font-display font-bold text-3xl md:text-4xl text-foreground mb-3">
             {t.skills.title}
           </h2>
@@ -207,6 +204,7 @@ export default function SkillsSection() {
           <div className="flex flex-wrap gap-2 justify-center">
             <button
               onClick={() => setActiveCategory("all")}
+              aria-pressed={activeCategory === "all"}
               data-testid="skills-filter-all"
               className={`px-4 py-1.5 rounded-full text-xs font-semibold border transition-all ${
                 activeCategory === "all"
@@ -220,6 +218,7 @@ export default function SkillsSection() {
               <button
                 key={cat.key}
                 onClick={() => setActiveCategory(cat.key)}
+                aria-pressed={activeCategory === cat.key}
                 data-testid={`skills-filter-${cat.key}`}
                 className={`px-4 py-1.5 rounded-full text-xs font-semibold border transition-all ${
                   activeCategory === cat.key

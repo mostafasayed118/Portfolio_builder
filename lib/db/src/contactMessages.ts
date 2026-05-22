@@ -24,7 +24,7 @@ function mapRow(row: any): ContactMessage {
     email: row.email,
     subject: row.subject ?? null,
     message: row.message,
-    is_read: row.status === "unread",
+    is_read: row.status !== "unread",
     created_at: row.created_at,
   };
 }

@@ -1,26 +1,23 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { createClient } from "@supabase/supabase-js";
 import { validateBody, cvSettingsUpdateSchema } from "../middleware/validate";
+import { adminAuth } from "../middleware/adminAuth";
+import { doubleCsrfProtection } from "../middleware/csrf";
 import { generateCvPdf } from "../utils/cv-generator";
-
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-function getServerSupabase() {
-  if (!supabaseUrl) throw new Error("SUPABASE_URL is not set");
-  if (!supabaseServiceRoleKey) throw new Error("SUPABASE_SERVICE_ROLE_KEY is not set");
-  return createClient(supabaseUrl, supabaseServiceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-}
+import { getSupabaseClient } from "../lib/supabase-client";
 
 const router: IRouter = Router();
 
+/**
+ * GET /api/v1/cv
+ * Public endpoint — intentionally unauthenticated.
+ * CV is meant to be publicly downloadable by portfolio visitors.
+ * If CV contains sensitive info, add auth middleware here.
+ */
 router.get("/cv", async (req: Request, res: Response) => {
   const portfolioUrl = process.env.VITE_SITE_URL ?? "https://mustafasayed.replit.app";
 
   try {
-    const supabase = getServerSupabase();
+    const supabase = getSupabaseClient();
     const pdfBytes = await generateCvPdf(supabase, portfolioUrl);
     const fileName = "Mustafa_Sayed_CV.pdf";
     res.setHeader("Content-Type", "application/pdf");
@@ -35,7 +32,7 @@ router.get("/cv", async (req: Request, res: Response) => {
 
   // Fallback: serve uploaded PDF from storage
   try {
-    const supabase = getServerSupabase();
+    const supabase = getSupabaseClient();
     const { data: settings, error } = await supabase
       .from("cv_settings")
       .select("object_path, file_name")
@@ -78,7 +75,7 @@ router.get("/cv", async (req: Request, res: Response) => {
 });
 
 router.get("/cv/settings", async (_req: Request, res: Response) => {
-  const supabase = getServerSupabase();
+  const supabase = getSupabaseClient();
   const { data: settings, error } = await supabase
     .from("cv_settings")
     .select("object_path, file_name, updated_at")
@@ -98,8 +95,8 @@ router.get("/cv/settings", async (_req: Request, res: Response) => {
   });
 });
 
-router.put("/cv/settings", validateBody(cvSettingsUpdateSchema), async (req: Request, res: Response) => {
-  const supabase = getServerSupabase();
+router.put("/cv/settings", adminAuth, doubleCsrfProtection, validateBody(cvSettingsUpdateSchema), async (req: Request, res: Response) => {
+  const supabase = getSupabaseClient();
   const { objectPath, fileName } = (req as Request & { validatedBody: { objectPath: string; fileName: string } }).validatedBody;
 
   const { data: existing } = await supabase

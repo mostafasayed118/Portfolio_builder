@@ -1,20 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@workspace/ui";
+import { useToast } from "@workspace/ui";
 import {
   Mail,
   MailOpen,
@@ -27,6 +14,12 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { api } from "@/lib/api-client";
+import { Badge, Button, Card, CardContent, Input, Skeleton, Textarea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui";
+import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
+import { SmartEmptyState } from "@/components/SmartEmptyState";
+import { getErrorMessage } from "@/lib/error-messages";
+
+const PAGE_SIZE = 20;
 
 type MsgStatus = "unread" | "read" | "archived";
 type Msg = {
@@ -60,6 +53,7 @@ const STATUS_FILTERS: {
 interface MessagesUIProps {
   messages: Msg[] | undefined;
   filtered: Msg[];
+  paginatedMessages: Msg[];
   unread: number;
   filter: string;
   setFilter: (f: string) => void;
@@ -75,11 +69,16 @@ interface MessagesUIProps {
   onMarkRead: (msg: Msg) => Promise<void>;
   onMarkAllRead: () => Promise<void>;
   onDelete: (msg: Msg) => Promise<void>;
+  page: number;
+  setPage: (p: number | ((prev: number) => number)) => void;
+  pageSize: number;
+  setPageSize: (s: number) => void;
 }
 
 function MessagesUI({
   messages,
   filtered,
+  paginatedMessages,
   unread,
   filter,
   setFilter,
@@ -95,11 +94,15 @@ function MessagesUI({
   onMarkRead,
   onMarkAllRead,
   onDelete,
+  page,
+  setPage,
+  pageSize,
+  setPageSize,
 }: MessagesUIProps) {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex-1 min-w-[120px]">
           <h1 className="text-2xl font-bold flex items-center gap-3">
             Messages
             {unread > 0 && <Badge className="text-xs">{unread} unread</Badge>}
@@ -109,56 +112,63 @@ function MessagesUI({
           </p>
         </div>
         {unread > 0 && (
-          <Button size="sm" variant="outline" onClick={onMarkAllRead}>
+          <Button size="sm" variant="outline" onClick={onMarkAllRead} className="min-h-[44px]">
             <CheckCheck size={14} className="mr-1.5" />
             Mark All Read
           </Button>
         )}
       </div>
 
-      <div className="flex gap-2 overflow-x-auto flex-nowrap md:flex-wrap pb-1">
-        {STATUS_FILTERS.map(({ key, label, icon: Icon }) => {
-          const count =
-            key === "all"
-              ? (messages?.length ?? 0)
-              : key === "unread"
-                ? (messages?.filter(isUnread).length ?? 0)
-                : key === "read"
-                  ? (messages?.filter((m) => !isUnread(m) && !isArchived(m))
-                      .length ?? 0)
-                  : (messages?.filter(isArchived).length ?? 0);
-          return (
-            <button
-              key={key}
-              onClick={() => setFilter(key)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-                filter === key
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-card text-muted-foreground border-border hover:border-primary/40"
-              }`}
-            >
-              <Icon size={12} />
-              {label} ({count})
-            </button>
-          );
-        })}
+      <div className="relative">
+        <div className="flex gap-2 overflow-x-auto pb-2 md:flex-wrap scrollbar-none" role="tablist" aria-label="Message filters">
+          {STATUS_FILTERS.map(({ key, label, icon: Icon }) => {
+            const count =
+              key === "all"
+                ? (messages?.length ?? 0)
+                : key === "unread"
+                  ? (messages?.filter(isUnread).length ?? 0)
+                  : key === "read"
+                    ? (messages?.filter((m) => !isUnread(m) && !isArchived(m))
+                        .length ?? 0)
+                    : (messages?.filter(isArchived).length ?? 0);
+            return (
+              <button
+                key={key}
+                onClick={() => setFilter(key)}
+                role="tab"
+                aria-selected={filter === key}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all shrink-0 min-h-[44px] ${
+                  filter === key
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-card text-muted-foreground border-border hover:border-primary/40"
+                }`}
+              >
+                <Icon size={12} />
+                {label} ({count})
+              </button>
+            );
+          })}
+        </div>
+        <div className="absolute end-0 top-0 bottom-2 w-8 bg-gradient-to-s from-background to-transparent pointer-events-none md:hidden" aria-hidden="true" />
       </div>
 
       {filtered.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            <Mail size={32} className="mx-auto mb-3 opacity-30" />
-            <div className="text-sm">
-              {messages?.length === 0
-                ? "No messages yet. They'll appear here when someone submits the contact form."
-                : "No messages match this filter."}
-            </div>
+            {messages?.length === 0 ? (
+              <SmartEmptyState type="messages" />
+            ) : (
+              <>
+                <Mail size={32} className="mx-auto mb-3 opacity-30" />
+                <div className="text-sm">No messages match this filter.</div>
+              </>
+            )}
           </CardContent>
         </Card>
       )}
 
       <div className="space-y-3">
-        {filtered.map((msg, i) => (
+        {paginatedMessages.map((msg, i) => (
           <Card
             key={msg.id ?? i}
             className={
@@ -212,37 +222,66 @@ function MessagesUI({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7"
-                    title="Reply"
+                    className="min-h-[44px] min-w-[44px]"
+                    aria-label={`Reply to ${msg.name}`}
                     onClick={() => openReply(msg)}
                   >
-                    <Reply size={13} />
+                    <Reply className="h-4 w-4" />
                   </Button>
                   {isUnread(msg) && (
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7"
-                      title="Mark as read"
+                      className="min-h-[44px] min-w-[44px]"
+                      aria-label={`Mark message from ${msg.name} as read`}
                       onClick={() => onMarkRead(msg)}
                     >
-                      <CheckCheck size={13} />
+                      <CheckCheck className="h-4 w-4" />
                     </Button>
                   )}
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 text-destructive"
+                    className="min-h-[44px] min-w-[44px] text-destructive hover:text-destructive hover:bg-destructive/10"
+                    aria-label={`Delete message from ${msg.name}`}
                     onClick={() => onDelete(msg)}
                   >
-                    <Trash2 size={13} />
-                  </Button>
+                    <Trash2 className="h-4 w-4" />
+                  </Button> {/* STANDARDIZED: Type E — inline delete */}
                 </div>
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      {filtered.length > pageSize && (
+        <div className="flex items-center justify-between mt-4 flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <p className="text-sm text-muted-foreground">
+              Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, filtered.length)} of {filtered.length}
+            </p>
+            <Select value={String(pageSize)} onValueChange={v => { setPageSize(Number(v)); setPage(1); }}>
+              <SelectTrigger className="w-28 h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10 / page</SelectItem>
+                <SelectItem value="25">25 / page</SelectItem>
+                <SelectItem value="50">50 / page</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => { setPage((p: number) => Math.max(1, p - 1)); }} disabled={page === 1} className="min-h-[44px]">
+              Previous
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => { setPage((p: number) => Math.min(Math.ceil(filtered.length / pageSize), p + 1)); }} disabled={page >= Math.ceil(filtered.length / pageSize)} className="min-h-[44px]">
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Dialog
         open={!!replyTo}
@@ -311,6 +350,9 @@ export default function MessagesManager() {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [filter, setFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [deleteTarget, setDeleteTarget] = useState<Msg | null>(null);
 
   const unread = useMemo(
     () => (messages as Msg[] | undefined)?.filter(isUnread).length ?? 0,
@@ -327,6 +369,10 @@ export default function MessagesManager() {
     if (filter === "archived") return msgs.filter(isArchived);
     return msgs;
   }, [messages, filter]);
+
+  const paginatedMessages = useMemo(() => {
+    return filtered.slice((page - 1) * pageSize, page * pageSize);
+  }, [filtered, page, pageSize]);
 
   const fmt = (ts: string) =>
     new Date(ts).toLocaleDateString("en-US", {
@@ -372,8 +418,7 @@ export default function MessagesManager() {
     return (
       <div className="p-6 flex flex-col items-center justify-center min-h-64 gap-4">
         <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-destructive font-medium">Failed to load data</p>
-        <p className="text-muted-foreground text-sm">{error?.message}</p>
+        <p className="text-destructive font-medium">{getErrorMessage(error)}</p>
         <Button onClick={() => refetch()} variant="outline">
           <RefreshCw className="h-4 w-4 mr-2" />
           Try Again
@@ -383,9 +428,11 @@ export default function MessagesManager() {
   }
 
   return (
+    <>
     <MessagesUI
       messages={messages as Msg[] | undefined}
       filtered={filtered}
+      paginatedMessages={paginatedMessages}
       unread={unread}
       filter={filter}
       setFilter={setFilter}
@@ -410,12 +457,32 @@ export default function MessagesManager() {
         toast({ title: "All marked as read" });
       }}
       onDelete={async (msg) => {
-        if (msg.id && confirm("Delete message?")) {
-          const res = await api.messages.delete(msg.id);
-          if (!res.success) throw new Error(res.message);
-          toast({ title: "Deleted" });
-        }
+        setDeleteTarget(msg);
       }}
+      page={page}
+      setPage={setPage}
+      pageSize={pageSize}
+      setPageSize={setPageSize}
     />
+
+    <SmartConfirmDialog
+      state={{
+        isOpen: !!deleteTarget,
+        title: "Delete Message",
+        message: `Are you sure you want to delete the message from "${deleteTarget?.name}"? This action cannot be undone.`,
+        confirmLabel: "Delete",
+        variant: "danger",
+        onConfirm: async () => {
+          if (deleteTarget?.id) {
+            const res = await api.messages.delete(deleteTarget.id);
+            if (!res.success) throw new Error(res.message);
+            toast({ title: "Message deleted" });
+          }
+          setDeleteTarget(null);
+        },
+      }}
+      onCancel={() => setDeleteTarget(null)}
+    />
+    </>
   );
 }

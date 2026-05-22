@@ -2,14 +2,11 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { Plus, X, GraduationCap, Globe, Target } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Slider } from "@/components/ui/slider";
 import { api } from "@/lib/api-client";
-import { toast } from "sonner";
+import { useToast } from "@workspace/ui";
+import { Button, Card, CardContent, CardHeader, CardTitle, Input, Skeleton, Slider, Textarea } from "@workspace/ui";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { useBeforeUnload } from "@/hooks/use-before-unload";
 
 type AboutFormData = {
   bio: string;
@@ -158,7 +155,8 @@ function LivePreview({ data }: { data: LivePreviewData }) {
 
 export default function AboutEditor() {
   const queryClient = useQueryClient();
-  const { data: aboutData, isLoading, error, refetch } = useQuery<any>({
+  const { toast } = useToast();
+  const { data: aboutData, isLoading, error, refetch } = useQuery({
     queryKey: ["about"],
     queryFn: async () => {
       const res = await api.about.get();
@@ -188,6 +186,12 @@ export default function AboutEditor() {
 
   const watchedData = useWatch({ control });
   const [interestInput, setInterestInput] = useState("");
+  const [showPreview, setShowPreview] = useState(false);
+
+  useKeyboardShortcuts([
+    { key: "s", ctrl: true, handler: () => { if (isDirty) handleSubmit(onSubmit)(); }, description: "Save changes" },
+  ]);
+  useBeforeUnload(isDirty, "You have unsaved changes. Leave anyway?");
 
   useEffect(() => {
     if (aboutData) {
@@ -213,10 +217,10 @@ export default function AboutEditor() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["about"] });
-      toast.success("About section updated successfully ✓");
+      toast({ title: "About section updated successfully" });
     },
     onError: (err) => {
-      toast.error(`Save failed: ${err.message}`);
+      toast({ title: `Save failed: ${err.message}`, variant: "destructive" });
     },
   });
 
@@ -248,7 +252,13 @@ export default function AboutEditor() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">About Editor</h1>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="lg:hidden mb-4">
+        <Button variant="outline" size="sm" onClick={() => setShowPreview(!showPreview)} className="min-h-[44px]" aria-pressed={showPreview} aria-label={showPreview ? "Hide preview panel" : "Show preview panel"}>
+          {showPreview ? "Hide Preview" : "Show Preview"}
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <SkeletonForm />
           <SkeletonPreview />
         </div>
@@ -261,7 +271,7 @@ export default function AboutEditor() {
       <Card className="border-destructive">
         <CardContent className="py-6">
           <p className="text-destructive">Failed to load about content</p>
-          <Button variant="outline" size="sm" onClick={() => refetch()} className="mt-2">
+          <Button variant="outline" size="sm" onClick={() => refetch()} className="mt-2 min-h-[44px]">
             Retry
           </Button>
         </CardContent>
@@ -276,7 +286,7 @@ export default function AboutEditor() {
           <h1 className="text-2xl font-bold">About Editor</h1>
           <p className="text-sm text-muted-foreground">Edit your about section content</p>
         </div>
-        <Button onClick={handleSubmit(onSubmit)} disabled={!isDirty || saveMutation.isPending}>
+        <Button onClick={handleSubmit(onSubmit)} disabled={!isDirty || saveMutation.isPending} data-save-button>
           {saveMutation.isPending ? "Saving..." : "Save Changes"}
         </Button>
       </div>
@@ -306,6 +316,7 @@ export default function AboutEditor() {
                 variant="outline"
                 size="sm"
                 onClick={() => appendEducation({ degree: "", institution: "", year: "" })}
+                className="min-h-[44px]"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Education
@@ -324,6 +335,8 @@ export default function AboutEditor() {
                         variant="ghost"
                         size="icon"
                         onClick={() => removeEducation(index)}
+                        className="min-h-[44px] min-w-[44px]"
+                        aria-label={`Remove education entry ${index + 1}`}
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -364,6 +377,7 @@ export default function AboutEditor() {
                 variant="outline"
                 size="sm"
                 onClick={() => appendLanguage({ name: "", level: 50 })}
+                className="min-h-[44px]"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Language
@@ -382,6 +396,8 @@ export default function AboutEditor() {
                         variant="ghost"
                         size="icon"
                         onClick={() => removeLanguage(index)}
+                        className="min-h-[44px] min-w-[44px]"
+                        aria-label={`Remove language ${index + 1}`}
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -433,7 +449,8 @@ export default function AboutEditor() {
                     <button
                       type="button"
                       onClick={() => removeInterest(index)}
-                      className="hover:text-destructive"
+                      className="relative flex items-center justify-center h-5 w-5 after:absolute after:inset-[-8px] after:content-[''] hover:text-destructive"
+                      aria-label={`Remove interest: ${interest}`}
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -444,8 +461,8 @@ export default function AboutEditor() {
           </Card>
         </div>
 
-        {/* Live Preview - Hidden on mobile */}
-        <div className="hidden lg:block">
+        {/* Live Preview */}
+        <div className={showPreview ? "block" : "hidden lg:block"}>
           <div className="sticky top-4">
             <p className="text-xs text-muted-foreground mb-2">Live Preview — updates as you type</p>
             <Card>

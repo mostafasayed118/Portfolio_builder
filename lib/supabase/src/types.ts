@@ -1,5 +1,5 @@
 // ============================================================================
-// Supabase Database Types — generated from supabase/migrations/001_init.sql
+// Supabase Database Types — generated from supabase/migrations/001 through 038
 // ============================================================================
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
@@ -87,6 +87,7 @@ export interface Database {
           updated_at?: string;
           created_at?: string;
         };
+        Relationships: [];
       };
       typography_settings: {
         Row: {
@@ -134,6 +135,7 @@ export interface Database {
           updated_at?: string;
           created_at?: string;
         };
+        Relationships: [];
       };
       site_settings: {
         Row: {
@@ -181,6 +183,7 @@ export interface Database {
           updated_at?: string;
           created_at?: string;
         };
+        Relationships: [];
       };
       seo_settings: {
         Row: {
@@ -225,6 +228,7 @@ export interface Database {
           updated_at?: string;
           created_at?: string;
         };
+        Relationships: [];
       };
       hero_content: {
         Row: {
@@ -305,6 +309,7 @@ export interface Database {
           updated_at?: string;
           created_at?: string;
         };
+        Relationships: [];
       };
       about_content: {
         Row: {
@@ -332,9 +337,17 @@ export interface Database {
           bio1_ar: string | null;
           bio2_ar: string | null;
           bio_ar: string | null;
-          education_ar: unknown[] | null;
-          languages_ar: unknown[] | null;
-          interests_ar: unknown[] | null;
+          education_ar: {
+            degree: string;
+            institution: string;
+            year: string;
+            description?: string;
+          }[] | null;
+          languages_ar: {
+            name: string;
+            level: number;
+          }[] | null;
+          interests_ar: string[] | null;
           is_published: boolean;
           updated_at: string;
           created_at: string;
@@ -364,9 +377,17 @@ export interface Database {
           bio1_ar?: string | null;
           bio2_ar?: string | null;
           bio_ar?: string | null;
-          education_ar?: unknown[] | null;
-          languages_ar?: unknown[] | null;
-          interests_ar?: unknown[] | null;
+          education_ar?: {
+            degree: string;
+            institution: string;
+            year: string;
+            description?: string;
+          }[] | null;
+          languages_ar?: {
+            name: string;
+            level: number;
+          }[] | null;
+          interests_ar?: string[] | null;
           is_published?: boolean;
           updated_at?: string;
           created_at?: string;
@@ -396,13 +417,22 @@ export interface Database {
           bio1_ar?: string | null;
           bio2_ar?: string | null;
           bio_ar?: string | null;
-          education_ar?: unknown[] | null;
-          languages_ar?: unknown[] | null;
-          interests_ar?: unknown[] | null;
+          education_ar?: {
+            degree: string;
+            institution: string;
+            year: string;
+            description?: string;
+          }[] | null;
+          languages_ar?: {
+            name: string;
+            level: number;
+          }[] | null;
+          interests_ar?: string[] | null;
           is_published?: boolean;
           updated_at?: string;
           created_at?: string;
         };
+        Relationships: [];
       };
       contact_info: {
         Row: {
@@ -453,6 +483,7 @@ export interface Database {
           updated_at?: string;
           created_at?: string;
         };
+        Relationships: [];
       };
       cv_settings: {
         Row: {
@@ -476,6 +507,7 @@ export interface Database {
           updated_at?: string;
           created_at?: string;
         };
+        Relationships: [];
       };
       skills: {
         Row: {
@@ -487,6 +519,8 @@ export interface Database {
           icon: string | null;
           sort_order: number | null;
           is_visible: boolean | null;
+          user_id: string | null;
+          deleted_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -499,6 +533,8 @@ export interface Database {
           icon?: string | null;
           sort_order?: number | null;
           is_visible?: boolean | null;
+          user_id?: string | null;
+          deleted_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -511,9 +547,12 @@ export interface Database {
           icon?: string | null;
           sort_order?: number | null;
           is_visible?: boolean | null;
+          user_id?: string | null;
+          deleted_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       projects: {
         Row: {
@@ -540,6 +579,8 @@ export interface Database {
           is_published: boolean | null;
           image_url: string | null;
           tags: string[];
+          user_id: string | null;
+          deleted_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -567,6 +608,8 @@ export interface Database {
           is_published?: boolean | null;
           image_url?: string | null;
           tags?: string[];
+          user_id?: string | null;
+          deleted_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -594,9 +637,12 @@ export interface Database {
           is_published?: boolean | null;
           image_url?: string | null;
           tags?: string[];
+          user_id?: string | null;
+          deleted_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       experience: {
         Row: {
@@ -616,6 +662,8 @@ export interface Database {
           is_published: boolean | null;
           current: boolean | null;
           order_num: number | null;
+          user_id: string | null;
+          deleted_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -636,6 +684,8 @@ export interface Database {
           is_published?: boolean | null;
           current?: boolean | null;
           order_num?: number | null;
+          user_id?: string | null;
+          deleted_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -656,9 +706,12 @@ export interface Database {
           is_published?: boolean | null;
           current?: boolean | null;
           order_num?: number | null;
+          user_id?: string | null;
+          deleted_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       certifications: {
         Row: {
@@ -676,6 +729,8 @@ export interface Database {
           sort_order: number | null;
           is_published: boolean | null;
           skills: string[];
+          user_id: string | null;
+          deleted_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -694,6 +749,8 @@ export interface Database {
           sort_order?: number | null;
           is_published?: boolean | null;
           skills?: string[];
+          user_id?: string | null;
+          deleted_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -712,41 +769,57 @@ export interface Database {
           sort_order?: number | null;
           is_published?: boolean | null;
           skills?: string[];
+          user_id?: string | null;
+          deleted_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       messages: {
         Row: {
           id: string;
           name: string;
           email: string;
+          subject: string | null;
           message: string;
           status: MsgStatus;
           reply_email_draft: string | null;
           replied_at: string | null;
+          user_id: string | null;
+          deleted_at: string | null;
           created_at: string;
+          updated_at: string;
         };
         Insert: {
           id?: string;
           name: string;
           email: string;
+          subject?: string | null;
           message: string;
           status?: MsgStatus;
           reply_email_draft?: string | null;
           replied_at?: string | null;
+          user_id?: string | null;
+          deleted_at?: string | null;
           created_at?: string;
+          updated_at?: string;
         };
         Update: {
           id?: string;
           name?: string;
           email?: string;
+          subject?: string | null;
           message?: string;
           status?: MsgStatus;
           reply_email_draft?: string | null;
           replied_at?: string | null;
+          user_id?: string | null;
+          deleted_at?: string | null;
           created_at?: string;
+          updated_at?: string;
         };
+        Relationships: [];
       };
       section_settings: {
         Row: {
@@ -776,6 +849,7 @@ export interface Database {
           updated_at?: string;
           created_at?: string;
         };
+        Relationships: [];
       };
       content_snapshots: {
         Row: {
@@ -805,6 +879,7 @@ export interface Database {
           changed_by?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       section_variants: {
         Row: {
@@ -840,6 +915,7 @@ export interface Database {
           updated_at?: string;
           created_at?: string;
         };
+        Relationships: [];
       };
       analytics_events: {
         Row: {
@@ -852,6 +928,7 @@ export interface Database {
           referrer: string | null;
           device: string | null;
           created_at: string;
+          updated_at: string;
         };
         Insert: {
           id?: string;
@@ -863,6 +940,7 @@ export interface Database {
           referrer?: string | null;
           device?: string | null;
           created_at?: string;
+          updated_at?: string;
         };
         Update: {
           id?: string;
@@ -874,7 +952,9 @@ export interface Database {
           referrer?: string | null;
           device?: string | null;
           created_at?: string;
+          updated_at?: string;
         };
+        Relationships: [];
       };
       content_health_reports: {
         Row: {
@@ -885,6 +965,7 @@ export interface Database {
           warning_count: number;
           suggestion_count: number;
           generated_at: string;
+          updated_at: string;
         };
         Insert: {
           id?: string;
@@ -894,6 +975,7 @@ export interface Database {
           warning_count?: number;
           suggestion_count?: number;
           generated_at?: string;
+          updated_at?: string;
         };
         Update: {
           id?: string;
@@ -903,7 +985,9 @@ export interface Database {
           warning_count?: number;
           suggestion_count?: number;
           generated_at?: string;
+          updated_at?: string;
         };
+        Relationships: [];
       };
       image_metadata: {
         Row: {
@@ -957,6 +1041,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       image_variants: {
         Row: {
@@ -968,6 +1053,7 @@ export interface Database {
           height: number | null;
           file_size_bytes: number | null;
           created_at: string;
+          updated_at: string;
         };
         Insert: {
           id?: string;
@@ -978,6 +1064,7 @@ export interface Database {
           height?: number | null;
           file_size_bytes?: number | null;
           created_at?: string;
+          updated_at?: string;
         };
         Update: {
           id?: string;
@@ -988,11 +1075,48 @@ export interface Database {
           height?: number | null;
           file_size_bytes?: number | null;
           created_at?: string;
+          updated_at?: string;
         };
+        Relationships: [];
+      };
+      users: {
+        Row: {
+          id: string;
+          clerk_id: string;
+          email: string;
+          name: string | null;
+          role: "user" | "superadmin";
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          clerk_id: string;
+          email: string;
+          name?: string | null;
+          role?: "user" | "superadmin";
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          clerk_id?: string;
+          email?: string;
+          name?: string | null;
+          role?: "user" | "superadmin";
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      reorder_sections: {
+        Args: { section_ids: string[]; sort_orders: number[] };
+        Returns: void;
+      };
+    };
     Enums: {
       theme_mode: ThemeMode;
       msg_status: MsgStatus;
@@ -1030,6 +1154,8 @@ export type ContentSnapshot = TableRow<"content_snapshots">;
 export type SectionVariant = TableRow<"section_variants">;
 export type AnalyticsEvent = TableRow<"analytics_events">;
 export type ContentHealthReport = TableRow<"content_health_reports">;
+export type ImageMetadata = TableRow<"image_metadata">;
+export type ImageVariant = TableRow<"image_variants">;
 
 export type InsertThemeSettings = TableInsert<"theme_settings">;
 export type InsertTypographySettings = TableInsert<"typography_settings">;
@@ -1045,3 +1171,6 @@ export type InsertExperience = TableInsert<"experience">;
 export type InsertCertification = TableInsert<"certifications">;
 export type InsertMessage = TableInsert<"messages">;
 export type InsertSectionSetting = TableInsert<"section_settings">;
+export type User = TableRow<"users">;
+export type InsertUser = TableInsert<"users">;
+export type UpdateUser = TableUpdate<"users">;

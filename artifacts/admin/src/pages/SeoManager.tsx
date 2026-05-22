@@ -1,21 +1,45 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useRef } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
-import { Save, Search, Globe, AlertCircle, RefreshCw } from "lucide-react";
+import { useToast } from "@workspace/ui";
+import { Save, Search, Globe, AlertCircle, RefreshCw, Loader2 } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { logError } from "@/lib/logger";
+import { getErrorMessage } from "@/lib/error-messages";
+import { cn } from "@/lib/utils";
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, Skeleton, Textarea } from "@workspace/ui";
 
 type SeoData = { title: string; description: string; keywords: string; og_title: string; og_description: string; og_image: string; canonical_url: string; twitterCard: string; twitter_creator: string };
 const DEFAULTS: SeoData = { title: "", description: "", keywords: "", og_title: "", og_description: "", og_image: "", canonical_url: "", twitterCard: "summary_large_image", twitter_creator: "" };
 
+function CharCounter({ current, max, label }: { current: number; max: number; label: string }) {
+  const over = current > max;
+  const nearLimit = current > max * 0.9;
+
+  return (
+    <div className="flex items-center justify-between mt-1">
+      <span className={cn(
+        "text-xs",
+        over ? "text-destructive font-semibold" :
+        nearLimit ? "text-amber-600 dark:text-amber-400" :
+        "text-muted-foreground"
+      )}>
+        {over
+          ? `${current - max} characters over ${label} limit`
+          : `${current}/${max}`
+        }
+      </span>
+      {over && (
+        <span className="text-xs text-destructive">
+          Google will truncate this
+        </span>
+      )}
+    </div>
+  );
+}
+
 export default function SeoManager() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["seoSettings"],
     queryFn: async () => {
@@ -48,6 +72,19 @@ export default function SeoManager() {
   const set = (k: keyof SeoData, v: string) => setForm(f => ({ ...f, [k]: v }));
 
   const handleSave = async () => {
+    if (form.title.length > 60 || form.description.length > 160) {
+      toast({ title: "Character limit exceeded", description: "Please reduce the title to 60 characters and description to 160 characters.", variant: "destructive" });
+      return;
+    }
+    const urlPattern = /^https?:\/\/.+/; {/* FIX: UX-020 */}
+    if (form.canonical_url && !urlPattern.test(form.canonical_url)) {
+      toast({ title: "Invalid canonical URL", description: "Must start with http:// or https://", variant: "destructive" });
+      return;
+    }
+    if (form.og_image && !urlPattern.test(form.og_image)) {
+      toast({ title: "Invalid OG image URL", description: "Must start with http:// or https://", variant: "destructive" });
+      return;
+    }
     setSaving(true);
     try {
       const res = await api.seoSettings.update({
@@ -63,9 +100,12 @@ export default function SeoManager() {
       });
       if (!res.success) throw new Error(res.message);
       toast({ title: "SEO settings saved" });
+      queryClient.invalidateQueries({ queryKey: ["seoSettings"] });
     } catch (err) { logError("Failed to save SEO settings", err, "SeoManager"); toast({ title: "Save failed", variant: "destructive" }); }
     finally { setSaving(false); }
   };
+
+  const isOverLimit = form.title.length > 60 || form.description.length > 160;
 
   if (isLoading) {
     return (
@@ -85,8 +125,7 @@ export default function SeoManager() {
     return (
       <div className="p-6 flex flex-col items-center justify-center min-h-64 gap-4">
         <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-destructive font-medium">Failed to load data</p>
-        <p className="text-muted-foreground text-sm">{error?.message}</p>
+        <p className="text-destructive font-medium">{getErrorMessage(error)}</p>
         <Button onClick={() => refetch()} variant="outline">
           <RefreshCw className="h-4 w-4 mr-2" />
           Try Again
@@ -99,7 +138,10 @@ export default function SeoManager() {
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div><h1 className="text-2xl font-bold">SEO Settings</h1><p className="text-sm text-muted-foreground mt-0.5">Meta tags, Open Graph, and Twitter card data.</p></div>
-        <Button size="sm" onClick={handleSave} disabled={saving}><Save size={14} className="mr-1.5" />{saving ? "Saving…" : "Save"}</Button>
+        <Button size="sm" onClick={handleSave} disabled={saving || isOverLimit} title={isOverLimit ? "Reduce character count before saving" : undefined} className="min-h-[44px]">
+          {saving && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
+          {saving ? "Saving…" : "Save"}
+        </Button>
       </div>
 
       <Card>
@@ -109,10 +151,10 @@ export default function SeoManager() {
         <CardContent className="space-y-4">
           <div className="space-y-1.5"><Label className="text-xs">Page Title <span className="text-muted-foreground">(≤60 chars)</span></Label>
             <Input value={form.title} onChange={e => set("title", e.target.value)} className="h-9" />
-            <p className="text-xs text-muted-foreground">{form.title.length}/60</p></div>
+            <CharCounter current={form.title.length} max={60} label="title" /></div>
           <div className="space-y-1.5"><Label className="text-xs">Meta Description <span className="text-muted-foreground">(≤160 chars)</span></Label>
             <Textarea value={form.description} onChange={e => set("description", e.target.value)} rows={3} />
-            <p className="text-xs text-muted-foreground">{form.description.length}/160</p></div>
+            <CharCounter current={form.description.length} max={160} label="description" /></div>
           <div className="space-y-1.5"><Label className="text-xs">Keywords <span className="text-muted-foreground">(comma-separated)</span></Label>
             <Input value={form.keywords} onChange={e => set("keywords", e.target.value)} className="h-9" /></div>
           <div className="space-y-1.5"><Label className="text-xs">Canonical URL</Label>
@@ -134,9 +176,9 @@ export default function SeoManager() {
             <Input value={form.og_image} onChange={e => set("og_image", e.target.value)} className="h-9" placeholder="https://…/og-image.png (1200×630)" /></div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1"><Label className="text-xs">Twitter Card</Label>
-              <Input value={form.twitterCard} onChange={e => set("twitterCard", e.target.value)} className="h-8 text-sm" /></div>
+              <Input value={form.twitterCard} onChange={e => set("twitterCard", e.target.value)} className="h-9" /></div>
             <div className="space-y-1"><Label className="text-xs">Twitter Creator</Label>
-              <Input value={form.twitter_creator} onChange={e => set("twitter_creator", e.target.value)} className="h-8 text-sm" placeholder="@handle" /></div>
+              <Input value={form.twitter_creator} onChange={e => set("twitter_creator", e.target.value)} className="h-9" placeholder="@handle" /></div>
           </div>
         </CardContent>
       </Card>
@@ -147,7 +189,7 @@ export default function SeoManager() {
           <CardContent>
             <div className="rounded-lg border bg-background p-4 space-y-1">
               <div className="text-blue-600 dark:text-blue-400 font-medium text-sm hover:underline cursor-pointer">{form.title || "Page Title"}</div>
-              <div className="text-green-700 dark:text-green-500 text-xs">{form.canonical_url || "https://your-site.replit.app"}</div>
+              <div className="text-emerald-700 dark:text-emerald-500 text-xs">{form.canonical_url || "https://your-site.replit.app"}</div>
               <div className="text-muted-foreground text-xs leading-relaxed">{form.description || "Page description…"}</div>
             </div>
           </CardContent>

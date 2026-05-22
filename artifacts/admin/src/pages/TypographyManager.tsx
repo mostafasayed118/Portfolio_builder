@@ -1,15 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Slider } from "@/components/ui/slider";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@workspace/ui";
 import { Save, RefreshCw, Eye, AlertCircle } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { logError } from "@/lib/logger";
+import { getErrorMessage } from "@/lib/error-messages";
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, Skeleton, Slider } from "@workspace/ui";
 
 type TypoData = {
   body_font: string;
@@ -48,6 +44,7 @@ const PRESET_PAIRS = [
 
 export default function TypographyManager() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { data: typoData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["typographySettings"],
     queryFn: async () => {
@@ -105,6 +102,7 @@ export default function TypographyManager() {
       });
       if (!res.success) throw new Error(res.message);
       toast({ title: "Typography saved", description: "Changes live on the portfolio." });
+      queryClient.invalidateQueries({ queryKey: ["typographySettings"] });
     } catch (err) {
       logError("Failed to save typography settings", err, "TypographyManager");
       toast({ title: "Save failed", variant: "destructive" });
@@ -134,8 +132,7 @@ export default function TypographyManager() {
     return (
       <div className="p-6 flex flex-col items-center justify-center min-h-64 gap-4">
         <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-destructive font-medium">Failed to load data</p>
-        <p className="text-muted-foreground text-sm">{error?.message}</p>
+        <p className="text-destructive font-medium">{getErrorMessage(error)}</p>
         <Button onClick={() => refetch()} variant="outline">
           <RefreshCw className="h-4 w-4 mr-2" />
           Try Again
@@ -152,10 +149,10 @@ export default function TypographyManager() {
           <p className="text-sm text-muted-foreground mt-0.5">Control fonts, sizes, and text rhythm across the portfolio.</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => { setTypo(DEFAULTS); toast({ title: "Reset to defaults" }); }}>
+          <Button variant="outline" size="sm" onClick={() => { setTypo(DEFAULTS); toast({ title: "Reset to defaults" }); }} className="min-h-[44px]">
             <RefreshCw size={14} className="mr-1.5" /> Reset
           </Button>
-          <Button size="sm" onClick={handleSave} disabled={saving}>
+          <Button size="sm" onClick={handleSave} disabled={saving} className="min-h-[44px]">
             <Save size={14} className="mr-1.5" />
             {saving ? "Saving…" : "Save Changes"}
           </Button>
@@ -169,13 +166,17 @@ export default function TypographyManager() {
               <CardTitle className="text-sm">Font Pairs</CardTitle>
               <CardDescription className="text-xs">Click a preset to apply it instantly</CardDescription>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-2">
+            <CardContent className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Font pair presets">
               {PRESET_PAIRS.map((p) => (
                 <button
                   key={p.display}
+                  type="button"
+                  role="radio"
+                  aria-checked={typo.display_font === p.display} // STANDARDIZED: Type I — font preset
+                  aria-label={`Select ${p.display} + ${p.body} font preset`}
                   onClick={() => applyPreset(p)}
-                  className={`text-left p-3 rounded-lg border transition-all hover:border-primary/50 hover:bg-accent/50 ${
-                    typo.display_font === p.display ? "border-primary bg-accent" : "border-border"
+                  className={`text-left p-3 rounded-lg border-2 transition-all min-h-[44px] hover:border-primary/50 hover:bg-accent/50 ${
+                    typo.display_font === p.display ? "border-primary bg-primary/5" : "border-border"
                   }`}
                 >
                   <div className="font-semibold text-sm text-foreground">{p.display}</div>

@@ -1,18 +1,13 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@workspace/ui";
 import { Plus, Pencil, Trash2, Code2, AlertCircle, RefreshCw } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { logError } from "@/lib/logger";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, Skeleton, Slider, Switch } from "@workspace/ui";
+import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
+import { SmartEmptyState } from "@/components/SmartEmptyState";
+import { getErrorMessage } from "@/lib/error-messages";
 
 type SkillRow = { id: string; name: string; category: string; proficiency: number; is_visible: boolean; sort_order: number };
 
@@ -20,11 +15,13 @@ const BLANK = { name: "", category: "", proficiency: 75, is_visible: true, sort_
 
 export default function SkillsManager() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { data: skills, isLoading, isError, error, refetch } = useQuery({ queryKey: ["skills"], queryFn: async () => { const res = await api.skills.list(); if (!res.success) throw new Error(res.message); return res.data; } });
 
   const [editing, setEditing] = useState<Partial<SkillRow> | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const openNew = () => { setIsNew(true); setEditing(BLANK); };
   const openEdit = (s: SkillRow) => { setIsNew(false); setEditing({ ...s }); };
@@ -52,17 +49,18 @@ export default function SkillsManager() {
       }
       if (!res.success) throw new Error(res.message);
       toast({ title: isNew ? "Skill created" : "Skill updated" });
+      queryClient.invalidateQueries({ queryKey: ["skills"] });
       setEditing(null);
     } catch (err) { logError("Failed to save skill", err, "SkillsManager"); toast({ title: "Failed", variant: "destructive" }); }
     finally { setSaving(false); }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this skill?")) return;
     try {
       const res = await api.skills.delete(id);
       if (!res.success) throw new Error(res.message);
       toast({ title: "Skill deleted" });
+      queryClient.invalidateQueries({ queryKey: ["skills"] });
     } catch (err) {
       logError("Failed to delete skill", err, "SkillsManager");
       toast({ title: "Delete failed", variant: "destructive" });
@@ -89,8 +87,7 @@ export default function SkillsManager() {
     return (
       <div className="p-6 flex flex-col items-center justify-center min-h-64 gap-4">
         <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-destructive font-medium">Failed to load data</p>
-        <p className="text-muted-foreground text-sm">{error?.message}</p>
+        <p className="text-destructive font-medium">{getErrorMessage(error)}</p>
         <Button onClick={() => refetch()} variant="outline">
           <RefreshCw className="h-4 w-4 mr-2" />
           Try Again
@@ -101,28 +98,24 @@ export default function SkillsManager() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex-1 min-w-[120px]">
           <h1 className="text-2xl font-bold">Skills Manager</h1>
           <p className="text-sm text-muted-foreground mt-0.5">{skills?.length ?? 0} skills across {cats.length} categories.</p>
         </div>
-        <Button size="sm" onClick={openNew}><Plus size={14} className="mr-1.5" />Add Skill</Button>
+        <Button size="sm" onClick={openNew} className="min-h-[44px]"><Plus className="h-4 w-4 mr-1.5" />Add Skill</Button>
       </div>
 
       {(!skills || skills.length === 0) ? (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
-            <Code2 size={32} className="mx-auto mb-3 opacity-30" />
-            <p className="text-sm font-medium">No skills yet</p>
-            <p className="text-xs mt-1">Add your first skill to get started.</p>
-            <Button size="sm" className="mt-4" onClick={openNew}><Plus size={14} className="mr-1.5" />Add Skill</Button>
-          </CardContent>
-        </Card>
+        <SmartEmptyState
+          type="skills"
+          onAction={openNew}
+        />
       ) : cats.map(cat => (
         <Card key={cat}>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center gap-2">
-              {cat}
+              <span className="font-semibold">{cat}</span>
               <Badge variant="secondary" className="text-xs">{skills?.filter(s => s.category === cat).length}</Badge>
             </CardTitle>
           </CardHeader>
@@ -131,7 +124,7 @@ export default function SkillsManager() {
               const row = mapToRow(skill);
               return (
               <div key={row.id} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/40 transition-colors group">
-                <div className={`w-2 h-2 rounded-full shrink-0 ${row.is_visible ? "bg-green-500" : "bg-muted-foreground/30"}`} />
+                <div className={`w-2 h-2 rounded-full shrink-0 ${row.is_visible ? "bg-emerald-500" : "bg-muted-foreground/30"}`} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">{row.name}</span>
@@ -142,8 +135,8 @@ export default function SkillsManager() {
                   </div>
                 </div>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(row)}><Pencil size={12} /></Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDelete(row.id)}><Trash2 size={12} /></Button>
+                  <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]" aria-label="Edit skill" onClick={() => openEdit(row)}><Pencil className="h-4 w-4" /></Button> {/* STANDARDIZED: Type D — inline edit */}
+                  <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] text-destructive hover:text-destructive hover:bg-destructive/10" aria-label="Delete skill" onClick={() => setDeleteTarget(row.id)}><Trash2 className="h-4 w-4" /></Button> {/* STANDARDIZED: Type E — inline delete */}
                 </div>
               </div>
               );
@@ -195,6 +188,21 @@ export default function SkillsManager() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <SmartConfirmDialog
+        state={{
+          isOpen: !!deleteTarget,
+          title: "Delete Skill",
+          message: "This action cannot be undone. The skill will be permanently removed.",
+          confirmLabel: "Delete",
+          variant: "danger",
+          onConfirm: async () => {
+            await handleDelete(deleteTarget!);
+            setDeleteTarget(null);
+          },
+        }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

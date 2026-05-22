@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Github, Linkedin, Mail, MapPin, ArrowDown, Download, Code, Cpu } from "lucide-react";
 import { motion } from "framer-motion";
 import { useMouseTilt } from "@/hooks/use-mouse-tilt";
@@ -10,7 +10,20 @@ import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
 import { trackEvent } from "@workspace/db/analytics";
 import { useLanguage } from "@/lib/language";
 
-function RotatingRing() {
+function useReducedMotion() {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReduced(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setReduced(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return reduced;
+}
+
+function RotatingRing({ reduced }: { reduced?: boolean }) {
+  if (reduced) return <div className="absolute -inset-8 rounded-full border-2 border-dashed border-primary/15" />;
   return (
     <motion.div
       className="absolute -inset-8 rounded-full border-2 border-dashed border-primary/15"
@@ -20,7 +33,8 @@ function RotatingRing() {
   );
 }
 
-function FloatingIcon({ icon: Icon, className, delay = 0 }: { icon: React.ElementType; className: string; delay?: number }) {
+function FloatingIcon({ icon: Icon, className, delay = 0, reduced }: { icon: React.ElementType; className: string; delay?: number; reduced?: boolean }) {
+  if (reduced) return <div className={className}><Icon className="h-full w-full" /></div>;
   return (
     <motion.div
       className={className}
@@ -51,12 +65,19 @@ function ScrollProgress() {
   }, 16);
   return (
     <div className="fixed top-16 left-0 right-0 h-0.5 z-50 bg-muted/30 pointer-events-none">
-      <div className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-150" style={{ width: `${progress}%` }} />
+      <div className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-150" style={{ width: `${Math.round(progress)}%` as React.CSSProperties["width"] }} />
     </div>
   );
 }
 
-function BackgroundOrbs() {
+function BackgroundOrbs({ reduced }: { reduced?: boolean }) {
+  if (reduced) return (
+    <div aria-hidden="true" className="absolute inset-0 overflow-hidden pointer-events-none -z-10">
+      <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-primary/15 blur-3xl" />
+      <div className="absolute -bottom-32 -right-32 w-80 h-80 rounded-full bg-accent/20 blur-3xl" />
+      <div className="absolute top-1/2 left-1/4 w-64 h-64 rounded-full bg-primary/10 blur-2xl" />
+    </div>
+  );
   return (
     <div aria-hidden="true" className="absolute inset-0 overflow-hidden pointer-events-none -z-10">
       <motion.div
@@ -74,6 +95,24 @@ function BackgroundOrbs() {
         transition={{ duration: 15, repeat: Infinity, ease: "easeInOut", delay: 6 }}
         className="absolute top-1/2 left-1/4 w-64 h-64 rounded-full bg-primary/10 blur-2xl"
       />
+    </div>
+  );
+}
+
+function AvatarContent({ reduced }: { reduced?: boolean }) {
+  return (
+    <div className="relative h-56 w-56 md:h-72 md:w-72">
+      <RotatingRing reduced={reduced} />
+      <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-primary/30 via-accent/20 to-primary/10 blur-xl" />
+      <div className="relative h-full w-full rounded-3xl glass border border-primary/20 flex items-center justify-center overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-accent/10" />
+        <div className="relative z-10 text-center p-6">
+          <div className="font-display font-bold text-6xl md:text-7xl text-primary mb-1">MS</div>
+          <div className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Data Engineer</div>
+        </div>
+      </div>
+      <FloatingIcon icon={Code} className="absolute -top-4 -right-4 h-7 w-7 text-primary/40" delay={0} reduced={reduced} />
+      <FloatingIcon icon={Cpu} className="absolute -bottom-4 -left-4 h-7 w-7 text-accent/40" delay={1} reduced={reduced} />
     </div>
   );
 }
@@ -101,7 +140,7 @@ function HeroSkeleton() {
           </div>
         </div>
         <div className="relative shrink-0 animate-fade-up" style={{ animationDelay: "0.2s" }}>
-          <div className="relative h-56 w-56 md:h-72 md:w-72">
+    <div className="relative h-40 w-40 sm:h-56 sm:w-56 md:h-72 md:w-72">
             <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-primary/30 via-accent/20 to-primary/10 blur-xl" />
             <div className="relative h-full w-full rounded-3xl glass border border-primary/20 flex items-center justify-center overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-accent/10" />
@@ -121,6 +160,7 @@ export default function HeroSection() {
   const { data: supabaseHero, isLoading } = useHeroContent();
   const tilt = useMouseTilt(12);
   const { t, isArabic } = useLanguage();
+  const reducedMotion = useReducedMotion();
 
   const hero = supabaseHero
     ? {
@@ -153,7 +193,7 @@ export default function HeroSection() {
       id="hero"
       className="relative min-h-screen flex items-center justify-center px-6 overflow-hidden"
     >
-      <BackgroundOrbs />
+      <BackgroundOrbs reduced={reducedMotion} />
 
       <div className="max-w-5xl mx-auto w-full flex flex-col md:flex-row items-center gap-10 md:gap-16 pt-20 relative z-10">
         <div className="animate-fade-up flex-1 text-center md:text-left">
@@ -185,20 +225,20 @@ export default function HeroSection() {
           </p>
 
           <div className="flex flex-wrap gap-3 justify-center md:justify-start mb-8">
-            <button
-              onClick={() => scrollTo("#contact")}
+            <a
+              href="#contact" // FIX: UX-007
               className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity shadow-[var(--shadow-float)]"
               data-testid="btn-get-in-touch"
             >
               {t.contact.title}
-            </button>
-            <button
-              onClick={() => scrollTo("#projects")}
+            </a>
+            <a
+              href="#projects"
               className="px-6 py-2.5 rounded-xl border border-border bg-card/70 text-foreground font-semibold text-sm hover:opacity-70 transition-opacity"
               data-testid="btn-view-projects"
             >
               {t.hero.viewProjects}
-            </button>
+            </a>
             <a
               href={`${import.meta.env.VITE_API_URL ?? ""}/api/v1/cv`}
               download
@@ -207,7 +247,8 @@ export default function HeroSection() {
               data-testid="btn-download-cv"
               onClick={() => {
                 if (isSupabaseConfigured) {
-                  trackEvent(getSupabase(), "cv_download", "/", { source: "hero" }).catch(() => {});
+                  const sb = getSupabase();
+                  if (sb) trackEvent(sb, "cv_download", "/", { source: "hero" }).catch(() => {});
                 }
               }}
             >
@@ -257,42 +298,17 @@ export default function HeroSection() {
             style={tilt.style}
             className="relative cursor-pointer hidden md:block"
           >
-            <div className="relative h-56 w-56 md:h-72 md:w-72">
-              <RotatingRing />
-              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-primary/30 via-accent/20 to-primary/10 blur-xl" />
-              <div className="relative h-full w-full rounded-3xl glass border border-primary/20 flex items-center justify-center overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-accent/10" />
-                <div className="relative z-10 text-center p-6">
-                  <div className="font-display font-bold text-6xl md:text-7xl text-primary mb-1">MS</div>
-                  <div className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Data Engineer</div>
-                </div>
-              </div>
-              <FloatingIcon icon={Code} className="absolute -top-4 -right-4 h-7 w-7 text-primary/40" delay={0} />
-              <FloatingIcon icon={Cpu} className="absolute -bottom-4 -left-4 h-7 w-7 text-accent/40" delay={1} />
-            </div>
+            <AvatarContent reduced={reducedMotion} />
           </motion.div>
-
           <div className="md:hidden">
-            <div className="relative h-56 w-56 md:h-72 md:w-72">
-              <RotatingRing />
-              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-primary/30 via-accent/20 to-primary/10 blur-xl" />
-              <div className="relative h-full w-full rounded-3xl glass border border-primary/20 flex items-center justify-center overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-accent/10" />
-                <div className="relative z-10 text-center p-6">
-                  <div className="font-display font-bold text-6xl md:text-7xl text-primary mb-1">MS</div>
-                  <div className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Data Engineer</div>
-                </div>
-              </div>
-              <FloatingIcon icon={Code} className="absolute -top-4 -right-4 h-7 w-7 text-primary/40" delay={0} />
-              <FloatingIcon icon={Cpu} className="absolute -bottom-4 -left-4 h-7 w-7 text-accent/40" delay={1} />
-            </div>
+            <AvatarContent reduced={reducedMotion} />
           </div>
         </div>
       </div>
 
-      <button
+      <button // FIX: UX-016
         onClick={() => scrollTo("#about")}
-        className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 text-muted-foreground hover:text-primary transition-colors group"
+        className="absolute bottom-4 sm:bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 text-muted-foreground hover:text-primary transition-colors group"
         aria-label="Scroll down"
       >
         <span className="text-xs font-medium">{t.common.readMore}</span>

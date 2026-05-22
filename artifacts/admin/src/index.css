@@ -214,6 +214,23 @@
   body {
     @apply font-sans antialiased bg-background text-foreground;
   }
+
+  /* Global focus ring */
+  *:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    border-radius: inherit;
+  }
+  *:focus {
+    outline: none;
+  }
+
+  /* High contrast mode support */
+  @media (forced-colors: active) {
+    *:focus-visible {
+      outline: 3px solid ButtonText;
+    }
+  }
 }
 
 @layer utilities {
@@ -227,6 +244,34 @@
   }
   .no-default-hover-elevate {}
   .no-default-active-elevate {}
+
+  /* RTL support */
+  [dir="rtl"] {
+    font-family: 'Cairo', 'Segoe UI', system-ui, sans-serif;
+    letter-spacing: 0;
+  }
+  [dir="rtl"] .sidebar {
+    left: auto;
+    right: 0;
+    border-right: none;
+    border-left: 1px solid hsl(var(--border));
+  }
+  [dir="rtl"] input,
+  [dir="rtl"] textarea,
+  [dir="rtl"] select {
+    text-align: right;
+  }
+  [dir="rtl"] .flip-rtl {
+    transform: scaleX(-1);
+  }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 
   .toggle-elevate::before,
   .toggle-elevate-2::before {
@@ -259,7 +304,7 @@
     position: absolute;
     inset: 0px;
     border-radius: inherit;
-    z-index: 999;
+    z-index: 40;
   }
   .hover-elevate:hover:not(.no-default-hover-elevate)::after,
   .active-elevate:active:not(.no-default-active-elevate)::after {

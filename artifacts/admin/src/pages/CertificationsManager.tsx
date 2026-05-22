@@ -1,59 +1,42 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import type { Certification } from "@workspace/supabase/types";
 import { api } from "@/lib/api-client";
 import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, AlertCircle, RefreshCw } from "lucide-react";
+import { useToast } from "@workspace/ui";
+import { Plus, Pencil, Trash2, AlertCircle, RefreshCw, Award } from "lucide-react";
 import { logError } from "@/lib/logger";
+import { Badge, Button, Card, CardContent, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Input, Label, Skeleton, Switch } from "@workspace/ui";
+import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
+import { SmartEmptyState } from "@/components/SmartEmptyState";
+import { getErrorMessage } from "@/lib/error-messages";
 
-type Cert = {
-  id: string;
-  title: string;
-  issuer: string;
-  title_ar: string | null;
-  issuer_ar: string | null;
-  issuer_logo: string | null;
-  date: string;
-  date_sort: string | null;
-  category: string | null;
-  credential_url: string | null;
-  sort_order: number;
-  is_published: boolean;
-  credential_id: string | null;
-  created_at: string;
-  updated_at: string;
-  skills: string[];
-};
+type Cert = Certification;
 
-const EMPTY_CERT: Cert = { 
-  id: "", 
-  title: "", 
-  issuer: "", 
+const EMPTY_CERT: Cert = {
+  id: "",
+  title: "",
+  issuer: "",
   title_ar: null,
   issuer_ar: null,
-  issuer_logo: null, 
-  date: "", 
-  date_sort: null, 
-  category: null, 
-  credential_url: null, 
-  sort_order: 0, 
+  issuer_logo: null,
+  date: "",
+  date_sort: null,
+  category: null,
+  credential_url: null,
+  sort_order: 0,
   is_published: true,
   credential_id: null,
   created_at: "",
   updated_at: "",
   skills: [],
+  user_id: null,
+  deleted_at: null,
 };
 
 export default function CertificationsManager() {
   const { toast } = useToast();
-  const { data: items, isLoading, isError, error, refetch } = useQuery<any>({
+  const queryClient = useQueryClient();
+  const { data: items, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["certifications"],
     queryFn: async () => {
       const res = await api.certifications.list();
@@ -64,12 +47,16 @@ export default function CertificationsManager() {
   const [editing, setEditing] = useState<Cert | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const openNew = () => { setIsNew(true); setEditing({ ...EMPTY_CERT }); };
   const openEdit = (c: Cert) => { setIsNew(false); setEditing({ ...c }); };
 
   const handleSave = async () => {
     if (!editing) return;
+    if (!editing.title?.trim()) { toast({ title: "Title is required", variant: "destructive" }); return; } {/* FIX: UX-018 */}
+    if (!editing.issuer?.trim()) { toast({ title: "Issuer is required", variant: "destructive" }); return; }
+    if (!editing.date?.trim()) { toast({ title: "Date is required", variant: "destructive" }); return; }
     setSaving(true);
     try {
       const rowData = {
@@ -92,12 +79,13 @@ export default function CertificationsManager() {
       }
       if (!res.success) throw new Error(res.message);
       toast({ title: isNew ? "Created" : "Updated" });
+      queryClient.invalidateQueries({ queryKey: ["certifications"] });
       setEditing(null);
     } catch (err) { logError("Failed to save certification", err, "CertificationsManager"); toast({ title: "Failed", variant: "destructive" }); }
     finally { setSaving(false); }
   };
 
-  const cats = [...new Set(items?.map((c: any) => c.category) ?? [])] as string[];
+  const cats = [...new Set(items?.map(c => c.category) ?? [])] as string[];
 
   if (isLoading) {
     return (
@@ -117,8 +105,7 @@ export default function CertificationsManager() {
     return (
       <div className="p-6 flex flex-col items-center justify-center min-h-64 gap-4">
         <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-destructive font-medium">Failed to load data</p>
-        <p className="text-muted-foreground text-sm">{error?.message}</p>
+        <p className="text-destructive font-medium">{getErrorMessage(error)}</p>
         <Button onClick={() => refetch()} variant="outline">
           <RefreshCw className="h-4 w-4 mr-2" />
           Try Again
@@ -129,26 +116,28 @@ export default function CertificationsManager() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div><h1 className="text-2xl font-bold">Certifications</h1><p className="text-sm text-muted-foreground mt-0.5">{items?.length ?? 0} certifications</p></div>
-        <Button size="sm" onClick={openNew}><Plus size={14} className="mr-1.5" />Add Cert</Button>
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex-1 min-w-[120px]"><h1 className="text-2xl font-bold">Certifications</h1><p className="text-sm text-muted-foreground mt-0.5">{items?.length ?? 0} certifications</p></div>
+        <Button size="sm" onClick={openNew} className="min-h-[44px]"><Plus className="h-4 w-4 mr-1.5" />Add Cert</Button>
       </div>
 
-      {cats.map(cat => (
+      {(!items || items.length === 0) ? (
+        <SmartEmptyState type="certifications" onAction={openNew} />
+      ) : cats.map(cat => (
         <div key={cat}>
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">{cat}</h2>
+          <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2 block">{cat}</span>
           <div className="space-y-2">
-            {items?.filter((c: any) => c.category === cat).map((cert: any) => (
+            {items?.filter(c => c.category === cat).map(cert => (
               <Card key={cert.id} className={!cert.is_published ? "opacity-60" : ""}>
-                <CardContent className="pt-3 pb-3 flex items-center gap-3">
+                <CardContent className="pt-4 pb-4 flex items-center gap-3">
                   <span className="text-2xl">{cert.issuer_logo ?? ""}</span>
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-sm">{cert.title}</div>
                     <div className="text-xs text-muted-foreground">{cert.issuer} · {cert.date}</div>
                   </div>
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(cert)}><Pencil size={12} /></Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={async () => { if (!confirm("Delete?")) return; try { const res = await api.certifications.delete(cert.id); if (!res.success) throw new Error(res.message); toast({ title: "Deleted" }); } catch (err) { logError("Failed to delete certification", err, "CertificationsManager"); toast({ title: "Delete failed", variant: "destructive" }); } }}><Trash2 size={12} /></Button>
+                    <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]" aria-label="Edit certification" onClick={() => openEdit(cert)}><Pencil className="h-4 w-4" /></Button> {/* STANDARDIZED: Type D — inline edit */}
+                    <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] text-destructive hover:text-destructive hover:bg-destructive/10" aria-label="Delete certification" onClick={() => setDeleteTarget(cert.id)}><Trash2 className="h-4 w-4" /></Button> {/* STANDARDIZED: Type E — inline delete */}
                   </div>
                 </CardContent>
               </Card>
@@ -194,6 +183,29 @@ export default function CertificationsManager() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <SmartConfirmDialog
+        state={{
+          isOpen: !!deleteTarget,
+          title: "Delete Certification",
+          message: "This action cannot be undone. The certification will be permanently removed.",
+          confirmLabel: "Delete",
+          variant: "danger",
+          onConfirm: async () => {
+            try {
+              const res = await api.certifications.delete(deleteTarget!);
+              if (!res.success) throw new Error(res.message);
+              toast({ title: "Certification deleted" });
+              queryClient.invalidateQueries({ queryKey: ["certifications"] });
+            } catch (err) {
+              logError("Failed to delete certification", err, "CertificationsManager");
+              toast({ title: "Delete failed", variant: "destructive" });
+            }
+            setDeleteTarget(null);
+          },
+        }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

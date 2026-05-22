@@ -9,9 +9,11 @@ export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 
 function createBrowserSupabase(): SupabaseClient<Database> | null {
   if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn(
-      "Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY. Set both in your .env file. Running in offline mode."
-    );
+    if (import.meta.env.DEV) {
+      console.warn(
+        "Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY. Set both in your .env file. Running in offline mode."
+      );
+    }
     return null;
   }
   return createClient<Database>(supabaseUrl, supabaseAnonKey);
@@ -19,11 +21,11 @@ function createBrowserSupabase(): SupabaseClient<Database> | null {
 
 let _client: SupabaseClient<Database> | null = null;
 
-export function getSupabase(): SupabaseClient<Database> {
+export function getSupabase(): SupabaseClient<Database> | null {
   if (!_client) {
     _client = createBrowserSupabase();
   }
-  return _client!;
+  return _client;
 }
 
 export function resetSupabase() {

@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { useLanguage } from "@/lib/language";
 import { Link, useLocation } from "wouter";
-import { ArrowLeft, ExternalLink, Github, Calendar, Sparkles } from "lucide-react";
+import { ArrowLeft, ExternalLink, Github, Calendar, Sparkles, FileX } from "lucide-react";
 import { PROJECTS } from "@/data/portfolio";
 import SEO, { generateProjectSchema } from "@/components/SEO";
 import ProjectCard from "@/components/ProjectCard";
@@ -107,7 +107,8 @@ export default function ProjectDetail({ slug }: ProjectDetailProps) {
 
   useEffect(() => {
     if (project?.slug && isSupabaseConfigured) {
-      trackEvent(getSupabase(), "project_view", `/projects/${project.slug}`, {
+      const sb = getSupabase();
+      if (sb) trackEvent(sb, "project_view", `/projects/${project.slug}`, {
         project_slug: project.slug,
         title: project.title,
       }).catch(() => {});
@@ -119,7 +120,24 @@ export default function ProjectDetail({ slug }: ProjectDetailProps) {
   }
 
   if (!project) {
-    return null;
+    return (
+      <main className="min-h-screen pt-20">
+        <div className="max-w-4xl mx-auto px-6 py-24 text-center space-y-4">
+          <FileX className="h-16 w-16 text-muted-foreground mx-auto" />
+          <h1 className="text-2xl font-bold">Project Not Found</h1>
+          <p className="text-muted-foreground">
+            The project you're looking for doesn't exist or has been removed.
+          </p>
+          <button
+            onClick={() => navigate("/#projects")}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Projects
+          </button>
+        </div>
+      </main>
+    );
   }
 
   const relatedProjects = PROJECTS.filter(
@@ -169,7 +187,7 @@ export default function ProjectDetail({ slug }: ProjectDetailProps) {
                 </span>
               </div>
 
-              <h1 className="text-3xl md:text-4xl font-display font-bold text-foreground">
+              <h1 className="text-4xl md:text-5xl font-display font-bold text-foreground">
                 {project.title}
               </h1>
 
@@ -202,7 +220,7 @@ export default function ProjectDetail({ slug }: ProjectDetailProps) {
             </header>
 
             <div className="glass rounded-2xl border border-border/60 p-6 md:p-8">
-              <h2 className="text-lg font-display font-semibold text-foreground mb-4">About This Project</h2>
+              <h2 className="text-xl font-display font-semibold text-foreground mb-4">About This Project</h2>
               <div className="prose prose-sm md:prose prose-muted max-w-none">
                 {(project.fullDescription ?? project.description ?? "").split("\n\n").map((paragraph, idx) => (
                   <p key={idx} className="text-muted-foreground leading-relaxed mb-4">
@@ -230,7 +248,7 @@ export default function ProjectDetail({ slug }: ProjectDetailProps) {
             )}
 
             <div className="glass rounded-2xl border border-border/60 p-6">
-              <h2 className="text-lg font-display font-semibold text-foreground mb-4">{t.projects.techStack}</h2>
+              <h2 className="text-xl font-display font-semibold text-foreground mb-4">{t.projects.techStack}</h2>
               <div className="flex flex-wrap gap-2">
                 {project.techStack.map((tech) => (
                   <span
@@ -245,7 +263,7 @@ export default function ProjectDetail({ slug }: ProjectDetailProps) {
 
             {project.metrics && project.metrics.length > 0 && (
               <div className="glass rounded-2xl border border-border/60 p-6">
-                <h2 className="text-lg font-display font-semibold text-foreground mb-4">Key Metrics</h2>
+                <h2 className="text-xl font-display font-semibold text-foreground mb-4">Key Metrics</h2>
                 <div className="flex flex-wrap gap-3">
                   {project.metrics.map((metric) => (
                     <span
@@ -262,7 +280,7 @@ export default function ProjectDetail({ slug }: ProjectDetailProps) {
 
           {relatedProjects.length > 0 && (
             <section className="mt-16">
-              <h2 className="text-2xl font-display font-bold text-foreground mb-8">{t.projects.relatedProjects}</h2>
+              <h2 className="text-xl font-display font-bold text-foreground mb-8">{t.projects.relatedProjects}</h2>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {relatedProjects.map((p) => (
                   <Link key={p.slug} href={`/projects/${p.slug}`}>

@@ -1,20 +1,13 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { createClient } from "@supabase/supabase-js";
 import multer from "multer";
 import { createHash } from "crypto";
+import { z } from "zod";
 import { doubleCsrfProtection } from "../middleware/csrf";
+import { adminAuth } from "../middleware/adminAuth";
+import { imageMetadataLimiter } from "../middleware/rateLimiter";
+import { getSupabaseClient } from "../lib/supabase-client";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
-const supabaseUrl: string | undefined = process.env.SUPABASE_URL;
-const supabaseServiceRoleKey: string | undefined = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-function getServerSupabase() {
-  if (!supabaseUrl) throw new Error("SUPABASE_URL is not set");
-  if (!supabaseServiceRoleKey) throw new Error("SUPABASE_SERVICE_ROLE_KEY is not set");
-  return createClient(supabaseUrl, supabaseServiceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-}
 
 const router: IRouter = Router();
 
@@ -38,10 +31,10 @@ const VARIANTS: { suffix: string; width: number; height?: number; fit?: string }
   { suffix: "social", width: 1200, height: 630, fit: "cover" },
 ];
 
-// POST /api/images/upload — upload an image
-router.post("/images/upload", doubleCsrfProtection, upload.single("file"), async (req: Request, res: Response) => {
+// POST /api/images/upload — upload an image (admin only)
+router.post("/images/upload", adminAuth, doubleCsrfProtection, upload.single("file"), async (req: Request, res: Response) => {
   try {
-    const supabase = getServerSupabase();
+    const supabase = getSupabaseClient();
     const entityType = req.body.entityType as string;
     const entityId = req.body.entityId as string | undefined;
     const file = req.file as Express.Multer.File | undefined;
@@ -63,6 +56,11 @@ router.post("/images/upload", doubleCsrfProtection, upload.single("file"), async
 
     if (entityId && typeof entityId !== "string") {
       res.status(400).json({ error: "Invalid entityId" });
+      return;
+    }
+
+    if (entityId && !z.string().uuid().safeParse(entityId).success) {
+      res.status(400).json({ error: "entityId must be a valid UUID" });
       return;
     }
 
@@ -97,7 +95,8 @@ router.post("/images/upload", doubleCsrfProtection, upload.single("file"), async
     if (metaError) throw new Error(`Metadata insert failed: ${metaError.message}`);
 
     // Use Supabase's built-in image transformation via URL params
-    const publicUrl = `${supabaseUrl!}/storage/v1/object/public/project_images/${storagePath}`;
+    const supabaseUrl = process.env.SUPABASE_URL!;
+    const publicUrl = `${supabaseUrl}/storage/v1/object/public/project_images/${storagePath}`;
 
     res.json({
       id: meta.id,
@@ -109,17 +108,17 @@ router.post("/images/upload", doubleCsrfProtection, upload.single("file"), async
     });
   } catch (err) {
     req.log.error({ err }, "Image upload failed");
-    res.status(500).json({ error: err instanceof Error ? err.message : "Upload failed" });
+    res.status(500).json({ error: "Image upload failed. Please try again." });
   }
 });
 
 // GET /api/images/:id/metadata — get image metadata
-router.get("/images/:id/metadata", async (req: Request, res: Response) => {
-  const supabase = getServerSupabase();
+router.get("/images/:id/metadata", imageMetadataLimiter, async (req: Request, res: Response) => {
+  const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from("image_metadata")
-    .select("*")
-    .eq("id", req.params.id)
+    .select("id, original_filename, mime_type, file_size_bytes, entity_type, entity_id, created_at")
+    .eq("id", req.params.id as string)
     .single();
 
   if (error || !data) {
@@ -130,14 +129,14 @@ router.get("/images/:id/metadata", async (req: Request, res: Response) => {
   res.json(data);
 });
 
-// DELETE /api/images/:id — delete image
-router.delete("/images/:id", doubleCsrfProtection, async (req: Request, res: Response) => {
+// DELETE /api/images/:id — delete image (admin only)
+router.delete("/images/:id", adminAuth, doubleCsrfProtection, async (req: Request, res: Response) => {
   try {
-    const supabase = getServerSupabase();
+    const supabase = getSupabaseClient();
     const { data: meta, error: metaError } = await supabase
       .from("image_metadata")
       .select("storage_path, id")
-      .eq("id", req.params.id)
+      .eq("id", req.params.id as string)
       .single();
 
     if (metaError || !meta) {

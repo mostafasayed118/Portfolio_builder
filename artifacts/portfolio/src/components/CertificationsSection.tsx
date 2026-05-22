@@ -3,6 +3,7 @@ import { useLanguage } from "@/lib/language";
 import type { TranslationKeys } from "@/i18n";
 import { ExternalLink, Award, ScrollText } from "lucide-react";
 import EmptyState from "./EmptyState";
+import SectionLabel from "./SectionLabel";
 import { CERTIFICATIONS, type Certificate } from "@/data/portfolio";
 import { useReveal } from "@/hooks/use-reveal";
 import { useCertifications } from "@/hooks/use-portfolio-data";
@@ -27,11 +28,11 @@ function getFilters(t: TranslationKeys) {
 }
 
 const CATEGORY_COLORS: Record<Certificate["category"], string> = {
-  python: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-  "data-engineering": "bg-primary/10 text-primary border-primary/20",
-  cloud: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20",
-  database: "bg-amber-500/10 text-amber-500 border-amber-500/20",
-  ai: "bg-violet-500/10 text-violet-500 border-violet-500/20",
+  python: "bg-primary/10 text-primary border-primary/20",
+  "data-engineering": "bg-accent/10 text-accent-foreground border-accent/20",
+  cloud: "bg-secondary text-secondary-foreground border-secondary/30",
+  database: "bg-muted text-muted-foreground border-border",
+  ai: "bg-primary/15 text-primary border-primary/30", // FIX: UX-040
 };
 
 const CATEGORY_LABELS: Record<Certificate["category"], string> = {
@@ -43,12 +44,12 @@ const CATEGORY_LABELS: Record<Certificate["category"], string> = {
 };
 
 const ISSUER_COLORS: Record<string, string> = {
-  DataCamp: "bg-green-500/10 text-green-600 border-green-500/20",
-  IBM: "bg-blue-600/10 text-blue-600 border-blue-600/20",
-  "Microsoft DEPI": "bg-sky-500/10 text-sky-500 border-sky-500/20",
-  Microsoft: "bg-sky-500/10 text-sky-500 border-sky-500/20",
-  HackerRank: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-  Maharatech: "bg-orange-500/10 text-orange-500 border-orange-500/20",
+  DataCamp: "bg-primary/10 text-primary border-primary/20",
+  IBM: "bg-accent/10 text-accent-foreground border-accent/20",
+  "Microsoft DEPI": "bg-secondary text-secondary-foreground border-secondary/30",
+  Microsoft: "bg-secondary text-secondary-foreground border-secondary/30",
+  HackerRank: "bg-primary/5 text-primary border-primary/10",
+  Maharatech: "bg-muted text-muted-foreground border-border",
 };
 
 function CertCard({ cert, index, t }: { cert: Certificate; index: number; t: TranslationKeys }) {
@@ -61,11 +62,6 @@ function CertCard({ cert, index, t }: { cert: Certificate; index: number; t: Tra
       style={{ transitionDelay: `${index * 60}ms` }}
       data-testid={`cert-card-${cert.id}`}
     >
-      <div
-        className="absolute left-0 top-0 bottom-0 w-px bg-gradient-to-b from-primary/40 via-primary/20 to-transparent ml-[18px]"
-        aria-hidden
-      />
-
       <div className="flex gap-4 items-start pb-6">
         <div className="relative shrink-0 z-10">
           <div className="h-9 w-9 rounded-full bg-card border-2 border-primary/30 flex items-center justify-center text-base shadow-sm group-hover:border-primary transition-colors">
@@ -73,7 +69,7 @@ function CertCard({ cert, index, t }: { cert: Certificate; index: number; t: Tra
           </div>
         </div>
 
-        <div className="flex-1 glass rounded-xl border p-4 hover:border-primary/25 transition-all duration-200 hover:shadow-[var(--shadow-card)]">
+        <div className="flex-1 glass rounded-xl border p-5 hover:border-primary/25 transition-all duration-200 hover:shadow-[var(--shadow-card)]">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
               <h3 className="font-display font-semibold text-sm text-foreground leading-snug mb-1.5 group-hover:text-primary transition-colors">
@@ -101,7 +97,7 @@ function CertCard({ cert, index, t }: { cert: Certificate; index: number; t: Tra
                 href={cert.credentialUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1 text-[11px] font-semibold text-primary hover:opacity-80 transition-opacity"
+                className="flex items-center gap-1 text-xs font-semibold text-primary hover:opacity-80 transition-opacity"
                 aria-label={`View ${cert.title} credential`}
                 data-testid={`cert-link-${cert.id}`}
               >
@@ -227,10 +223,7 @@ export default function CertificationsSection() {
     >
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 text-xs font-semibold tracking-widest uppercase text-primary bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-full mb-4">
-            <Award className="h-3.5 w-3.5" />
-            {t.certifications.title}
-          </div>
+          <SectionLabel><Award className="h-3.5 w-3.5" />{t.certifications.title}</SectionLabel> {/* FIX: UX-002 */}
           <h2 className="font-display font-bold text-3xl md:text-4xl text-foreground mb-3">
             {t.certifications.title}
           </h2>
@@ -249,6 +242,7 @@ export default function CertificationsSection() {
                 <button
                   key={f.key}
                   onClick={() => setActive(f.key)}
+                  aria-pressed={active === f.key}
                   data-testid={`cert-filter-${f.key}`}
                   className={`px-4 py-1.5 rounded-full text-xs font-semibold border transition-all ${
                     active === f.key
@@ -271,25 +265,29 @@ export default function CertificationsSection() {
             compact
           />
         ) : (
-        <div
-          className={`md:grid md:grid-cols-2 md:gap-x-12 section-reveal ${revealed ? "revealed" : ""}`}
-        >
-          {sortedGroups.map(([monthKey, certs]) => (
-            <div key={monthKey} className="mb-2">
-              <div className="flex items-center gap-2 mb-3 ml-12">
-                <span className="text-xs font-bold text-primary uppercase tracking-widest">
-                  {monthLabel(monthKey)}
-                </span>
-                <div className="flex-1 h-px bg-primary/15" />
-                <span className="text-[11px] text-muted-foreground bg-primary/8 border border-primary/15 px-2 py-0.5 rounded-full">
-                  {certs.length} cert{certs.length !== 1 ? "s" : ""}
-                </span>
+        <div className="relative">
+          <div
+            className="absolute left-4 top-0 bottom-0 w-px bg-gradient-to-b from-primary/40 via-primary/20 to-transparent md:hidden"
+            aria-hidden="true"
+          />
+          <div className="md:grid md:grid-cols-2 md:gap-x-12 md:gap-y-4 section-reveal"> {/* FIX: UX-010, UX-017 */}
+            {sortedGroups.map(([monthKey, certs]) => (
+              <div key={monthKey} className="mb-4">
+                <div className="flex items-center gap-2 mb-3 md:ml-0 ml-12">
+                  <span className="text-sm font-bold text-primary uppercase tracking-wide">
+                    {monthLabel(monthKey)}
+                  </span>
+                  <div className="flex-1 h-px bg-primary/15" />
+                  <span className="text-[11px] text-muted-foreground bg-primary/8 border border-primary/15 px-2 py-0.5 rounded-full">
+                    {certs.length} cert{certs.length !== 1 ? "s" : ""}
+                  </span>
+                </div>
+                {certs.map((cert, i) => (
+                  <CertCard key={cert.id} cert={cert} index={i} t={t} />
+                ))}
               </div>
-              {certs.map((cert, i) => (
-                <CertCard key={cert.id} cert={cert} index={i} t={t} />
-              ))}
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
         )}
 
@@ -298,34 +296,34 @@ export default function CertificationsSection() {
             {
               label: "DataCamp",
               count: allCerts.filter((c) => c.issuer === "DataCamp").length,
-              color: "text-green-600",
-              bg: "bg-green-500/10",
-              border: "border-green-500/20",
+              color: "text-primary",
+              bg: "bg-primary/10",
+              border: "border-primary/20",
               logo: "🎓",
             },
             {
               label: "IBM",
               count: allCerts.filter((c) => c.issuer === "IBM").length,
-              color: "text-blue-600",
-              bg: "bg-blue-600/10",
-              border: "border-blue-600/20",
+              color: "text-accent-foreground",
+              bg: "bg-accent/10",
+              border: "border-accent/20",
               logo: "🔵",
             },
             {
               label: "Microsoft",
               count: allCerts.filter((c) => c.issuer.startsWith("Microsoft"))
                 .length,
-              color: "text-sky-500",
-              bg: "bg-sky-500/10",
-              border: "border-sky-500/20",
+              color: "text-secondary-foreground",
+              bg: "bg-secondary/10",
+              border: "border-secondary/20",
               logo: "🪟",
             },
             {
               label: "HackerRank",
               count: allCerts.filter((c) => c.issuer === "HackerRank").length,
-              color: "text-emerald-600",
-              bg: "bg-emerald-500/10",
-              border: "border-emerald-500/20",
+              color: "text-primary",
+              bg: "bg-primary/5",
+              border: "border-primary/10",
               logo: "💻",
             },
           ].map((org) => (

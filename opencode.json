@@ -8,6 +8,17 @@
       "env": {
         "API_KEY": "sk-user-2UwP9WcJAD-dWNy-tcyvWxSmMxWs48uUzVwTMigjprRhMGpTRrxccEgyXNewstXrAn0ee_aDn24YublE7uLyx-Cs21Kx8SIGgkdIlK4ksOZOFT6w7HjEoZLgQqbQaAcybgM"
       }
+    },
+    "graphify": {
+      "type": "local",
+      "command": ["python", "-m", "graphify.serve", "graphify-out/graph.json"],
+      "enabled": false,
+      "description": "Graphify MCP server for querying the knowledge graph"
+    }
+  },
+  "permission": {
+    "skill": {
+      "*": "allow"
     }
   }
 }

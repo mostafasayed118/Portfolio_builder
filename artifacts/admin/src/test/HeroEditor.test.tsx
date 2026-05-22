@@ -3,12 +3,11 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import HeroEditor from "@/pages/HeroEditor";
 
-const { mockFetchHeroContent, mockUpsertHeroContent, mockToastSuccess, mockToastError } = vi.hoisted(
+const { mockFetchHeroContent, mockUpsertHeroContent, mockToast } = vi.hoisted(
   () => ({
     mockFetchHeroContent: vi.fn(),
     mockUpsertHeroContent: vi.fn(),
-    mockToastSuccess: vi.fn(),
-    mockToastError: vi.fn(),
+    mockToast: vi.fn(),
   }),
 );
 
@@ -26,12 +25,13 @@ vi.mock("@/lib/api-client", () => ({
   },
 }));
 
-vi.mock("sonner", () => ({
-  toast: {
-    success: mockToastSuccess,
-    error: mockToastError,
-  },
-}));
+vi.mock("@workspace/ui", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@workspace/ui")>();
+  return {
+    ...actual,
+    useToast: () => ({ toast: mockToast }),
+  };
+});
 
 function renderWithProviders(ui: React.ReactElement) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -122,8 +122,8 @@ describe("HeroEditor", () => {
     await userEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
     await waitFor(() => {
-      expect(mockToastSuccess).toHaveBeenCalledWith(
-        "Hero section updated successfully ✓",
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({ title: "Hero section updated successfully" }),
       );
     });
   });
@@ -142,7 +142,9 @@ describe("HeroEditor", () => {
     await userEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
     await waitFor(() => {
-      expect(mockToastError).toHaveBeenCalledWith("Save failed: Network error");
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({ title: "Save failed: Network error", variant: "destructive" }),
+      );
     });
   });
 });

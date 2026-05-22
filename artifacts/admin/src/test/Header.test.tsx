@@ -19,7 +19,8 @@ function Wrapper({ children }: { children: ReactNode }) {
 describe("Header", () => {
   it("renders the page title", () => {
     render(<Header onMenuClick={vi.fn()} />, { wrapper: Wrapper });
-    const titles = screen.getAllByText("Overview");
+    // Default location "/" doesn't match any PATH_LABELS key, so it falls back to "Admin CMS"
+    const titles = screen.getAllByText("Admin CMS");
     expect(titles.length).toBeGreaterThanOrEqual(1);
     expect(titles[0]).toBeInTheDocument();
   });

@@ -10,7 +10,7 @@ SELECT
   cm.email,
   cm.subject,
   cm.message,
-  CASE WHEN cm.is_read THEN 'read' ELSE 'unread' END,
+  CASE WHEN cm.is_read THEN 'read'::msg_status ELSE 'unread'::msg_status END,
   cm.created_at
 FROM contact_messages cm
 WHERE NOT EXISTS (

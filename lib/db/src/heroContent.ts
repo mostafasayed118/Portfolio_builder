@@ -55,8 +55,6 @@ export async function upsertHeroContent(
   return data.id;
 }
 
-export const fetchHeroContent = getHeroContent;
-
 export async function seedDefaultHeroContent(
   supabase: SupabaseClient,
 ): Promise<string | null> {

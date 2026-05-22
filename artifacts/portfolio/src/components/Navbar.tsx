@@ -6,6 +6,9 @@ import { useThrottledScroll } from "@/hooks/use-throttled-scroll";
 import { useLanguage } from "@/lib/language";
 import { LanguageToggle } from "@/components/LanguageToggle";
 
+const NAVBAR_SCROLL_THRESHOLD = 20;
+const ACTIVE_SECTION_THRESHOLD = 150;
+
 const NAV_LINKS = [
   { key: "about", href: "#about" },
   { key: "skills", href: "#skills" },
@@ -24,11 +27,11 @@ export default function Navbar() {
   const [activeSection, setActiveSection] = useState("");
 
   useThrottledScroll(() => {
-    setScrolled(window.scrollY > 20);
+    setScrolled(window.scrollY > NAVBAR_SCROLL_THRESHOLD);
     const sections = [...NAV_LINKS.map(l => l.href.slice(1))].reverse();
     for (const id of sections) {
       const el = document.getElementById(id);
-      if (el && el.getBoundingClientRect().top <= 150) {
+      if (el && el.getBoundingClientRect().top <= ACTIVE_SECTION_THRESHOLD) {
         setActiveSection(id);
         break;
       }
@@ -42,6 +45,38 @@ export default function Navbar() {
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const menu = document.querySelector("[data-mobile-menu]");
+    if (!menu) return;
+    const focusable = menu.querySelectorAll<HTMLElement>("button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])");
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+
+    const handleTab = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setMobileOpen(false);
+        return;
+      }
+      if (e.key !== "Tab") return;
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleTab);
+    first?.focus();
+    return () => document.removeEventListener("keydown", handleTab);
+  }, [mobileOpen]);
 
   const handleNavClick = (href: string) => {
     setMobileOpen(false);
@@ -85,6 +120,7 @@ export default function Navbar() {
               <button
                 key={link.href}
                 onClick={() => handleNavClick(link.href)}
+                aria-current={isActive ? "page" : undefined}
                 className={`relative px-3 py-2 text-sm font-medium rounded-lg transition-all ${
                   isActive
                     ? "text-primary bg-primary/10"
@@ -123,7 +159,9 @@ export default function Navbar() {
             onClick={() => setMobileOpen((v) => !v)}
             onKeyDown={(e) => e.key === "Escape" && setMobileOpen(false)}
             className="h-9 w-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
-            aria-label="Toggle menu"
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-nav"
+            aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
             data-testid="btn-mobile-menu"
           >
             {mobileOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
@@ -131,11 +169,21 @@ export default function Navbar() {
         </div>
       </div>
 
-      <div
-        className={`md:hidden overflow-hidden transition-all duration-300 ${
-          mobileOpen ? "max-h-80 opacity-100" : "max-h-0 opacity-0"
-        }`}
-      >
+        {mobileOpen && ( // FIX: UX-013
+          <div
+            className="fixed inset-0 bg-black/40 z-30 md:hidden"
+            onClick={() => setMobileOpen(false)}
+          />
+        )}
+        <div
+          id="mobile-nav"
+          className={`md:hidden overflow-hidden transition-all duration-300 z-40 ${
+            mobileOpen ? "max-h-[calc(100dvh-4rem)] opacity-100 overflow-y-auto" : "max-h-0 opacity-0"
+          }`}
+          data-mobile-menu
+          role="navigation"
+          aria-label="Mobile navigation"
+        >
         <div className="glass-strong border-t border-border/50 px-6 py-4 space-y-1">
           {NAV_LINKS.map((link) => {
             const label = t.nav[link.key as keyof typeof t.nav] as string;
@@ -143,7 +191,8 @@ export default function Navbar() {
               <button
                 key={link.href}
                 onClick={() => handleNavClick(link.href)}
-                className={`block w-full text-left px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                aria-current={activeSection === link.href.slice(1) ? "page" : undefined}
+                className={`block w-full text-start px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
                   activeSection === link.href.slice(1)
                     ? "text-primary bg-primary/10"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"

@@ -1,0 +1,1 @@
+{"nodes": [{"id": "ux_audit_fixed", "label": "UX Audit Resolved Issues", "file_type": "document", "source_file": "docs/ux-audit-fixed.md"}], "edges": [{"source": "ux_audit_fixed", "target": "ux_audit_findings", "relation": "implements", "confidence": "EXTRACTED", "confidence_score": 1.0, "source_file": "docs/ux-audit-fixed.md"}], "hyperedges": []}

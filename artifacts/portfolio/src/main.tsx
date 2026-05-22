@@ -8,11 +8,13 @@ const requiredEnvVars = [
   'VITE_SUPABASE_ANON_KEY',
 ];
 
-requiredEnvVars.forEach(key => {
-  if (!import.meta.env[key]) {
-    console.warn(`⚠️ Missing env var: ${key} — some features will be disabled`);
-  }
-});
+if (import.meta.env.DEV) {
+  requiredEnvVars.forEach(key => {
+    if (!import.meta.env[key]) {
+      console.warn(`⚠️ Missing env var: ${key} — some features will be disabled`);
+    }
+  });
+}
 
 createRoot(document.getElementById("root")!).render(
   <RootErrorBoundary>

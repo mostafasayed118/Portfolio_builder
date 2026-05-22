@@ -1,6 +1,7 @@
 import { useLanguage } from "@/lib/language";
 import { Briefcase } from "lucide-react";
 import TimelineItem from "./TimelineItem";
+import SectionLabel from "./SectionLabel";
 import EmptyState from "./EmptyState";
 import { EXPERIENCE } from "@/data/portfolio";
 import { useReveal } from "@/hooks/use-reveal";
@@ -74,10 +75,8 @@ export default function ExperienceSection() {
       className="py-24 px-6 bg-muted/20"
     >
       <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-14">
-          <div className="inline-flex items-center gap-2 text-xs font-semibold tracking-widest uppercase text-primary bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-full mb-4">
-            {t.experience.title}
-          </div>
+        <div className="text-center mb-12">
+          <SectionLabel>{t.experience.title}</SectionLabel> {/* FIX: UX-002 */}
           <h2 className="font-display font-bold text-3xl md:text-4xl text-foreground mb-3">
             {t.experience.title}
           </h2>

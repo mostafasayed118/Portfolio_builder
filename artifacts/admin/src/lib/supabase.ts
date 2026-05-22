@@ -1,10 +1,3 @@
-import { getAdminSupabase } from "@workspace/supabase/admin";
+import { getSupabase, isSupabaseConfigured } from "@workspace/supabase/client";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const supabaseServiceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY as string | undefined;
-
-export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseServiceRoleKey);
-
-export function getSupabase() {
-  return getAdminSupabase();
-}
+export { getSupabase, isSupabaseConfigured };

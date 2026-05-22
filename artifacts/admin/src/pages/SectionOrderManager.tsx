@@ -1,13 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect, useRef } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@workspace/ui";
 import { GripVertical, Save, RotateCcw, Eye, EyeOff, AlertCircle, RefreshCw } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { logError } from "@/lib/logger";
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Skeleton, Switch } from "@workspace/ui";
 
 type Section = { id: string; key: string; label: string; is_visible: boolean; sort_order: number };
 
@@ -110,13 +107,13 @@ export default function SectionOrderManager() {
 
   return (
     <div className="max-w-xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div><h1 className="text-2xl font-bold">Section Order</h1><p className="text-sm text-muted-foreground mt-0.5">Drag to reorder. Toggle to show/hide.</p></div>
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex-1 min-w-[120px]"><h1 className="text-2xl font-bold">Section Order</h1><p className="text-sm text-muted-foreground mt-0.5">Drag to reorder. Toggle to show/hide.</p></div>
         <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={handleReset} disabled={saving || sections.length === 0}>
+          <Button size="sm" variant="outline" onClick={handleReset} disabled={saving || sections.length === 0} className="min-h-[44px]">
             <RotateCcw size={14} className="mr-1.5" />Reset
           </Button>
-          <Button size="sm" onClick={handleSave} disabled={saving}><Save size={14} className="mr-1.5" />{saving ? "Saving…" : "Save Order"}</Button>
+          <Button size="sm" onClick={handleSave} disabled={saving} className="min-h-[44px]"><Save size={14} className="mr-1.5" />{saving ? "Saving…" : "Save Order"}</Button>
         </div>
       </div>
 
@@ -126,9 +123,11 @@ export default function SectionOrderManager() {
           <CardDescription className="text-xs">Drag the grip to reorder. Changes apply to the live portfolio.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
+          <ul role="list" aria-label="Section order — drag to reorder" className="space-y-2 list-none m-0 p-0">
           {sections.map((section, i) => (
-            <div
+            <li
               key={section.id}
+              role="listitem"
               draggable
               onDragStart={() => handleDragStart(i, section.id)}
               onDragOver={e => handleDragOver(e, i)}
@@ -150,8 +149,9 @@ export default function SectionOrderManager() {
                   onClick={e => e.stopPropagation()}
                 />
               </div>
-            </div>
+            </li>
           ))}
+          </ul>
         </CardContent>
       </Card>
     </div>

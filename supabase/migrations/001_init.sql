@@ -109,7 +109,7 @@ CREATE TABLE IF NOT EXISTS hero_content (
   description TEXT NOT NULL DEFAULT 'Passionate about building scalable data pipelines, transforming raw data into actionable insights, and architecting robust ETL solutions.',
   github_url TEXT NOT NULL DEFAULT 'https://github.com/mustafasayed',
   linkedin_url TEXT NOT NULL DEFAULT 'https://linkedin.com/in/mustafasayed',
-  email TEXT NOT NULL DEFAULT 'mustafasayedsaeed@outlook.com',
+  email TEXT NOT NULL DEFAULT 'admin@example.com',
   available BOOLEAN NOT NULL DEFAULT true,
   cv_file_name TEXT,
   is_published BOOLEAN NOT NULL DEFAULT true,
@@ -514,17 +514,17 @@ ON CONFLICT DO NOTHING;
 
 -- Site settings
 INSERT INTO site_settings (site_name, site_tagline, footer_text, copyright_text, logo_text, default_theme) VALUES
-('Mustafa Sayed', 'Data Engineer', 'Built with passion and a lot of coffee.', '© 2025 Mustafa Sayed. All rights reserved.', 'MS', 'dark')
+('Your Name', 'Your Tagline', 'Built with passion and a lot of coffee.', '© 2025 Your Name. All rights reserved.', 'YN', 'dark')
 ON CONFLICT DO NOTHING;
 
 -- SEO settings
 INSERT INTO seo_settings (title, description, keywords, og_title, og_description, canonical_url, twitter_card, twitter_creator) VALUES
-('Mustafa Sayed — Data Engineer', 'Data Engineer specializing in ETL pipelines, data warehouses, and BI dashboards. Based in Cairo, Egypt.', 'data engineer, ETL, Apache Spark, Kafka, Snowflake, BigQuery, Python, SQL, Cairo', 'Mustafa Sayed — Data Engineer', 'Building scalable data pipelines and transforming raw data into actionable insights.', 'https://mustafasayed.replit.app', 'summary_large_image', '@mustafasayed')
+('Your Name — Data Engineer', 'Data Engineer specializing in ETL pipelines, data warehouses, and BI dashboards.', 'data engineer, ETL, Python, SQL', 'Your Name — Data Engineer', 'Building scalable data pipelines and transforming raw data into actionable insights.', 'https://yourdomain.com', 'summary_large_image', '@yourusername')
 ON CONFLICT DO NOTHING;
 
 -- Hero content
 INSERT INTO hero_content (heading, name, roles, description, github_url, linkedin_url, email, available, cv_file_name, is_published) VALUES
-('Hi, I''m', 'Mustafa Sayed', ARRAY['Data Engineer', 'ETL Developer', 'Pipeline Architect', 'BI Developer'], 'Passionate about building scalable data pipelines, transforming raw data into actionable insights, and architecting robust ETL solutions.', 'https://github.com/mustafasayed', 'https://linkedin.com/in/mustafasayed', 'mustafasayedsaeed@outlook.com', true, 'Mustafa_Sayed_Resume.pdf', true)
+('Hi, I''m', 'Your Name', ARRAY['Data Engineer', 'ETL Developer', 'Pipeline Architect', 'BI Developer'], 'Passionate about building scalable data pipelines, transforming raw data into actionable insights, and architecting robust ETL solutions.', 'https://github.com/yourusername', 'https://linkedin.com/in/yourusername', 'admin@example.com', true, 'Your_Name_Resume.pdf', true)
 ON CONFLICT DO NOTHING;
 
 -- About content
@@ -534,7 +534,7 @@ ON CONFLICT DO NOTHING;
 
 -- Contact info
 INSERT INTO contact_info (email, phone, location, github, linkedin, availability_status) VALUES
-('mustafasayedsaeed@outlook.com', '+20 100 000 0000', 'Cairo, Egypt', 'https://github.com/mustafasayed', 'https://linkedin.com/in/mustafasayed', 'Open to opportunities')
+('admin@example.com', '+1 000 000 0000', 'Your City, Country', 'https://github.com/yourusername', 'https://linkedin.com/in/yourusername', 'Open to opportunities')
 ON CONFLICT DO NOTHING;
 
 -- Section settings

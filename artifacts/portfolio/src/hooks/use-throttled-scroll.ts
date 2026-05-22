@@ -9,7 +9,6 @@ export function useThrottledScroll(
 
   useEffect(() => {
     let lastCall = 0;
-    let rafId: number;
 
     const handler = () => {
       const now = Date.now();
@@ -19,17 +18,10 @@ export function useThrottledScroll(
       }
     };
 
-    const rafHandler = () => {
-      handler();
-      rafId = requestAnimationFrame(rafHandler);
-    };
-
-    rafId = requestAnimationFrame(rafHandler);
     window.addEventListener("scroll", handler, { passive: true });
 
     return () => {
       window.removeEventListener("scroll", handler);
-      cancelAnimationFrame(rafId);
     };
   }, [throttleMs]);
 }

@@ -1,10 +1,12 @@
 import { lazy, Suspense } from "react";
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import AdminLayout from "@/components/AdminLayout";
 import Overview from "@/pages/Overview";
+import { Toaster, TooltipProvider } from "@workspace/ui";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import { ViewingUserProvider } from "@/lib/viewing-user-context";
+import { ProtectedRoute, SignInPage } from "@/lib/auth";
 
 const ThemeManager = lazy(() => import("@/pages/ThemeManager"));
 const TypographyManager = lazy(() => import("@/pages/TypographyManager"));
@@ -42,35 +44,52 @@ function PageFallback() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <AdminLayout>
-            <Suspense fallback={<PageFallback />}>
-              <Switch>
-                <Route path="/" component={Overview} />
-                <Route path="/theme" component={ThemeManager} />
-                <Route path="/typography" component={TypographyManager} />
-                <Route path="/hero" component={HeroEditor} />
-                <Route path="/about" component={AboutEditor} />
-                <Route path="/skills" component={SkillsManager} />
-                <Route path="/projects" component={ProjectsManager} />
-                <Route path="/experience" component={ExperienceManager} />
-                <Route path="/certifications" component={CertificationsManager} />
-                <Route path="/contact" component={ContactManager} />
-                <Route path="/messages" component={MessagesManager} />
-                <Route path="/seo" component={SeoManager} />
-                <Route path="/sections" component={SectionOrderManager} />
-                <Route path="/settings" component={SiteSettingsManager} />
-                <Route path="/cv" component={CvManager} />
-                <Route component={NotFound} />
-              </Switch>
-            </Suspense>
-          </AdminLayout>
-          <Toaster />
-        </WouterRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <ViewingUserProvider>
+            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <Suspense fallback={<PageFallback />}>
+                <Switch>
+                  {/* Public route — sign-in (no auth required) */}
+                  <Route path="/sign-in">
+                    <SignInPage />
+                  </Route>
+
+                  {/* All other routes require auth */}
+                  <Route>
+                    <ProtectedRoute>
+                      <AdminLayout>
+                        <Switch>
+                          <Route path="/" component={() => <Redirect to="/overview" />} />
+                          <Route path="/overview" component={Overview} />
+                          <Route path="/hero" component={HeroEditor} />
+                          <Route path="/about" component={AboutEditor} />
+                          <Route path="/projects" component={ProjectsManager} />
+                          <Route path="/skills" component={SkillsManager} />
+                          <Route path="/experience" component={ExperienceManager} />
+                          <Route path="/certifications" component={CertificationsManager} />
+                          <Route path="/messages" component={MessagesManager} />
+                          <Route path="/contact" component={ContactManager} />
+                          <Route path="/cv" component={CvManager} />
+                          <Route path="/seo" component={SeoManager} />
+                          <Route path="/typography" component={TypographyManager} />
+                          <Route path="/sections" component={SectionOrderManager} />
+                          <Route path="/theme" component={ThemeManager} />
+                          <Route path="/settings" component={SiteSettingsManager} />
+                          <Route component={NotFound} />
+                        </Switch>
+                      </AdminLayout>
+                    </ProtectedRoute>
+                  </Route>
+                </Switch>
+              </Suspense>
+              <Toaster />
+            </WouterRouter>
+          </ViewingUserProvider>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 
