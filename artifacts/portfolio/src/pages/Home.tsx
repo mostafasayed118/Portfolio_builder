@@ -1,10 +1,12 @@
 import { lazy, Suspense, useEffect } from "react";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
 import { trackEvent } from "@workspace/db/analytics";
-import { toast } from "sonner";
+import { useToast } from "@workspace/ui";
+import { useRealtimeSync } from "@/hooks/use-realtime-sync";
 import SEO from "@/components/SEO";
 import HeroSection from "@/components/HeroSection";
 import BackToTop from "@/components/BackToTop";
+import { SyncDebug } from "@/components/SyncDebug";
 
 const AboutSection = lazy(() => import("@/components/AboutSection"));
 const SkillsSection = lazy(() => import("@/components/SkillsSection"));
@@ -30,6 +32,9 @@ function SectionSkeleton() {
 }
 
 export default function Home() {
+  const { toast } = useToast();
+  useRealtimeSync();
+
   useEffect(() => {
     if (isSupabaseConfigured) {
       const supabase = getSupabase();
@@ -43,12 +48,14 @@ export default function Home() {
     const hasVisited = sessionStorage.getItem("visited");
     if (!hasVisited) {
       sessionStorage.setItem("visited", "true");
-      setTimeout(() => {
-        toast("Welcome to my portfolio!", {
+      const timer = setTimeout(() => {
+        toast({
+          title: "Welcome to my portfolio!",
           description: "Explore my projects, skills, and experience. Feel free to reach out!",
           duration: 5000,
         });
       }, 1500);
+      return () => clearTimeout(timer);
     }
   }, []);
 
@@ -56,7 +63,9 @@ export default function Home() {
     <>
       <SEO />
       <main>
+      <Suspense fallback={<SectionSkeleton />}>
         <HeroSection />
+      </Suspense> {/* FIX: UX-009 */}
       <Suspense fallback={<SectionSkeleton />}>
         <AboutSection />
       </Suspense>
@@ -76,6 +85,7 @@ export default function Home() {
         <ContactSection />
       </Suspense>
       <BackToTop />
+      <SyncDebug />
     </main>
     </>
   );

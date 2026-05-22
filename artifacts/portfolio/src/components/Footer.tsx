@@ -1,33 +1,14 @@
-import { Github, Linkedin, Mail, Heart, ArrowUp } from "lucide-react";
+import { Github, Linkedin, Mail, Heart } from "lucide-react";
 import { HERO } from "@/data/portfolio";
-import { useState } from "react";
 import { useBranding } from "@/lib/branding";
-import { useThrottledScroll } from "@/hooks/use-throttled-scroll";
 import { useLanguage } from "@/lib/language";
 
 export default function Footer() {
   const { siteName } = useBranding();
   const { t } = useLanguage();
-  const [showBackToTop, setShowBackToTop] = useState(false);
-
-  useThrottledScroll(() => {
-    setShowBackToTop(window.scrollY > 600);
-  }, 100);
-
-  const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 
   return (
     <footer className="relative py-12 px-6 border-t border-border/50 bg-muted/10">
-      {showBackToTop && (
-        <button
-          onClick={scrollToTop}
-          className="absolute -top-5 left-1/2 -translate-x-1/2 h-10 w-10 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:opacity-90 transition-all animate-fade-in"
-          aria-label="Back to top"
-        >
-          <ArrowUp className="h-4 w-4" />
-        </button>
-      )}
-
       <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="flex items-center gap-3">
           <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">

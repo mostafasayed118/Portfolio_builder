@@ -16,17 +16,29 @@ import { useQuery } from "@tanstack/react-query";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
 import { getContactInfo } from "@workspace/db/contact-info";
 import { trackEvent } from "@workspace/db/analytics";
-import { useFormValidation } from "@/hooks/useFormValidation";
+import { useFormValidation } from "@workspace/ui";
+import SectionLabel from "./SectionLabel";
+import { SmartInput, SmartTextarea, createValidationRules } from "@workspace/ui";
 import { contactFormSchema } from "@workspace/validation/schemas";
+import { getCsrfToken, clearCsrfCache } from "@/lib/csrf";
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
+const API_BASE = import.meta.env.VITE_API_URL;
+if (!API_BASE && import.meta.env.PROD) {
+  console.warn("VITE_API_URL is not set in production - using fallback");
+}
+const apiBase = API_BASE ?? "http://localhost:3001";
 
 export default function ContactSection() {
   const { ref, revealed } = useReveal();
   const { t } = useLanguage();
   const { data: contactData } = useQuery({
     queryKey: ["contactInfo"],
-    queryFn: () => getContactInfo(getSupabase()),
+    queryFn: () => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("Supabase not configured");
+      return getContactInfo(supabase);
+    },
+    refetchInterval: 15_000,
     enabled: isSupabaseConfigured,
   });
 
@@ -74,17 +86,22 @@ export default function ContactSection() {
     { name: "", email: "", message: "" },
     contactFormSchema,
   );
+  const rules = createValidationRules();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submitContact = async () => {
+    setSubmitError(null);
     if (!form.validateAll()) return;
     form.setIsSubmitting(true);
-    setSubmitError(null);
 
     try {
-      const res = await fetch(`${API_BASE}/api/v1/admin/contact`, {
+      const csrfToken = await getCsrfToken();
+      const res = await fetch(`${apiBase}/api/v1/contact`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-csrf-token": csrfToken,
+        },
+        credentials: "include",
         body: JSON.stringify({
           name: form.values.name,
           email: form.values.email,
@@ -101,10 +118,24 @@ export default function ContactSection() {
       setSubmitted(true);
       form.reset();
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : t.contact.errorMessage);
+      if (err instanceof Error && err.message.includes("CSRF")) {
+        clearCsrfCache();
+        setSubmitError(t.contact.errorMessage);
+      } else {
+        setSubmitError(err instanceof Error ? err.message : t.contact.errorMessage);
+      }
     } finally {
       form.setIsSubmitting(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await submitContact();
+  };
+
+  const handleRetry = async () => {
+    await submitContact();
   };
 
   return (
@@ -118,10 +149,8 @@ export default function ContactSection() {
         <div className="absolute bottom-1/4 left-1/4 w-80 h-80 bg-primary/5 rounded-full blur-[120px]" />
       </div>
       <div className="max-w-5xl mx-auto relative z-10">
-        <div className="text-center mb-14">
-          <div className="inline-flex items-center gap-2 text-xs font-semibold tracking-widest uppercase text-primary bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-full mb-4">
-            {t.contact.title}
-          </div>
+        <div className="text-center mb-12">
+          <SectionLabel>{t.contact.title}</SectionLabel> {/* FIX: UX-002 */}
           <h2 className="font-display font-bold text-3xl md:text-4xl text-foreground mb-3">
             {t.contact.title}
           </h2>
@@ -153,7 +182,8 @@ export default function ContactSection() {
                         onClick={() => {
                           const type = label.toLowerCase();
                           if (isSupabaseConfigured && (type === "email" || type === "github" || type === "linkedin")) {
-                            trackEvent(getSupabase(), "contact_click", "/", { type }).catch(() => {});
+                            const sb = getSupabase();
+                            if (sb) trackEvent(sb, "contact_click", "/", { type }).catch(() => {});
                           }
                         }}
                       >
@@ -169,7 +199,7 @@ export default function ContactSection() {
               ))}
             </div>
 
-            <div className="glass rounded-xl overflow-hidden border h-48">
+            <div className="glass rounded-xl overflow-hidden border aspect-video min-h-36 max-h-64">
               <iframe
                 title="Cairo, Egypt on map"
                 src="https://www.openstreetmap.org/export/embed.html?bbox=31.2%2C30.0%2C31.4%2C30.15&layer=mapnik&marker=30.0626%2C31.2497"
@@ -212,7 +242,7 @@ export default function ContactSection() {
                   >
                     {t.contact.name}
                   </label>
-                  <input
+                  <SmartInput
                     id="contact-name"
                     type="text"
                     autoComplete="name"
@@ -224,12 +254,16 @@ export default function ContactSection() {
                     aria-describedby={form.errors.name && form.touched.name ? "error-name" : undefined}
                     className={`w-full rounded-lg px-4 py-2.5 text-sm bg-muted/50 border focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all text-foreground placeholder:text-muted-foreground ${form.errors.name && form.touched.name ? "border-red-500" : "border-border"}`}
                     data-testid="input-name"
+                    validationRules={[rules.required(t.contact.name + " is required"), rules.maxLength(100)]}
                   />
                   {form.errors.name && form.touched.name && (
                     <p id="error-name" className="text-xs text-destructive mt-1" role="alert">
                       {form.errors.name}
                     </p>
                   )}
+                  <div className="text-xs text-muted-foreground text-right mt-1">
+                    {form.values.name.length}/100
+                  </div>
                 </div>
 
                 <div>
@@ -239,7 +273,7 @@ export default function ContactSection() {
                   >
                     {t.contact.email}
                   </label>
-                  <input
+                  <SmartInput
                     id="contact-email"
                     type="email"
                     autoComplete="email"
@@ -250,6 +284,7 @@ export default function ContactSection() {
                     aria-describedby={form.errors.email && form.touched.email ? "error-email" : undefined}
                     className={`w-full rounded-lg px-4 py-2.5 text-sm bg-muted/50 border focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all text-foreground placeholder:text-muted-foreground ${form.errors.email && form.touched.email ? "border-red-500" : "border-border"}`}
                     data-testid="input-email"
+                    validationRules={[rules.required(t.contact.email + " is required"), rules.email()]}
                   />
                   {form.errors.email && form.touched.email && (
                     <p id="error-email" className="text-xs text-destructive mt-1" role="alert">
@@ -265,7 +300,7 @@ export default function ContactSection() {
                   >
                     {t.contact.message}
                   </label>
-                  <textarea
+                  <SmartTextarea
                     id="contact-message"
                     rows={5}
                     autoComplete="off"
@@ -277,16 +312,29 @@ export default function ContactSection() {
                     aria-describedby={form.errors.message && form.touched.message ? "error-message" : undefined}
                     className={`w-full rounded-lg px-4 py-2.5 text-sm bg-muted/50 border focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all text-foreground placeholder:text-muted-foreground resize-none ${form.errors.message && form.touched.message ? "border-red-500" : "border-border"}`}
                     data-testid="input-message"
+                    validationRules={[rules.required(t.contact.message + " is required"), rules.maxLength(2000)]}
                   />
                   {form.errors.message && form.touched.message && (
                     <p id="error-message" className="text-xs text-destructive mt-1" role="alert">
                       {form.errors.message}
                     </p>
                   )}
+                  <div className="text-xs text-muted-foreground text-right mt-1">
+                    {form.values.message.length}/2000
+                  </div>
                 </div>
 
                 {submitError && (
-                  <p className="text-xs text-destructive mt-1">{submitError}</p>
+                  <div className="space-y-2">
+                    <p className="text-xs text-destructive mt-1" role="alert">{submitError}</p>
+                    <button
+                      type="button"
+                      onClick={handleRetry}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Try again
+                    </button>
+                  </div>
                 )}
                 <button
                   type="submit"

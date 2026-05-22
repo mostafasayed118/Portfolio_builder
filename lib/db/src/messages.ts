@@ -7,6 +7,7 @@ export async function listMessages(
   const { data, error } = await supabase
     .from("messages")
     .select("*")
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
   if (error) throw error;
   return data;
@@ -18,7 +19,8 @@ export async function unreadCount(
   const { count, error } = await supabase
     .from("messages")
     .select("*", { count: "exact", head: true })
-    .eq("status", "unread");
+    .eq("status", "unread")
+    .is("deleted_at", null);
   if (error) throw error;
   return count ?? 0;
 }
@@ -64,7 +66,10 @@ export async function deleteMessage(
   supabase: SupabaseClient,
   id: string,
 ): Promise<void> {
-  const { error } = await supabase.from("messages").delete().eq("id", id);
+  const { error } = await supabase
+    .from("messages")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id);
   if (error) throw error;
 }
 

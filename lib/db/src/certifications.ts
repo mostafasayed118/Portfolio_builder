@@ -42,6 +42,7 @@ export async function listCertificationRows(
   const { data, error } = await supabase
     .from("certifications")
     .select("*")
+    .is("deleted_at", null)
     .order("sort_order", { ascending: true });
   if (error) throw error;
   return data as DbCertification[];
@@ -53,6 +54,7 @@ export async function fetchCertifications(
   const { data, error } = await supabase
     .from("certifications")
     .select("*")
+    .is("deleted_at", null)
     .order("sort_order", { ascending: true });
   if (error) throw error;
   return (data as DbCertification[]).map(mapDbToCertification);
@@ -173,6 +175,9 @@ export async function deleteCertification(
   supabase: SupabaseClient,
   id: string,
 ): Promise<void> {
-  const { error } = await supabase.from("certifications").delete().eq("id", id);
+  const { error } = await supabase
+    .from("certifications")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id);
   if (error) throw error;
 }

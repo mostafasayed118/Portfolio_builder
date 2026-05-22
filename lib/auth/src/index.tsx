@@ -3,7 +3,7 @@ import { createContext, useContext, createElement, type ReactNode } from "react"
 export type AuthUser = {
   id: string;
   email: string;
-  role: "admin" | "visitor";
+  role: "admin" | "visitor" | "superadmin";
 };
 
 export interface AuthContextValue {
@@ -12,6 +12,7 @@ export interface AuthContextValue {
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
   isAdmin: boolean;
+  isSuperadmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);

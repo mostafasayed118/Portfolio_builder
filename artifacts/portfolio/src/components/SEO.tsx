@@ -6,6 +6,7 @@ import { useLanguage } from "@/lib/language";
 
 const SITE_URL = import.meta.env.VITE_SITE_URL ?? "https://mustafasayed.replit.app";
 const DEFAULT_IMAGE = `${SITE_URL}/opengraph.jpg`;
+const TWITTER_HANDLE = import.meta.env.VITE_TWITTER_HANDLE ?? "";
 
 const JOB_TITLE = "Data Engineer";
 
@@ -90,8 +91,8 @@ function SEOContent({
       { name: "twitter:title", content: fullTitle },
       { name: "twitter:description", content: metaDescription },
       { name: "twitter:image", content: image },
-      { name: "twitter:site", content: "@mustafasayed" },
-      { name: "twitter:creator", content: "@mustafasayed" },
+      { name: "twitter:site", content: TWITTER_HANDLE ? `@${TWITTER_HANDLE}` : "" },
+      { name: "twitter:creator", content: TWITTER_HANDLE ? `@${TWITTER_HANDLE}` : "" },
     ];
 
     twitterTags.forEach(({ name, content }) => {

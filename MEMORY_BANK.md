@@ -67,8 +67,8 @@ The monorepo uses **pnpm workspaces** with shared libraries under `lib/` and thr
 ├─────────────────────────────────────────────────────────┤
 │                    Database                               │
 │                                                          │
-│  supabase/migrations/  → 13 SQL migration files           │
-│    (001_init through 013_dynamic_branding)                │
+│  supabase/migrations/  → 30 SQL migration files           │
+│    (001_init through 030_add_soft_delete)                │
 │  Tables: hero_content, about_content, projects, skills,   │
 │    experience, certifications, contact_messages,           │
 │    analytics_events, image_metadata, content_snapshots,   │
@@ -113,7 +113,7 @@ The monorepo uses **pnpm workspaces** with shared libraries under `lib/` and thr
 
 ## 4. Database Tables
 
-All tables live in the Supabase PostgreSQL database. 13 migration files in `supabase/migrations/`.
+All tables live in the Supabase PostgreSQL database. 30 migration files in `supabase/migrations/`.
 
 | # | Table | Key Columns | Used By |
 |---|---|---|---|
@@ -258,19 +258,36 @@ pnpm run build
 
 See full report in [TECHNICAL_DEBT_REPORT.md](./TECHNICAL_DEBT_REPORT.md) — overall score: **7.5/10**.
 
+### Critical Issues (Resolved)
+
+- ~~Contact form had no retry mechanism on submission failure~~ — Fixed with `handleRetry` function and "Try again" button
+- ~~No input sanitization on contact form API~~ — Fixed with `sanitizeHtml()` escaping HTML entities before storage
+- ~~CSP allowed `'unsafe-inline'` in script-src~~ — Removed; nonce-based CSP planned for future
+- ~~No pagination on messages manager~~ — Fixed with client-side pagination (20 per page)
+- ~~No soft-delete support~~ — Fixed with migration 030 adding `deleted_at` columns and updated RLS policies
+
 ### Top 5 Remaining Issues
 
 1. **No component tests for admin** — Most mutation-heavy components (HeroEditor, ProjectsManager, SkillsManager, etc.) need unit tests.
 2. **`console.error` in structured logger** — The existing `admin/src/lib/logger.ts` is well-structured but could be shared across artifacts.
-3. **`not-found.tsx`** — Was using hardcoded gray colors instead of theme-aware classes (fixed).
-4. **Scroll listeners** — Already throttled via `useThrottledScroll` hook in Navbar and Footer.
-5. **Migration numbering** — 6 skipped migration numbers (003, 010, 016-019), duplicate 002 prefix.
+3. **Migration numbering** — Several skipped/preserved placeholder numbers (003, 010, 016-019) from earlier development.
+4. **CSP nonce migration** — `scriptSrc` still relies on `'self'` only; inline script bundles may need nonce injection for full CSP compliance.
+5. **Soft-delete API routes** — Migration 030 adds `deleted_at` columns but API routes still use hard deletes; needs route updates.
 
 ---
 
 ## 9. Recent Changes Log
 
-1. **Fix 16** — Created 4 new migration files (022-025): image RLS, duplicate trigger cleanup, analytics cleanup, FK constraints
+1. **Fix 25** — Created DEPLOYMENT.md with comprehensive Vercel/Render/Supabase deployment guide
+2. **Fix 24** — Created LICENSE file (MIT License)
+3. **Fix 23** — Updated MEMORY_BANK.md with resolved issues and migration count
+4. **Fix 22** — Created migration 030: soft-delete support with `deleted_at` columns and updated RLS policies
+5. **Fix 21** — Verified admin route naming consistency (singleton resources use hyphenated names, collection resources are plural)
+6. **Fix 20** — Added HTML sanitization (`sanitizeHtml`) to contact form API endpoint to prevent XSS
+7. **Fix 19** — Hardened CSP in API server: removed `'unsafe-inline'` from scriptSrc, added baseUri, formAction, workerSrc
+8. **Fix 18** — Added pagination to Messages Manager (20 per page with Previous/Next controls)
+9. **Fix 17** — Added retry mechanism to contact form with `handleRetry` function and "Try again" button
+10. **Fix 16** — Created 4 new migration files (022-025): image RLS, duplicate trigger cleanup, analytics cleanup, FK constraints
 2. **Fix 15** — Updated MEMORY_BANK.md with accurate known issues and change log
 3. **Fix 14** — Updated root README to list all 8 lib packages
 4. **Fix 13** — Fixed `order` → `order_num` in ExperienceUpdate type (types.ts:658)

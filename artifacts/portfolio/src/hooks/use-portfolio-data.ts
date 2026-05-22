@@ -9,18 +9,19 @@ import { listCertifications } from "@workspace/db/certifications";
 import { fetchProjectBySlug } from "@workspace/db/projects";
 import type { Skill as DbSkill } from "@workspace/supabase/types";
 
-const STALE_TIME = 1000 * 60 * 5;
+const POLL_INTERVAL = 60_000;
+const POLL_OPTIONS = { refetchInterval: POLL_INTERVAL, refetchIntervalInBackground: false };
 
 export function useHeroContent() {
   return useQuery({
     queryKey: ["hero"],
-    queryFn: () => {
+    queryFn: async () => {
       const supabase = getSupabase();
-      if (!supabase) return null;
+      if (!supabase) throw new Error("Supabase not configured");
       return getHeroContent(supabase);
     },
-    staleTime: STALE_TIME,
-    retry: 1,
+    ...POLL_OPTIONS,
+    retry: 2,
     enabled: isSupabaseConfigured,
   });
 }
@@ -28,13 +29,13 @@ export function useHeroContent() {
 export function useAboutContent() {
   return useQuery({
     queryKey: ["about"],
-    queryFn: () => {
+    queryFn: async () => {
       const supabase = getSupabase();
-      if (!supabase) return null;
+      if (!supabase) throw new Error("Supabase not configured");
       return getAboutContent(supabase);
     },
-    staleTime: STALE_TIME,
-    retry: 1,
+    ...POLL_OPTIONS,
+    retry: 2,
     enabled: isSupabaseConfigured,
   });
 }
@@ -42,13 +43,13 @@ export function useAboutContent() {
 export function useSkills() {
   return useQuery({
     queryKey: ["skills"],
-    queryFn: () => {
+    queryFn: async () => {
       const supabase = getSupabase();
-      if (!supabase) return [];
+      if (!supabase) throw new Error("Supabase not configured");
       return listSkills(supabase);
     },
-    staleTime: STALE_TIME,
-    retry: 1,
+    ...POLL_OPTIONS,
+    retry: 2,
     enabled: isSupabaseConfigured,
   });
 }
@@ -56,13 +57,13 @@ export function useSkills() {
 export function useProjects() {
   return useQuery({
     queryKey: ["projects"],
-    queryFn: () => {
+    queryFn: async () => {
       const supabase = getSupabase();
-      if (!supabase) return [];
+      if (!supabase) throw new Error("Supabase not configured");
       return listPublishedProjects(supabase);
     },
-    staleTime: STALE_TIME,
-    retry: 1,
+    ...POLL_OPTIONS,
+    retry: 2,
     enabled: isSupabaseConfigured,
   });
 }
@@ -70,13 +71,13 @@ export function useProjects() {
 export function useExperience() {
   return useQuery({
     queryKey: ["experience"],
-    queryFn: () => {
+    queryFn: async () => {
       const supabase = getSupabase();
-      if (!supabase) return [];
+      if (!supabase) throw new Error("Supabase not configured");
       return listExperience(supabase);
     },
-    staleTime: STALE_TIME,
-    retry: 1,
+    ...POLL_OPTIONS,
+    retry: 2,
     enabled: isSupabaseConfigured,
   });
 }
@@ -84,13 +85,13 @@ export function useExperience() {
 export function useCertifications() {
   return useQuery({
     queryKey: ["certifications"],
-    queryFn: () => {
+    queryFn: async () => {
       const supabase = getSupabase();
-      if (!supabase) return [];
+      if (!supabase) throw new Error("Supabase not configured");
       return listCertifications(supabase);
     },
-    staleTime: STALE_TIME,
-    retry: 1,
+    ...POLL_OPTIONS,
+    retry: 2,
     enabled: isSupabaseConfigured,
   });
 }
@@ -98,13 +99,13 @@ export function useCertifications() {
 export function useProjectBySlug(slug: string | undefined) {
   return useQuery({
     queryKey: ["project", slug],
-    queryFn: () => {
+    queryFn: async () => {
       const supabase = getSupabase();
-      if (!supabase) return null;
+      if (!supabase) throw new Error("Supabase not configured");
       return fetchProjectBySlug(supabase, slug!);
     },
-    staleTime: STALE_TIME,
-    retry: 1,
+    ...POLL_OPTIONS,
+    retry: 2,
     enabled: isSupabaseConfigured && !!slug,
   });
 }

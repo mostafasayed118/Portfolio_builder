@@ -31,9 +31,13 @@ vi.mock("@/lib/api-client", () => ({
   },
 }));
 
-vi.mock("@/hooks/use-toast", () => ({
-  useToast: () => ({ toast: vi.fn() }),
-}));
+vi.mock("@workspace/ui", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@workspace/ui")>();
+  return {
+    ...actual,
+    useToast: () => ({ toast: vi.fn() }),
+  };
+});
 
 function renderWithProviders(ui: React.ReactElement) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -103,11 +107,14 @@ describe("CertificationsManager", () => {
     await screen.findByText("Add Certification");
 
     const dialog = screen.getByRole("dialog");
-    const titleInput = within(dialog).getAllByRole("textbox")[0];
-    const issuerInput = within(dialog).getAllByRole("textbox")[1];
+    const textboxs = within(dialog).getAllByRole("textbox");
+    const titleInput = textboxs[0];
+    const issuerInput = textboxs[1];
+    const dateInput = textboxs[3]; // Date (display) field
 
     await userEvent.type(titleInput, "New Cert");
     await userEvent.type(issuerInput, "Test Org");
+    await userEvent.type(dateInput, "Mar 2024");
 
     await userEvent.click(within(dialog).getByText("Save"));
 
@@ -122,7 +129,6 @@ describe("CertificationsManager", () => {
   });
 
   it("confirms before deleting certification", async () => {
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     const { container } = renderWithProviders(<CertificationsManager />);
 
     await screen.findByText("Certifications");
@@ -132,11 +138,12 @@ describe("CertificationsManager", () => {
     ) as HTMLElement;
     await userEvent.click(deleteBtn);
 
+    const dialog = await screen.findByRole("alertdialog");
+    expect(screen.getByText("Delete Certification")).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByText("Delete"));
+
     await waitFor(() => {
-      expect(confirmSpy).toHaveBeenCalledWith("Delete?");
       expect(mockDeleteCertification).toHaveBeenCalledWith("1");
     });
-
-    confirmSpy.mockRestore();
   });
 });

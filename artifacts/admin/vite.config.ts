@@ -43,6 +43,7 @@ export default defineConfig({
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
   },
+  ssr: { noExternal: ["@workspace/ui"] },
   server: {
     port: 5174,
     strictPort: true,

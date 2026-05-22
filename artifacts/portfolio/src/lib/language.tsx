@@ -24,7 +24,11 @@ const LanguageContext = createContext<LanguageContextType | null>(null);
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const { data: langSettings } = useQuery({
     queryKey: ["language-settings"],
-    queryFn: () => fetchLanguageSettings(getSupabase()),
+    queryFn: () => {
+      const sb = getSupabase();
+      if (!sb) throw new Error("Supabase not configured");
+      return fetchLanguageSettings(sb);
+    },
     enabled: isSupabaseConfigured,
     staleTime: 1000 * 60 * 5,
   });

@@ -29,9 +29,13 @@ vi.mock("@/lib/api-client", () => ({
   },
 }));
 
-vi.mock("@/hooks/use-toast", () => ({
-  useToast: () => ({ toast: vi.fn() }),
-}));
+vi.mock("@workspace/ui", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@workspace/ui")>();
+  return {
+    ...actual,
+    useToast: () => ({ toast: vi.fn() }),
+  };
+});
 
 function renderWithProviders(ui: React.ReactElement) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -108,7 +112,7 @@ describe("MessagesViewer", () => {
 
     await screen.findByText("Alice");
 
-    const markReadBtn = screen.getAllByTitle("Mark as read")[0];
+    const markReadBtn = screen.getByRole("button", { name: /mark message from alice as read/i });
     await userEvent.click(markReadBtn);
 
     await waitFor(() => {
@@ -116,21 +120,20 @@ describe("MessagesViewer", () => {
     });
   });
 
-  it("bulk delete with confirmation dialog", async () => {
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
-    const { container } = renderWithProviders(<MessagesManager />);
+  it("deletes message with confirmation dialog", async () => {
+    renderWithProviders(<MessagesManager />);
 
     await screen.findByText("Alice");
 
-    const deleteBtn = container.querySelector(".text-destructive") as HTMLElement;
+    const deleteBtn = screen.getByRole("button", { name: /delete message from alice/i });
     await userEvent.click(deleteBtn);
 
+    const dialog = await screen.findByRole("alertdialog");
+    await userEvent.click(within(dialog).getByText("Delete"));
+
     await waitFor(() => {
-      expect(confirmSpy).toHaveBeenCalledWith("Delete message?");
       expect(mockDeleteMessage).toHaveBeenCalledWith("1");
     });
-
-    confirmSpy.mockRestore();
   });
 
   it("shows empty state when no messages", async () => {
@@ -139,9 +142,10 @@ describe("MessagesViewer", () => {
     renderWithProviders(<MessagesManager />);
 
     expect(
-      await screen.findByText(
-        /No messages yet. They'll appear here when someone submits the contact form./,
-      ),
+      await screen.findByText("No messages yet"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Messages from your contact form will appear here"),
     ).toBeInTheDocument();
   });
 });

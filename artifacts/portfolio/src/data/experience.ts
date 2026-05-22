@@ -1,0 +1,48 @@
+export const EXPERIENCE = [
+  {
+    id: 1,
+    title: "Data Engineer Trainee",
+    company: "Microsoft DEPI Scholarship",
+    location: "Cairo, Egypt (Remote)",
+    period: "Aug 2025 – Dec 2025",
+    description: [
+      "Completed a rigorous data engineering track co-sponsored by Microsoft Egypt and the Egyptian Ministry of Communications.",
+      "Designed and deployed end-to-end pipelines using Azure Data Lake Gen2, Azure Data Factory, and Azure Synapse Analytics.",
+      "Gained hands-on experience in SQL, Python, Data Warehousing, and Prompt Engineering for AI.",
+      "Delivered a capstone project ingesting, transforming, and visualising large datasets in the Azure ecosystem.",
+      "Earned Microsoft Azure Data Fundamentals (DP-900) and Data Engineer Associate certifications.",
+    ],
+    technologies: ["Azure Data Factory", "Azure Synapse Analytics", "Azure Data Lake Gen2", "Python", "SQL"],
+    type: "internship" as const,
+  },
+  {
+    id: 2,
+    title: "Google Data Analytics Professional Certificate",
+    company: "Coursera — Google",
+    location: "Online",
+    period: "2023",
+    description: [
+      "Completed the 8-course Google Data Analytics Professional Certificate (240+ hours).",
+      "Mastered the full analytics workflow: Ask, Prepare, Process, Analyse, Share, and Act.",
+      "Gained hands-on experience with SQL, R (tidyverse, ggplot2), Tableau, and Google Sheets.",
+      "Capstone: cleaned and analysed Cyclistic bike-share data with Tableau dashboards and stakeholder recommendations.",
+    ],
+    technologies: ["SQL", "R", "Tableau", "Google Sheets", "BigQuery"],
+    type: "certification" as const,
+  },
+  {
+    id: 3,
+    title: "Volunteer — Data & Technology Community",
+    company: "GDSC Obour Institute · IEEE BUB SB",
+    location: "Obour, Egypt",
+    period: "2023 – 2024",
+    description: [
+      "Organised data science workshops and coding sessions for 100+ students at Obour Institute.",
+      "Mentored peers in Python programming, SQL fundamentals, and data analysis techniques.",
+      "Coordinated technical events in collaboration with GDSC and the IEEE student branch.",
+      "Participant in NASA Space Apps Benha competition.",
+    ],
+    technologies: ["Python", "SQL", "Data Analysis"],
+    type: "volunteer" as const,
+  },
+];

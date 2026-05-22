@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { Upload, FileText, CheckCircle, ExternalLink, Trash2, Info } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { useState, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useToast } from "@workspace/ui";
+import { Upload, FileText, CheckCircle, ExternalLink, Trash2, Info, AlertCircle, RefreshCw } from "lucide-react";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
 import { logError } from "@/lib/logger";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Skeleton } from "@workspace/ui";
+import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
 
 interface CvSettings {
   objectPath: string | null;
@@ -17,21 +17,40 @@ export default function CvManager() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [settings, setSettings] = useState<CvSettings | null>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [dragging, setDragging] = useState(false);
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
 
-  useEffect(() => {
-    fetch("/api/v1/cv/settings")
-      .then((r) => r.json() as Promise<CvSettings>)
-      .then(setSettings)
-      .catch(() => {});
-  }, []);
+  const {
+    data: settings,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["cv-settings"],
+    queryFn: async () => {
+      const res = await fetch("/api/v1/cv/settings");
+      if (!res.ok) {
+        throw new Error(
+          res.status === 401 ? "Session expired — please log in again" :
+          res.status === 404 ? "CV settings not found" :
+          `Failed to load CV settings (${res.status})`
+        );
+      }
+      return res.json() as Promise<CvSettings>;
+    },
+    retry: 1,
+  });
 
   const uploadFile = async (file: File) => {
     if (!file.type.includes("pdf")) {
       toast({ title: "Only PDF files are supported", variant: "destructive" });
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) { {/* FIX: UX-019 */}
+      toast({ title: "File too large", description: "Maximum file size is 10MB", variant: "destructive" });
       return;
     }
 
@@ -39,7 +58,7 @@ export default function CvManager() {
     setProgress(0);
 
     try {
-      const supabase = getSupabase();
+      const supabase = getSupabase()!;
       const objectPath = `cv-${Date.now()}.pdf`;
 
       const { error: uploadError } = await supabase.storage
@@ -60,12 +79,11 @@ export default function CvManager() {
       });
       if (!saveRes.ok) {
         const errBody = await saveRes.text().catch(() => "");
-        // Cleanup storage on save failure
         await supabase.storage.from("cv").remove([objectPath]);
         throw new Error(`Failed to save CV settings (${saveRes.status}): ${errBody.slice(0, 200)}`);
       }
       const saved = await saveRes.json() as CvSettings;
-      setSettings(saved);
+      await refetch();
       toast({ title: "CV uploaded successfully", description: `${file.name} is now live.` });
     } catch (err) {
       toast({
@@ -93,10 +111,9 @@ export default function CvManager() {
   };
 
   const handleRemove = async () => {
-    if (!confirm("Remove the current CV? The Download CV button will show a 'not found' error until a new file is uploaded.")) return;
     try {
       if (settings?.objectPath) {
-        await getSupabase().storage.from("cv").remove([settings.objectPath]);
+        await getSupabase()!.storage.from("cv").remove([settings.objectPath]);
       }
       const res = await fetch("/api/v1/cv/settings", {
         method: "PUT",
@@ -104,7 +121,7 @@ export default function CvManager() {
         body: JSON.stringify({ objectPath: "", fileName: "" }),
       });
       if (!res.ok) throw new Error("Failed to update CV settings");
-      setSettings((s) => s ? { ...s, objectPath: null, fileName: null } : null);
+      await refetch();
       toast({ title: "CV removed" });
     } catch (err) {
       logError("Failed to save CV settings", err, "CvManager");
@@ -117,6 +134,34 @@ export default function CvManager() {
       month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit",
     });
 
+  if (isLoading) {
+    return (
+      <div className="p-4 sm:p-6 max-w-2xl mx-auto space-y-4">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-40 w-full rounded-xl" />
+        <Skeleton className="h-32 w-full rounded-xl" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="p-4 sm:p-6 flex flex-col items-center justify-center min-h-64 gap-4">
+        <AlertCircle className="h-10 w-10 text-destructive" />
+        <div className="text-center">
+          <p className="font-medium">Failed to load CV settings</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {error instanceof Error ? error.message : "Unknown error"}
+          </p>
+        </div>
+        <Button variant="outline" onClick={() => refetch()}>
+          <RefreshCw className="h-4 w-4 me-2" />
+          Try Again
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
@@ -128,16 +173,16 @@ export default function CvManager() {
       </div>
 
       {settings?.objectPath && (
-        <Card className="border-green-500/30 bg-green-500/5">
+        <Card className="border-emerald-500/30 bg-emerald-500/5">
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center shrink-0">
-                <FileText size={20} className="text-green-500" />
+              <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
+                <FileText size={20} className="text-emerald-500" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-medium text-sm truncate">{settings.fileName}</span>
-                  <Badge variant="default" className="text-xs bg-green-600 hover:bg-green-600">Live</Badge>
+                  <Badge variant="default" className="text-xs bg-emerald-600 hover:bg-emerald-600">Live</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Last updated {fmt(settings.updatedAt)}
@@ -147,7 +192,7 @@ export default function CvManager() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-8 gap-1.5 text-xs"
+                  className="min-h-[44px] gap-1.5 text-xs" // FIX: UX-027
                   onClick={() => window.open("/api/v1/cv", "_blank")}
                 >
                   <ExternalLink size={12} />
@@ -156,10 +201,11 @@ export default function CvManager() {
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                  onClick={handleRemove}
+                  className="min-h-[44px] min-w-[44px] text-destructive hover:text-destructive hover:bg-destructive/10" // STANDARDIZED: Type E — inline delete
+                  onClick={() => setShowRemoveConfirm(true)}
+                  aria-label="Remove CV"
                 >
-                  <Trash2 size={13} />
+                  <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
             </div>
@@ -177,6 +223,10 @@ export default function CvManager() {
             onDragLeave={() => setDragging(false)}
             onDrop={handleDrop}
             onClick={() => !uploading && fileInputRef.current?.click()}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); !uploading && fileInputRef.current?.click(); }}}
+            role="button"
+            tabIndex={0}
+            aria-label="Upload CV PDF file"
             className={`
               relative border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all
               ${dragging ? "border-primary bg-primary/5" : "border-border hover:border-primary/50 hover:bg-muted/30"}
@@ -247,6 +297,21 @@ export default function CvManager() {
           </div>
         </CardContent>
       </Card>
+
+      <SmartConfirmDialog
+        state={{
+          isOpen: showRemoveConfirm,
+          title: "Remove CV",
+          message: "The Download CV button will show a 'not found' error until a new file is uploaded.",
+          confirmLabel: "Remove",
+          variant: "warning",
+          onConfirm: async () => {
+            await handleRemove();
+            setShowRemoveConfirm(false);
+          },
+        }}
+        onCancel={() => setShowRemoveConfirm(false)}
+      />
     </div>
   );
 }

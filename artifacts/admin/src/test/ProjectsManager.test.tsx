@@ -27,9 +27,13 @@ vi.mock("@/lib/api-client", () => ({
   },
 }));
 
-vi.mock("@/hooks/use-toast", () => ({
-  useToast: () => ({ toast: vi.fn() }),
-}));
+vi.mock("@workspace/ui", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@workspace/ui")>();
+  return {
+    ...actual,
+    useToast: () => ({ toast: vi.fn() }),
+  };
+});
 
 vi.mock("@/components/ImageUploader", () => ({
   default: () => null,
@@ -103,11 +107,13 @@ describe("ProjectsManager", () => {
     await userEvent.click(screen.getByRole("button", { name: /add project/i }));
     await screen.findByRole("dialog");
 
-    const titleInput =
-      within(screen.getByRole("dialog")).getAllByRole("textbox")[0];
-    await userEvent.type(titleInput, "My Amazing Project");
+    const dialog = screen.getByRole("dialog");
+    const textboxs = within(dialog).getAllByRole("textbox");
+    await userEvent.type(textboxs[0], "My Amazing Project");
+    await userEvent.type(textboxs[1], "A description");
+    await userEvent.type(textboxs[2], "Data Engineering");
 
-    await userEvent.click(screen.getByText("Save"));
+    await userEvent.click(within(dialog).getByText("Save"));
 
     await waitFor(() => {
       expect(mockCreateProject).toHaveBeenCalled();
@@ -123,11 +129,13 @@ describe("ProjectsManager", () => {
     await userEvent.click(screen.getByRole("button", { name: /add project/i }));
     await screen.findByRole("dialog");
 
-    const titleInput =
-      within(screen.getByRole("dialog")).getAllByRole("textbox")[0];
-    await userEvent.type(titleInput, "Test Project");
+    const dialog = screen.getByRole("dialog");
+    const textboxs = within(dialog).getAllByRole("textbox");
+    await userEvent.type(textboxs[0], "Test Project");
+    await userEvent.type(textboxs[1], "A description");
+    await userEvent.type(textboxs[2], "Data Engineering");
 
-    await userEvent.click(screen.getByText("Save"));
+    await userEvent.click(within(dialog).getByText("Save"));
 
     await waitFor(() => {
       expect(mockCreateProject).toHaveBeenCalled();
@@ -144,11 +152,13 @@ describe("ProjectsManager", () => {
     await userEvent.click(screen.getByRole("button", { name: /add project/i }));
     await screen.findByRole("dialog");
 
-    const titleInput =
-      within(screen.getByRole("dialog")).getAllByRole("textbox")[0];
-    await userEvent.type(titleInput, "New Project");
+    const dialog = screen.getByRole("dialog");
+    const textboxs = within(dialog).getAllByRole("textbox");
+    await userEvent.type(textboxs[0], "New Project");
+    await userEvent.type(textboxs[1], "A description");
+    await userEvent.type(textboxs[2], "Data Engineering");
 
-    await userEvent.click(screen.getByText("Save"));
+    await userEvent.click(within(dialog).getByText("Save"));
 
     await waitFor(() => {
       expect(mockCreateProject).toHaveBeenCalledWith(
@@ -160,8 +170,9 @@ describe("ProjectsManager", () => {
     });
   });
 
-  it("confirms before deleting project", async () => {
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+  it("calls delete API when delete is confirmed", async () => {
+    mockDeleteProject.mockResolvedValue({ success: true });
+    
     const { container } = renderWithProviders(<ProjectsManager />);
 
     await screen.findByText("Projects Manager");
@@ -172,10 +183,14 @@ describe("ProjectsManager", () => {
     await userEvent.click(deleteBtn);
 
     await waitFor(() => {
-      expect(confirmSpy).toHaveBeenCalledWith("Delete?");
-      expect(mockDeleteProject).toHaveBeenCalledWith("1");
+      expect(screen.getByText("Delete Project")).toBeInTheDocument();
     });
 
-    confirmSpy.mockRestore();
+    const deleteButtons = screen.getAllByRole("button", { name: /delete/i });
+    await userEvent.click(deleteButtons[deleteButtons.length - 1]);
+
+    await waitFor(() => {
+      expect(mockDeleteProject).toHaveBeenCalled();
+    });
   });
 });

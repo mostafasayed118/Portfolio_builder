@@ -30,6 +30,10 @@ const toastVariants = cva(
         default: "border bg-background text-foreground",
         destructive:
           "destructive group border-destructive bg-destructive text-destructive-foreground",
+        // FIX: UX-003 — TODO: Replace with semantic CSS variables (--color-success, --color-warning, --color-info)
+        success: "border-green-500/50 bg-green-500/10 text-green-700 dark:text-green-400",
+        warning: "border-yellow-500/50 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
+        info: "border-blue-500/50 bg-blue-500/10 text-blue-700 dark:text-blue-400",
       },
     },
     defaultVariants: {

@@ -62,7 +62,7 @@ const TimelineItem = memo(function TimelineItem({ title, company, location, peri
       <div className="glass rounded-xl p-5 flex-1 mb-6 border hover:border-primary/20 transition-all">
         <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
           <div>
-            <h3 className="font-display font-semibold text-sm text-foreground">{title}</h3>
+            <h3 className="font-display font-semibold text-base text-foreground">{title}</h3>
             <p className="text-xs text-primary font-medium">{company}</p>
             <p className="text-xs text-muted-foreground">{location}</p>
           </div>

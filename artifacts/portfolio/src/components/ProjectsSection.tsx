@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLanguage } from "@/lib/language";
 import { FolderKanban } from "lucide-react";
 import ProjectCard from "./ProjectCard";
+import SectionLabel from "./SectionLabel";
 import EmptyState from "./EmptyState";
 import { PROJECTS } from "@/data/portfolio";
 import { useReveal } from "@/hooks/use-reveal";
@@ -51,8 +52,6 @@ export default function ProjectsSection() {
     return <ProjectsSkeleton />;
   }
 
-  const projectIds = projectsData?.map(p => p.id) ?? [];
-
   const allProjects =
     projectsData && projectsData.length > 0
       ? [...projectsData]
@@ -96,9 +95,7 @@ export default function ProjectsSection() {
     >
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 text-xs font-semibold tracking-widest uppercase text-primary bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-full mb-4">
-            {t.projects.title}
-          </div>
+          <SectionLabel>{t.projects.title}</SectionLabel> {/* FIX: UX-002 */}
           <h2 className="font-display font-bold text-3xl md:text-4xl text-foreground mb-3">
             {t.projects.title}
           </h2>
@@ -113,6 +110,7 @@ export default function ProjectsSection() {
             <button
               key={cat.key}
               onClick={() => setActive(cat.key)}
+              aria-pressed={active === cat.key}
               data-testid={`filter-${cat.key}`}
               className={`px-4 py-2 rounded-full text-xs font-semibold border transition-all ${
                 active === cat.key

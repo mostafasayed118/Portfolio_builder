@@ -2,13 +2,12 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, useWatch } from "react-hook-form";
 import { Github, Linkedin, Twitter, Mail, Download, Plus, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { api } from "@/lib/api-client";
-import { toast } from "sonner";
+import { useToast } from "@workspace/ui";
+import { Button, Card, CardContent, CardHeader, CardTitle, Input, Skeleton, Textarea } from "@workspace/ui";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { useBeforeUnload } from "@/hooks/use-before-unload";
+import { ImageWithFallback } from "@/components/ImageWithFallback";
 
 type HeroFormData = {
   name: string;
@@ -137,7 +136,8 @@ function LivePreview({ data }: { data: Partial<HeroFormData> }) {
 
 export default function HeroEditor() {
   const queryClient = useQueryClient();
-  const { data: heroData, isLoading, error, refetch } = useQuery<any>({
+  const { toast } = useToast();
+  const { data: heroData, isLoading, error, refetch } = useQuery({
     queryKey: ["hero"],
     queryFn: async () => {
       const res = await api.hero.get();
@@ -161,6 +161,12 @@ export default function HeroEditor() {
   });
 
   const watchedData = useWatch({ control });
+  const [showPreview, setShowPreview] = useState(false);
+
+  useKeyboardShortcuts([
+    { key: "s", ctrl: true, handler: () => { if (isDirty) handleSubmit(onSubmit)(); }, description: "Save changes" },
+  ]);
+  useBeforeUnload(isDirty, "You have unsaved changes. Leave anyway?");
 
   useEffect(() => {
     if (heroData) {
@@ -203,10 +209,10 @@ export default function HeroEditor() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["hero"] });
-      toast.success("Hero section updated successfully ✓");
+      toast({ title: "Hero section updated successfully" });
     },
     onError: (err) => {
-      toast.error(`Save failed: ${err.message}`);
+      toast({ title: `Save failed: ${err.message}`, variant: "destructive" });
     },
   });
 
@@ -255,7 +261,13 @@ export default function HeroEditor() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">Hero Editor</h1>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="lg:hidden mb-4">
+        <Button variant="outline" size="sm" onClick={() => setShowPreview(!showPreview)} className="min-h-[44px]" aria-pressed={showPreview} aria-label={showPreview ? "Hide preview panel" : "Show preview panel"}>
+          {showPreview ? "Hide Preview" : "Show Preview"}
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <SkeletonForm />
           <SkeletonPreview />
         </div>
@@ -268,7 +280,7 @@ export default function HeroEditor() {
       <Card className="border-destructive">
         <CardContent className="py-6">
           <p className="text-destructive">Failed to load hero content</p>
-          <Button variant="outline" size="sm" onClick={() => refetch()} className="mt-2">
+          <Button variant="outline" size="sm" onClick={() => refetch()} className="mt-2 min-h-[44px]">
             Retry
           </Button>
         </CardContent>
@@ -283,7 +295,7 @@ export default function HeroEditor() {
           <h1 className="text-2xl font-bold">Hero Editor</h1>
           <p className="text-sm text-muted-foreground">Edit your hero section content</p>
         </div>
-        <Button onClick={handleSubmit(onSubmit)} disabled={!isDirty || saveMutation.isPending}>
+        <Button onClick={handleSubmit(onSubmit)} disabled={!isDirty || saveMutation.isPending} data-save-button>
           {saveMutation.isPending ? "Saving..." : "Save Changes"}
         </Button>
       </div>
@@ -320,17 +332,17 @@ export default function HeroEditor() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Avatar URL</label>
-                <div className="flex items-center gap-2">
-                  <Input {...register("avatar_url")} placeholder="https://..." className="flex-1" />
-                  {watchedData.avatar_url && (
-                    <img
-                      src={watchedData.avatar_url}
-                      alt="preview"
-                      className="h-8 w-8 rounded object-cover border"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                    />
-                  )}
-                </div>
+                  <div className="flex items-center gap-2">
+                    <Input {...register("avatar_url")} placeholder="https://..." className="flex-1" />
+                    {watchedData.avatar_url && (
+                      <ImageWithFallback
+                        src={watchedData.avatar_url}
+                        alt="Avatar preview"
+                        size="sm"
+                        className="h-8 w-8 rounded object-cover border"
+                      />
+                    )}
+                  </div>
               </div>
               
               <div className="space-y-2">
@@ -357,13 +369,15 @@ export default function HeroEditor() {
                       variant="ghost"
                       size="icon"
                       onClick={() => removeTypewriterLine(i)}
+                      className="min-h-[44px] min-w-[44px]"
+                      aria-label={`Remove typewriter line ${i + 1}`}
                     >
                       <X className="h-4 w-4" />
                     </Button>
                   )}
                 </div>
               ))}
-              <Button type="button" variant="outline" size="sm" onClick={addTypewriterLine}>
+              <Button type="button" variant="outline" size="sm" onClick={addTypewriterLine} className="min-h-[44px]">
                 <Plus className="h-4 w-4 mr-2" /> Add line
               </Button>
             </CardContent>
@@ -416,12 +430,14 @@ export default function HeroEditor() {
                     variant="ghost"
                     size="icon"
                     onClick={() => removeStat(i)}
+                    className="min-h-[44px] min-w-[44px]"
+                    aria-label={`Remove stat ${i + 1}`}
                   >
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
               ))}
-              <Button type="button" variant="outline" size="sm" onClick={addStat}>
+              <Button type="button" variant="outline" size="sm" onClick={addStat} className="min-h-[44px]">
                 <Plus className="h-4 w-4 mr-2" /> Add stat
               </Button>
             </CardContent>
@@ -447,20 +463,22 @@ export default function HeroEditor() {
                     variant="ghost"
                     size="icon"
                     onClick={() => removeCustomLink(i)}
+                    className="min-h-[44px] min-w-[44px]"
+                    aria-label={`Remove custom link ${i + 1}`}
                   >
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
               ))}
-              <Button type="button" variant="outline" size="sm" onClick={addCustomLink}>
+              <Button type="button" variant="outline" size="sm" onClick={addCustomLink} className="min-h-[44px]">
                 <Plus className="h-4 w-4 mr-2" /> Add custom link
               </Button>
             </CardContent>
           </Card>
         </div>
 
-        {/* Live Preview - Hidden on mobile */}
-        <div className="hidden lg:block">
+        {/* Live Preview */}
+        <div className={showPreview ? "block" : "hidden lg:block"}>
           <div className="sticky top-4">
             <p className="text-xs text-muted-foreground mb-2">Live Preview — updates as you type</p>
             <Card>

@@ -1,14 +1,14 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const supabaseServiceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY as string | undefined;
+const supabaseUrl = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL as string | undefined;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY as string | undefined;
 
 function createAdminSupabase() {
   if (!supabaseUrl || !supabaseServiceRoleKey) {
     throw new Error(
-      "Missing VITE_SUPABASE_URL or VITE_SUPABASE_SERVICE_ROLE_KEY. " +
-        "Set both in your admin .env.local file.",
+      "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY. " +
+        "Set both in your server .env file.",
     );
   }
   return createClient<Database>(supabaseUrl, supabaseServiceRoleKey, {

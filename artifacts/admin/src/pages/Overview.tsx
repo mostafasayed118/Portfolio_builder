@@ -7,15 +7,11 @@ import {
   ArrowRight, Zap, TrendingUp, Sparkles, AlertCircle, CheckCircle2,
   RefreshCw
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@workspace/ui";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { api } from "@/lib/api-client";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { seedFromStaticData, type SeedProgress } from "@/lib/seed";
+import { useViewingUser } from "@/lib/viewing-user-context";
+import { Badge, Button, Card, CardContent, Dialog, DialogContent, DialogHeader, DialogTitle, Skeleton } from "@workspace/ui";
 
 const MODULES = [
   { path: "/theme", label: "Theme Manager", icon: Palette, desc: "Colors, palette, dark/light mode", group: "Appearance" },
@@ -36,32 +32,41 @@ const MODULES = [
 const GROUPS = ["Appearance", "Content", "Inbox", "Site"];
 
 function StatsBar() {
+  const { toast } = useToast();
+  const { viewingUserId } = useViewingUser();
+
   const { data: unread, isLoading: unreadLoading, isError: unreadError, error: unreadErrorObj, refetch: refetchUnread } = useQuery({
-    queryKey: ["unreadCount"],
+    queryKey: ["unreadCount", viewingUserId],
     queryFn: async () => {
-      const res = await api.messages.unreadCount();
+      const res = await api.messages.unreadCount(viewingUserId ?? undefined);
       if (!res.success) throw new Error(res.message);
       return res.data;
     },
     enabled: isSupabaseConfigured,
+    retry: 2,
+    retryDelay: 1000,
   });
   const { data: skills, isLoading: skillsLoading, isError: skillsError, error: skillsErrorObj, refetch: refetchSkills } = useQuery({
-    queryKey: ["skills"],
+    queryKey: ["skills", viewingUserId],
     queryFn: async () => {
-      const res = await api.skills.list();
+      const res = await api.skills.list(viewingUserId ?? undefined);
       if (!res.success) throw new Error(res.message);
       return res.data;
     },
     enabled: isSupabaseConfigured,
+    retry: 2,
+    retryDelay: 1000,
   });
   const { data: projects, isLoading: projectsLoading, isError: projectsError, error: projectsErrorObj, refetch: refetchProjects } = useQuery({
-    queryKey: ["projects"],
+    queryKey: ["projects", viewingUserId],
     queryFn: async () => {
-      const res = await api.projects.list();
+      const res = await api.projects.list(viewingUserId ?? undefined);
       if (!res.success) throw new Error(res.message);
       return res.data;
     },
     enabled: isSupabaseConfigured,
+    retry: 2,
+    retryDelay: 1000,
   });
 
   const isLoading = unreadLoading || skillsLoading || projectsLoading;
@@ -104,7 +109,7 @@ function StatsBar() {
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-      {[
+      {[ // FIX: UX-008 — Color mapping: messages=blue, skills=emerald, projects=violet, status=green
         { label: "Unread Messages", value: unread ?? "–", icon: MessageSquare, color: "text-blue-500" },
         { label: "Skills", value: skills?.length ?? "–", icon: Code2, color: "text-emerald-500" },
         { label: "Projects", value: projects?.length ?? "–", icon: FolderKanban, color: "text-violet-500" },
@@ -140,51 +145,32 @@ function StatsBar() {
 
 function SeedDialog() {
   const [open, setOpen] = useState(false);
-  const [progress, setProgress] = useState<SeedProgress[]>([
-    { step: "hero", status: "pending" },
-    { step: "about", status: "pending" },
-    { step: "skills", status: "pending" },
-    { step: "projects", status: "pending" },
-    { step: "experience", status: "pending" },
-    { step: "certifications", status: "pending" },
-  ]);
+  const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ success: boolean; summary: Record<string, number>; errors: string[] } | null>(null);
   const queryClient = useQueryClient();
 
   const handleSeed = async () => {
+    setLoading(true);
     setResult(null);
-    setProgress([
-      { step: "hero", status: "pending" },
-      { step: "about", status: "pending" },
-      { step: "skills", status: "pending" },
-      { step: "projects", status: "pending" },
-      { step: "experience", status: "pending" },
-      { step: "certifications", status: "pending" },
-    ]);
 
-    const res = await seedFromStaticData(setProgress);
-    setResult(res);
-
-    queryClient.invalidateQueries({ queryKey: ["projects"] });
-    queryClient.invalidateQueries({ queryKey: ["skills"] });
-    queryClient.invalidateQueries({ queryKey: ["experience"] });
-    queryClient.invalidateQueries({ queryKey: ["certifications"] });
-    queryClient.invalidateQueries({ queryKey: ["heroContent"] });
-    queryClient.invalidateQueries({ queryKey: ["aboutContent"] });
-  };
-
-  const getIcon = (status: SeedProgress["status"]) => {
-    switch (status) {
-      case "done": return <CheckCircle2 className="h-5 w-5 text-green-500" />;
-      case "running": return <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />;
-      case "error": return <AlertCircle className="h-5 w-5 text-red-500" />;
-      default: return <div className="h-5 w-5 rounded-full border-2 border-muted" />;
+    const res = await api.seed.run();
+    if (res.success && res.data) {
+      setResult({ success: true, summary: res.data.summary, errors: res.data.errors });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["skills"] });
+      queryClient.invalidateQueries({ queryKey: ["experience"] });
+      queryClient.invalidateQueries({ queryKey: ["certifications"] });
+      queryClient.invalidateQueries({ queryKey: ["heroContent"] });
+      queryClient.invalidateQueries({ queryKey: ["aboutContent"] });
+    } else {
+      setResult({ success: false, summary: {}, errors: [(res as { message: string }).message || "Failed to seed data"] });
     }
+    setLoading(false);
   };
 
   return (
     <>
-      <Button onClick={() => setOpen(true)} variant="outline" className="shrink-0 gap-2">
+      <Button onClick={() => { setOpen(true); setResult(null); }} variant="outline" className="shrink-0 gap-2">
         <Sparkles size={16} />
         Import Static Data
       </Button>
@@ -196,32 +182,25 @@ function SeedDialog() {
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            <div className="space-y-3">
-              {progress.map((p) => (
-                <div key={p.step} className="flex items-center gap-3">
-                  {getIcon(p.status)}
-                  <div className="flex-1">
-                    <div className="text-sm font-medium capitalize">{p.step} content</div>
-                    {p.count !== undefined && p.status === "done" && (
-                      <div className="text-xs text-muted-foreground">{p.count} imported</div>
-                    )}
-                    {p.error && <div className="text-xs text-red-500">{p.error}</div>}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <Button onClick={handleSeed} disabled={loading} className="w-full">
+              {loading ? "Importing…" : "Import Now"}
+            </Button>
 
             {result && (
               <div className="mt-4 p-3 rounded-lg bg-muted/50">
-                <div className="text-sm font-medium mb-2">Summary</div>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  {Object.entries(result.summary).map(([key, val]) => (
-                    <div key={key} className="flex justify-between">
-                      <span className="text-muted-foreground capitalize">{key}</span>
-                      <span>{val}</span>
-                    </div>
-                  ))}
+                <div className="text-sm font-medium mb-2">
+                  {result.success ? "Import Complete" : "Import Failed"}
                 </div>
+                {result.success && Object.entries(result.summary).length > 0 && (
+                  <div className="grid grid-cols-2 gap-2 text-xs min-w-0">
+                    {Object.entries(result.summary).map(([key, val]) => (
+                      <div key={key} className="flex justify-between">
+                        <span className="text-muted-foreground capitalize">{key}</span>
+                        <span>{val}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {result.errors.length > 0 && (
                   <div className="mt-2 text-xs text-red-500">
                     {result.errors.map((e) => <div key={e}>• {e}</div>)}

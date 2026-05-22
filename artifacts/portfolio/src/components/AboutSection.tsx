@@ -120,7 +120,7 @@ export default function AboutSection() {
         <div className="absolute bottom-1/3 right-1/4 w-80 h-80 bg-accent/4 rounded-full blur-[100px]" />
       </div>
       <div className="max-w-5xl mx-auto relative z-10">
-        <div className="text-center mb-14">
+        <div className="text-center mb-12">
           <SectionLabel>{t.about.title}</SectionLabel>
           <h2 className="font-display font-bold text-3xl md:text-4xl text-foreground mb-3">{t.about.title}</h2>
           <p className="text-muted-foreground text-sm max-w-xl mx-auto">
@@ -132,10 +132,10 @@ export default function AboutSection() {
           className={`grid md:grid-cols-2 gap-8 md:gap-10 section-reveal ${revealed ? "revealed" : ""}`}
         >
           <div className="space-y-6">
-            <p className="text-muted-foreground leading-relaxed text-sm">
+            <p className="text-muted-foreground leading-relaxed text-sm max-w-prose">
               {about.bio1}
             </p>
-            <p className="text-muted-foreground leading-relaxed text-sm">
+            <p className="text-muted-foreground leading-relaxed text-sm max-w-prose">
               {about.bio2}
             </p>
 

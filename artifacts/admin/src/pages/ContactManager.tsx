@@ -1,21 +1,18 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@workspace/ui";
 import { Save, AlertCircle, RefreshCw } from "lucide-react";
 import { logError } from "@/lib/logger";
+import { getErrorMessage } from "@/lib/error-messages";
+import { Button, Card, CardContent, CardHeader, CardTitle, Input, Label, Skeleton, Textarea } from "@workspace/ui";
 
 type ContactData = { email: string; phone: string; location: string; github: string; linkedin: string; whatsapp: string; mapEmbedUrl: string; availabilityStatus: string };
 const DEFAULTS: ContactData = { email: "", phone: "", location: "", github: "", linkedin: "", whatsapp: "", mapEmbedUrl: "", availabilityStatus: "Open to opportunities" };
 
 export default function ContactManager() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["contactInfo"],
     queryFn: async () => {
@@ -57,6 +54,7 @@ export default function ContactManager() {
       });
       if (!res.success) throw new Error(res.message);
       toast({ title: "Contact info saved" });
+      queryClient.invalidateQueries({ queryKey: ["contactInfo"] });
     } catch (err) { logError("Failed to save contact info", err, "ContactManager"); toast({ title: "Save failed", variant: "destructive" }); }
     finally { setSaving(false); }
   };
@@ -89,8 +87,7 @@ export default function ContactManager() {
     return (
       <div className="p-6 flex flex-col items-center justify-center min-h-64 gap-4">
         <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-destructive font-medium">Failed to load data</p>
-        <p className="text-muted-foreground text-sm">{error?.message}</p>
+        <p className="text-destructive font-medium">{getErrorMessage(error)}</p>
         <Button onClick={() => refetch()} variant="outline">
           <RefreshCw className="h-4 w-4 mr-2" />
           Try Again

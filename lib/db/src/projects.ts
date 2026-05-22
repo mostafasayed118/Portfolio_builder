@@ -10,6 +10,7 @@ export async function listProjects(
   const { data, error } = await supabase
     .from("projects")
     .select("*")
+    .is("deleted_at", null)
     .order("sort_order", { ascending: true });
   if (error) throw error;
   return data;
@@ -22,6 +23,7 @@ export async function listPublishedProjects(
     .from("projects")
     .select("*")
     .eq("is_published", true)
+    .is("deleted_at", null)
     .order("sort_order", { ascending: true });
   if (error) throw error;
   return data;
@@ -113,7 +115,10 @@ export async function deleteProject(
   supabase: SupabaseClient,
   id: string,
 ): Promise<void> {
-  const { error } = await supabase.from("projects").delete().eq("id", id);
+  const { error } = await supabase
+    .from("projects")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id);
   if (error) throw error;
 }
 
@@ -138,6 +143,7 @@ export async function fetchProjectBySlug(
      .select("*")
      .eq("slug", slug)
      .eq("is_published", true)
+     .is("deleted_at", null)
      .maybeSingle();
    if (error) throw error;
    return data;

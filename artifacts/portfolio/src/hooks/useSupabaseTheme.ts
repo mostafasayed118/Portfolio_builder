@@ -65,7 +65,11 @@ function mapThemeData(data: {
 export function useSupabaseTheme() {
   const { data: themeData } = useQuery({
     queryKey: ["themeSettings"],
-    queryFn: () => getThemeSettings(getSupabase()),
+    queryFn: () => {
+      const sb = getSupabase();
+      if (!sb) throw new Error("Supabase not configured");
+      return getThemeSettings(sb);
+    },
     enabled: isSupabaseConfigured,
   });
 
@@ -90,7 +94,11 @@ export function useSupabaseTheme() {
 export function useSupabaseTypography() {
   const { data: typoData } = useQuery({
     queryKey: ["typographySettings"],
-    queryFn: () => getTypographySettings(getSupabase()),
+    queryFn: () => {
+      const sb = getSupabase();
+      if (!sb) throw new Error("Supabase not configured");
+      return getTypographySettings(sb);
+    },
     enabled: isSupabaseConfigured,
   });
 

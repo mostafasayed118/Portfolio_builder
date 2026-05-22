@@ -1,19 +1,14 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, X, Star, Image as ImageIcon, AlertCircle, RefreshCw } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@workspace/ui";
+import { Plus, Pencil, Trash2, X, Star, Image as ImageIcon, AlertCircle, RefreshCw, Search, Loader2, SearchX, FolderOpen } from "lucide-react";
 import ImageUploader from "@/components/ImageUploader";
+import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
+import { SmartEmptyState } from "@/components/SmartEmptyState";
 import { logError } from "@/lib/logger";
+import { getErrorMessage } from "@/lib/error-messages";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Input, Label, Skeleton, Switch, Textarea } from "@workspace/ui";
 
 type Project = {
   id: string; title: string; description: string; tech_stack: string[];
@@ -28,6 +23,7 @@ const BLANK = {
 
 export default function ProjectsManager() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { data: projects, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["projects"],
     queryFn: async () => {
@@ -42,6 +38,15 @@ export default function ProjectsManager() {
   const [techInput, setTechInput] = useState("");
   const [metricInput, setMetricInput] = useState("");
   const [projectImages, setProjectImages] = useState<{ id: string; url: string }[]>([]);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+
+  const filteredProjects = projects?.filter(p => 
+    p.title.toLowerCase().includes(search.toLowerCase()) ||
+    p.description.toLowerCase().includes(search.toLowerCase()) ||
+    (p.category ?? "").toLowerCase().includes(search.toLowerCase()) ||
+    p.tech_stack?.some(t => t.toLowerCase().includes(search.toLowerCase()))
+  ) ?? [];
 
   const openNew = () => { setIsNew(true); setEditing({ ...BLANK }); setTechInput(""); setMetricInput(""); };
   const openEdit = (p: Project) => {
@@ -61,11 +66,14 @@ export default function ProjectsManager() {
 
   const handleSave = async () => {
     if (!editing) return;
+    if (!editing.title?.trim()) { toast({ title: "Title is required", variant: "destructive" }); return; } {/* FIX: UX-018 */}
+    if (!editing.category?.trim()) { toast({ title: "Category is required", variant: "destructive" }); return; }
+    if (!editing.description?.trim()) { toast({ title: "Description is required", variant: "destructive" }); return; }
     setSaving(true);
     try {
       const { id: editId, ...rest } = editing;
       const baseSlug = rest.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-      const slug = projects?.some(p => p.id !== editId && (p as any).slug === baseSlug)
+      const slug = projects?.some(p => p.id !== editId && p.slug === baseSlug)
         ? `${baseSlug}-${Date.now().toString(36)}`
         : baseSlug;
       const payload = { ...rest, slug, live_url: rest.live_url || null, metrics: rest.metrics?.length ? rest.metrics : undefined };
@@ -74,6 +82,7 @@ export default function ProjectsManager() {
       else res = await api.projects.update(editId!, payload);
       if (!res.success) throw new Error(res.message);
       toast({ title: isNew ? "Project created" : "Project updated" });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
       setEditing(null);
     } catch (err) { logError("Failed to save project", err, "ProjectsManager"); toast({ title: "Failed", variant: "destructive" }); }
     finally { setSaving(false); }
@@ -97,8 +106,7 @@ export default function ProjectsManager() {
     return (
       <div className="p-6 flex flex-col items-center justify-center min-h-64 gap-4">
         <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-destructive font-medium">Failed to load data</p>
-        <p className="text-muted-foreground text-sm">{error?.message}</p>
+        <p className="text-destructive font-medium">{getErrorMessage(error)}</p>
         <Button onClick={() => refetch()} variant="outline">
           <RefreshCw className="h-4 w-4 mr-2" />
           Try Again
@@ -109,18 +117,29 @@ export default function ProjectsManager() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex-1 min-w-[120px]">
           <h1 className="text-2xl font-bold">Projects Manager</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{projects?.length ?? 0} projects</p>
+          <p className="text-sm text-muted-foreground mt-0.5">{filteredProjects.length} projects</p>
         </div>
-        <Button size="sm" onClick={openNew}><Plus size={14} className="mr-1.5" />Add Project</Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search projects..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 w-full sm:w-64 h-9"
+            />
+          </div>
+          <Button size="sm" onClick={openNew} className="min-h-[44px]"><Plus className="h-4 w-4 mr-1.5" />Add Project</Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4">
-        {projects?.map(p => (
+        {filteredProjects.map(p => (
           <Card key={p.id} className={!p.is_published ? "opacity-60" : ""}>
-            <CardContent className="pt-4 pb-4 flex items-start gap-4">
+            <CardContent className="pt-5 pb-4 flex items-start gap-4"> {/* FIX: UX-001 */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-medium text-sm">{p.title}</span>
@@ -135,16 +154,26 @@ export default function ProjectsManager() {
                 </div>
               </div>
               <div className="flex gap-1 shrink-0">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { const { slug: _, image_url: __, tags: ___, created_at: ____, updated_at: _____, ...rest } = p; openEdit({ ...rest, category: p.category ?? "", featured: p.featured ?? false, is_published: p.is_published ?? false, github_url: p.github_url ?? "", live_url: p.live_url ?? undefined, metrics: p.metrics ?? [], sort_order: p.sort_order ?? 0 }); }}><Pencil size={13} /></Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => { if (!confirm("Delete?")) return; try { const res = await api.projects.delete(p.id); if (!res.success) throw new Error(res.message); toast({ title: "Deleted" }); } catch (err) { logError("Failed to delete project", err, "ProjectsManager"); toast({ title: "Delete failed", variant: "destructive" }); } }}><Trash2 size={13} /></Button>
+                <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]" aria-label="Edit project" onClick={() => { const { slug: _, image_url: __, tags: ___, created_at: ____, updated_at: _____, ...rest } = p; openEdit({ ...rest, category: p.category ?? "", featured: p.featured ?? false, is_published: p.is_published ?? false, github_url: p.github_url ?? "", live_url: p.live_url ?? undefined, metrics: p.metrics ?? [], sort_order: p.sort_order ?? 0 }); }}><Pencil className="h-4 w-4" /></Button> {/* STANDARDIZED: Type D — inline edit */}
+                <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] text-destructive hover:text-destructive hover:bg-destructive/10" aria-label="Delete project" onClick={() => { setDeleteId(p.id); }}><Trash2 className="h-4 w-4" /></Button> {/* STANDARDIZED: Type E — inline delete */}
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
+      {filteredProjects.length === 0 && search && ( // FIX: UX-021
+        <div className="text-center py-12">
+          <SearchX className="h-10 w-10 mx-auto text-muted-foreground" />
+          <p className="mt-3 font-medium">No projects matching "{search}"</p>
+          <Button variant="outline" size="sm" onClick={() => setSearch("")} className="mt-3 min-h-[44px]">
+            Clear search
+          </Button>
+        </div>
+      )}
+
       <Dialog open={!!editing} onOpenChange={o => !o && setEditing(null)}>
-        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{isNew ? "Add Project" : "Edit Project"}</DialogTitle></DialogHeader>
           {editing && (
             <div className="space-y-4 py-2">
@@ -174,20 +203,20 @@ export default function ProjectsManager() {
                 <Input value={editing.live_url} onChange={e => setEditing(x => ({ ...x!, live_url: e.target.value }))} className="h-8 text-sm" /></div>
               <div className="space-y-2"><Label className="text-xs">Tech Stack</Label>
                 <div className="flex flex-wrap gap-1">
-                  {editing.tech_stack.map(t => <Badge key={t} variant="secondary" className="flex items-center gap-1 pr-1">{t}<button onClick={() => removeTag("tech_stack", t)}><X size={10} /></button></Badge>)}
+                  {editing.tech_stack.map(t => <Badge key={t} variant="secondary" className="flex items-center gap-1 pr-1">{t}<button type="button" onClick={() => removeTag("tech_stack", t)} className="relative flex items-center justify-center h-5 w-5 after:absolute after:inset-[-8px] after:content-['']" aria-label={`Remove technology ${t}`}><X className="h-3 w-3" /></button></Badge>)} {/* STANDARDIZED: Type F — tag remove */}
                 </div>
                 <div className="flex gap-2">
                   <Input value={techInput} onChange={e => setTechInput(e.target.value)} onKeyDown={e => e.key === "Enter" && addTag("tech_stack", techInput, setTechInput)} placeholder="Add tech…" className="h-8 text-sm" />
-                  <Button size="sm" variant="outline" onClick={() => addTag("tech_stack", techInput, setTechInput)}><Plus size={12} /></Button>
+                  <Button size="sm" variant="outline" onClick={() => addTag("tech_stack", techInput, setTechInput)} className="min-h-[44px]" aria-label="Add technology"><Plus className="h-4 w-4" /></Button>
                 </div>
               </div>
               <div className="space-y-2"><Label className="text-xs">Metrics (optional)</Label>
                 <div className="flex flex-wrap gap-1">
-                  {editing.metrics?.map(m => <Badge key={m} variant="outline" className="flex items-center gap-1 pr-1">{m}<button onClick={() => removeTag("metrics", m)}><X size={10} /></button></Badge>)}
+                  {editing.metrics?.map(m => <Badge key={m} variant="outline" className="flex items-center gap-1 pr-1">{m}<button type="button" onClick={() => removeTag("metrics", m)} className="relative flex items-center justify-center h-5 w-5 after:absolute after:inset-[-8px] after:content-['']" aria-label={`Remove metric ${m}`}><X className="h-3 w-3" /></button></Badge>)}
                 </div>
                 <div className="flex gap-2">
                   <Input value={metricInput} onChange={e => setMetricInput(e.target.value)} onKeyDown={e => e.key === "Enter" && addTag("metrics", metricInput, setMetricInput)} placeholder="e.g. 99.9% uptime" className="h-8 text-sm" />
-                  <Button size="sm" variant="outline" onClick={() => addTag("metrics", metricInput, setMetricInput)}><Plus size={12} /></Button>
+                  <Button size="sm" variant="outline" onClick={() => addTag("metrics", metricInput, setMetricInput)} className="min-h-[44px]" aria-label="Add metric"><Plus className="h-4 w-4" /></Button>
                 </div>
               </div>
               <div className="flex items-center justify-between"><Label className="text-sm">Featured</Label><Switch checked={editing.featured} onCheckedChange={v => setEditing(x => ({ ...x!, featured: v }))} /></div>
@@ -200,6 +229,30 @@ export default function ProjectsManager() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <SmartConfirmDialog
+        state={{
+          isOpen: !!deleteId,
+          title: "Delete Project",
+          message: "This action cannot be undone. The project will be permanently removed.",
+          confirmLabel: "Delete",
+          variant: "danger",
+          onConfirm: async () => {
+            if (!deleteId) return;
+            try {
+              const res = await api.projects.delete(deleteId);
+              if (!res.success) throw new Error(res.message);
+              toast({ title: "Project deleted" });
+              queryClient.invalidateQueries({ queryKey: ["projects"] });
+            } catch (err) {
+              logError("Failed to delete project", err, "ProjectsManager");
+              toast({ title: "Delete failed", variant: "destructive" });
+            }
+            setDeleteId(null);
+          },
+        }}
+        onCancel={() => setDeleteId(null)}
+      />
     </div>
   );
 }

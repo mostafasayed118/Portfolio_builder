@@ -9,6 +9,7 @@ export async function listSkills(
   const { data, error } = await supabase
     .from("skills")
     .select("*")
+    .is("deleted_at", null)
     .order("sort_order", { ascending: true });
   if (error) throw error;
   return data;
@@ -22,6 +23,7 @@ export async function listSkillsByCategory(
     .from("skills")
     .select("*")
     .eq("category", category)
+    .is("deleted_at", null)
     .order("sort_order", { ascending: true });
   if (error) throw error;
   return data;
@@ -73,6 +75,9 @@ export async function deleteSkill(
   supabase: SupabaseClient,
   id: string,
 ): Promise<void> {
-  const { error } = await supabase.from("skills").delete().eq("id", id);
+  const { error } = await supabase
+    .from("skills")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id);
   if (error) throw error;
 }

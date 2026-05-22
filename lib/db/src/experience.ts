@@ -9,6 +9,7 @@ export async function listExperience(
   const { data, error } = await supabase
     .from("experience")
     .select("*")
+    .is("deleted_at", null)
     .order("sort_order", { ascending: true });
   if (error) throw error;
   return data;
@@ -79,6 +80,9 @@ export async function deleteExperience(
   supabase: SupabaseClient,
   id: string,
 ): Promise<void> {
-  const { error } = await supabase.from("experience").delete().eq("id", id);
+  const { error } = await supabase
+    .from("experience")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id);
   if (error) throw error;
 }

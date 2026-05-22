@@ -15,8 +15,6 @@ export async function getAboutContent(
   return data;
 }
 
-export const fetchAboutContent = getAboutContent;
-
 export async function upsertAboutContent(
   supabase: SupabaseClient,
   args: Omit<Partial<InsertAboutContent>, 'id' | 'created_at'>,

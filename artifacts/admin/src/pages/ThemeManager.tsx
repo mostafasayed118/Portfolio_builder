@@ -1,17 +1,10 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Slider } from "@/components/ui/slider";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@workspace/ui";
 import { Save, RefreshCw, Sun, Moon, Eye, AlertCircle } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { logError } from "@/lib/logger";
+import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, Skeleton, Slider, Tabs, TabsContent, TabsList, TabsTrigger } from "@workspace/ui";
 
 type ThemeData = {
   mode: "light" | "dark";
@@ -293,10 +286,10 @@ export default function ThemeManager() {
           <p className="text-sm text-muted-foreground mt-0.5">Edit color tokens — changes apply to the live portfolio instantly.</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={handleReset}>
+          <Button variant="outline" size="sm" onClick={handleReset} className="min-h-[44px]">
             <RefreshCw size={14} className="mr-1.5" /> Reset
           </Button>
-          <Button size="sm" onClick={handleSave} disabled={saving}>
+          <Button size="sm" onClick={handleSave} disabled={saving} className="min-h-[44px]">
             <Save size={14} className="mr-1.5" />
             {saving ? "Saving…" : "Save Changes"}
           </Button>
@@ -359,11 +352,11 @@ export default function ThemeManager() {
                   <div
                     key={px}
                     onClick={() => set("radius", `${(px / 16).toFixed(3)}rem`)}
-                    onKeyDown={(e) => e.key === "Enter" && set("radius", `${(px / 16).toFixed(3)}rem`)}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); set("radius", `${(px / 16).toFixed(3)}rem`); }}}
                     role="button"
                     tabIndex={0}
                     aria-label={`Border radius: ${px}px`}
-                    className="w-8 h-8 bg-primary/20 border-2 border-primary/30 cursor-pointer hover:border-primary transition-colors"
+                    className="w-8 h-8 bg-primary/20 border-2 border-primary/30 cursor-pointer hover:border-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     style={{ borderRadius: `${px}px` }}
                     title={`${px}px`}
                   />

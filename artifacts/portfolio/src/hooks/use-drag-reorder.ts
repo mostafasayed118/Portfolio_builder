@@ -21,10 +21,12 @@ export function useDragReorder<T extends { id: string }>(
   const dragNode = useRef<HTMLElement | null>(null);
 
   const previousItemsRef = useRef(items);
-  if (items !== previousItemsRef.current) {
-    previousItemsRef.current = items;
-    setOrderedItems(items);
-  }
+  useEffect(() => {
+    if (items !== previousItemsRef.current) {
+      previousItemsRef.current = items;
+      setOrderedItems(items);
+    }
+  }, [items]);
 
   const handleDragStart = useCallback(
     (e: React.DragEvent, id: string) => {
@@ -82,8 +84,8 @@ export function useDragReorder<T extends { id: string }>(
 
       const newItems = [...orderedItems];
       const [moved] = newItems.splice(dragIdx, 1);
-      const adjustedDropIdx = dropPosition === "after" ? dropIdx : dropIdx;
-      const insertAt = dragIdx < adjustedDropIdx ? adjustedDropIdx : adjustedDropIdx;
+      const adjustedDropIdx = dropPosition === "after" ? dropIdx + 1 : dropIdx;
+      const insertAt = dragIdx < adjustedDropIdx ? adjustedDropIdx - 1 : adjustedDropIdx;
       newItems.splice(insertAt, 0, moved);
 
       setOrderedItems(newItems);
