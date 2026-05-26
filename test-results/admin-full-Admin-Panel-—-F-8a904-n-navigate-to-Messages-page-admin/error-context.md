@@ -1,0 +1,263 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: admin-full.spec.ts >> Admin Panel — Full Manual Test Suite >> Sidebar Navigation >> can navigate to Messages page
+- Location: e2e\admin-full.spec.ts:199:11
+
+# Error details
+
+```
+Error: expect(locator).toBeAttached() failed
+
+Locator: locator('nav a:has-text("Messages"), aside a:has-text("Messages")').first()
+Expected: attached
+Timeout: 10000ms
+Error: element(s) not found
+
+Call log:
+  - Expect "toBeAttached" with timeout 10000ms
+  - waiting for locator('nav a:has-text("Messages"), aside a:has-text("Messages")').first()
+
+```
+
+```yaml
+- heading "Sign in to build your portfolio" [level=1]
+- paragraph: Welcome back! Please sign in to continue
+- button "Sign in with Google Continue with Google":
+  - img "Sign in with Google"
+  - text: Continue with Google
+- paragraph: or
+- text: Email address
+- textbox "Email address":
+  - /placeholder: Enter your email address
+- text: Password
+- textbox "Password":
+  - /placeholder: Enter your password
+- button "Show password":
+  - img
+- button "Continue":
+  - text: Continue
+  - img
+- text: Don’t have an account?
+- link "Sign up":
+  - /url: https://nearby-koi-38.accounts.dev/sign-up?__clerk_db_jwt=dvb_3EE6yqKq8obHJ3mqeTUf28BKdCW
+- paragraph: Secured by
+- link "Clerk logo":
+  - /url: https://go.clerk.com/components
+  - img
+- paragraph: Development mode
+- region "Notifications (F8)":
+  - list
+```
+
+# Test source
+
+```ts
+  103 | 
+  104 |   // ═══════════════════════════════════════════════════════════════
+  105 |   // 3. COMMAND PALETTE (Ctrl+K)
+  106 |   // ═══════════════════════════════════════════════════════════════
+  107 |   test.describe("Command Palette", () => {
+  108 |     test("Ctrl+K opens command palette", async ({ page }) => {
+  109 |       await page.goto("/");
+  110 |       await page.keyboard.press("Control+k");
+  111 | 
+  112 |       const dialog = page.locator('[role="dialog"], [cmdk-root], [class*="command"]');
+  113 |       await expect(dialog.first()).toBeVisible({ timeout: 3000 });
+  114 |     });
+  115 | 
+  116 |     test("command palette has search input", async ({ page }) => {
+  117 |       await page.goto("/");
+  118 |       await page.keyboard.press("Control+k");
+  119 |       const input = page.locator('[role="dialog"] input, [cmdk-input]');
+  120 |       await expect(input.first()).toBeVisible({ timeout: 3000 });
+  121 |     });
+  122 | 
+  123 |     test("command palette lists navigation items", async ({ page }) => {
+  124 |       await page.goto("/");
+  125 |       await page.keyboard.press("Control+k");
+  126 | 
+  127 |       for (const item of ["Overview", "Hero", "Projects", "Skills", "SEO", "Theme"]) {
+  128 |         const cmdItem = page.locator(`[role="dialog"] [cmdk-item]:has-text("${item}")`);
+  129 |         await expect(cmdItem.first()).toBeAttached({ timeout: 3000 });
+  130 |       }
+  131 |     });
+  132 | 
+  133 |     test("command palette has Quick Actions group", async ({ page }) => {
+  134 |       await page.goto("/");
+  135 |       await page.keyboard.press("Control+k");
+  136 |       const group = page.locator(
+  137 |         '[role="dialog"] [cmdk-group-heading]:has-text("Quick Actions")'
+  138 |       );
+  139 |       await expect(group).toBeAttached({ timeout: 3000 });
+  140 |     });
+  141 | 
+  142 |     test("typing in command palette filters results", async ({ page }) => {
+  143 |       await page.goto("/");
+  144 |       await page.keyboard.press("Control+k");
+  145 |       const input = page.locator('[role="dialog"] input, [cmdk-input]');
+  146 |       await expect(input.first()).toBeVisible({ timeout: 3000 });
+  147 |       await input.first().fill("theme");
+  148 | 
+  149 |       // The Theme item should still be visible
+  150 |       const themeItem = page.locator('[role="dialog"] [cmdk-item]:has-text("Theme")');
+  151 |       await expect(themeItem.first()).toBeVisible({ timeout: 3000 });
+  152 |     });
+  153 | 
+  154 |     test("Escape closes command palette", async ({ page }) => {
+  155 |       await page.goto("/");
+  156 |       await page.keyboard.press("Control+k");
+  157 |       const dialog = page.locator('[role="dialog"]');
+  158 |       await expect(dialog.first()).toBeVisible({ timeout: 3000 });
+  159 | 
+  160 |       await page.keyboard.press("Escape");
+  161 |       await expect(dialog.first()).not.toBeVisible({ timeout: 3000 });
+  162 |     });
+  163 | 
+  164 |     test("header search button opens command palette", async ({ page }) => {
+  165 |       await page.goto("/");
+  166 |       const searchBtn = page.locator(
+  167 |         'header button:has-text("Search"), header button[aria-label*="command palette" i]'
+  168 |       );
+  169 |       if (await searchBtn.first().isVisible()) {
+  170 |         await searchBtn.first().click();
+  171 |         const dialog = page.locator('[role="dialog"]');
+  172 |         await expect(dialog.first()).toBeVisible({ timeout: 3000 });
+  173 |       }
+  174 |     });
+  175 |   });
+  176 | 
+  177 |   // ═══════════════════════════════════════════════════════════════
+  178 |   // 4. SIDEBAR NAVIGATION
+  179 |   // ═══════════════════════════════════════════════════════════════
+  180 |   test.describe("Sidebar Navigation", () => {
+  181 |     const navItems = [
+  182 |       { label: "Overview", url: "/overview" },
+  183 |       { label: "Hero", url: "/hero" },
+  184 |       { label: "About", url: "/about" },
+  185 |       { label: "Projects", url: "/projects" },
+  186 |       { label: "Skills", url: "/skills" },
+  187 |       { label: "Experience", url: "/experience" },
+  188 |       { label: "Certifications", url: "/certifications" },
+  189 |       { label: "Messages", url: "/messages" },
+  190 |       { label: "CV", url: "/cv" },
+  191 |       { label: "SEO", url: "/seo" },
+  192 |       { label: "Typography", url: "/typography" },
+  193 |       { label: "Section", url: "/sections" },
+  194 |       { label: "Theme", url: "/theme" },
+  195 |       { label: "Settings", url: "/settings" },
+  196 |     ];
+  197 | 
+  198 |     for (const item of navItems) {
+  199 |       test(`can navigate to ${item.label} page`, async ({ page }) => {
+  200 |         await page.goto("/");
+  201 | 
+  202 |         const link = page.locator(`nav a:has-text("${item.label}"), aside a:has-text("${item.label}")`);
+> 203 |         await expect(link.first()).toBeAttached({ timeout: 10000 });
+      |                                    ^ Error: expect(locator).toBeAttached() failed
+  204 | 
+  205 |         if (await link.first().isVisible()) {
+  206 |           await link.first().click();
+  207 |           await expect(page).toHaveURL(new RegExp(item.url), { timeout: 10000 });
+  208 |         }
+  209 |       });
+  210 |     }
+  211 |   });
+  212 | 
+  213 |   // ═══════════════════════════════════════════════════════════════
+  214 |   // 5. OVERVIEW DASHBOARD
+  215 |   // ═══════════════════════════════════════════════════════════════
+  216 |   test.describe("Overview Dashboard", () => {
+  217 |     test("overview shows stat cards", async ({ page }) => {
+  218 |       await page.goto("/overview");
+  219 |       const cards = page.locator("[class*='card'], [class*='stat']");
+  220 |       await expect(cards.first()).toBeAttached({ timeout: 10000 });
+  221 |     });
+  222 | 
+  223 |     test("overview shows module grid with links to sections", async ({ page }) => {
+  224 |       await page.goto("/overview");
+  225 |       const moduleLinks = page.locator(
+  226 |         'a[href*="/hero"], a[href*="/projects"], a[href*="/skills"]'
+  227 |       );
+  228 |       const count = await moduleLinks.count();
+  229 |       expect(count).toBeGreaterThan(0);
+  230 |     });
+  231 |   });
+  232 | 
+  233 |   // ═══════════════════════════════════════════════════════════════
+  234 |   // 6. HERO EDITOR
+  235 |   // ═══════════════════════════════════════════════════════════════
+  236 |   test.describe("Hero Editor", () => {
+  237 |     test("hero editor page loads with form fields", async ({ page }) => {
+  238 |       await page.goto("/hero");
+  239 |       const form = page.locator("form, [class*='form'], input");
+  240 |       await expect(form.first()).toBeAttached({ timeout: 10000 });
+  241 |     });
+  242 | 
+  243 |     test("hero editor has save button", async ({ page }) => {
+  244 |       await page.goto("/hero");
+  245 |       const saveBtn = page.locator('button:has-text("Save"), button[data-save-button]');
+  246 |       await expect(saveBtn.first()).toBeAttached({ timeout: 10000 });
+  247 |     });
+  248 |   });
+  249 | 
+  250 |   // ═══════════════════════════════════════════════════════════════
+  251 |   // 7. PROJECTS MANAGER
+  252 |   // ═══════════════════════════════════════════════════════════════
+  253 |   test.describe("Projects Manager", () => {
+  254 |     test("projects page loads with content or empty state", async ({ page }) => {
+  255 |       await page.goto("/projects");
+  256 |       const content = page.locator("table, [class*='empty'], [class*='card'], [class*='list']");
+  257 |       await expect(content.first()).toBeAttached({ timeout: 10000 });
+  258 |     });
+  259 | 
+  260 |     test("projects page has add/create button", async ({ page }) => {
+  261 |       await page.goto("/projects");
+  262 |       const addBtn = page.locator(
+  263 |         'button:has-text("Add"), button:has-text("Create"), button:has-text("New")'
+  264 |       );
+  265 |       await expect(addBtn.first()).toBeAttached({ timeout: 10000 });
+  266 |     });
+  267 |   });
+  268 | 
+  269 |   // ═══════════════════════════════════════════════════════════════
+  270 |   // 8. SKILLS MANAGER
+  271 |   // ═══════════════════════════════════════════════════════════════
+  272 |   test.describe("Skills Manager", () => {
+  273 |     test("skills page loads with content", async ({ page }) => {
+  274 |       await page.goto("/skills");
+  275 |       const content = page.locator("table, [class*='empty'], [class*='card'], input");
+  276 |       await expect(content.first()).toBeAttached({ timeout: 10000 });
+  277 |     });
+  278 | 
+  279 |     test("skills page has add button", async ({ page }) => {
+  280 |       await page.goto("/skills");
+  281 |       const addBtn = page.locator(
+  282 |         'button:has-text("Add"), button:has-text("Create"), button:has-text("New")'
+  283 |       );
+  284 |       await expect(addBtn.first()).toBeAttached({ timeout: 10000 });
+  285 |     });
+  286 |   });
+  287 | 
+  288 |   // ═══════════════════════════════════════════════════════════════
+  289 |   // 9. EXPERIENCE MANAGER
+  290 |   // ═══════════════════════════════════════════════════════════════
+  291 |   test.describe("Experience Manager", () => {
+  292 |     test("experience page loads with content", async ({ page }) => {
+  293 |       await page.goto("/experience");
+  294 |       const content = page.locator("table, [class*='empty'], [class*='card'], input");
+  295 |       await expect(content.first()).toBeAttached({ timeout: 10000 });
+  296 |     });
+  297 |   });
+  298 | 
+  299 |   // ═══════════════════════════════════════════════════════════════
+  300 |   // 10. CERTIFICATIONS MANAGER
+  301 |   // ═══════════════════════════════════════════════════════════════
+  302 |   test.describe("Certifications Manager", () => {
+  303 |     test("certifications page loads with content", async ({ page }) => {
+```

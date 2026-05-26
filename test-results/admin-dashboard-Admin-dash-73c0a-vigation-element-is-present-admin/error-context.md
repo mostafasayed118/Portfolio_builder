@@ -1,0 +1,144 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: admin-dashboard.spec.ts >> Admin dashboard >> sidebar navigation element is present
+- Location: e2e\admin-dashboard.spec.ts:52:7
+
+# Error details
+
+```
+Error: expect(locator).toBeVisible() failed
+
+Locator: locator('nav, aside, [role=\'navigation\']').first()
+Expected: visible
+Timeout: 10000ms
+Error: element(s) not found
+
+Call log:
+  - Expect "toBeVisible" with timeout 10000ms
+  - waiting for locator('nav, aside, [role=\'navigation\']').first()
+
+```
+
+```yaml
+- heading "Sign in to build your portfolio" [level=1]
+- paragraph: Welcome back! Please sign in to continue
+- button "Sign in with Google Continue with Google":
+  - img "Sign in with Google"
+  - text: Continue with Google
+- paragraph: or
+- text: Email address
+- textbox "Email address":
+  - /placeholder: Enter your email address
+- text: Password
+- textbox "Password":
+  - /placeholder: Enter your password
+- button "Show password":
+  - img
+- button "Continue":
+  - text: Continue
+  - img
+- text: Don’t have an account?
+- link "Sign up":
+  - /url: https://nearby-koi-38.accounts.dev/sign-up?__clerk_db_jwt=dvb_3EE6x98tdwtqiBdx25iTYcmkXnk
+- paragraph: Secured by
+- link "Clerk logo":
+  - /url: https://go.clerk.com/components
+  - img
+- paragraph: Development mode
+- region "Notifications (F8)":
+  - list
+```
+
+# Test source
+
+```ts
+  1  | import { test, expect } from "@playwright/test";
+  2  | 
+  3  | test.describe("Admin dashboard", () => {
+  4  |   test("renders sign-in page when unauthenticated", async ({ page }) => {
+  5  |     await page.goto("/");
+  6  |     // Should see sign-in form or Clerk auth component
+  7  |     await expect(page.locator("body")).toBeVisible({ timeout: 10000 });
+  8  |     // The page should either show a sign-in form or redirect
+  9  |     const content = await page.textContent("body");
+  10 |     expect(content).toBeTruthy();
+  11 |   });
+  12 | 
+  13 |   test("sidebar navigation has expected links when authenticated", async ({ page }) => {
+  14 |     // Mock the API to return success for all endpoints
+  15 |     await page.route("**/api/v1/**", async (route) => {
+  16 |       const url = route.request().url();
+  17 |       if (url.includes("/healthz")) {
+  18 |         await route.fulfill({ status: 200, body: JSON.stringify({ status: "ok" }) });
+  19 |       } else if (url.includes("/csrf-token")) {
+  20 |         await route.fulfill({ status: 200, body: JSON.stringify({ csrfToken: "test-token" }) });
+  21 |       } else {
+  22 |         await route.fulfill({ status: 200, body: JSON.stringify({ success: true, data: [] }) });
+  23 |       }
+  24 |     });
+  25 | 
+  26 |     await page.goto("/");
+  27 |     await page.waitForTimeout(2000);
+  28 | 
+  29 |     // Check for navigation links (these should be present in the sidebar)
+  30 |     const navText = await page.textContent("nav, aside, [role='navigation']");
+  31 |     // At minimum the page should render
+  32 |     expect(navText).toBeTruthy();
+  33 |   });
+  34 | 
+  35 |   test("protected routes exist and are configured", async ({ page }) => {
+  36 |     // Verify that the admin app responds to known routes
+  37 |     const routes = ["/overview", "/hero", "/skills", "/projects"];
+  38 |     for (const route of routes) {
+  39 |       const response = await page.goto(route);
+  40 |       expect(response).toBeTruthy();
+  41 |       // Should get a 200 (the SPA serves index.html for all routes)
+  42 |       expect(response?.status()).toBeLessThan(500);
+  43 |     }
+  44 |   });
+  45 | 
+  46 |   test("renders main content area (app shell mounts)", async ({ page }) => {
+  47 |     await page.goto("/");
+  48 |     const mainContent = page.locator("main, [role='main'], #root");
+  49 |     await expect(mainContent.first()).toBeVisible({ timeout: 10000 });
+  50 |   });
+  51 | 
+  52 |   test("sidebar navigation element is present", async ({ page }) => {
+  53 |     await page.goto("/");
+  54 |     const sidebar = page.locator("nav, aside, [role='navigation']");
+> 55 |     await expect(sidebar.first()).toBeVisible({ timeout: 10000 });
+     |                                   ^ Error: expect(locator).toBeVisible() failed
+  56 |   });
+  57 | 
+  58 |   test("can navigate to all sidebar routes via URL", async ({ page }) => {
+  59 |     const routes = [
+  60 |       "/overview",
+  61 |       "/hero",
+  62 |       "/about",
+  63 |       "/skills",
+  64 |       "/projects",
+  65 |       "/experience",
+  66 |       "/certifications",
+  67 |       "/messages",
+  68 |       "/cv",
+  69 |       "/seo",
+  70 |       "/typography",
+  71 |       "/sections",
+  72 |       "/theme",
+  73 |       "/settings",
+  74 |     ];
+  75 |     for (const route of routes) {
+  76 |       const response = await page.goto(route);
+  77 |       expect(response).toBeTruthy();
+  78 |       expect(response?.status()).toBeLessThan(500);
+  79 |     }
+  80 |   });
+  81 | });
+  82 | 
+```

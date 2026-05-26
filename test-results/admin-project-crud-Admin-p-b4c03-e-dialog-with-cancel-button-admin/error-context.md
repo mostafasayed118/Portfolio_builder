@@ -1,0 +1,221 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: admin-project-crud.spec.ts >> Admin project CRUD >> can close create dialog with cancel button
+- Location: e2e\admin-project-crud.spec.ts:154:7
+
+# Error details
+
+```
+TimeoutError: locator.click: Timeout 10000ms exceeded.
+Call log:
+  - waiting for getByRole('button', { name: /add|create|new.*project/i })
+
+```
+
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - generic [ref=e6]:
+    - generic [ref=e7]:
+      - generic [ref=e9]:
+        - heading "Sign in to build your portfolio" [level=1] [ref=e10]
+        - paragraph [ref=e11]: Welcome back! Please sign in to continue
+      - generic [ref=e12]:
+        - button "Sign in with Google Continue with Google" [ref=e15] [cursor=pointer]:
+          - generic [ref=e16]:
+            - img "Sign in with Google" [ref=e18]
+            - generic [ref=e19]: Continue with Google
+        - paragraph [ref=e22]: or
+        - generic [ref=e24]:
+          - generic [ref=e25]:
+            - generic [ref=e28]:
+              - generic [ref=e30]: Email address
+              - textbox "Email address" [ref=e31]:
+                - /placeholder: Enter your email address
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - generic: Password
+                  - generic:
+                    - textbox "Password":
+                      - /placeholder: Enter your password
+                    - button "Show password":
+                      - img
+          - button "Continue" [ref=e34] [cursor=pointer]:
+            - generic [ref=e35]:
+              - text: Continue
+              - img [ref=e36]
+    - generic [ref=e38]:
+      - generic [ref=e39]:
+        - generic [ref=e40]: Don’t have an account?
+        - link "Sign up" [ref=e41] [cursor=pointer]:
+          - /url: https://nearby-koi-38.accounts.dev/sign-up?__clerk_db_jwt=dvb_3EE71hWjPApZQvMOE6Xx0cmrB0T
+      - generic [ref=e43]:
+        - generic [ref=e45]:
+          - paragraph [ref=e46]: Secured by
+          - link "Clerk logo" [ref=e47] [cursor=pointer]:
+            - /url: https://go.clerk.com/components
+            - img [ref=e48]
+        - paragraph [ref=e53]: Development mode
+  - region "Notifications (F8)":
+    - list
+```
+
+# Test source
+
+```ts
+  57  | 
+  58  |   test("projects page loads and shows content", async ({ page }) => {
+  59  |     await page.goto("/projects");
+  60  |     await expect(page.locator("body")).toBeVisible({ timeout: 10000 });
+  61  |     await page.waitForTimeout(1000);
+  62  |   });
+  63  | 
+  64  |   test("projects page loads and shows heading", async ({ page }) => {
+  65  |     await page.goto("/projects");
+  66  |     const heading = page.getByRole("heading", { name: /project/i });
+  67  |     await expect(heading).toBeVisible({ timeout: 10000 });
+  68  |   });
+  69  | 
+  70  |   test("create project button is visible", async ({ page }) => {
+  71  |     await page.goto("/projects");
+  72  |     const createBtn = page.getByRole("button", { name: /add|create|new.*project/i });
+  73  |     await expect(createBtn).toBeVisible({ timeout: 10000 });
+  74  |   });
+  75  | 
+  76  |   test("can open create project dialog", async ({ page }) => {
+  77  |     await page.goto("/projects");
+  78  |     const createBtn = page.getByRole("button", { name: /add|create|new.*project/i });
+  79  |     await expect(createBtn).toBeVisible({ timeout: 10000 });
+  80  |     await createBtn.click();
+  81  | 
+  82  |     const dialog = page.locator('[role="dialog"]');
+  83  |     await expect(dialog).toBeVisible({ timeout: 5000 });
+  84  |   });
+  85  | 
+  86  |   test("create dialog has title and description fields", async ({ page }) => {
+  87  |     await page.goto("/projects");
+  88  |     const createBtn = page.getByRole("button", { name: /add|create|new.*project/i });
+  89  |     await createBtn.click();
+  90  | 
+  91  |     const dialog = page.locator('[role="dialog"]');
+  92  |     await expect(dialog).toBeVisible({ timeout: 5000 });
+  93  | 
+  94  |     const titleInput = page.locator('input[name="title"], input[placeholder*="title" i]');
+  95  |     const descInput = page.locator('textarea[name="description"], textarea[placeholder*="description" i]');
+  96  | 
+  97  |     await expect(titleInput).toBeVisible({ timeout: 3000 });
+  98  |     await expect(descInput).toBeVisible({ timeout: 3000 });
+  99  |   });
+  100 | 
+  101 |   test("can fill in project form fields", async ({ page }) => {
+  102 |     await page.goto("/projects");
+  103 |     const createBtn = page.getByRole("button", { name: /add|create|new.*project/i });
+  104 |     await createBtn.click();
+  105 | 
+  106 |     const dialog = page.locator('[role="dialog"]');
+  107 |     await expect(dialog).toBeVisible({ timeout: 5000 });
+  108 | 
+  109 |     const titleInput = page.locator('input[name="title"], input[placeholder*="title" i]');
+  110 |     await expect(titleInput).toBeVisible({ timeout: 3000 });
+  111 | 
+  112 |     await titleInput.fill("E2E Test Project");
+  113 |     await expect(titleInput).toHaveValue("E2E Test Project");
+  114 |   });
+  115 | 
+  116 |   test("form validates required title field", async ({ page }) => {
+  117 |     await page.goto("/projects");
+  118 |     const createBtn = page.getByRole("button", { name: /add|create|new.*project/i });
+  119 |     await createBtn.click();
+  120 | 
+  121 |     const dialog = page.locator('[role="dialog"]');
+  122 |     await expect(dialog).toBeVisible({ timeout: 5000 });
+  123 | 
+  124 |     // Find the submit button inside the dialog
+  125 |     const submitBtn = dialog.getByRole("button", { name: /save|create|submit/i });
+  126 |     await expect(submitBtn).toBeVisible({ timeout: 3000 });
+  127 |     await submitBtn.click();
+  128 | 
+  129 |     // Dialog should still be open (form validation prevented submit)
+  130 |     await expect(dialog).toBeVisible({ timeout: 3000 });
+  131 | 
+  132 |     // Check for validation feedback
+  133 |     const validationError = page.locator(
+  134 |       '[class*="error"], [class*="invalid"], [aria-invalid="true"], input:invalid'
+  135 |     );
+  136 |     const hasValidationFeedback = await validationError.count().then((c) => c > 0);
+  137 |     if (!hasValidationFeedback) {
+  138 |       await expect(page.locator('input[name="title"], input[placeholder*="title" i]')).toHaveValue("");
+  139 |     }
+  140 |   });
+  141 | 
+  142 |   test("can close create dialog with escape key", async ({ page }) => {
+  143 |     await page.goto("/projects");
+  144 |     const createBtn = page.getByRole("button", { name: /add|create|new.*project/i });
+  145 |     await createBtn.click();
+  146 | 
+  147 |     const dialog = page.locator('[role="dialog"]');
+  148 |     await expect(dialog).toBeVisible({ timeout: 5000 });
+  149 | 
+  150 |     await page.keyboard.press("Escape");
+  151 |     await expect(dialog).not.toBeVisible({ timeout: 3000 });
+  152 |   });
+  153 | 
+  154 |   test("can close create dialog with cancel button", async ({ page }) => {
+  155 |     await page.goto("/projects");
+  156 |     const createBtn = page.getByRole("button", { name: /add|create|new.*project/i });
+> 157 |     await createBtn.click();
+      |                     ^ TimeoutError: locator.click: Timeout 10000ms exceeded.
+  158 | 
+  159 |     const dialog = page.locator('[role="dialog"]');
+  160 |     await expect(dialog).toBeVisible({ timeout: 5000 });
+  161 | 
+  162 |     const cancelBtn = dialog.getByRole("button", { name: /cancel/i });
+  163 |     if (await cancelBtn.isVisible().catch(() => false)) {
+  164 |       await cancelBtn.click();
+  165 |       await expect(dialog).not.toBeVisible({ timeout: 3000 });
+  166 |     } else {
+  167 |       await page.keyboard.press("Escape");
+  168 |       await expect(dialog).not.toBeVisible({ timeout: 3000 });
+  169 |     }
+  170 |   });
+  171 | 
+  172 |   test("project list displays items when data exists", async ({ page }) => {
+  173 |     await page.goto("/projects");
+  174 |     await page.waitForTimeout(2000);
+  175 |     const body = await page.textContent("body");
+  176 |     expect(body).toBeTruthy();
+  177 |   });
+  178 | 
+  179 |   test("can fill and submit the project create form", async ({ page }) => {
+  180 |     await page.goto("/projects");
+  181 |     const createBtn = page.getByRole("button", { name: /add|create|new.*project/i });
+  182 |     await expect(createBtn).toBeVisible({ timeout: 10000 });
+  183 |     await createBtn.click();
+  184 | 
+  185 |     const dialog = page.locator('[role="dialog"]');
+  186 |     await expect(dialog).toBeVisible({ timeout: 5000 });
+  187 | 
+  188 |     const titleInput = page.locator('input[name="title"], input[placeholder*="title" i]');
+  189 |     const descInput = page.locator('textarea[name="description"], textarea[placeholder*="description" i]');
+  190 | 
+  191 |     await titleInput.fill("E2E Created Project");
+  192 |     await descInput.fill("A project created via E2E test automation");
+  193 | 
+  194 |     const submitBtn = dialog.getByRole("button", { name: /save|create|submit/i });
+  195 |     await submitBtn.click();
+  196 | 
+  197 |     // After successful submit, dialog should close
+  198 |     await expect(dialog).not.toBeVisible({ timeout: 5000 });
+  199 |   });
+  200 | });
+  201 | 
+```

@@ -57,3 +57,6 @@ testsprite_tests/*.log
 testsprite_tests/.env
 
 .vercel
+
+# Windows NUL device artifacts
+nul
