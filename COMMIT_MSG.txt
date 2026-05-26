@@ -1,0 +1,5 @@
+Fix: actually remove 3 unused deps from api-server/package.json
+
+The previous commit intended to remove @google-cloud/storage,
+@workspace/db, and google-auth-library but the edit didn't stick
+due to line ending mismatches. Now properly applied.

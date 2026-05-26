@@ -1,0 +1,214 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: admin-full.spec.ts >> Admin Panel — Full Manual Test Suite >> Admin Dark Mode >> toggling dark mode works in admin
+- Location: e2e\admin-full.spec.ts:415:9
+
+# Error details
+
+```
+Error: expect(locator).toBeVisible() failed
+
+Locator: locator('header button[aria-label*="theme" i], header button[aria-label*="dark" i], header button[aria-label*="light" i]').first()
+Expected: visible
+Timeout: 10000ms
+Error: element(s) not found
+
+Call log:
+  - Expect "toBeVisible" with timeout 10000ms
+  - waiting for locator('header button[aria-label*="theme" i], header button[aria-label*="dark" i], header button[aria-label*="light" i]').first()
+
+```
+
+```yaml
+- heading "Sign in to build your portfolio" [level=1]
+- paragraph: Welcome back! Please sign in to continue
+- button "Sign in with Google Continue with Google":
+  - img "Sign in with Google"
+  - text: Continue with Google
+- paragraph: or
+- text: Email address
+- textbox "Email address":
+  - /placeholder: Enter your email address
+- text: Password
+- textbox "Password":
+  - /placeholder: Enter your password
+- button "Show password":
+  - img
+- button "Continue":
+  - text: Continue
+  - img
+- text: Don’t have an account?
+- link "Sign up":
+  - /url: https://nearby-koi-38.accounts.dev/sign-up?__clerk_db_jwt=dvb_3EE70JdutCMAjzhgnmnBJwRkcUc
+- paragraph: Secured by
+- link "Clerk logo":
+  - /url: https://go.clerk.com/components
+  - img
+- paragraph: Development mode
+- region "Notifications (F8)":
+  - list
+```
+
+# Test source
+
+```ts
+  323 |   // ═══════════════════════════════════════════════════════════════
+  324 |   // 12. CV MANAGER
+  325 |   // ═══════════════════════════════════════════════════════════════
+  326 |   test.describe("CV Manager", () => {
+  327 |     test("cv page loads with upload controls", async ({ page }) => {
+  328 |       await page.goto("/cv");
+  329 |       const content = page.locator(
+  330 |         "input[type='file'], button:has-text('Upload'), [class*='card']"
+  331 |       );
+  332 |       await expect(content.first()).toBeAttached({ timeout: 10000 });
+  333 |     });
+  334 |   });
+  335 | 
+  336 |   // ═══════════════════════════════════════════════════════════════
+  337 |   // 13. SEO MANAGER
+  338 |   // ═══════════════════════════════════════════════════════════════
+  339 |   test.describe("SEO Manager", () => {
+  340 |     test("seo page loads with form fields", async ({ page }) => {
+  341 |       await page.goto("/seo");
+  342 |       const inputs = page.locator("input, textarea");
+  343 |       await expect(inputs.first()).toBeAttached({ timeout: 10000 });
+  344 |       const count = await inputs.count();
+  345 |       expect(count).toBeGreaterThan(0);
+  346 |     });
+  347 | 
+  348 |     test("seo page has save button", async ({ page }) => {
+  349 |       await page.goto("/seo");
+  350 |       const saveBtn = page.locator('button:has-text("Save"), button[data-save-button]');
+  351 |       await expect(saveBtn.first()).toBeAttached({ timeout: 10000 });
+  352 |     });
+  353 |   });
+  354 | 
+  355 |   // ═══════════════════════════════════════════════════════════════
+  356 |   // 14. TYPOGRAPHY MANAGER
+  357 |   // ═══════════════════════════════════════════════════════════════
+  358 |   test.describe("Typography Manager", () => {
+  359 |     test("typography page loads with controls", async ({ page }) => {
+  360 |       await page.goto("/typography");
+  361 |       const content = page.locator("select, input, [class*='card']");
+  362 |       await expect(content.first()).toBeAttached({ timeout: 10000 });
+  363 |     });
+  364 |   });
+  365 | 
+  366 |   // ═══════════════════════════════════════════════════════════════
+  367 |   // 15. SECTION ORDER MANAGER
+  368 |   // ═══════════════════════════════════════════════════════════════
+  369 |   test.describe("Section Order Manager", () => {
+  370 |     test("sections page loads with reorder controls", async ({ page }) => {
+  371 |       await page.goto("/sections");
+  372 |       const content = page.locator(
+  373 |         "[class*='drag'], [class*='section'], [class*='item'], table"
+  374 |       );
+  375 |       await expect(content.first()).toBeAttached({ timeout: 10000 });
+  376 |     });
+  377 |   });
+  378 | 
+  379 |   // ═══════════════════════════════════════════════════════════════
+  380 |   // 16. THEME MANAGER
+  381 |   // ═══════════════════════════════════════════════════════════════
+  382 |   test.describe("Theme Manager", () => {
+  383 |     test("theme page loads with color pickers", async ({ page }) => {
+  384 |       await page.goto("/theme");
+  385 |       const content = page.locator(
+  386 |         "input[type='color'], input[type='text'], [class*='color'], [class*='picker']"
+  387 |       );
+  388 |       await expect(content.first()).toBeAttached({ timeout: 10000 });
+  389 |     });
+  390 | 
+  391 |     test("theme page has save button", async ({ page }) => {
+  392 |       await page.goto("/theme");
+  393 |       const saveBtn = page.locator('button:has-text("Save"), button[data-save-button]');
+  394 |       await expect(saveBtn.first()).toBeAttached({ timeout: 10000 });
+  395 |     });
+  396 |   });
+  397 | 
+  398 |   // ═══════════════════════════════════════════════════════════════
+  399 |   // 17. SITE SETTINGS
+  400 |   // ═══════════════════════════════════════════════════════════════
+  401 |   test.describe("Site Settings", () => {
+  402 |     test("settings page loads with form fields", async ({ page }) => {
+  403 |       await page.goto("/settings");
+  404 |       const inputs = page.locator("input, textarea");
+  405 |       await expect(inputs.first()).toBeAttached({ timeout: 10000 });
+  406 |       const count = await inputs.count();
+  407 |       expect(count).toBeGreaterThan(0);
+  408 |     });
+  409 |   });
+  410 | 
+  411 |   // ═══════════════════════════════════════════════════════════════
+  412 |   // 18. DARK MODE IN ADMIN
+  413 |   // ═══════════════════════════════════════════════════════════════
+  414 |   test.describe("Admin Dark Mode", () => {
+  415 |     test("toggling dark mode works in admin", async ({ page }) => {
+  416 |       await page.goto("/");
+  417 |       const html = page.locator("html");
+  418 |       const wasDark = await html.evaluate(el => el.classList.contains("dark"));
+  419 | 
+  420 |       const toggle = page.locator(
+  421 |         'header button[aria-label*="theme" i], header button[aria-label*="dark" i], header button[aria-label*="light" i]'
+  422 |       );
+> 423 |       await expect(toggle.first()).toBeVisible({ timeout: 10000 });
+      |                                    ^ Error: expect(locator).toBeVisible() failed
+  424 | 
+  425 |       if (await toggle.first().isVisible()) {
+  426 |         await toggle.first().click();
+  427 |         const isDark = await html.evaluate(el => el.classList.contains("dark"));
+  428 |         expect(isDark).not.toBe(wasDark);
+  429 |       }
+  430 |     });
+  431 |   });
+  432 | 
+  433 |   // ═══════════════════════════════════════════════════════════════
+  434 |   // 19. KEYBOARD SHORTCUTS
+  435 |   // ═══════════════════════════════════════════════════════════════
+  436 |   test.describe("Keyboard Shortcuts", () => {
+  437 |     test("Ctrl+/ focuses search input on pages with search", async ({ page }) => {
+  438 |       await page.goto("/skills");
+  439 |       await page.keyboard.press("Control+/");
+  440 | 
+  441 |       const searchInput = page.locator(
+  442 |         '[data-search-input], input[placeholder*="search" i]'
+  443 |       );
+  444 |       if (await searchInput.first().isVisible()) {
+  445 |         const isFocused = await searchInput.first().evaluate(el => el === document.activeElement);
+  446 |         expect(isFocused).toBe(true);
+  447 |       }
+  448 |     });
+  449 | 
+  450 |     test("Escape closes open dialogs", async ({ page }) => {
+  451 |       await page.goto("/");
+  452 |       // Open command palette
+  453 |       await page.keyboard.press("Control+k");
+  454 |       const dialog = page.locator('[role="dialog"]');
+  455 |       await expect(dialog.first()).toBeVisible({ timeout: 3000 });
+  456 | 
+  457 |       // Close with Escape
+  458 |       await page.keyboard.press("Escape");
+  459 |       await expect(dialog.first()).not.toBeVisible({ timeout: 3000 });
+  460 |     });
+  461 |   });
+  462 | 
+  463 |   // ═══════════════════════════════════════════════════════════════
+  464 |   // 20. ERROR HANDLING
+  465 |   // ═══════════════════════════════════════════════════════════════
+  466 |   test.describe("Error Handling", () => {
+  467 |     test("unknown route shows 404 page", async ({ page }) => {
+  468 |       await page.goto("/this-does-not-exist");
+  469 |       const notFound = page.locator('text=/not found|404|page.*exist/i');
+  470 |       await expect(notFound.first()).toBeAttached({ timeout: 10000 });
+  471 |     });
+  472 |   });
+  473 | });
+  474 | 
+```
