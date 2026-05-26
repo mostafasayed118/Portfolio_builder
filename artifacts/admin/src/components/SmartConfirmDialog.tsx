@@ -1,6 +1,13 @@
-import { useState, useCallback, useEffect, useRef, useId } from "react";
-import { AlertTriangle, Trash2, XCircle, CheckCircle, HelpCircle } from "lucide-react";
+import { useEffect, useRef, useId } from "react";
+import { AlertTriangle, Trash2, CheckCircle, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const variantConfig = {
+  danger: { icon: Trash2, iconClass: "text-destructive", defaultConfirm: "Delete" },
+  warning: { icon: AlertTriangle, iconClass: "text-amber-600 dark:text-amber-400", defaultConfirm: "Continue" },
+  info: { icon: HelpCircle, iconClass: "text-primary", defaultConfirm: "OK" },
+  success: { icon: CheckCircle, iconClass: "text-emerald-600 dark:text-emerald-400", defaultConfirm: "Confirm" },
+};
 
 interface ConfirmDialogState {
   isOpen: boolean;
@@ -11,78 +18,6 @@ interface ConfirmDialogState {
   variant?: "danger" | "warning" | "info" | "success";
   onConfirm?: () => void | Promise<void>;
   onCancel?: () => void;
-}
-
-interface UseSmartConfirmReturn {
-  confirm: (options: Omit<ConfirmDialogState, "isOpen">) => Promise<boolean>;
-  dialogState: ConfirmDialogState;
-  isOpen: boolean;
-}
-
-const variantConfig = {
-  danger: {
-    icon: Trash2,
-    iconClass: "text-destructive",
-    defaultConfirm: "Delete",
-  },
-  warning: {
-    icon: AlertTriangle,
-    iconClass: "text-amber-600 dark:text-amber-400",
-    defaultConfirm: "Continue",
-  },
-  info: {
-    icon: HelpCircle,
-    iconClass: "text-primary",
-    defaultConfirm: "OK",
-  },
-  success: {
-    icon: CheckCircle,
-    iconClass: "text-emerald-600 dark:text-emerald-400",
-    defaultConfirm: "Confirm",
-  },
-};
-
-const defaultState: ConfirmDialogState = {
-  isOpen: false,
-  title: "",
-  message: "",
-  variant: "info",
-};
-
-export function useSmartConfirm(): UseSmartConfirmReturn {
-  const [dialogState, setDialogState] = useState<ConfirmDialogState>(defaultState);
-  const resolveRef = useRef<((value: boolean) => void) | null>(null);
-
-  const confirm = useCallback(async (options: Omit<ConfirmDialogState, "isOpen">) => {
-    return new Promise<boolean>((resolve) => {
-      resolveRef.current = resolve;
-      setDialogState({
-        ...options,
-        isOpen: true,
-        confirmLabel: options.confirmLabel || variantConfig[options.variant || "info"].defaultConfirm,
-        cancelLabel: options.cancelLabel || "Cancel",
-        onConfirm: async () => {
-          try {
-            await options.onConfirm?.();
-            setDialogState(defaultState);
-            resolveRef.current?.(true);
-            resolveRef.current = null;
-          } catch {
-            resolveRef.current?.(false);
-            resolveRef.current = null;
-          }
-        },
-      });
-    });
-  }, []);
-
-  const handleCancel = useCallback(() => {
-    setDialogState(defaultState);
-    resolveRef.current?.(false);
-    resolveRef.current = null;
-  }, []);
-
-  return { confirm, dialogState: { ...dialogState, onCancel: handleCancel }, isOpen: dialogState.isOpen };
 }
 
 interface SmartConfirmDialogProps {

@@ -64,11 +64,8 @@
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.61.3",
-    "@supabase/supabase-js": "^2.105.4",
-    "@workspace/db": "workspace:*",
     "@workspace/supabase": "workspace:*",
     "@workspace/auth": "workspace:*",
-    "@workspace/validation": "workspace:*",
     "@workspace/ui": "workspace:*"
   }
 }

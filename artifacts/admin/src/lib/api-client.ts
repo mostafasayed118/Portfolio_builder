@@ -103,6 +103,7 @@ function userIdParam(userId?: string): string {
 
 export const api = {
   users: {
+    me: () => request<Pick<User, "id" | "email" | "role">>("GET", "/users/me"),
     list: () => request<User[]>("GET", "/users"),
     updateRole: (id: string, role: "user" | "superadmin") => request<User>("PATCH", `/users/${id}/role`, { role }),
   },

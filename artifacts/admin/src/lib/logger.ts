@@ -32,6 +32,9 @@ export function logWarn(message: string, context?: string): void {
   if (import.meta.env.DEV) {
     console.warn(`[${context ?? "App"}] ${message}`);
   }
+  if (import.meta.env.PROD) {
+    console.warn(JSON.stringify({ level: "warn", message, context, timestamp: new Date().toISOString() }));
+  }
 }
 
 export function logInfo(message: string, context?: string): void {

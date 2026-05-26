@@ -14,6 +14,21 @@ const updateRoleSchema = z.object({
   role: z.enum(["user", "superadmin"]),
 });
 
+// GET /api/v1/admin/users/me — get current authenticated user (any admin)
+router.get("/me", async (req: AuthenticatedRequest, res: Response) => {
+  if (!req.user) {
+    return res.status(401).json({ success: false, message: "Not authenticated" });
+  }
+  return res.json({
+    success: true,
+    data: {
+      id: req.user.id,
+      email: req.user.email,
+      role: req.user.role,
+    },
+  });
+});
+
 // GET /api/v1/admin/users — list all users (superadmin only)
 router.get("/", requireSuperadmin, async (_req: AuthenticatedRequest, res: Response) => {
   const { data, error } = await supabase

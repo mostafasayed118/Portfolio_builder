@@ -31,15 +31,6 @@ export const contactLimiter = rateLimit({
   message: { error: "Too many messages sent, please try again later" },
 });
 
-export const authLimiter = rateLimit({
-  windowMs: FIFTEEN_MINUTES_MS,
-  max: 10,
-  skip: skipIfDev,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Too many auth attempts, please try again later" },
-});
-
 export const adminLimiter = rateLimit({
   windowMs: FIFTEEN_MINUTES_MS,
   max: 200,
