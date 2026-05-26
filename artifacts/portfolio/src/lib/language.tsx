@@ -91,6 +91,3 @@ export function useLanguage() {
   return ctx;
 }
 
-export function useT() {
-  return useLanguage().t;
-}

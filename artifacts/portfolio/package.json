@@ -65,7 +65,6 @@
     "zod": "catalog:"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.105.4",
     "@workspace/db": "workspace:*",
     "@workspace/supabase": "workspace:*",
     "@workspace/validation": "workspace:*",

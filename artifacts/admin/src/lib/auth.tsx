@@ -30,14 +30,13 @@ function ClerkAuthBridge({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Try to fetch user from backend (will auto-provision if not exists)
-    api.users.list().then(res => {
+    // Fetch current user from backend (lightweight /users/me, not /users list)
+    api.users.me().then(res => {
       if (res.success && res.data) {
-        const me = res.data.find(u => u.clerk_id === clerkUser.id);
-        if (me) setDbUser(me);
+        setDbUser(res.data);
       }
     }).catch(() => {
-      // Ignore errors - user might not have superadmin access to list all users
+      // Ignore errors — user may not have admin access yet
     });
   }, [isSignedIn, clerkUser]);
 
