@@ -4,6 +4,7 @@ import type { AuthenticatedRequest } from "../../middleware/adminAuth";
 import type { Response } from "express";
 import { z } from "zod";
 import { getSupabaseClient } from "../../lib/supabase-client";
+import { validateParamId } from "../../middleware/validateUuid";
 
 const router: IRouter = Router();
 
@@ -29,7 +30,7 @@ router.get("/", async (_req: AuthenticatedRequest, res: Response) => {
   return res.json({ success: true, data });
 });
 
-router.put("/:id", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
+router.put("/:id", validateParamId, doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
   const result = sectionSettingSchema.safeParse(req.body);
   if (!result.success) {
     return res.status(400).json({ success: false, errors: result.error.flatten().fieldErrors });

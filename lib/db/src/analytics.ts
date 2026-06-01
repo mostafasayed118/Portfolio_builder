@@ -100,8 +100,8 @@ export async function fetchMessageStats(
   since.setDate(since.getDate() - days);
 
   const { data: allMessages } = await supabase
-    .from("contact_messages")
-    .select("created_at, is_read")
+    .from("messages")
+    .select("created_at, status")
     .gte("created_at", since.toISOString())
     .order("created_at", { ascending: true });
 
@@ -114,7 +114,7 @@ export async function fetchMessageStats(
     const d = msg.created_at.slice(0, 10);
     const entry = dailyMap.get(d) ?? { total: 0, unread: 0 };
     entry.total++;
-    if (!msg.is_read) entry.unread++;
+    if (msg.status === "unread") entry.unread++;
     dailyMap.set(d, entry);
   }
 

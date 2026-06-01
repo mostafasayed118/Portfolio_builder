@@ -86,7 +86,7 @@ export default defineConfig({
       },
     },
     fs: {
-      strict: false,
+      strict: true,
       allow: [path.resolve(import.meta.dirname, "../..")],
     },
   },

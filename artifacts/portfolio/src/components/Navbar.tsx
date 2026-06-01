@@ -5,6 +5,7 @@ import { useBranding } from "@/lib/branding";
 import { useThrottledScroll } from "@/hooks/use-throttled-scroll";
 import { useLanguage } from "@/lib/language";
 import { LanguageToggle } from "@/components/LanguageToggle";
+import { useThemeSync } from "@/lib/theme-sync-context";
 
 const NAVBAR_SCROLL_THRESHOLD = 20;
 const ACTIVE_SECTION_THRESHOLD = 150;
@@ -19,9 +20,10 @@ const NAV_LINKS = [
 ];
 
 export default function Navbar() {
-  const { theme, toggle } = useTheme();
+  const { theme, toggle, setTheme } = useTheme();
   const { siteName, logoUrl } = useBranding();
   const { t } = useLanguage();
+  const { isSynced, mode, previousTheme, acknowledge } = useThemeSync();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("");
@@ -84,7 +86,39 @@ export default function Navbar() {
     if (el) el.scrollIntoView({ behavior: "smooth" });
   };
 
+  const handleUndo = () => {
+    const undoTheme = (sessionStorage.getItem("theme_undo") as "light" | "dark" | null) ?? previousTheme;
+    if (undoTheme) {
+      setTheme(undoTheme);
+      localStorage.setItem("theme_explicit", "true");
+    }
+    sessionStorage.removeItem("theme_undo");
+    acknowledge();
+  };
+
   return (
+    <div className="fixed top-0 left-0 right-0 z-50">
+      {isSynced && (
+        <div className="bg-primary/10 border-b border-primary/20 px-4 py-2 flex items-center justify-center gap-3 text-sm">
+          <span>
+            Theme set to{" "}
+            <strong>{mode === "dark" ? "Dark mode" : "Light mode"}</strong>
+          </span>
+          <span>from site settings</span>
+          <button
+            onClick={handleUndo}
+            className="underline text-primary hover:text-primary/80 font-medium"
+          >
+            Undo
+          </button>
+          <button
+            onClick={acknowledge}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         scrolled
@@ -206,5 +240,6 @@ export default function Navbar() {
         </div>
       </div>
     </header>
+    </div>
   );
 }

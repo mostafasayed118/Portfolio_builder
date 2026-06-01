@@ -24,7 +24,7 @@ export class SmartErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     this.props.onError?.(error, errorInfo);
-    console.error("[SmartErrorBoundary] Caught error:", error, errorInfo);
+    if (import.meta.env.DEV) console.error("[SmartErrorBoundary] Caught error:", error, errorInfo);
   }
 
   handleRetry = () => {
@@ -73,7 +73,7 @@ export class SmartErrorBoundary extends Component<Props, State> {
 
 export function useErrorHandler() {
   const handleError = (error: Error) => {
-    console.error("[ErrorHandler]", error.message);
+    if (import.meta.env.DEV) console.error("[ErrorHandler]", error.message);
   };
 
   return { handleError };

@@ -25,5 +25,20 @@ for (const envPath of envPaths) {
       }
       if (!process.env[key]) process.env[key] = value;
     }
-  } catch {}
+  } catch {
+    // .env file not found — not an error, env vars may be set via platform
+  }
+}
+
+// Validate required env vars at startup (fail fast)
+const REQUIRED_VARS = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "CSRF_SECRET"];
+const missing = REQUIRED_VARS.filter((key) => !process.env[key]);
+if (missing.length > 0) {
+  // Don't throw during tests — tests set their own env vars in setup.ts
+  const isTest = process.env.NODE_ENV === "test" || process.env.VITEST === "true";
+  if (!isTest) {
+    console.error(`[startup] Missing required environment variables: ${missing.join(", ")}`);
+    console.error("[startup] Copy .env.example to .env and fill in your values.");
+    process.exit(1);
+  }
 }

@@ -43,6 +43,7 @@ function ArabicContentStatus() {
     queryKey: ["arabic-content-status"],
     queryFn: async () => {
       const supabase = getSupabase();
+      if (!supabase) throw new Error("Supabase not configured");
       const [heroRes, aboutRes, projectsRes, experienceRes, certsRes] = await Promise.all([
         supabase.from("hero_content").select("name_ar").not("name_ar", "is", null).maybeSingle(),
         supabase.from("about_content").select("bio_ar").not("bio_ar", "is", null).maybeSingle(),

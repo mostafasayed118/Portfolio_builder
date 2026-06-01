@@ -2,7 +2,7 @@
   "framework": "node",
   "buildCommand": "pnpm run build",
   "outputDirectory": "dist",
-  "installCommand": "pnpm install --no-frozen-lockfile",
+  "installCommand": "pnpm install --frozen-lockfile",
   "routes": [
     { "src": "/api/(.*)", "dest": "/" }
   ]

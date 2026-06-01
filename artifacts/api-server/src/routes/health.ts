@@ -1,5 +1,4 @@
 import { Router, type IRouter } from "express";
-import { HealthCheckResponse } from "@workspace/api-zod";
 import { getSupabaseClient } from "../lib/supabase-client";
 
 const router: IRouter = Router();
@@ -10,7 +9,7 @@ let healthCache: { data: unknown; expiresAt: number } | null = null;
 router.get("/healthz", async (_req, res) => {
   const now = Date.now();
   if (healthCache && now < healthCache.expiresAt) {
-    const cached = HealthCheckResponse.parse(healthCache.data);
+    const cached = healthCache.data as Record<string, unknown>;
     const status = cached.status === "ok" ? 200 : 503;
     return res.status(status).json(cached);
   }
@@ -36,7 +35,7 @@ router.get("/healthz", async (_req, res) => {
 
   const overall = dbStatus === "ok" ? "ok" : "degraded";
 
-  const data = HealthCheckResponse.parse({
+  const data = {
     status: overall,
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
@@ -48,12 +47,17 @@ router.get("/healthz", async (_req, res) => {
       status: "ok",
       response_ms: Date.now() - start,
     },
-  });
+  };
 
   // Cache for 5 seconds
   healthCache = { data, expiresAt: now + 5000 };
 
   return res.status(dbStatus === "ok" ? 200 : 503).json(data);
 });
+
+/** Clear the health cache — used by tests to reset state between runs */
+export function resetHealthCache() {
+  healthCache = null;
+}
 
 export default router;

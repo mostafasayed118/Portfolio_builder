@@ -8,7 +8,7 @@ import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
 import { SmartEmptyState } from "@/components/SmartEmptyState";
 import { logError } from "@/lib/logger";
 import { getErrorMessage } from "@/lib/error-messages";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Input, Label, Skeleton, Switch, Textarea } from "@workspace/ui";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, Skeleton, Switch, Textarea } from "@workspace/ui";
 
 type Project = {
   id: string; title: string; description: string; tech_stack: string[];
@@ -174,7 +174,12 @@ export default function ProjectsManager() {
 
       <Dialog open={!!editing} onOpenChange={o => !o && setEditing(null)}>
         <DialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>{isNew ? "Add Project" : "Edit Project"}</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>{isNew ? "Add Project" : "Edit Project"}</DialogTitle>
+            <DialogDescription className="sr-only">
+              {isNew ? "Add a new project to your portfolio." : "Edit project details."}
+            </DialogDescription>
+          </DialogHeader>
           {editing && (
             <div className="space-y-4 py-2">
               <div className="space-y-1.5"><Label className="text-xs">Title</Label>

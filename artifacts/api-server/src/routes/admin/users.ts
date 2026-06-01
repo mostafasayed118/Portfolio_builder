@@ -5,6 +5,7 @@ import { requireSuperadmin } from "../../middleware/requireSuperadmin";
 import type { Response } from "express";
 import { z } from "zod";
 import { getSupabaseClient } from "../../lib/supabase-client";
+import { validateParamId } from "../../middleware/validateUuid";
 
 const router: IRouter = Router();
 
@@ -41,11 +42,8 @@ router.get("/", requireSuperadmin, async (_req: AuthenticatedRequest, res: Respo
 });
 
 // PATCH /api/v1/admin/users/:id/role — change user role (superadmin only)
-router.patch("/:id/role", requireSuperadmin, doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
+router.patch("/:id/role", requireSuperadmin, doubleCsrfProtection, validateParamId, async (req: AuthenticatedRequest, res: Response) => {
   const id = req.params.id as string;
-  if (!id || id.length < 1) {
-    return res.status(400).json({ success: false, message: "Invalid ID" });
-  }
 
   const result = updateRoleSchema.safeParse(req.body);
   if (!result.success) {

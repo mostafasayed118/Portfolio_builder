@@ -13,7 +13,6 @@
     "./certifications": "./src/certifications.ts",
     "./contact-info": "./src/contactInfo.ts",
     "./messages": "./src/messages.ts",
-    "./contact-messages": "./src/contactMessages.ts",
     "./theme-settings": "./src/themeSettings.ts",
     "./typography-settings": "./src/typographySettings.ts",
     "./seo-settings": "./src/seoSettings.ts",

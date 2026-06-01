@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useToast } from "@workspace/ui";
 import { Plus, Pencil, Trash2, AlertCircle, RefreshCw, Award } from "lucide-react";
 import { logError } from "@/lib/logger";
-import { Badge, Button, Card, CardContent, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Input, Label, Skeleton, Switch } from "@workspace/ui";
+import { Badge, Button, Card, CardContent, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, Skeleton, Switch } from "@workspace/ui";
 import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
 import { SmartEmptyState } from "@/components/SmartEmptyState";
 import { getErrorMessage } from "@/lib/error-messages";
@@ -148,7 +148,12 @@ export default function CertificationsManager() {
 
       <Dialog open={!!editing} onOpenChange={o => !o && setEditing(null)}>
         <DialogContent>
-          <DialogHeader><DialogTitle>{isNew ? "Add Certification" : "Edit Certification"}</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>{isNew ? "Add Certification" : "Edit Certification"}</DialogTitle>
+            <DialogDescription className="sr-only">
+              {isNew ? "Add a new certification to your portfolio." : "Edit certification details."}
+            </DialogDescription>
+          </DialogHeader>
           {editing && (
             <div className="space-y-4 py-2">
               <div className="space-y-1.5"><Label className="text-xs">Title</Label>

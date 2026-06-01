@@ -4,6 +4,7 @@ import type { AuthenticatedRequest } from "../../middleware/adminAuth";
 import type { Response } from "express";
 import { z } from "zod";
 import { getSupabaseClient } from "../../lib/supabase-client";
+import { singletonUpsert } from "../../lib/singleton-upsert";
 
 const router: IRouter = Router();
 
@@ -37,18 +38,13 @@ router.put("/", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Res
   if (!result.success) {
     return res.status(400).json({ success: false, errors: result.error.flatten().fieldErrors });
   }
-  const existing = await supabase.from("contact_info").select("id").limit(1).maybeSingle();
-  const payload = { ...result.data, updated_at: new Date().toISOString() };
-
-  let dbResult;
-  if (existing.data) {
-    dbResult = await supabase.from("contact_info").update(payload).eq("id", existing.data.id);
-  } else {
-    dbResult = await supabase.from("contact_info").insert({ ...payload }).select("id").single();
+  try {
+    await singletonUpsert(supabase, "contact_info", result.data);
+    return res.json({ success: true });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return res.status(500).json({ success: false, message });
   }
-
-  if (dbResult.error) return res.status(500).json({ success: false, message: dbResult.error.message });
-  return res.json({ success: true });
 });
 
 export default router;

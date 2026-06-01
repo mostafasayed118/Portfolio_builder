@@ -6,13 +6,10 @@ import type {
 import { getClerkToken } from "./auth-token";
 
 const API_BASE = import.meta.env.VITE_API_URL;
-if (!API_BASE && import.meta.env.PROD) {
-  console.warn("VITE_API_URL is not set in production - using fallback");
-}
 const apiBase = API_BASE ?? "http://localhost:3001";
 const ADMIN_API_KEY = import.meta.env.VITE_ADMIN_API_KEY as string | undefined;
 
-async function getCsrfToken(): Promise<string> {
+export async function getCsrfToken(): Promise<string> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 5000);
   try {
@@ -27,7 +24,7 @@ async function getCsrfToken(): Promise<string> {
     return data.csrfToken;
   } catch (err) {
     clearTimeout(timeoutId);
-    throw new Error("Unable to establish secure session — please refresh the page");
+    throw new Error("Unable to establish secure session — please refresh the page", { cause: err });
   }
 }
 

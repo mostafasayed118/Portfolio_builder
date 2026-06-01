@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { validateBody, cvSettingsUpdateSchema } from "../middleware/validate";
+import { cvSettingsUpdateSchema } from "@workspace/api-zod";
 import { adminAuth } from "../middleware/adminAuth";
 import { doubleCsrfProtection } from "../middleware/csrf";
 import { generateCvPdf } from "../utils/cv-generator";
@@ -95,9 +95,14 @@ router.get("/cv/settings", async (_req: Request, res: Response) => {
   });
 });
 
-router.put("/cv/settings", adminAuth, doubleCsrfProtection, validateBody(cvSettingsUpdateSchema), async (req: Request, res: Response) => {
+router.put("/cv/settings", adminAuth, doubleCsrfProtection, async (req: Request, res: Response) => {
+  const result = cvSettingsUpdateSchema.safeParse(req.body);
+  if (!result.success) {
+    res.status(400).json({ error: "Validation failed", details: result.error.flatten().fieldErrors });
+    return;
+  }
+  const { objectPath, fileName } = result.data;
   const supabase = getSupabaseClient();
-  const { objectPath, fileName } = (req as Request & { validatedBody: { objectPath: string; fileName: string } }).validatedBody;
 
   const { data: existing } = await supabase
     .from("cv_settings")

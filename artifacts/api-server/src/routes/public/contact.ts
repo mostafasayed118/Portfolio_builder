@@ -14,20 +14,6 @@ const router: IRouter = Router();
 
 const supabase = getSupabaseClient();
 
-/**
- * Sanitizes HTML entities in user input to prevent XSS attacks
- * @param input - Raw user input string
- * @returns Sanitized string with HTML entities escaped
- */
-function sanitizeHtml(input: string): string {
-  return input
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#x27;");
-}
-
 const contactSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name must be under 100 characters").trim(),
   email: z.string().email("Valid email is required").trim(),
@@ -37,7 +23,13 @@ const contactSchema = z.object({
 router.post("/", contactLimiter, async (req: Request, res: Response) => {
   // Origin check — reject requests from unexpected sources
   const origin = req.headers.origin ?? req.headers.referer;
-  if (origin) {
+  if (!origin) {
+    // In production, reject requests with no origin header (non-browser requests).
+    // In dev, allow them for tools like curl/Postman.
+    if (process.env.NODE_ENV === "production") {
+      return res.status(403).json({ success: false, message: "Origin header required" });
+    }
+  } else {
     const allowed = [process.env.VITE_SITE_URL, process.env.VITE_ADMIN_URL].filter(Boolean);
     let originAllowed = false;
     try {
@@ -61,9 +53,9 @@ router.post("/", contactLimiter, async (req: Request, res: Response) => {
   const { name, email, message } = result.data;
 
   const { error } = await supabase.from("messages").insert({
-    name: sanitizeHtml(name),
-    email: sanitizeHtml(email),
-    message: sanitizeHtml(message),
+    name,
+    email,
+    message,
     status: "unread",
   });
 

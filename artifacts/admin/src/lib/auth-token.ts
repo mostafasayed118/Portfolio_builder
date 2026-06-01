@@ -51,27 +51,27 @@ export async function getClerkToken(): Promise<string | null> {
     ]);
   }
   if (!_getToken) {
-    console.warn("[auth] Clerk token getter not available — API calls will fail with 401");
+    if (import.meta.env.DEV) console.warn("[auth] Clerk token getter not available \u2014 API calls will fail with 401");
     return null;
   }
   try {
     const token = await _getToken();
     if (!token) {
-      console.warn("[auth] Clerk getToken() returned null — session may not have a JWT configured");
+      if (import.meta.env.DEV) console.warn("[auth] Clerk getToken() returned null \u2014 session may not have a JWT configured");
       // Retry once after a short delay (session hydration race condition)
       await new Promise((r) => setTimeout(r, 500));
       const retryToken = await _getToken();
-      if (!retryToken) {
-        console.warn("[auth] Clerk getToken() returned null on retry — API calls will be unauthenticated");
+      if (!retryToken && import.meta.env.DEV) {
+        console.warn("[auth] Clerk getToken() returned null on retry \u2014 API calls will be unauthenticated");
       }
       return retryToken;
     }
 
-    // Check if token is expired — Clerk sometimes returns stale tokens
+    // Check if token is expired \u2014 Clerk sometimes returns stale tokens
     if (isTokenExpired(token)) {
       const now = Date.now();
       if (now - _lastExpiredWarn > 10_000) {
-        console.warn("[auth] Clerk token is expired — returning null so API key fallback can be used");
+        if (import.meta.env.DEV) console.warn("[auth] Clerk token is expired \u2014 returning null so API key fallback can be used");
         _lastExpiredWarn = now;
       }
       return null;
@@ -79,7 +79,7 @@ export async function getClerkToken(): Promise<string | null> {
 
     return token;
   } catch (err) {
-    console.warn("[auth] Clerk getToken() threw:", err);
+    if (import.meta.env.DEV) console.warn("[auth] Clerk getToken() threw:", err);
     return null;
   }
 }

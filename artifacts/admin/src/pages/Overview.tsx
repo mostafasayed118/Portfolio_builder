@@ -7,11 +7,10 @@ import {
   ArrowRight, Zap, TrendingUp, Sparkles, AlertCircle, CheckCircle2,
   RefreshCw
 } from "lucide-react";
-import { useToast } from "@workspace/ui";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { api } from "@/lib/api-client";
 import { useViewingUser } from "@/lib/viewing-user-context";
-import { Badge, Button, Card, CardContent, Dialog, DialogContent, DialogHeader, DialogTitle, Skeleton } from "@workspace/ui";
+import { Badge, Button, Card, CardContent, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Skeleton } from "@workspace/ui";
 
 const MODULES = [
   { path: "/theme", label: "Theme Manager", icon: Palette, desc: "Colors, palette, dark/light mode", group: "Appearance" },
@@ -32,7 +31,6 @@ const MODULES = [
 const GROUPS = ["Appearance", "Content", "Inbox", "Site"];
 
 function StatsBar() {
-  const { toast } = useToast();
   const { viewingUserId } = useViewingUser();
 
   const { data: unread, isLoading: unreadLoading, isError: unreadError, error: unreadErrorObj, refetch: refetchUnread } = useQuery({
@@ -153,19 +151,24 @@ function SeedDialog() {
     setLoading(true);
     setResult(null);
 
-    const res = await api.seed.run();
-    if (res.success && res.data) {
-      setResult({ success: true, summary: res.data.summary, errors: res.data.errors });
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-      queryClient.invalidateQueries({ queryKey: ["skills"] });
-      queryClient.invalidateQueries({ queryKey: ["experience"] });
-      queryClient.invalidateQueries({ queryKey: ["certifications"] });
-      queryClient.invalidateQueries({ queryKey: ["heroContent"] });
-      queryClient.invalidateQueries({ queryKey: ["aboutContent"] });
-    } else {
-      setResult({ success: false, summary: {}, errors: [(res as { message: string }).message || "Failed to seed data"] });
+    try {
+      const res = await api.seed.run();
+      if (res.success && res.data) {
+        setResult({ success: true, summary: res.data.summary, errors: res.data.errors });
+        queryClient.invalidateQueries({ queryKey: ["projects"] });
+        queryClient.invalidateQueries({ queryKey: ["skills"] });
+        queryClient.invalidateQueries({ queryKey: ["experience"] });
+        queryClient.invalidateQueries({ queryKey: ["certifications"] });
+        queryClient.invalidateQueries({ queryKey: ["heroContent"] });
+        queryClient.invalidateQueries({ queryKey: ["aboutContent"] });
+      } else {
+        setResult({ success: false, summary: {}, errors: [(res as { message: string }).message || "Failed to seed data"] });
+      }
+    } catch (err) {
+      setResult({ success: false, summary: {}, errors: [err instanceof Error ? err.message : "Network error — please try again"] });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -179,6 +182,9 @@ function SeedDialog() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Import Static Data</DialogTitle>
+            <DialogDescription className="sr-only">
+              Import static portfolio data into the database.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
@@ -216,8 +222,6 @@ function SeedDialog() {
 }
 
 export default function Overview() {
-  const { toast } = useToast();
-
   return (
     <div className="max-w-5xl mx-auto space-y-8">
       <div className="flex items-start justify-between gap-4">

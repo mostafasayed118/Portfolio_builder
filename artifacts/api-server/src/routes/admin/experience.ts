@@ -5,6 +5,7 @@ import { validateQueryUserId, validateParamId } from "../../middleware/validateU
 import type { Response } from "express";
 import { z } from "zod";
 import { getSupabaseClient } from "../../lib/supabase-client";
+import type { Database } from "@workspace/supabase/types";
 
 const router: IRouter = Router();
 
@@ -62,7 +63,7 @@ router.post("/", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Re
     return res.status(400).json({ success: false, errors: result.error.flatten().fieldErrors });
   }
   const insertData = { ...result.data, user_id: req.user!.id, is_published: result.data.is_published ?? true };
-  const { error } = await supabase.from("experience").insert(insertData);
+  const { error } = await supabase.from("experience").insert(insertData as Database["public"]["Tables"]["experience"]["Insert"]);
   if (error) return res.status(500).json({ success: false, message: error.message });
   return res.status(201).json({ success: true });
 });
@@ -73,7 +74,7 @@ router.put("/:id", doubleCsrfProtection, validateParamId, async (req: Authentica
     return res.status(400).json({ success: false, errors: result.error.flatten().fieldErrors });
   }
   const isSuperadmin = req.user?.role === "superadmin";
-  let query = supabase.from("experience").update(result.data).eq("id", req.params.id as string);
+  let query = supabase.from("experience").update(result.data as Database["public"]["Tables"]["experience"]["Update"]).eq("id", req.params.id as string);
   if (!isSuperadmin) {
     query = query.eq("user_id", req.user!.id);
   }
