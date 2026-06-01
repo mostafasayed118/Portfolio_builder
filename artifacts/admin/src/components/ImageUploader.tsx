@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { Upload, X, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { useToast } from "@workspace/ui";
 import { Button } from "@workspace/ui";
+import { getCsrfToken } from "@/lib/api-client";
 
 interface UploadedImage {
   id: string;
@@ -71,6 +72,8 @@ export default function ImageUploader({
         if (e.lengthComputable) setProgress(Math.round((e.loaded / e.total) * 100));
       };
 
+      const csrfToken = await getCsrfToken().catch(() => null);
+
       const result = await new Promise<UploadedImage>((resolve, reject) => {
         xhr.onload = () => {
           if (xhr.status >= 200 && xhr.status < 300) {
@@ -86,6 +89,7 @@ export default function ImageUploader({
         };
         xhr.onerror = () => reject(new Error("Network error"));
         xhr.open("POST", `${API_BASE}/api/v1/images/upload`);
+        if (csrfToken) xhr.setRequestHeader("x-csrf-token", csrfToken);
         xhrRef.current = xhr;
         xhr.send(formData);
       });

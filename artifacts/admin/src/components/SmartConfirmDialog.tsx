@@ -1,12 +1,12 @@
-import { useEffect, useRef, useId } from "react";
-import { AlertTriangle, Trash2, CheckCircle, HelpCircle } from "lucide-react";
+import { useEffect, useRef, useId, useState } from "react";
+import { AlertTriangle, Trash2, CheckCircle, HelpCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const variantConfig = {
-  danger: { icon: Trash2, iconClass: "text-destructive", defaultConfirm: "Delete" },
-  warning: { icon: AlertTriangle, iconClass: "text-amber-600 dark:text-amber-400", defaultConfirm: "Continue" },
-  info: { icon: HelpCircle, iconClass: "text-primary", defaultConfirm: "OK" },
-  success: { icon: CheckCircle, iconClass: "text-emerald-600 dark:text-emerald-400", defaultConfirm: "Confirm" },
+  danger: { icon: Trash2, iconClass: "text-destructive", defaultConfirm: "Delete", defaultCancel: "Cancel" },
+  warning: { icon: AlertTriangle, iconClass: "text-amber-600 dark:text-amber-400", defaultConfirm: "Continue", defaultCancel: "Cancel" },
+  info: { icon: HelpCircle, iconClass: "text-primary", defaultConfirm: "OK", defaultCancel: "Cancel" },
+  success: { icon: CheckCircle, iconClass: "text-emerald-600 dark:text-emerald-400", defaultConfirm: "Confirm", defaultCancel: "Cancel" },
 };
 
 interface ConfirmDialogState {
@@ -29,7 +29,13 @@ export function SmartConfirmDialog({ state, onCancel }: SmartConfirmDialogProps)
   const titleId = useId();
   const descId = useId();
   const cancelRef = useRef<HTMLButtonElement>(null);
+  const [confirming, setConfirming] = useState(false);
   const handleCancel = state.onCancel ?? onCancel ?? (() => {});
+
+  // Reset confirming state when dialog closes
+  useEffect(() => {
+    if (!state.isOpen) setConfirming(false);
+  }, [state.isOpen]);
 
   useEffect(() => {
     if (!state.isOpen) return;
@@ -40,11 +46,11 @@ export function SmartConfirmDialog({ state, onCancel }: SmartConfirmDialogProps)
   useEffect(() => {
     if (!state.isOpen) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") handleCancel();
+      if (e.key === "Escape" && !confirming) handleCancel();
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [state.isOpen, handleCancel]);
+  }, [state.isOpen, handleCancel, confirming]);
 
   useEffect(() => {
     if (state.isOpen) {
@@ -65,7 +71,7 @@ export function SmartConfirmDialog({ state, onCancel }: SmartConfirmDialogProps)
       <div
         className="fixed inset-0 z-50 bg-black/50"
         aria-hidden="true"
-        onClick={handleCancel}
+        onClick={confirming ? undefined : handleCancel}
       />
       <div
         role="alertdialog"
@@ -87,22 +93,34 @@ export function SmartConfirmDialog({ state, onCancel }: SmartConfirmDialogProps)
           <button
             ref={cancelRef}
             onClick={handleCancel}
-            className="px-4 py-2 text-sm font-medium rounded-md border bg-background hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            disabled={confirming}
+            className="px-4 py-2 text-sm font-medium rounded-md border bg-background hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
           >
-            {state.cancelLabel}
+            {state.cancelLabel ?? config.defaultCancel}
           </button>
           <button
             onClick={async () => {
-              await state.onConfirm?.();
+              if (confirming) return;
+              setConfirming(true);
+              try {
+                await state.onConfirm?.();
+              } finally {
+                setConfirming(false);
+              }
             }}
+            disabled={confirming}
             className={cn(
-              "px-4 py-2 text-sm font-medium rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+              "px-4 py-2 text-sm font-medium rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50",
               state.variant === "danger"
                 ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 : "bg-primary text-primary-foreground hover:bg-primary/90",
             )}
           >
-            {state.confirmLabel}
+            {confirming ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              state.confirmLabel ?? config.defaultConfirm
+            )}
           </button>
         </div>
       </div>

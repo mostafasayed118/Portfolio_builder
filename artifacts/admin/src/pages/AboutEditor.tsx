@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
-import { Plus, X, GraduationCap, Globe, Target } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { useToast } from "@workspace/ui";
-import { Button, Card, CardContent, CardHeader, CardTitle, Input, Skeleton, Slider, Textarea } from "@workspace/ui";
+import { Button, Card, CardContent, CardHeader, CardTitle, Input, Slider, Textarea } from "@workspace/ui";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useBeforeUnload } from "@/hooks/use-before-unload";
+import { AboutLivePreview } from "@/components/AboutLivePreview";
+import { SkeletonForm, SkeletonPreview } from "@/components/EditorSkeletons";
 
 type AboutFormData = {
   bio: string;
@@ -23,134 +25,12 @@ type AboutFormData = {
   interests: string[];
 };
 
-function SkeletonForm() {
-  return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <Skeleton className="h-4 w-16" />
-        <Skeleton className="h-20 w-full" />
-      </div>
-      <div className="space-y-2">
-        <Skeleton className="h-4 w-24" />
-        <Skeleton className="h-10 w-full" />
-      </div>
-      <div className="space-y-2">
-        <Skeleton className="h-4 w-32" />
-        <Skeleton className="h-10 w-full" />
-      </div>
-    </div>
-  );
-}
-
-function SkeletonPreview() {
-  return (
-    <div className="space-y-4">
-      <Skeleton className="h-64 w-full rounded-xl" />
-    </div>
-  );
-}
-
 function getLanguageLabel(level: number): string {
   if (level <= 25) return "Beginner";
   if (level <= 50) return "Intermediate";
   if (level <= 75) return "Advanced";
   if (level <= 90) return "Professional";
   return "Native";
-}
-
-type LivePreviewData = {
-  bio?: string;
-  education?: Array<{
-    degree?: string;
-    institution?: string;
-    year?: string;
-    description?: string;
-  }>;
-  languages?: Array<{
-    name?: string;
-    level?: number;
-  }>;
-  interests?: string[];
-};
-
-function LivePreview({ data }: { data: LivePreviewData }) {
-  return (
-    <div className="space-y-4">
-      <div>
-        <h3 className="text-lg font-semibold mb-2">About Me</h3>
-        {data.bio ? (
-          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-            {data.bio}
-          </p>
-        ) : (
-          <p className="text-sm text-muted-foreground italic">No bio yet...</p>
-        )}
-      </div>
-
-      {data.education && data.education.length > 0 && (
-        <div>
-          <h4 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-1">
-            <GraduationCap className="h-4 w-4" />
-            Education
-          </h4>
-          <div className="space-y-2">
-            {data.education.map((edu, i) => (
-              <div key={i} className="text-sm">
-                <div className="font-medium">{edu.degree}</div>
-                <div className="text-muted-foreground">
-                  {edu.institution} · {edu.year}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {data.languages && data.languages.length > 0 && (
-        <div>
-          <h4 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-1">
-            <Globe className="h-4 w-4" />
-            Languages
-          </h4>
-          <div className="space-y-2">
-            {data.languages.map((lang, i) => (
-              <div key={i}>
-                <div className="flex justify-between text-xs font-medium mb-1">
-                  <span>{lang.name}</span>
-                  <span>{lang.level}%</span>
-                </div>
-                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-primary transition-all duration-300"
-                    style={{ width: `${lang.level}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {data.interests && data.interests.length > 0 && (
-        <div>
-          <h4 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-1">
-            <Target className="h-4 w-4" />
-            Interests
-          </h4>
-          <div className="flex flex-wrap gap-1">
-            {data.interests.map((interest, i) => (
-              <span
-                key={i}
-                className="text-xs px-2 py-0.5 bg-muted rounded-full"
-              >
-                {interest}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
 }
 
 export default function AboutEditor() {
@@ -252,13 +132,12 @@ export default function AboutEditor() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">About Editor</h1>
         </div>
-      <div className="lg:hidden mb-4">
-        <Button variant="outline" size="sm" onClick={() => setShowPreview(!showPreview)} className="min-h-[44px]" aria-pressed={showPreview} aria-label={showPreview ? "Hide preview panel" : "Show preview panel"}>
-          {showPreview ? "Hide Preview" : "Show Preview"}
-        </Button>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="lg:hidden mb-4">
+          <Button variant="outline" size="sm" onClick={() => setShowPreview(!showPreview)} className="min-h-[44px]" aria-pressed={showPreview} aria-label={showPreview ? "Hide preview panel" : "Show preview panel"}>
+            {showPreview ? "Hide Preview" : "Show Preview"}
+          </Button>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <SkeletonForm />
           <SkeletonPreview />
         </div>
@@ -299,27 +178,15 @@ export default function AboutEditor() {
               <CardTitle>Bio</CardTitle>
             </CardHeader>
             <CardContent>
-              <Textarea
-                {...register("bio")}
-                placeholder="Tell your story..."
-                rows={6}
-                className="resize-none"
-              />
+              <Textarea {...register("bio")} placeholder="Tell your story..." rows={6} className="resize-none" />
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Education</CardTitle>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => appendEducation({ degree: "", institution: "", year: "" })}
-                className="min-h-[44px]"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Education
+              <Button type="button" variant="outline" size="sm" onClick={() => appendEducation({ degree: "", institution: "", year: "" })} className="min-h-[44px]">
+                <Plus className="h-4 w-4 mr-2" /> Add Education
               </Button>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -330,14 +197,7 @@ export default function AboutEditor() {
                   <div key={field.id} className="p-4 rounded-lg border border-border space-y-3">
                     <div className="flex justify-between items-start">
                       <span className="text-xs font-medium text-muted-foreground">Entry {index + 1}</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeEducation(index)}
-                        className="min-h-[44px] min-w-[44px]"
-                        aria-label={`Remove education entry ${index + 1}`}
-                      >
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removeEducation(index)} className="min-h-[44px] min-w-[44px]" aria-label={`Remove education entry ${index + 1}`}>
                         <X className="h-4 w-4" />
                       </Button>
                     </div>
@@ -357,11 +217,7 @@ export default function AboutEditor() {
                     </div>
                     <div>
                       <label className="text-xs text-muted-foreground">Description</label>
-                      <Textarea
-                        {...register(`education.${index}.description` as const)}
-                        placeholder="Optional description..."
-                        rows={2}
-                      />
+                      <Textarea {...register(`education.${index}.description` as const)} placeholder="Optional description..." rows={2} />
                     </div>
                   </div>
                 ))
@@ -372,15 +228,8 @@ export default function AboutEditor() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Languages</CardTitle>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => appendLanguage({ name: "", level: 50 })}
-                className="min-h-[44px]"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Language
+              <Button type="button" variant="outline" size="sm" onClick={() => appendLanguage({ name: "", level: 50 })} className="min-h-[44px]">
+                <Plus className="h-4 w-4 mr-2" /> Add Language
               </Button>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -391,14 +240,7 @@ export default function AboutEditor() {
                   <div key={field.id} className="p-4 rounded-lg border border-border space-y-3">
                     <div className="flex justify-between items-start">
                       <span className="text-xs font-medium text-muted-foreground">Language {index + 1}</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeLanguage(index)}
-                        className="min-h-[44px] min-w-[44px]"
-                        aria-label={`Remove language ${index + 1}`}
-                      >
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removeLanguage(index)} className="min-h-[44px] min-w-[44px]" aria-label={`Remove language ${index + 1}`}>
                         <X className="h-4 w-4" />
                       </Button>
                     </div>
@@ -441,17 +283,9 @@ export default function AboutEditor() {
               />
               <div className="flex flex-wrap gap-2">
                 {watchedData.interests?.map((interest, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-muted rounded-full"
-                  >
+                  <span key={index} className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-muted rounded-full">
                     {interest}
-                    <button
-                      type="button"
-                      onClick={() => removeInterest(index)}
-                      className="relative flex items-center justify-center h-5 w-5 after:absolute after:inset-[-8px] after:content-[''] hover:text-destructive"
-                      aria-label={`Remove interest: ${interest}`}
-                    >
+                    <button type="button" onClick={() => removeInterest(index)} className="relative flex items-center justify-center h-5 w-5 after:absolute after:inset-[-8px] after:content-[''] hover:text-destructive" aria-label={`Remove interest: ${interest}`}>
                       <X className="h-3 w-3" />
                     </button>
                   </span>
@@ -467,7 +301,7 @@ export default function AboutEditor() {
             <p className="text-xs text-muted-foreground mb-2">Live Preview — updates as you type</p>
             <Card>
               <CardContent className="pt-6">
-                <LivePreview data={watchedData} />
+                <AboutLivePreview data={watchedData} />
               </CardContent>
             </Card>
             <p className="text-xs text-muted-foreground mt-2">Actual appearance may vary slightly</p>

@@ -206,7 +206,7 @@ describe("CV API", () => {
         .set("x-admin-key", mockAdminKey)
         .send({ objectPath: "/path/to/file", fileName: "resume.docx" });
       expect(res.status).toBe(400);
-      expect(res.body.success).toBe(false);
+      expect(res.body.error).toBeDefined();
     });
 
     it("returns 400 when objectPath is missing", async () => {
@@ -215,7 +215,7 @@ describe("CV API", () => {
         .set("x-admin-key", mockAdminKey)
         .send({ fileName: "resume.pdf" });
       expect(res.status).toBe(400);
-      expect(res.body.errors).toBeDefined();
+      expect(res.body.details).toBeDefined();
     });
 
     it("returns 400 when fileName is missing", async () => {
@@ -224,7 +224,7 @@ describe("CV API", () => {
         .set("x-admin-key", mockAdminKey)
         .send({ objectPath: "/cv/resume.pdf" });
       expect(res.status).toBe(400);
-      expect(res.body.errors).toBeDefined();
+      expect(res.body.details).toBeDefined();
     });
 
     it("returns 200 with valid data when existing record exists", async () => {

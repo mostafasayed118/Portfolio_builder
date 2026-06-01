@@ -8,9 +8,17 @@ import { listExperience } from "@workspace/db/experience";
 import { listCertifications } from "@workspace/db/certifications";
 import { fetchProjectBySlug } from "@workspace/db/projects";
 import type { Skill as DbSkill } from "@workspace/supabase/types";
+import { SKILL_CATEGORIES } from "@/data/skills";
 
-const POLL_INTERVAL = 60_000;
-const POLL_OPTIONS = { refetchInterval: POLL_INTERVAL, refetchIntervalInBackground: false };
+// Realtime sync handles live updates; polling is a fallback for missed events.
+const POLL_INTERVAL = 5 * 60_000; // 5 min
+const STALE_TIME = 5 * 60_000;    // 5 min
+const POLL_OPTIONS = {
+  refetchInterval: POLL_INTERVAL,
+  refetchIntervalInBackground: false,
+  refetchOnWindowFocus: false,
+  staleTime: STALE_TIME,
+};
 
 export function useHeroContent() {
   return useQuery({
@@ -110,6 +118,11 @@ export function useProjectBySlug(slug: string | undefined) {
   });
 }
 
+// Build a case-insensitive map from SKILL_CATEGORIES for color lookup
+const categoryColorMap = new Map(
+  SKILL_CATEGORIES.map((c) => [c.label.toLowerCase(), c.color]),
+);
+
 export function groupSkillsByCategory(skills: DbSkill[]) {
   const grouped: Record<string, { name: string; proficiency: number; level: "Expert" | "Advanced" | "Intermediate" | "Familiar" }[]> = {};
   for (const s of skills) {
@@ -128,7 +141,7 @@ export function groupSkillsByCategory(skills: DbSkill[]) {
   return Object.entries(grouped).map(([key, skills]) => ({
     key: key.toLowerCase().replace(/\s+/g, "-"),
     label: key,
-    color: "blue",
+    color: categoryColorMap.get(key.toLowerCase()) ?? "blue",
     skills: skills.sort((a, b) => b.proficiency - a.proficiency),
   }));
 }

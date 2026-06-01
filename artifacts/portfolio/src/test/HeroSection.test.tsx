@@ -7,6 +7,31 @@ vi.mock("@/hooks/use-typewriter", () => ({
   useTypewriter: vi.fn(() => "Data Engineer"),
 }));
 
+vi.mock("framer-motion", () => {
+  const React = require("react");
+  return {
+    motion: new Proxy({}, {
+      get: (_target: unknown, prop: string) => {
+        return React.forwardRef((props: Record<string, unknown>, ref: React.Ref<HTMLElement>) => {
+          const { initial, animate, exit, transition, whileHover, whileTap, whileInView, variants, viewport, ...rest } = props;
+          return React.createElement(prop, { ...rest, ref });
+        });
+      },
+    }),
+    AnimatePresence: ({ children }: { children: React.ReactNode }) => children,
+    useMotionValue: (initial: number) => ({ get: () => initial, set: vi.fn(), on: vi.fn(), destroy: vi.fn() }),
+    useTransform: () => ({ get: () => 0, set: vi.fn(), on: vi.fn() }),
+    useSpring: (val: unknown) => val,
+    useReducedMotion: () => false,
+    useInView: () => true,
+  };
+});
+
+vi.mock("@/lib/supabase-provider", () => ({
+  getSupabase: vi.fn(() => null),
+  isSupabaseConfigured: false,
+}));
+
 function renderWithProviders(ui: React.ReactElement) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(

@@ -14,7 +14,7 @@ const ADMIN_EMAILS: string[] = (
 function ClerkAuthBridge({ children }: { children: ReactNode }) {
   const { isSignedIn, isLoaded, getToken, signOut: clerkSignOut } = useAuth();
   const { user: clerkUser } = useUser();
-  const [dbUser, setDbUser] = useState<User | null>(null);
+  const [dbUser, setDbUser] = useState<Pick<User, "id" | "email" | "role"> | null>(null);
 
   // Set token getter in effect to respect React's pure-render principle
   useEffect(() => {

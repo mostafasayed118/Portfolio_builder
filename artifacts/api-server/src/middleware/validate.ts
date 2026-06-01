@@ -75,7 +75,7 @@ export const v = {
   },
 
   email(opts?: { label?: string }): Validator<string> {
-    const emailRE = /^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$/;
+    const emailRE = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
     return (value: unknown) => {
       if (typeof value !== "string") {
         return { ok: false, error: `${opts?.label ?? "Email"} must be a string`, value: "" };

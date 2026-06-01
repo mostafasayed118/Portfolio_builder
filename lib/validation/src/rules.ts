@@ -26,7 +26,7 @@ export const rules = {
   email: (label = "Email"): RuleFn =>
     (v) => {
       if (typeof v !== "string") return `${label} must be a string`;
-      const re = /^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$/;
+      const re = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
       return re.test(v.trim()) ? null : `${label} is not a valid email address`;
     },
 

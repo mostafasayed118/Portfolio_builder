@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
-import type { Request, Response } from "express";
-import type { AuthenticatedRequest } from "../../middleware/adminAuth";
 import { doubleCsrfProtection } from "../../middleware/csrf";
+import type { AuthenticatedRequest } from "../../middleware/adminAuth";
+import { requireSuperadmin } from "../../middleware/requireSuperadmin";
+import type { Response } from "express";
 import { getSupabaseClient } from "../../lib/supabase-client";
 
 const router: IRouter = Router();
@@ -43,7 +44,7 @@ const CERTIFICATIONS = [
   { title: "Sample Certification", issuer: "Issuer Name", date: "2025", dateSort: "2025-01", category: "data-engineering" as const },
 ];
 
-router.post("/", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
+router.post("/", requireSuperadmin, doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
   const errors: string[] = [];
   const summary: Record<string, number> = {};
   const force = req.query.force === "true";
@@ -68,12 +69,13 @@ router.post("/", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Re
   }
 
   try {
-    // If force re-seed, clear existing data first (scoped to this user)
+    // If force re-seed, soft-delete existing data first (scoped to this user)
     if (force) {
-      await supabase.from("skills").delete().eq("user_id", userId);
-      await supabase.from("projects").delete().eq("user_id", userId);
-      await supabase.from("experience").delete().eq("user_id", userId);
-      await supabase.from("certifications").delete().eq("user_id", userId);
+      const now = new Date().toISOString();
+      await supabase.from("skills").update({ deleted_at: now }).eq("user_id", userId).is("deleted_at", null);
+      await supabase.from("projects").update({ deleted_at: now }).eq("user_id", userId).is("deleted_at", null);
+      await supabase.from("experience").update({ deleted_at: now }).eq("user_id", userId).is("deleted_at", null);
+      await supabase.from("certifications").update({ deleted_at: now }).eq("user_id", userId).is("deleted_at", null);
     }
 
     await supabase.from("hero_content").upsert({

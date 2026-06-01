@@ -2,10 +2,11 @@ import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@workspace/ui";
 import { Upload, FileText, CheckCircle, ExternalLink, Trash2, Info, AlertCircle, RefreshCw } from "lucide-react";
-import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
+import { getSupabase } from "@/lib/supabase";
 import { logError } from "@/lib/logger";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Skeleton } from "@workspace/ui";
 import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
+import { getCsrfToken } from "@/lib/api-client";
 
 interface CvSettings {
   objectPath: string | null;
@@ -58,7 +59,8 @@ export default function CvManager() {
     setProgress(0);
 
     try {
-      const supabase = getSupabase()!;
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("Supabase is not configured — cannot upload CV");
       const objectPath = `cv-${Date.now()}.pdf`;
 
       const { error: uploadError } = await supabase.storage
@@ -72,9 +74,13 @@ export default function CvManager() {
 
       setProgress(100);
 
+      const csrfToken = await getCsrfToken().catch(() => null);
       const saveRes = await fetch("/api/v1/cv/settings", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(csrfToken ? { "x-csrf-token": csrfToken } : {}),
+        },
         body: JSON.stringify({ objectPath, fileName: file.name }),
       });
       if (!saveRes.ok) {
@@ -82,7 +88,7 @@ export default function CvManager() {
         await supabase.storage.from("cv").remove([objectPath]);
         throw new Error(`Failed to save CV settings (${saveRes.status}): ${errBody.slice(0, 200)}`);
       }
-      const saved = await saveRes.json() as CvSettings;
+      await saveRes.json();
       await refetch();
       toast({ title: "CV uploaded successfully", description: `${file.name} is now live.` });
     } catch (err) {
@@ -112,12 +118,18 @@ export default function CvManager() {
 
   const handleRemove = async () => {
     try {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("Supabase is not configured — cannot remove CV");
       if (settings?.objectPath) {
-        await getSupabase()!.storage.from("cv").remove([settings.objectPath]);
+        await supabase.storage.from("cv").remove([settings.objectPath]);
       }
+      const csrfToken = await getCsrfToken().catch(() => null);
       const res = await fetch("/api/v1/cv/settings", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(csrfToken ? { "x-csrf-token": csrfToken } : {}),
+        },
         body: JSON.stringify({ objectPath: "", fileName: "" }),
       });
       if (!res.ok) throw new Error("Failed to update CV settings");
@@ -223,7 +235,7 @@ export default function CvManager() {
             onDragLeave={() => setDragging(false)}
             onDrop={handleDrop}
             onClick={() => !uploading && fileInputRef.current?.click()}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); !uploading && fileInputRef.current?.click(); }}}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (!uploading) fileInputRef.current?.click(); }}}
             role="button"
             tabIndex={0}
             aria-label="Upload CV PDF file"

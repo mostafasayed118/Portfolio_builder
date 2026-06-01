@@ -1,4 +1,5 @@
 import React from "react";
+import { logError } from "@/lib/logger";
 
 export class RootErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -11,6 +12,13 @@ export class RootErrorBoundary extends React.Component<
 
   static getDerivedStateFromError(error: Error) {
     return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    logError("RootErrorBoundary caught error", error, "RootErrorBoundary");
+    if (import.meta.env.DEV) {
+      console.error("[RootErrorBoundary] Component stack:", errorInfo.componentStack);
+    }
   }
 
   render() {

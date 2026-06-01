@@ -69,6 +69,33 @@ describe("Global Error Handler", () => {
     });
   });
 
+  it("returns 400 for SyntaxError with body (malformed JSON)", async () => {
+    vi.resetModules();
+
+    vi.doMock("../lib/logger", () => ({
+      logger: {
+        info: vi.fn(),
+        error: vi.fn(),
+        warn: vi.fn(),
+        debug: vi.fn(),
+        child: vi.fn(),
+        level: "silent",
+      },
+    }));
+
+    const { errorHandler } = await import("../middleware/errorHandler");
+    const err = new SyntaxError("Unexpected token in JSON");
+    (err as any).body = {};
+
+    errorHandler(err, req as Request, res as Response, next);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      message: "Invalid JSON in request body",
+    });
+  });
+
   it("does not leak stack traces in 500 responses", async () => {
     vi.resetModules();
 

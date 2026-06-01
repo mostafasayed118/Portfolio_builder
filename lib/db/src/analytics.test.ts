@@ -159,9 +159,9 @@ function buildMessageStatsMock(messages: any[] = []) {
 describe("fetchMessageStats", () => {
   it("aggregates messages by date with total and unread counts", async () => {
     const supabase = buildMessageStatsMock([
-      { created_at: "2024-01-01T10:00:00Z", is_read: false },
-      { created_at: "2024-01-01T11:00:00Z", is_read: true },
-      { created_at: "2024-01-02T09:00:00Z", is_read: false },
+      { created_at: "2024-01-01T10:00:00Z", status: "unread" },
+      { created_at: "2024-01-01T11:00:00Z", status: "read" },
+      { created_at: "2024-01-02T09:00:00Z", status: "unread" },
     ]);
 
     const stats = await fetchMessageStats(supabase, 30);

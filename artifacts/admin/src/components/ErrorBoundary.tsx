@@ -21,7 +21,7 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("Admin ErrorBoundary caught:", error, errorInfo);
+    if (import.meta.env.DEV) console.error("Admin ErrorBoundary caught:", error, errorInfo);
   }
 
   render() {

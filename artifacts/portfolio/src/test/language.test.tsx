@@ -111,6 +111,9 @@ describe("LanguageProvider", () => {
     await waitFor(() => {
       expect(result.current.langSettings).not.toBeNull();
     });
+    await waitFor(() => {
+      expect(result.current.lang).toBe("ar");
+    });
 
     act(() => result.current.setLanguage("en"));
     expect(result.current.lang).toBe("ar");

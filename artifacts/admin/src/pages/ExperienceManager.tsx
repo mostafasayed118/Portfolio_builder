@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useToast } from "@workspace/ui";
 import { Plus, Pencil, Trash2, X, AlertCircle, RefreshCw, Briefcase } from "lucide-react";
 import { logError } from "@/lib/logger";
-import { Badge, Button, Card, CardContent, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Skeleton, Switch } from "@workspace/ui";
+import { Badge, Button, Card, CardContent, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Skeleton, Switch } from "@workspace/ui";
 import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
 import { SmartEmptyState } from "@/components/SmartEmptyState";
 import { getErrorMessage } from "@/lib/error-messages";
@@ -134,7 +134,12 @@ export default function ExperienceManager() {
 
       <Dialog open={!!editing} onOpenChange={o => !o && setEditing(null)}>
         <DialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>{isNew ? "Add Experience" : "Edit Experience"}</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>{isNew ? "Add Experience" : "Edit Experience"}</DialogTitle>
+            <DialogDescription className="sr-only">
+              {isNew ? "Add a new experience entry." : "Edit experience details."}
+            </DialogDescription>
+          </DialogHeader>
           {editing && (
             <div className="space-y-4 py-2">
               <div className="grid grid-cols-2 gap-3">

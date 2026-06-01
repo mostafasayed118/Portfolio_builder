@@ -22,6 +22,7 @@ vi.mock("../../lib/supabase-client", () => {
     order: vi.fn().mockReturnThis(),
     upsert: vi.fn().mockResolvedValue({ data: null, error: null }),
     rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
+    is: vi.fn().mockReturnThis(),
   };
   return { getSupabaseClient: vi.fn(() => supabaseChain) };
 });
@@ -56,6 +57,7 @@ describe("Seed API", () => {
     vi.mocked(supabaseChain.single).mockResolvedValue({ data: null, error: null });
     vi.mocked(supabaseChain.order).mockReturnThis();
     vi.mocked(supabaseChain.upsert).mockResolvedValue({ data: null, error: null });
+    vi.mocked(supabaseChain.is).mockReturnThis();
   });
 
   describe("POST /api/v1/admin/seed", () => {
@@ -78,16 +80,15 @@ describe("Seed API", () => {
       }
     });
 
-    it("returns 400 when no user context (req.user is undefined)", async () => {
+    it("returns 403 when user is not superadmin", async () => {
       const res = await request(app)
         .post("/api/v1/admin/seed")
         .set("x-admin-key", mockAdminKey)
         .set("x-test-mode", "no-user")
         .send({});
 
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(403);
       expect(res.body.success).toBe(false);
-      expect(res.body.message).toBe("No user context. Please log in again.");
     });
 
     it("seeds data with user_id from authenticated user", async () => {
@@ -116,8 +117,8 @@ describe("Seed API", () => {
         .set("x-admin-key", mockAdminKey)
         .send({});
 
-      // In force mode, delete should be called for skills, projects, experience, certifications
-      expect(supabaseChain.delete).toHaveBeenCalled();
+      // In force mode, update (soft delete) should be called for skills, projects, experience, certifications
+      expect(supabaseChain.update).toHaveBeenCalled();
       expect(supabaseChain.eq).toHaveBeenCalledWith("user_id", "test-user-id");
     });
 

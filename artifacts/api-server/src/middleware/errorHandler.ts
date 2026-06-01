@@ -13,6 +13,12 @@ export function errorHandler(
     return;
   }
 
+  // Handle malformed JSON body from express.json()
+  if (err.name === "SyntaxError" && "body" in err) {
+    res.status(400).json({ success: false, message: "Invalid JSON in request body" });
+    return;
+  }
+
   logger.error({ err }, "Unhandled error");
   res.status(500).json({ success: false, message: "Internal server error" });
 }

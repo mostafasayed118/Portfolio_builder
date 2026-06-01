@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
-import { Button, Dialog, DialogContent, DialogHeader, DialogTitle } from "@workspace/ui";
+import { Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@workspace/ui";
 import { api } from "@/lib/api-client";
 
 export function SeedDialog() {
@@ -61,6 +61,9 @@ export function SeedDialog() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Import Static Data</DialogTitle>
+            <DialogDescription className="sr-only">
+              Import static data from the portfolio configuration files into the database.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">

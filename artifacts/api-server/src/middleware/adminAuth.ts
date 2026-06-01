@@ -57,8 +57,8 @@ async function verifyClerkJWT(token: string): Promise<{ email: string; clerkId: 
     const clerkId = payload.sub;
     if (!clerkId) return null;
 
-    const emailFromToken = ((payload as Record<string, unknown>)?.email ??
-      (payload as Record<string, unknown>)?.emailAddress ??
+    const emailFromToken = ((payload as { email?: string; emailAddress?: string })?.email ??
+      (payload as { email?: string; emailAddress?: string })?.emailAddress ??
       "") as string;
     if (emailFromToken) return { email: emailFromToken.toLowerCase(), clerkId };
 
