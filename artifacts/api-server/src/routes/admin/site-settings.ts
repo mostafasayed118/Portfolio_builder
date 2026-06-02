@@ -5,10 +5,9 @@ import type { Response } from "express";
 import { z } from "zod";
 import { getSupabaseClient } from "../../lib/supabase-client";
 import { singletonUpsert } from "../../lib/singleton-upsert";
+import { ok, badRequest, serverError } from "../../lib/api-response";
 
 const router: IRouter = Router();
-
-const supabase = getSupabaseClient();
 
 const siteSettingsSchema = z.object({
   site_name: z.string().max(100).optional(),
@@ -28,36 +27,39 @@ const languageSchema = z.object({
 });
 
 router.get("/", async (_req: AuthenticatedRequest, res: Response) => {
+  const supabase = getSupabaseClient();
   const { data, error } = await supabase.from("site_settings").select("*").limit(1).maybeSingle();
-  if (error) return res.status(500).json({ success: false, message: error.message });
-  return res.json({ success: true, data });
+  if (error) return serverError(res, error.message);
+  return ok(res, data);
 });
 
 router.put("/", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
+  const supabase = getSupabaseClient();
   const result = siteSettingsSchema.safeParse(req.body);
   if (!result.success) {
-    return res.status(400).json({ success: false, errors: result.error.flatten().fieldErrors });
+    return badRequest(res, result.error.flatten().fieldErrors as Record<string, string[]>);
   }
   try {
     await singletonUpsert(supabase, "site_settings", result.data);
-    return res.json({ success: true });
+    return ok(res, undefined);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    return res.status(500).json({ success: false, message });
+    return serverError(res, message);
   }
 });
 
 router.patch("/language", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
+  const supabase = getSupabaseClient();
   const result = languageSchema.safeParse(req.body);
   if (!result.success) {
-    return res.status(400).json({ success: false, errors: result.error.flatten().fieldErrors });
+    return badRequest(res, result.error.flatten().fieldErrors as Record<string, string[]>);
   }
   try {
     await singletonUpsert(supabase, "site_settings", { default_language: result.data.default_language });
-    return res.json({ success: true });
+    return ok(res, undefined);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    return res.status(500).json({ success: false, message });
+    return serverError(res, message);
   }
 });
 

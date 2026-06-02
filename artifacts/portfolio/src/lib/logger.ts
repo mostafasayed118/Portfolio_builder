@@ -1,47 +1,21 @@
-type LogLevel = "error" | "warn" | "info";
+/**
+ * App-level logger entry point.
+ *
+ * Internally re-exports `@workspace/logging` after wiring up the
+ * Vite-specific `import.meta.env.DEV` check. This lets the shared
+ * lib stay framework-agnostic while the app gets a simple
+ * `import { logError } from "@/lib/logger"` API that just works.
+ *
+ * Usage in routes / components:
+ *   import { logError, logWarn, logInfo } from "@/lib/logger";
+ *   logError("Failed to fetch skills", err, "SkillsManager");
+ *
+ * In DEV (`pnpm dev`), the output is pretty and coloured.
+ * In PROD (`pnpm build`), the output is single-line JSON for log
+ * aggregation (Loki, CloudWatch, etc.).
+ */
+import { configureLogger, logError, logInfo, logWarn } from "@workspace/logging";
 
-interface LogEntry {
-  level: LogLevel;
-  message: string;
-  context?: string;
-  error?: unknown;
-  timestamp: string;
-}
+configureLogger(() => ({ dev: import.meta.env.DEV }));
 
-export function logError(message: string, error: unknown, context?: string): void {
-  const entry: LogEntry = {
-    level: "error",
-    message,
-    context,
-    error: error instanceof Error
-      ? { name: error.name, message: error.message, stack: error.stack }
-      : error,
-    timestamp: new Date().toISOString(),
-  };
-
-  if (import.meta.env.DEV) {
-    console.error(`[${context ?? "App"}] ${message}`, error);
-  }
-
-  if (import.meta.env.PROD) {
-    console.error(JSON.stringify(entry));
-  }
-}
-
-export function logWarn(message: string, context?: string): void {
-  if (import.meta.env.DEV) {
-    console.warn(`[${context ?? "App"}] ${message}`);
-  }
-  if (import.meta.env.PROD) {
-    console.warn(JSON.stringify({ level: "warn", message, context, timestamp: new Date().toISOString() }));
-  }
-}
-
-export function logInfo(message: string, context?: string): void {
-  if (import.meta.env.DEV) {
-    console.info(`[${context ?? "App"}] ${message}`);
-  }
-  if (import.meta.env.PROD) {
-    console.info(JSON.stringify({ level: "info", message, context, timestamp: new Date().toISOString() }));
-  }
-}
+export { logError, logInfo, logWarn };

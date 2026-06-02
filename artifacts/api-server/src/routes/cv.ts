@@ -4,6 +4,8 @@ import { adminAuth } from "../middleware/adminAuth";
 import { doubleCsrfProtection } from "../middleware/csrf";
 import { generateCvPdf } from "../utils/cv-generator";
 import { getSupabaseClient } from "../lib/supabase-client";
+import { env } from "../lib/env";
+import { ok, badRequest, notFound, serverError } from "../lib/api-response";
 
 const router: IRouter = Router();
 
@@ -14,7 +16,7 @@ const router: IRouter = Router();
  * If CV contains sensitive info, add auth middleware here.
  */
 router.get("/cv", async (req: Request, res: Response) => {
-  const portfolioUrl = process.env.VITE_SITE_URL ?? "https://mustafasayed.replit.app";
+  const portfolioUrl = env.VITE_SITE_URL ?? "https://mustafasayed.replit.app";
 
   try {
     const supabase = getSupabaseClient();
@@ -42,12 +44,12 @@ router.get("/cv", async (req: Request, res: Response) => {
 
     if (error) {
       req.log.error({ err: error }, "Error fetching CV settings");
-      res.status(500).json({ error: "Failed to fetch CV settings." });
+      res.status(500).json({ success: false, message: "Failed to fetch CV settings." });
       return;
     }
 
     if (!settings?.object_path) {
-      res.status(404).json({ error: "No CV has been uploaded yet." });
+      res.status(404).json({ success: false, message: "No CV has been uploaded yet." });
       return;
     }
 
@@ -58,7 +60,7 @@ router.get("/cv", async (req: Request, res: Response) => {
 
     if (downloadError || !fileData) {
       req.log.error({ err: downloadError }, "Error downloading CV from storage");
-      res.status(500).json({ error: "Failed to download CV file." });
+      res.status(500).json({ success: false, message: "Failed to download CV file." });
       return;
     }
 
@@ -70,7 +72,7 @@ router.get("/cv", async (req: Request, res: Response) => {
     res.end(buffer);
   } catch (err) {
     req.log.error({ err }, "Error serving CV");
-    res.status(500).json({ error: "Failed to serve CV." });
+    res.status(500).json({ success: false, message: "Failed to serve CV." });
   }
 });
 
@@ -84,11 +86,10 @@ router.get("/cv/settings", async (_req: Request, res: Response) => {
     .maybeSingle();
 
   if (error) {
-    res.status(500).json({ error: "Failed to fetch CV settings." });
-    return;
+    return serverError(res, "Failed to fetch CV settings.");
   }
 
-  res.json({
+  return ok(res, {
     objectPath: settings?.object_path ?? null,
     fileName: settings?.file_name ?? null,
     updatedAt: settings?.updated_at ?? new Date().toISOString(),
@@ -98,8 +99,7 @@ router.get("/cv/settings", async (_req: Request, res: Response) => {
 router.put("/cv/settings", adminAuth, doubleCsrfProtection, async (req: Request, res: Response) => {
   const result = cvSettingsUpdateSchema.safeParse(req.body);
   if (!result.success) {
-    res.status(400).json({ error: "Validation failed", details: result.error.flatten().fieldErrors });
-    return;
+    return badRequest(res, result.error.flatten().fieldErrors);
   }
   const { objectPath, fileName } = result.data;
   const supabase = getSupabaseClient();
@@ -122,10 +122,9 @@ router.put("/cv/settings", adminAuth, doubleCsrfProtection, async (req: Request,
       .eq("id", existing.id);
 
     if (error) {
-      res.status(500).json({ error: "Failed to update CV settings." });
-      return;
+      return serverError(res, "Failed to update CV settings.");
     }
-    res.json({ id: existing.id });
+    return ok(res, { id: existing.id });
   } else {
     const { data, error } = await supabase
       .from("cv_settings")
@@ -137,10 +136,9 @@ router.put("/cv/settings", adminAuth, doubleCsrfProtection, async (req: Request,
       .single();
 
     if (error) {
-      res.status(500).json({ error: "Failed to save CV settings." });
-      return;
+      return serverError(res, "Failed to save CV settings.");
     }
-    res.json({ id: data?.id });
+    return ok(res, { id: data?.id });
   }
 });
 

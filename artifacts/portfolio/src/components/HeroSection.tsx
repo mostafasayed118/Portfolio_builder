@@ -4,11 +4,13 @@ import { motion } from "framer-motion";
 import { useMouseTilt } from "@/hooks/use-mouse-tilt";
 import { useTypewriter } from "@/hooks/use-typewriter";
 import { useThrottledScroll } from "@/hooks/use-throttled-scroll";
-import { HERO } from "@/data/portfolio";
+import { HERO, CONTACT } from "@/data/portfolio";
 import { useHeroContent } from "@/hooks/use-portfolio-data";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
 import { trackEvent } from "@workspace/db/analytics";
+import { logWarn } from "@/lib/logger";
 import { useLanguage } from "@/lib/language";
+import { getApiUrl } from "@/lib/env";
 
 function useReducedMotion() {
   const [reduced, setReduced] = useState(false);
@@ -46,8 +48,13 @@ function FloatingIcon({ icon: Icon, className, delay = 0, reduced }: { icon: Rea
   );
 }
 
-function HeroTypewriter({ texts }: { texts: string[] }) {
-  const role = useTypewriter(texts, { typingSpeed: 70, deletingSpeed: 40, pauseMs: 2000 });
+function HeroTypewriter({ texts, fallback }: { texts: string[]; fallback?: string }) {
+  // When texts is empty (DB unconfigured + static fallback failed to load),
+  // show a static fallback string instead of an empty blinking cursor.
+  const effectiveTexts = texts.length > 0
+    ? texts
+    : (fallback ? [fallback] : []);
+  const role = useTypewriter(effectiveTexts, { typingSpeed: 70, deletingSpeed: 40, pauseMs: 2000 });
   return (
     <span className="text-primary">
       {role}
@@ -161,6 +168,8 @@ export default function HeroSection() {
   const tilt = useMouseTilt(12);
   const { t, isArabic } = useLanguage();
   const reducedMotion = useReducedMotion();
+  const apiBase = getApiUrl();
+  const cvHref = apiBase ? `${apiBase}/api/v1/cv` : "";
 
   const hero = supabaseHero
     ? {
@@ -212,12 +221,12 @@ export default function HeroSection() {
           </h1>
 
           <div className="text-xl md:text-2xl font-display font-semibold text-muted-foreground min-h-[2rem] mb-4">
-            <HeroTypewriter texts={hero.roles} />
+            <HeroTypewriter texts={hero.roles} fallback={t.hero.fallbackRole} />
           </div>
 
           <div className="flex items-center gap-1.5 justify-center md:justify-start text-sm text-muted-foreground mb-6">
             <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
-            <span>{"Cairo, Egypt"}</span>
+            <span>{CONTACT.location}</span>
           </div>
 
           <p className="text-muted-foreground leading-relaxed max-w-md mx-auto md:mx-0 mb-8 text-sm md:text-base">
@@ -226,7 +235,7 @@ export default function HeroSection() {
 
           <div className="flex flex-wrap gap-3 justify-center md:justify-start mb-8">
             <a
-              href="#contact" // FIX: UX-007
+              href="#contact"
               className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity shadow-[var(--shadow-float)]"
               data-testid="btn-get-in-touch"
             >
@@ -240,15 +249,26 @@ export default function HeroSection() {
               {t.hero.viewProjects}
             </a>
             <a
-              href={`${import.meta.env.VITE_API_URL ?? ""}/api/v1/cv`}
+              href={cvHref || undefined}
               download
-              title="Download CV — includes QR code linking to this portfolio"
-              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl border border-primary/40 bg-primary/8 text-primary font-semibold text-sm hover:opacity-70 transition-opacity"
+              aria-disabled={!cvHref}
+              title={cvHref
+                ? "Download CV — includes QR code linking to this portfolio"
+                : "CV download unavailable (API server not configured)"}
+              className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-xl border font-semibold text-sm transition-opacity ${
+                cvHref
+                  ? "border-primary/40 bg-primary/8 text-primary hover:opacity-70"
+                  : "border-border/40 bg-muted/40 text-muted-foreground cursor-not-allowed"
+              }`}
               data-testid="btn-download-cv"
-              onClick={() => {
+              onClick={(e) => {
+                if (!cvHref) {
+                  e.preventDefault();
+                  return;
+                }
                 if (isSupabaseConfigured) {
                   const sb = getSupabase();
-                  if (sb) trackEvent(sb, "cv_download", "/", { source: "hero" }).catch(() => {});
+                  if (sb) trackEvent(sb, "cv_download", "/", { source: "hero" }).catch((err) => logWarn("trackEvent failed", err));
                 }
               }}
             >
@@ -306,7 +326,7 @@ export default function HeroSection() {
         </div>
       </div>
 
-      <button // FIX: UX-016
+      <button
         onClick={() => scrollTo("#about")}
         className="absolute bottom-4 sm:bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 text-muted-foreground hover:text-primary transition-colors group"
         aria-label="Scroll down"

@@ -252,10 +252,18 @@ describe("Images API", () => {
       });
 
       const res = await request(app)
-        .delete("/api/v1/images/non-existent-id")
+        .delete("/api/v1/images/00000000-0000-0000-0000-000000000001")
         .set("x-admin-key", mockAdminKey);
       expect(res.status).toBe(404);
       expect(res.body.error).toMatch(/not found/i);
+    });
+
+    it("returns 400 for invalid UUID", async () => {
+      const res = await request(app)
+        .delete("/api/v1/images/not-a-uuid")
+        .set("x-admin-key", mockAdminKey);
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/invalid/i);
     });
   });
 });

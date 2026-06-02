@@ -37,6 +37,7 @@ export async function uploadFile(
   folder?: string,
 ): Promise<UploadResult> {
   const supabase = getSupabase();
+  if (!supabase) return { error: "Supabase is not configured" };
   const sanitized = sanitizeFilename(file.name);
   const timestamp = Date.now();
   const folderPart = folder ? `${folder}/` : "";
@@ -68,6 +69,7 @@ export async function deleteFile(
   path: string,
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = getSupabase();
+  if (!supabase) return { success: false, error: "Supabase is not configured" };
 
   const { error } = await supabase.storage.from(bucket).remove([path]);
 
@@ -83,6 +85,7 @@ export async function getPublicUrl(
   path: string,
 ): Promise<string> {
   const supabase = getSupabase();
+  if (!supabase) return "";
   const { data } = supabase.storage.from(bucket).getPublicUrl(path);
   return data.publicUrl;
 }
@@ -94,6 +97,7 @@ export async function uploadFileWithProgress(
   onProgress: (pct: number) => void,
 ): Promise<UploadResult> {
   const supabase = getSupabase();
+  if (!supabase) return { error: "Supabase is not configured" };
   const sanitized = sanitizeFilename(file.name);
   const timestamp = Date.now();
   const folderPart = folder ? `${folder}/` : "";

@@ -45,4 +45,12 @@
 | [MANIFEST.md](../MANIFEST.md) | File manifest with migration listing |
 | [SECURITY.md](../SECURITY.md) | Security policy and auth model |
 | [FEATURE_INVENTORY.md](../FEATURE_INVENTORY.md) | Complete feature list per app |
+| [BACKEND_AUDIT_REPORT.md](../BACKEND_AUDIT_REPORT.md) | 48-endpoint backend audit, updated 2026-06-01 |
+| [TECHNICAL_DEBT_REPORT.md](../TECHNICAL_DEBT_REPORT.md) | Tech debt, stays 0/10 post 2026-06-01 |
 | [LICENSE](../LICENSE) | MIT license |
+
+## Artifact READMEs
+
+| File | Description |
+|------|-------------|
+| [API Server README](../artifacts/api-server/README.md) | Express + Supabase backend — quickstart, env, architecture, conventions, test instructions, recent reliability fixes |

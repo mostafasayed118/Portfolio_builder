@@ -1,9 +1,9 @@
 import { lazy, Suspense, useEffect } from "react";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
 import { trackEvent } from "@workspace/db/analytics";
+import { logWarn } from "@/lib/logger";
 import { useToast } from "@workspace/ui";
 import { useRealtimeSync } from "@/hooks/use-realtime-sync";
-import SEO from "@/components/SEO";
 import HeroSection from "@/components/HeroSection";
 import BackToTop from "@/components/BackToTop";
 import { SyncDebug } from "@/components/SyncDebug";
@@ -39,7 +39,7 @@ export default function Home() {
     if (isSupabaseConfigured) {
       const supabase = getSupabase();
       if (supabase) {
-        trackEvent(supabase, "page_view", "/").catch(() => {});
+        trackEvent(supabase, "page_view", "/").catch((err) => logWarn("trackEvent failed", err));
       }
     }
   }, []);
@@ -62,11 +62,10 @@ export default function Home() {
 
   return (
     <>
-      <SEO />
-      <main>
+      <main id="main-content">
       <Suspense fallback={<SectionSkeleton />}>
         <HeroSection />
-      </Suspense> {/* FIX: UX-009 */}
+      </Suspense>
       <Suspense fallback={<SectionSkeleton />}>
         <AboutSection />
       </Suspense>

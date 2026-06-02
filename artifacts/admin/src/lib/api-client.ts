@@ -4,10 +4,9 @@ import type {
   TypographySettings, SeoSettings, SectionSetting, SiteSettings,
 } from "@workspace/supabase/types";
 import { getClerkToken } from "./auth-token";
+import { getApiUrl } from "./env";
 
-const API_BASE = import.meta.env.VITE_API_URL;
-const apiBase = API_BASE ?? "http://localhost:3001";
-const ADMIN_API_KEY = import.meta.env.VITE_ADMIN_API_KEY as string | undefined;
+const apiBase = getApiUrl();
 
 export async function getCsrfToken(): Promise<string> {
   const controller = new AbortController();
@@ -42,9 +41,6 @@ async function request<T>(
   const clerkToken = await getClerkToken();
   if (clerkToken) {
     headers["Authorization"] = `Bearer ${clerkToken}`;
-  } else if (ADMIN_API_KEY) {
-    // Fallback to API key auth for local dev when Clerk token is unavailable
-    headers["x-admin-key"] = ADMIN_API_KEY;
   }
 
   if (body && (method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE")) {
@@ -96,6 +92,58 @@ export interface User {
 
 function userIdParam(userId?: string): string {
   return userId ? `?userId=${encodeURIComponent(userId)}` : "";
+}
+
+async function publicRequest<T>(
+  method: string,
+  path: string,
+  body?: unknown,
+): Promise<ApiResult<T>> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+
+  const clerkToken = await getClerkToken();
+  if (clerkToken) {
+    headers["Authorization"] = `Bearer ${clerkToken}`;
+  }
+
+  if (body && (method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE")) {
+    const csrfToken = await getCsrfToken();
+    headers["x-csrf-token"] = csrfToken;
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const res = await fetch(`${apiBase}/api/v1${path}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+      credentials: "include",
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    if (!res.ok) {
+      let message = `Request failed (${res.status})`;
+      try {
+        const errData = await res.json();
+        if (errData.message) message = errData.message;
+      } catch { /* response wasn't JSON */ }
+      return { success: false, message };
+    }
+    return await res.json();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Network error";
+    if (message.includes("aborted")) {
+      return { success: false, message: "Request timed out" };
+    }
+    return { success: false, message };
+  }
+}
+
+export interface CvSettings {
+  objectPath: string | null;
+  fileName: string | null;
+  updatedAt: string;
 }
 
 export const api = {
@@ -176,6 +224,11 @@ export const api = {
   },
   seed: {
     run: () => request<{ summary: Record<string, number>; errors: string[] }>("POST", "/seed"),
+  },
+  cv: {
+    getSettings: () => publicRequest<CvSettings>("GET", "/cv/settings"),
+    updateSettings: (data: { objectPath: string; fileName: string }) =>
+      publicRequest<CvSettings>("PUT", "/cv/settings", data),
   },
   ai: {
     generateDescription: (techStack: string[], title?: string) =>

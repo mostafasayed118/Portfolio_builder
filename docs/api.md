@@ -148,16 +148,35 @@ Deletes image from storage and removes metadata record.
 {
   "name": "John Doe",
   "email": "john@example.com",
-  "message": "Hello, I'd like to discuss a project."
+  "message": "Hello, I'd like to discuss a project.",
+  "website": "",
+  "_formLoadedAt": 1717200000000
 }
 ```
 
-**Validation:** `name` 1–100 chars, `email` valid format, `message` 10–2000 chars. All fields HTML-entity-escaped before storage.
+**Field-by-field validation:**
+- `name` — required, 1–100 chars, trim, control chars stripped
+- `email` — required, valid format, trim, lowercased, max 254 chars (RFC 5321)
+- `message` — required, 10–2000 chars, trim, control chars stripped
+- `website` — **honeypot** (must be empty). Bots that auto-fill all fields trip this.
+- `_formLoadedAt` — **time-trap** (optional client-side timestamp). Server rejects:
+  - submissions < 2 seconds after render (bots submit too fast)
+  - submissions > 1 hour after render (stale/replayed form)
 
-**Response:** `201 Created`
+**Abuse controls:**
+- Origin / referer check (production rejects missing origin; allowlist otherwise)
+- Honeypot field silently dropped with `200 OK` to avoid tipping off bots
+- Time-trap silently dropped with `200 OK` when form is too fast
+- Per-IP rate limit: 5 requests per hour
+- All rejections logged with IP, UA, origin, and rejection reason (never message content)
+
+**Response:** `200 OK`
 ```json
-{ "success": true, "data": { "id": "uuid" } }
+{ "success": true }
 ```
+
+Note: a honeypot or time-trap hit still returns `200 OK` so the bot doesn't
+know it was caught. True validation failures return `400`.
 
 ---
 
@@ -215,14 +234,14 @@ Prefix: `/api/v1/admin/`
 
 ### Skills (Collection)
 
-| Method | Path | Description |
-|---|---|---|
-| GET | `/admin/skills` | List skills (paginated) |
-| POST | `/admin/skills` | Create skill |
-| PUT | `/admin/skills/:id` | Update skill |
-| DELETE | `/admin/skills/:id` | Soft-delete skill |
+| Method | Path | Description | Error codes |
+|---|---|---|---|
+| GET | `/admin/skills` | List skills (paginated) | — |
+| POST | `/admin/skills` | Create skill | 400 (validation) |
+| PUT | `/admin/skills/:id` | Update skill | 400 (validation), 404 (not found / not yours) |
+| DELETE | `/admin/skills/:id` | Soft-delete skill | 404 (not found / not yours) |
 
-**GET params:** `?limit=50&offset=0&userId=uuid`
+**GET params:** `?limit=50&offset=0&userId=uuid` (superadmins may pass `userId` to query on behalf of another user; non-superadmins always see their own rows).
 
 **POST body:**
 ```json
@@ -247,54 +266,76 @@ Validation: `name` 1–100 chars (required), `category` required, `proficiency` 
 }
 ```
 
+**404 contract:** `PUT /admin/skills/:id` and `DELETE /admin/skills/:id` both return `404 Skill not found` when:
+- the row id doesn't exist, **or**
+- the row exists but belongs to a different user (and the caller is not a superadmin)
+
+This is enforced via `.select("id")` + count check on every update/delete.
+
 ### Projects (Collection)
 
-| Method | Path | Description |
-|---|---|---|
-| GET | `/admin/projects` | List projects (paginated) |
-| POST | `/admin/projects` | Create project |
-| PUT | `/admin/projects/:id` | Update project |
-| DELETE | `/admin/projects/:id` | Soft-delete project |
+| Method | Path | Description | Error codes |
+|---|---|---|---|
+| GET | `/admin/projects` | List projects (paginated) | — |
+| POST | `/admin/projects` | Create project | 400 |
+| PUT | `/admin/projects/:id` | Update project | 400, 404 |
+| DELETE | `/admin/projects/:id` | Soft-delete project | 404 |
 
 **POST/PUT validation:** `title` 1–150 chars (required), `description` 10–2000 chars (required), `github_url`/`live_url`/`image_url` valid URL or empty/null, `tech_stack`/`tags` string arrays, `metrics` string array (max 20), `featured`/`is_published` boolean.
 
 ### Experience (Collection)
 
-| Method | Path | Description |
-|---|---|---|
-| GET | `/admin/experience` | List experience entries (paginated) |
-| POST | `/admin/experience` | Create experience |
-| PUT | `/admin/experience/:id` | Update experience |
-| DELETE | `/admin/experience/:id` | Soft-delete experience |
+| Method | Path | Description | Error codes |
+|---|---|---|---|
+| GET | `/admin/experience` | List experience entries (paginated) | — |
+| POST | `/admin/experience` | Create experience | 400 |
+| PUT | `/admin/experience/:id` | Update experience | 400, 404 |
+| DELETE | `/admin/experience/:id` | Soft-delete experience | 404 |
 
 Validation: `title` 1–150, `company` 1–150, `period` required.
 
 ### Certifications (Collection)
 
-| Method | Path | Description |
-|---|---|---|
-| GET | `/admin/certifications` | List certifications (paginated) |
-| POST | `/admin/certifications` | Create certification |
-| PUT | `/admin/certifications/:id` | Update certification |
-| DELETE | `/admin/certifications/:id` | Soft-delete certification |
+| Method | Path | Description | Error codes |
+|---|---|---|---|
+| GET | `/admin/certifications` | List certifications (paginated) | — |
+| POST | `/admin/certifications` | Create certification | 400 |
+| PUT | `/admin/certifications/:id` | Update certification | 400, 404 |
+| DELETE | `/admin/certifications/:id` | Soft-delete certification | 404 |
 
 Validation: `title` 1–200, `issuer` required, `credential_url` valid URL or null.
 
 ### Messages (Collection)
 
-| Method | Path | Description |
-|---|---|---|
-| GET | `/admin/messages` | List messages (paginated) |
-| GET | `/admin/messages/unread-count` | Unread message count |
-| PATCH | `/admin/messages/:id/read` | Mark as read |
-| PATCH | `/admin/messages/:id/unread` | Mark as unread |
-| DELETE | `/admin/messages/:id` | Soft-delete message |
-| POST | `/admin/messages/bulk-delete` | Bulk soft-delete |
+| Method | Path | Description | Error codes |
+|---|---|---|---|
+| GET | `/admin/messages` | List messages (paginated) | — |
+| GET | `/admin/messages/unread-count` | Unread message count | — |
+| PATCH | `/admin/messages/:id/read` | Mark as read | 404 |
+| PATCH | `/admin/messages/:id/unread` | Mark as unread | 404 |
+| DELETE | `/admin/messages/:id` | Soft-delete message | 404 |
+| POST | `/admin/messages/bulk-delete` | Bulk soft-delete | 400 |
 
 **bulk-delete body:**
 ```json
 { "ids": ["uuid1", "uuid2", "uuid3"] }
 ```
+
+### Section Settings (Collection)
+
+| Method | Path | Description | Error codes |
+|---|---|---|---|
+| GET | `/admin/section-settings` | List section visibility/order | — |
+| PUT | `/admin/section-settings/:id` | Update section settings | 400, 404 |
+| POST | `/admin/section-settings/reorder` | Reorder sections | 400 |
+
+### Users
+
+| Method | Path | Description | Error codes |
+|---|---|---|---|
+| GET | `/admin/users/me` | Get current authenticated user | 401 |
+| GET | `/admin/users` | List users (superadmin only) | 403 |
+| PATCH | `/admin/users/:id/role` | Change user role (superadmin only) | 400, 403, 404 |
 
 ### Contact Info (Singleton)
 

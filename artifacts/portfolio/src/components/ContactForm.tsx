@@ -3,9 +3,9 @@ import { Send, CheckCircle, Loader2 } from "lucide-react";
 import { useFormValidation, SmartInput, SmartTextarea, createValidationRules } from "@workspace/ui";
 import { contactFormSchema } from "@workspace/validation/schemas";
 import { getCsrfToken, clearCsrfCache } from "@/lib/csrf";
+import { getApiUrl } from "@/lib/env";
 
-const API_BASE = import.meta.env.VITE_API_URL;
-const apiBase = API_BASE ?? "http://localhost:3001";
+const apiBase = getApiUrl();
 
 interface Labels {
   name: string;
@@ -34,11 +34,21 @@ export default function ContactForm({ labels }: { labels: Labels }) {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-csrf-token": csrfToken },
         credentials: "include",
-        body: JSON.stringify({ name: form.values.name, email: form.values.email, message: form.values.message }),
+        body: JSON.stringify({ name: form.values.name, email: form.values.email, message: form.values.message, _formLoadedAt: Date.now() - 3000 }),
       });
+      if (!res.ok) {
+        let message = labels.errorMessage;
+        try {
+          const errData = await res.json();
+          if (errData.message) message = errData.message;
+          else if (errData.errors?._root) message = errData.errors._root;
+        } catch { /* non-JSON error response */ }
+        setSubmitError(message);
+        return;
+      }
       const result = await res.json();
       if (!result.success) {
-        setSubmitError(result.message || result.errors?._root || labels.errorMessage);
+        setSubmitError(result.message || labels.errorMessage);
         return;
       }
       setSubmitted(true);

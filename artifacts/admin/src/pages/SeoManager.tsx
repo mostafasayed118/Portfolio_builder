@@ -76,7 +76,7 @@ export default function SeoManager() {
       toast({ title: "Character limit exceeded", description: "Please reduce the title to 60 characters and description to 160 characters.", variant: "destructive" });
       return;
     }
-    const urlPattern = /^https?:\/\/.+/; {/* FIX: UX-020 */}
+    const urlPattern = /^https?:\/\/.+/;
     if (form.canonical_url && !urlPattern.test(form.canonical_url)) {
       toast({ title: "Invalid canonical URL", description: "Must start with http:// or https://", variant: "destructive" });
       return;

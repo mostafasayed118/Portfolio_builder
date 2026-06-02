@@ -40,7 +40,7 @@ const ProjectCard = memo(function ProjectCard({ project }: ProjectCardProps) {
       className="masonry-item group relative cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-2xl"
       data-testid={`card-project-${project.id}`}
       onClick={handleClick}
-      role="link" // FIX: UX-028
+      role="link"
       tabIndex={0}
       aria-label={`View details for ${project.title}`}
       onKeyDown={(e) => {
@@ -65,6 +65,8 @@ const ProjectCard = memo(function ProjectCard({ project }: ProjectCardProps) {
               src={project.imageId}
               alt={project.title}
               variants={project.imageVariants}
+              width={800}
+              height={450}
               className="h-48 w-full transition-transform duration-700 group-hover:scale-110"
               loading="lazy"
             />

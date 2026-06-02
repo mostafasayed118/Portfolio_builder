@@ -8,6 +8,7 @@ import ProjectCard from "@/components/ProjectCard";
 import { useProjectBySlug } from "@/hooks/use-portfolio-data";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
 import { trackEvent } from "@workspace/db/analytics";
+import { logWarn } from "@/lib/logger";
 
 function ProjectDetailSkeleton() {
   return (
@@ -111,7 +112,7 @@ export default function ProjectDetail({ slug }: ProjectDetailProps) {
       if (sb) trackEvent(sb, "project_view", `/projects/${project.slug}`, {
         project_slug: project.slug,
         title: project.title,
-      }).catch(() => {});
+      }).catch((err) => logWarn("trackEvent failed", err));
     }
   }, [project?.slug]);
 

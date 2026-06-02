@@ -7,6 +7,7 @@ import cookieParser from "cookie-parser";
 import { randomUUID } from "crypto";
 import v1Router from "./routes/v1";
 import { logger } from "./lib/logger";
+import { env } from "./lib/env";
 import { errorHandler } from "./middleware/errorHandler";
 import { generateCsrfToken } from "./middleware/csrf";
 import { generalLimiter } from "./middleware/rateLimiter";
@@ -14,7 +15,7 @@ import { generalLimiter } from "./middleware/rateLimiter";
 function isValidUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
-    const allowedProtocols = isProduction ? ["https:"] : ["http:", "https:"];
+    const allowedProtocols = env.IS_PRODUCTION ? ["https:"] : ["http:", "https:"];
     return allowedProtocols.includes(parsed.protocol);
   } catch {
     return false;
@@ -39,7 +40,7 @@ app.use(helmet({
       baseUri: ["'self'"],
       formAction: ["'self'"],
       workerSrc: ["'self'"],
-      upgradeInsecureRequests: process.env.NODE_ENV === "production" ? [] : null,
+      upgradeInsecureRequests: env.IS_PRODUCTION ? [] : null,
     },
   },
   crossOriginEmbedderPolicy: false,
@@ -65,13 +66,11 @@ app.use(
   }),
 );
 
-const isProduction = process.env.NODE_ENV === "production";
-
 const allowedOrigins = [
-  ...(isProduction ? [] : ["http://localhost:5173", "http://localhost:5174"]),
-  process.env.VITE_SITE_URL,
-  process.env.VITE_ADMIN_URL,
-  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
+  ...(env.IS_PRODUCTION ? [] : ["http://localhost:5173", "http://localhost:5174"]),
+  env.VITE_SITE_URL,
+  env.VITE_ADMIN_URL,
+  env.VERCEL_URL ? `https://${env.VERCEL_URL}` : undefined,
 ].filter((url): url is string => !!url && isValidUrl(url));
 
 app.use(cors({

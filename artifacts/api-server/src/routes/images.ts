@@ -6,6 +6,7 @@ import { doubleCsrfProtection } from "../middleware/csrf";
 import { adminAuth } from "../middleware/adminAuth";
 import { imageMetadataLimiter } from "../middleware/rateLimiter";
 import { getSupabaseClient } from "../lib/supabase-client";
+import { env } from "../lib/env";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -95,7 +96,7 @@ router.post("/images/upload", adminAuth, doubleCsrfProtection, upload.single("fi
     if (metaError) throw new Error(`Metadata insert failed: ${metaError.message}`);
 
     // Use Supabase's built-in image transformation via URL params
-    const supabaseUrl = process.env.SUPABASE_URL!;
+    const supabaseUrl = env.SUPABASE_URL;
     const publicUrl = `${supabaseUrl}/storage/v1/object/public/project_images/${storagePath}`;
 
     res.json({
@@ -114,11 +115,17 @@ router.post("/images/upload", adminAuth, doubleCsrfProtection, upload.single("fi
 
 // GET /api/images/:id/metadata — get image metadata
 router.get("/images/:id/metadata", imageMetadataLimiter, async (req: Request, res: Response) => {
+  const imageId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  if (!z.string().uuid().safeParse(imageId).success) {
+    res.status(400).json({ error: "Invalid image ID" });
+    return;
+  }
+
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from("image_metadata")
     .select("id, original_filename, mime_type, file_size_bytes, entity_type, entity_id, created_at")
-    .eq("id", req.params.id as string)
+    .eq("id", imageId)
     .single();
 
   if (error || !data) {
@@ -131,12 +138,18 @@ router.get("/images/:id/metadata", imageMetadataLimiter, async (req: Request, re
 
 // DELETE /api/images/:id — delete image (admin only)
 router.delete("/images/:id", adminAuth, doubleCsrfProtection, async (req: Request, res: Response) => {
+  const imageId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  if (!z.string().uuid().safeParse(imageId).success) {
+    res.status(400).json({ error: "Invalid image ID" });
+    return;
+  }
+
   try {
     const supabase = getSupabaseClient();
     const { data: meta, error: metaError } = await supabase
       .from("image_metadata")
       .select("storage_path, id")
-      .eq("id", req.params.id as string)
+      .eq("id", imageId)
       .single();
 
     if (metaError || !meta) {

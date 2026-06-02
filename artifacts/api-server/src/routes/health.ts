@@ -26,7 +26,7 @@ router.get("/healthz", async (_req, res) => {
       .from("site_settings")
       .select("id")
       .limit(1)
-      .single();
+      .maybeSingle();
     dbLatency = Date.now() - t;
     if (error) dbStatus = "error";
   } catch {

@@ -65,7 +65,7 @@ function SkillTag({ skill, index, t }: { skill: Skill; index: number; t?: Transl
       onClick={() => setHovered(v => !v)}
       onFocus={() => setHovered(true)}
       onBlur={() => setHovered(false)}
-      onKeyDown={(e) => { {/* FIX: UX-036 */}
+      onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           setHovered(v => !v);
@@ -187,12 +187,12 @@ export default function SkillsSection() {
   return (
     <section
       id="skills"
-      ref={ref as React.RefObject<HTMLElement>}
+      ref={ref}
       className="py-24 px-6"
     >
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-12">
-          <SectionLabel>{t.skills.title}</SectionLabel> {/* FIX: UX-002 */}
+          <SectionLabel>{t.skills.title}</SectionLabel>
           <h2 className="font-display font-bold text-3xl md:text-4xl text-foreground mb-3">
             {t.skills.title}
           </h2>

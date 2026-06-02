@@ -60,3 +60,5 @@ testsprite_tests/.env
 
 # Windows NUL device artifacts
 nul
+
+testsprite_tests\tmp\config.json

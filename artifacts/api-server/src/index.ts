@@ -1,12 +1,11 @@
 import "./preload-env";
 import app from "./app";
 import { logger } from "./lib/logger";
+import { env } from "./lib/env";
 
-const rawPort = process.env["PORT"] || "3001";
-const port = Number(rawPort);
-
-if (Number.isNaN(port) || port <= 0) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
+const port = env.PORT;
+if (!Number.isFinite(port) || port <= 0) {
+  throw new Error(`Invalid PORT value: "${port}"`);
 }
 
 const server = app.listen(port, (err) => {

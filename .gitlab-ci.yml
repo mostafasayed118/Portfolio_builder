@@ -1,0 +1,65 @@
+stages:
+  - validate
+  - test
+  - build
+
+variables:
+  NODE_VERSION: "22"
+  PNPM_VERSION: "9.15.0"
+
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - node_modules/
+    - artifacts/*/node_modules/
+    - lib/*/node_modules/
+
+.install_template: &install
+  before_script:
+    - corepack enable
+    - corepack prepare pnpm@${PNPM_VERSION} --activate
+    - pnpm install --frozen-lockfile
+
+install:
+  stage: validate
+  image: node:${NODE_VERSION}
+  <<: *install
+  script:
+    - echo "Dependencies installed successfully"
+
+typecheck:
+  stage: validate
+  image: node:${NODE_VERSION}
+  <<: *install
+  script:
+    - pnpm typecheck
+
+lint:
+  stage: validate
+  image: node:${NODE_VERSION}
+  <<: *install
+  script:
+    - pnpm lint
+
+test:
+  stage: test
+  image: node:${NODE_VERSION}
+  <<: *install
+  script:
+    - pnpm test
+  artifacts:
+    when: always
+    paths:
+      - test-results/
+    expire_in: 1 week
+
+build:
+  stage: build
+  image: node:${NODE_VERSION}
+  <<: *install
+  script:
+    - pnpm build
+  artifacts:
+    paths:
+      - artifacts/*/dist/
+    expire_in: 1 week

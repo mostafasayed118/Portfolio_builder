@@ -45,9 +45,9 @@ export async function upsertAboutContent(
       grade: args.grade ?? "Very Good",
       education_years: args.education_years ?? "2020 – 2024",
       languages: args.languages ?? [
-        { lang: "Arabic", level: "Native", pct: 100 },
-        { lang: "English", level: "Professional", pct: 85 },
-        { lang: "French", level: "Basic", pct: 30 },
+        { name: "Arabic", level: 100 },
+        { name: "English", level: 85 },
+        { name: "French", level: 30 },
       ],
       is_published: args.is_published ?? true,
       updated_at: now,

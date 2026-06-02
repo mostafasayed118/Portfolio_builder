@@ -135,8 +135,8 @@ export default function SkillsManager() {
                   </div>
                 </div>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
-                  <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]" aria-label="Edit skill" onClick={() => openEdit(row)}><Pencil className="h-4 w-4" /></Button> {/* STANDARDIZED: Type D — inline edit */}
-                  <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] text-destructive hover:text-destructive hover:bg-destructive/10" aria-label="Delete skill" onClick={() => setDeleteTarget(row.id)}><Trash2 className="h-4 w-4" /></Button> {/* STANDARDIZED: Type E — inline delete */}
+                  <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]" aria-label="Edit skill" onClick={() => openEdit(row)}><Pencil className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] text-destructive hover:text-destructive hover:bg-destructive/10" aria-label="Delete skill" onClick={() => setDeleteTarget(row.id)}><Trash2 className="h-4 w-4" /></Button>
                 </div>
               </div>
               );

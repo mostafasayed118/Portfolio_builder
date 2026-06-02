@@ -29,29 +29,6 @@ describe("api-client", () => {
     });
   });
 
-  it("falls back to x-admin-key when no clerk token", async () => {
-    vi.resetModules();
-    vi.stubEnv("VITE_ADMIN_API_KEY", "test-admin-key");
-
-    vi.mock("./auth-token", () => ({
-      getClerkToken: vi.fn().mockResolvedValue(null),
-    }));
-
-    const mockFetch = vi.fn().mockResolvedValue({
-      json: () => Promise.resolve({ success: true, data: {} }),
-    });
-    vi.stubGlobal("fetch", mockFetch);
-
-    const { api } = await import("./api-client");
-    await api.hero.get();
-
-    expect(mockFetch).toHaveBeenCalled();
-    const init = mockFetch.mock.calls[0][1] as RequestInit;
-    expect(init.headers).toMatchObject({
-      "x-admin-key": "test-admin-key",
-    });
-  });
-
   it("includes CSRF token for POST requests", async () => {
     const { getClerkToken } = await import("./auth-token");
     vi.mocked(getClerkToken).mockResolvedValue("clerk-token");

@@ -38,6 +38,8 @@ export function ImageWithFallback({
     <img
       src={src}
       alt={alt}
+      loading="lazy"
+      decoding="async"
       className={className}
       onError={() => setError(true)}
     />

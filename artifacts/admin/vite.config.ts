@@ -42,6 +42,21 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id: string) {
+          if (!id.includes("node_modules")) return;
+          if (id.includes("/node_modules/react-dom") || id.includes("/node_modules/react/")) return "vendor-react";
+          if (id.includes("@tanstack/react-query")) return "vendor-query";
+          if (id.includes("@radix-ui")) return "vendor-radix";
+          if (id.includes("@clerk")) return "vendor-clerk";
+          if (id.includes("framer-motion")) return "vendor-motion";
+          if (id.includes("lucide-react")) return "vendor-icons";
+          if (id.includes("@supabase")) return "vendor-supabase";
+        },
+      },
+    },
+    chunkSizeWarningLimit: 600,
   },
   ssr: { noExternal: ["@workspace/ui"] },
   server: {

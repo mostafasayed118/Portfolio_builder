@@ -61,8 +61,8 @@ const Header = memo(function Header({ onMenuClick }: Props) {
           variant="ghost"
           size="icon"
           onClick={() => setDark(!dark)}
-          className="text-muted-foreground hover:text-foreground min-h-[44px] min-w-[44px]" // FIX: UX-004
-          aria-pressed={dark} // FIX: UX-030
+          className="text-muted-foreground hover:text-foreground min-h-[44px] min-w-[44px]"
+          aria-pressed={dark}
           aria-label={`Switch to ${dark ? "light" : "dark"} mode`}
           title={dark ? "Switch to light mode" : "Switch to dark mode"}
         >

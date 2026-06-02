@@ -112,7 +112,7 @@ export default function AboutSection() {
   return (
     <section
       id="about"
-      ref={ref as React.RefObject<HTMLElement>}
+      ref={ref}
       className="relative py-24 px-6 bg-muted/20 overflow-hidden"
     >
       <div aria-hidden="true" className="absolute inset-0 pointer-events-none">
@@ -132,9 +132,6 @@ export default function AboutSection() {
           className={`grid md:grid-cols-2 gap-8 md:gap-10 section-reveal ${revealed ? "revealed" : ""}`}
         >
           <div className="space-y-6">
-            <p className="text-muted-foreground leading-relaxed text-sm max-w-prose">
-              {about.bio1}
-            </p>
             <p className="text-muted-foreground leading-relaxed text-sm max-w-prose">
               {about.bio2}
             </p>

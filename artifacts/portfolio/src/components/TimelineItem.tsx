@@ -39,13 +39,13 @@ const TYPE_CONFIG = {
 };
 
 const TimelineItem = memo(function TimelineItem({ title, company, location, period, description, technologies, type, index, isLast }: TimelineItemProps) {
-  const { ref, revealed } = useReveal(0.1);
+  const { ref, revealed } = useReveal<HTMLDivElement>(0.1);
   const config = TYPE_CONFIG[type] || TYPE_CONFIG.internship;
   const { Icon } = config;
 
   return (
     <div
-      ref={ref as React.RefObject<HTMLDivElement>}
+      ref={ref}
       className={`flex gap-4 section-reveal ${revealed ? "revealed" : ""}`}
       style={{ transitionDelay: `${index * 100}ms` }}
       data-testid={`timeline-item-${index}`}

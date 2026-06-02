@@ -5,6 +5,10 @@
   "packageManager": "pnpm@9.15.0",
   "scripts": {
     "preinstall": "node -e \"process.exit(process.env.npm_config_user_agent?.startsWith('pnpm') ? 0 : (console.error('Use pnpm instead') || 1))\"",
+    "dev": "pnpm -r --parallel --filter @workspace/portfolio --filter @workspace/admin --filter @workspace/api-server run dev",
+    "dev:portfolio": "pnpm --filter @workspace/portfolio run dev",
+    "dev:admin": "pnpm --filter @workspace/admin run dev",
+    "dev:api": "pnpm --filter @workspace/api-server run dev",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",

@@ -8,7 +8,7 @@ const { mockSupabaseClient } = vi.hoisted(() => {
     from: vi.fn(),
     select: vi.fn(),
     limit: vi.fn(),
-    single: vi.fn(),
+    maybeSingle: vi.fn(),
   };
   m.from.mockReturnValue(m);
   m.select.mockReturnValue(m);
@@ -27,7 +27,7 @@ function resetMocks() {
   mockSupabaseClient.from.mockClear();
   mockSupabaseClient.select.mockClear();
   mockSupabaseClient.limit.mockClear();
-  mockSupabaseClient.single.mockReset();
+  mockSupabaseClient.maybeSingle.mockReset();
 
   // Re-establish chain defaults
   mockSupabaseClient.from.mockReturnValue(mockSupabaseClient);
@@ -35,7 +35,7 @@ function resetMocks() {
   mockSupabaseClient.limit.mockReturnValue(mockSupabaseClient);
 
   // Default: ping returns success (site_settings has one row)
-  mockSupabaseClient.single.mockResolvedValue({ data: { id: 1 }, error: null });
+  mockSupabaseClient.maybeSingle.mockResolvedValue({ data: { id: 1 }, error: null });
 }
 
 beforeEach(() => {
@@ -105,7 +105,7 @@ describe("GET /api/v1/healthz", () => {
   });
 
   it("returns 503 with degraded status when DB ping returns error", async () => {
-    mockSupabaseClient.single.mockResolvedValue({ data: null, error: { message: "connection timeout" } });
+    mockSupabaseClient.maybeSingle.mockResolvedValue({ data: null, error: { message: "connection timeout" } });
 
     const res = await request(app).get("/api/v1/healthz");
 
@@ -116,7 +116,7 @@ describe("GET /api/v1/healthz", () => {
   });
 
   it("returns 503 with degraded status when ping throws", async () => {
-    mockSupabaseClient.single.mockRejectedValue(new Error("DB unreachable"));
+    mockSupabaseClient.maybeSingle.mockRejectedValue(new Error("DB unreachable"));
 
     const res = await request(app).get("/api/v1/healthz");
 
@@ -127,7 +127,7 @@ describe("GET /api/v1/healthz", () => {
 
   it("caches degraded status and returns 503 from cache", async () => {
     // First request — DB error, cached as degraded
-    mockSupabaseClient.single.mockResolvedValue({ data: null, error: { message: "timeout" } });
+    mockSupabaseClient.maybeSingle.mockResolvedValue({ data: null, error: { message: "timeout" } });
     const res1 = await request(app).get("/api/v1/healthz");
     expect(res1.status).toBe(503);
     expect(res1.body.status).toBe("degraded");

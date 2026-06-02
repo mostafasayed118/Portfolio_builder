@@ -172,7 +172,7 @@ export default function TypographyManager() {
                   key={p.display}
                   type="button"
                   role="radio"
-                  aria-checked={typo.display_font === p.display} // STANDARDIZED: Type I — font preset
+                  aria-checked={typo.display_font === p.display}
                   aria-label={`Select ${p.display} + ${p.body} font preset`}
                   onClick={() => applyPreset(p)}
                   className={`text-left p-3 rounded-lg border-2 transition-all min-h-[44px] hover:border-primary/50 hover:bg-accent/50 ${
