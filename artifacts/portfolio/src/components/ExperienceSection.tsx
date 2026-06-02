@@ -71,12 +71,12 @@ export default function ExperienceSection() {
   return (
     <section
       id="experience"
-      ref={ref as React.RefObject<HTMLElement>}
+      ref={ref}
       className="py-24 px-6 bg-muted/20"
     >
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-12">
-          <SectionLabel>{t.experience.title}</SectionLabel> {/* FIX: UX-002 */}
+          <SectionLabel>{t.experience.title}</SectionLabel>
           <h2 className="font-display font-bold text-3xl md:text-4xl text-foreground mb-3">
             {t.experience.title}
           </h2>

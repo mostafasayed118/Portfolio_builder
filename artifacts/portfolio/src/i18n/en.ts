@@ -12,6 +12,7 @@ export interface TranslationKeys {
     downloadCV: string;
     viewProjects: string;
     availableForWork: string;
+    fallbackRole: string;
   };
   about: {
     title: string;
@@ -99,6 +100,7 @@ export const en: TranslationKeys = {
     downloadCV: "Download CV",
     viewProjects: "View Projects",
     availableForWork: "Available for work",
+    fallbackRole: "Data Engineer",
   },
   about: {
     title: "About Me",

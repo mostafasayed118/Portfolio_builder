@@ -10,11 +10,11 @@ export interface Message {
   created_at: string;
 }
 
-function isUnread(msg: Message): boolean {
+export function isUnread(msg: Message): boolean {
   return msg.status === "unread" || msg.status === undefined;
 }
 
-function isArchived(msg: Message): boolean {
+export function isArchived(msg: Message): boolean {
   return msg.status === "archived";
 }
 

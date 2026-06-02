@@ -66,7 +66,7 @@ export default function ProjectsManager() {
 
   const handleSave = async () => {
     if (!editing) return;
-    if (!editing.title?.trim()) { toast({ title: "Title is required", variant: "destructive" }); return; } {/* FIX: UX-018 */}
+    if (!editing.title?.trim()) { toast({ title: "Title is required", variant: "destructive" }); return; }
     if (!editing.category?.trim()) { toast({ title: "Category is required", variant: "destructive" }); return; }
     if (!editing.description?.trim()) { toast({ title: "Description is required", variant: "destructive" }); return; }
     setSaving(true);
@@ -139,7 +139,7 @@ export default function ProjectsManager() {
       <div className="grid grid-cols-1 gap-4">
         {filteredProjects.map(p => (
           <Card key={p.id} className={!p.is_published ? "opacity-60" : ""}>
-            <CardContent className="pt-5 pb-4 flex items-start gap-4"> {/* FIX: UX-001 */}
+            <CardContent className="pt-5 pb-4 flex items-start gap-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-medium text-sm">{p.title}</span>
@@ -154,15 +154,15 @@ export default function ProjectsManager() {
                 </div>
               </div>
               <div className="flex gap-1 shrink-0">
-                <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]" aria-label="Edit project" onClick={() => { const { slug: _, image_url: __, tags: ___, created_at: ____, updated_at: _____, ...rest } = p; openEdit({ ...rest, category: p.category ?? "", featured: p.featured ?? false, is_published: p.is_published ?? false, github_url: p.github_url ?? "", live_url: p.live_url ?? undefined, metrics: p.metrics ?? [], sort_order: p.sort_order ?? 0 }); }}><Pencil className="h-4 w-4" /></Button> {/* STANDARDIZED: Type D — inline edit */}
-                <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] text-destructive hover:text-destructive hover:bg-destructive/10" aria-label="Delete project" onClick={() => { setDeleteId(p.id); }}><Trash2 className="h-4 w-4" /></Button> {/* STANDARDIZED: Type E — inline delete */}
+                <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]" aria-label="Edit project" onClick={() => { const { slug: _, image_url: __, tags: ___, created_at: ____, updated_at: _____, ...rest } = p; openEdit({ ...rest, category: p.category ?? "", featured: p.featured ?? false, is_published: p.is_published ?? false, github_url: p.github_url ?? "", live_url: p.live_url ?? undefined, metrics: p.metrics ?? [], sort_order: p.sort_order ?? 0 }); }}><Pencil className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] text-destructive hover:text-destructive hover:bg-destructive/10" aria-label="Delete project" onClick={() => { setDeleteId(p.id); }}><Trash2 className="h-4 w-4" /></Button>
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {filteredProjects.length === 0 && search && ( // FIX: UX-021
+      {filteredProjects.length === 0 && search && (
         <div className="text-center py-12">
           <SearchX className="h-10 w-10 mx-auto text-muted-foreground" />
           <p className="mt-3 font-medium">No projects matching "{search}"</p>
@@ -208,7 +208,7 @@ export default function ProjectsManager() {
                 <Input value={editing.live_url} onChange={e => setEditing(x => ({ ...x!, live_url: e.target.value }))} className="h-8 text-sm" /></div>
               <div className="space-y-2"><Label className="text-xs">Tech Stack</Label>
                 <div className="flex flex-wrap gap-1">
-                  {editing.tech_stack.map(t => <Badge key={t} variant="secondary" className="flex items-center gap-1 pr-1">{t}<button type="button" onClick={() => removeTag("tech_stack", t)} className="relative flex items-center justify-center h-5 w-5 after:absolute after:inset-[-8px] after:content-['']" aria-label={`Remove technology ${t}`}><X className="h-3 w-3" /></button></Badge>)} {/* STANDARDIZED: Type F — tag remove */}
+                  {editing.tech_stack.map(t => <Badge key={t} variant="secondary" className="flex items-center gap-1 pr-1">{t}<button type="button" onClick={() => removeTag("tech_stack", t)} className="relative flex items-center justify-center h-5 w-5 after:absolute after:inset-[-8px] after:content-['']" aria-label={`Remove technology ${t}`}><X className="h-3 w-3" /></button></Badge>)}
                 </div>
                 <div className="flex gap-2">
                   <Input value={techInput} onChange={e => setTechInput(e.target.value)} onKeyDown={e => e.key === "Enter" && addTag("tech_stack", techInput, setTechInput)} placeholder="Add tech…" className="h-8 text-sm" />

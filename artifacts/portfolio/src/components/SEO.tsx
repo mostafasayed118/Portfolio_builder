@@ -36,7 +36,7 @@ function SEOContent({
   const fullTitle = title ? `${title} — ${siteName}` : `${siteName} — ${JOB_TITLE}`;
   const metaDescription =
     description ||
-    `Portfolio of ${HERO.name}, ${JOB_TITLE} from Cairo, Egypt. ${HERO.description}`;
+    `Portfolio of ${HERO.name}, ${JOB_TITLE} from ${CONTACT.location}. ${HERO.description}`;
 
   useEffect(() => {
     const doc = document;

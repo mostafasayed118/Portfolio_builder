@@ -121,7 +121,7 @@ export default function CertificationsSection() {
   return (
     <section
       id="certifications"
-      ref={ref as React.RefObject<HTMLElement>}
+      ref={ref}
       className="py-24 px-6"
     >
       <div className="max-w-5xl mx-auto">

@@ -57,7 +57,7 @@ export default function ExperienceManager() {
 
   const handleSave = async () => {
     if (!editing) return;
-    if (!editing.title?.trim()) { toast({ title: "Title is required", variant: "destructive" }); return; } {/* FIX: UX-018 */}
+    if (!editing.title?.trim()) { toast({ title: "Title is required", variant: "destructive" }); return; }
     if (!editing.company?.trim()) { toast({ title: "Company is required", variant: "destructive" }); return; }
     if (!editing.period?.trim()) { toast({ title: "Period is required", variant: "destructive" }); return; }
     setSaving(true);
@@ -124,8 +124,8 @@ export default function ExperienceManager() {
                 <div className="text-xs text-muted-foreground mt-0.5">{item.period} · {item.location}</div>
               </div>
               <div className="flex gap-1">
-                <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]" aria-label="Edit experience" onClick={() => { const { current: _, order_num: __, created_at: ___, updated_at: ____, ...rest } = item; openEdit({ ...rest, sort_order: item.sort_order ?? 0, is_published: item.is_published ?? false }); }}><Pencil className="h-4 w-4" /></Button> {/* STANDARDIZED: Type D — inline edit */}
-                <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] text-destructive hover:text-destructive hover:bg-destructive/10" aria-label="Delete experience" onClick={() => setDeleteTarget(item.id)}><Trash2 className="h-4 w-4" /></Button> {/* STANDARDIZED: Type E — inline delete */}
+                <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]" aria-label="Edit experience" onClick={() => { const { current: _, order_num: __, created_at: ___, updated_at: ____, ...rest } = item; openEdit({ ...rest, sort_order: item.sort_order ?? 0, is_published: item.is_published ?? false }); }}><Pencil className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] text-destructive hover:text-destructive hover:bg-destructive/10" aria-label="Delete experience" onClick={() => setDeleteTarget(item.id)}><Trash2 className="h-4 w-4" /></Button>
               </div>
             </CardContent>
           </Card>
@@ -165,7 +165,7 @@ export default function ExperienceManager() {
                 {editing.description.map((d, i) => (
                   <div key={i} className="flex gap-2">
                     <Input value={d} onChange={e => updateDesc(i, e.target.value)} className="h-8 text-sm flex-1" placeholder={`Bullet ${i + 1}…`} />
-                    <button onClick={() => removeDesc(i)} className="relative min-h-[44px] min-w-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive after:absolute after:inset-[-6px]" aria-label={`Remove description bullet ${i + 1}`}><X size={14} /></button> {/* FIX: UX-005 */}
+                    <button onClick={() => removeDesc(i)} className="relative min-h-[44px] min-w-[44px] flex items-center justify-center text-muted-foreground hover:text-destructive after:absolute after:inset-[-6px]" aria-label={`Remove description bullet ${i + 1}`}><X size={14} /></button>
                   </div>
                 ))}
               </div>

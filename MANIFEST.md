@@ -1,37 +1,69 @@
 # ✅ COMPLETE FILE MANIFEST
 
-## Files Modified
-- artifacts/portfolio/src/components/SkillsSection.tsx — Added SKILL_CATEGORIES static fallback when DB returns empty
-- artifacts/portfolio/src/components/CertificationsSection.tsx — Replaced raw useQuery with useCertifications hook, added CertificationsSkeleton
-- artifacts/portfolio/src/pages/ProjectDetail.tsx — Added useProjectBySlug hook, skeleton loading, static fallback chain, 404 redirect
-- artifacts/portfolio/src/hooks/use-portfolio-data.ts — Fixed fetchAboutContent → getAboutContent, fixed groupSkillsByCategory level type
+> **Last updated:** 2026-06-01 (post reliability batch plan)
+
+## Files Added (2026-06-01)
+
+**API server (`artifacts/api-server/`)**
+- `src/lib/env.ts` — centralised, typed env validation (startup `process.exit(1)` for missing required vars, `_setOverride()` test hook)
+- `src/lib/route-helpers.ts` — shared pagination, user-scoping, error-logging helpers (`parsePagination`, `resolveTargetUserId`, `logSupabaseError`, `runCollectionQuery`)
+- `src/test/routes/collection-404.test.ts` — 14 regression tests for the 404-on-missing-row contract
+- `README.md` — API server docs (quickstart, env, architecture, conventions, tests, recent fixes)
+
+## Files Modified (2026-06-01)
+
+**API server (`artifacts/api-server/src/`)**
+- `lib/api-response.ts` — added `forbidden()`, `unauthorized()`, `rateLimited()` helpers
+- `lib/singleton-upsert.ts` — `any` cast confined to a local `_call()` helper
+- `middleware/errorHandler.ts` — captures route context (path, method, IP, requestId, content-type, content-length)
+- `middleware/rateLimiter.ts` — 429 messages use unified `{ success: false, message }` shape
+- `preload-env.ts` — delegates to new `env.ts` module
+- `routes/public/contact.ts` — honeypot, 2s time-trap, input normalization, structured abuse logging
+- `routes/admin/about.ts`, `hero.ts` — added `logSupabaseError` calls
+- `routes/admin/{about,contact-info,hero,seo-settings,section-settings,site-settings,theme-settings,typography-settings}.ts` — moved `getSupabaseClient()` from module import time into handler
+- `index.ts` — uses `env.PORT` instead of raw `process.env.PORT`
+- `package.json` — added `test`, `test:watch`, `test:coverage`, `verify`, `lint` scripts
+- `test/routes/health.test.ts` — updated mock to use `maybeSingle` (was `single`)
+
+**Docs (`docs/` and root-level)**
+- `docs/api.md` — contact form schema (honeypot + time-trap), 404 error column on every collection route, refreshed env table
+- `docs/setup.md` — env validation behavior, contact 403 troubleshooting, `verify` command
+- `docs/testing.md` — 31 API test files, 236 tests, new `verify`/`test` scripts
+- `docs/changelog.md` — 2026-06-01 entry
+- `BACKEND_AUDIT_REPORT.md` — mark H2, H4, M3, M6, L3, L5 resolved; new "post-2026-06-01 batch plan" sections
+- `TECHNICAL_DEBT_REPORT.md` — 2026-06-01 fixes table; overall score stays 0/10
+- `MEMORY_BANK.md` — new `lib` modules, env access pattern, 2026-06-01 resolved issues
+- `docs/README.md` — adds `artifacts/api-server/README.md` link to the index
+
+## Files Modified (earlier, kept for context)
+- `artifacts/portfolio/src/components/SkillsSection.tsx` — Added SKILL_CATEGORIES static fallback when DB returns empty
+- `artifacts/portfolio/src/components/CertificationsSection.tsx` — Replaced raw useQuery with useCertifications hook, added CertificationsSkeleton
+- `artifacts/portfolio/src/pages/ProjectDetail.tsx` — Added useProjectBySlug hook, skeleton loading, static fallback chain, 404 redirect
+- `artifacts/portfolio/src/hooks/use-portfolio-data.ts` — Fixed fetchAboutContent → getAboutContent, fixed groupSkillsByCategory level type
 
 ## Files Not Modified (already correct)
-- artifacts/portfolio/src/components/ProjectsSection.tsx — Already uses useProjects with fallback
-- artifacts/portfolio/src/components/ExperienceSection.tsx — Already uses useExperience with fallback
+- `artifacts/portfolio/src/components/ProjectsSection.tsx` — Already uses useProjects with fallback
+- `artifacts/portfolio/src/components/ExperienceSection.tsx` — Already uses useExperience with fallback
 
 ---
 
 # 🚀 SETUP CHECKLIST
 
 1. Clone repo: `git clone <repo-url>`
-2. Install workspace dependencies: `cd artifacts/portfolio && npm install`
-3. Install workspace packages: `cd lib/supabase && npm install`, `cd lib/db && npm install`
+2. Install dependencies (workspace root): `pnpm install`
+3. Install workspace packages: `cd lib/supabase && pnpm install`, `cd lib/db && pnpm install`
 4. Set up Supabase project:
    - Create project at https://supabase.com
-   - Get project URL and anon key
-5. Required env vars (in .env):
-   - `NEXT_PUBLIC_SUPABASE_URL=<your-supabase-url>`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-supabase-anon-key>`
-   - `NEXT_PUBLIC_SITE_URL=<your-site-url>`
-6. Run migrations in order:
-   - `supabase/migrations/001_init.sql`
-   - `supabase/migrations/002_projects.sql`
-   - `supabase/migrations/003_images.sql`
-   - `supabase/migrations/004_images.sql`
+   - Get project URL, anon key, and service role key
+5. Copy env files:
+   - `cp artifacts/portfolio/.env.example artifacts/portfolio/.env`
+   - `cp artifacts/admin/.env.example artifacts/admin/.env`
+   - `cp artifacts/api-server/.env.example artifacts/api-server/.env`
+6. Run migrations in order (Supabase SQL Editor or CLI)
 7. Start dev servers:
-   - Admin: `cd artifacts/admin && npm run dev`
-   - Portfolio: `cd artifacts/portfolio && npm run dev`
+   - API: `pnpm --filter @workspace/api-server dev` (port 3001)
+   - Admin: `pnpm --filter @workspace/admin dev` (port 5174)
+   - Portfolio: `pnpm --filter @workspace/portfolio dev` (port 5173)
 8. Login to admin → seed data
 9. Verify portfolio shows dynamic content
 

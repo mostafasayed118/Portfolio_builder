@@ -10,11 +10,14 @@ import { fetchProjectBySlug } from "@workspace/db/projects";
 import type { Skill as DbSkill } from "@workspace/supabase/types";
 import { SKILL_CATEGORIES } from "@/data/skills";
 
-// Realtime sync handles live updates; polling is a fallback for missed events.
-const POLL_INTERVAL = 5 * 60_000; // 5 min
-const STALE_TIME = 5 * 60_000;    // 5 min
+// Realtime sync (use-realtime-sync.ts) handles live updates for the
+// 3 most-active tables. The remaining tables (about, skills,
+// experience, certifications, contact_info, theme, typography, seo,
+// section_settings) don't poll — their React Query cache is treated
+// as "fresh" for 30 minutes, after which a background refetch fires
+// only when the component re-mounts or the window is focused.
+const STALE_TIME = 30 * 60_000; // 30 min
 const POLL_OPTIONS = {
-  refetchInterval: POLL_INTERVAL,
   refetchIntervalInBackground: false,
   refetchOnWindowFocus: false,
   staleTime: STALE_TIME,

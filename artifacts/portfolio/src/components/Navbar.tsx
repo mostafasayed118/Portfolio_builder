@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Moon, Sun, Menu, X } from "lucide-react";
 import { useTheme } from "@/lib/theme";
 import { useBranding } from "@/lib/branding";
@@ -26,6 +26,7 @@ export default function Navbar() {
   const { isSynced, mode, previousTheme, acknowledge } = useThemeSync();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const [activeSection, setActiveSection] = useState("");
 
   useThrottledScroll(() => {
@@ -47,6 +48,13 @@ export default function Navbar() {
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
+
+  // Return focus to hamburger button when mobile menu closes
+  useEffect(() => {
+    if (!mobileOpen) {
+      menuButtonRef.current?.focus();
+    }
+  }, [mobileOpen]);
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -98,6 +106,12 @@ export default function Navbar() {
 
   return (
     <div className="fixed top-0 left-0 right-0 z-50">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md focus:text-sm"
+      >
+        Skip to content
+      </a>
       {isSynced && (
         <div className="bg-primary/10 border-b border-primary/20 px-4 py-2 flex items-center justify-center gap-3 text-sm">
           <span>
@@ -190,6 +204,7 @@ export default function Navbar() {
             {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
           <button
+            ref={menuButtonRef}
             onClick={() => setMobileOpen((v) => !v)}
             onKeyDown={(e) => e.key === "Escape" && setMobileOpen(false)}
             className="h-9 w-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
@@ -203,7 +218,7 @@ export default function Navbar() {
         </div>
       </div>
 
-        {mobileOpen && ( // FIX: UX-013
+        {mobileOpen && (
           <div
             className="fixed inset-0 bg-black/40 z-30 md:hidden"
             onClick={() => setMobileOpen(false)}

@@ -127,7 +127,7 @@ describe("CV API", () => {
       const res = await request(app).get("/api/v1/cv");
 
       expect(res.status).toBe(404);
-      expect(res.body.error).toMatch(/no cv/i);
+      expect(res.body.message).toMatch(/no cv/i);
     });
 
     it("returns 500 when cv_settings DB query fails in fallback", async () => {
@@ -141,7 +141,7 @@ describe("CV API", () => {
       const res = await request(app).get("/api/v1/cv");
 
       expect(res.status).toBe(500);
-      expect(res.body.error).toMatch(/failed to fetch cv settings/i);
+      expect(res.body.message).toMatch(/failed to fetch cv settings/i);
     });
   });
 
@@ -159,11 +159,12 @@ describe("CV API", () => {
       const res = await request(app).get("/api/v1/cv/settings");
 
       expect(res.status).toBe(200);
-      expect(res.body).toHaveProperty("objectPath");
-      expect(res.body).toHaveProperty("fileName");
-      expect(res.body).toHaveProperty("updatedAt");
-      expect(res.body.objectPath).toBe("cv/test.pdf");
-      expect(res.body.fileName).toBe("resume.pdf");
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toHaveProperty("objectPath");
+      expect(res.body.data).toHaveProperty("fileName");
+      expect(res.body.data).toHaveProperty("updatedAt");
+      expect(res.body.data.objectPath).toBe("cv/test.pdf");
+      expect(res.body.data.fileName).toBe("resume.pdf");
     });
 
     it("returns null values when no settings exist", async () => {
@@ -175,8 +176,9 @@ describe("CV API", () => {
       const res = await request(app).get("/api/v1/cv/settings");
 
       expect(res.status).toBe(200);
-      expect(res.body.objectPath).toBeNull();
-      expect(res.body.fileName).toBeNull();
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.objectPath).toBeNull();
+      expect(res.body.data.fileName).toBeNull();
     });
 
     it("returns 500 when DB query fails", async () => {
@@ -188,7 +190,7 @@ describe("CV API", () => {
       const res = await request(app).get("/api/v1/cv/settings");
 
       expect(res.status).toBe(500);
-      expect(res.body.error).toMatch(/failed to fetch cv settings/i);
+      expect(res.body.message).toMatch(/failed to fetch cv settings/i);
     });
   });
 
@@ -206,7 +208,7 @@ describe("CV API", () => {
         .set("x-admin-key", mockAdminKey)
         .send({ objectPath: "/path/to/file", fileName: "resume.docx" });
       expect(res.status).toBe(400);
-      expect(res.body.error).toBeDefined();
+      expect(res.body.errors).toBeDefined();
     });
 
     it("returns 400 when objectPath is missing", async () => {
@@ -215,7 +217,7 @@ describe("CV API", () => {
         .set("x-admin-key", mockAdminKey)
         .send({ fileName: "resume.pdf" });
       expect(res.status).toBe(400);
-      expect(res.body.details).toBeDefined();
+      expect(res.body.errors).toBeDefined();
     });
 
     it("returns 400 when fileName is missing", async () => {
@@ -224,7 +226,7 @@ describe("CV API", () => {
         .set("x-admin-key", mockAdminKey)
         .send({ objectPath: "/cv/resume.pdf" });
       expect(res.status).toBe(400);
-      expect(res.body.details).toBeDefined();
+      expect(res.body.errors).toBeDefined();
     });
 
     it("returns 200 with valid data when existing record exists", async () => {
@@ -238,7 +240,7 @@ describe("CV API", () => {
         .set("x-admin-key", mockAdminKey)
         .send({ objectPath: "/cv/resume.pdf", fileName: "resume.pdf" });
       expect(res.status).toBe(200);
-      expect(res.body.id).toBe("existing-id-123");
+      expect(res.body.data.id).toBe("existing-id-123");
     });
 
     it("returns 200 and inserts when no existing record", async () => {
@@ -256,7 +258,7 @@ describe("CV API", () => {
         .set("x-admin-key", mockAdminKey)
         .send({ objectPath: "/cv/resume.pdf", fileName: "resume.pdf" });
       expect(res.status).toBe(200);
-      expect(res.body.id).toBe("new-id-456");
+      expect(res.body.data.id).toBe("new-id-456");
     });
 
     it("rejects non-PDF filenames with pattern validation", async () => {

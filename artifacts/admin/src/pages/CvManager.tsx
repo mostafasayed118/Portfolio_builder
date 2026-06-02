@@ -6,13 +6,7 @@ import { getSupabase } from "@/lib/supabase";
 import { logError } from "@/lib/logger";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Skeleton } from "@workspace/ui";
 import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
-import { getCsrfToken } from "@/lib/api-client";
-
-interface CvSettings {
-  objectPath: string | null;
-  fileName: string | null;
-  updatedAt: string;
-}
+import { api } from "@/lib/api-client";
 
 export default function CvManager() {
   const { toast } = useToast();
@@ -32,15 +26,9 @@ export default function CvManager() {
   } = useQuery({
     queryKey: ["cv-settings"],
     queryFn: async () => {
-      const res = await fetch("/api/v1/cv/settings");
-      if (!res.ok) {
-        throw new Error(
-          res.status === 401 ? "Session expired — please log in again" :
-          res.status === 404 ? "CV settings not found" :
-          `Failed to load CV settings (${res.status})`
-        );
-      }
-      return res.json() as Promise<CvSettings>;
+      const result = await api.cv.getSettings();
+      if (!result.success) throw new Error(result.message);
+      return result.data!;
     },
     retry: 1,
   });
@@ -50,7 +38,7 @@ export default function CvManager() {
       toast({ title: "Only PDF files are supported", variant: "destructive" });
       return;
     }
-    if (file.size > 10 * 1024 * 1024) { {/* FIX: UX-019 */}
+    if (file.size > 10 * 1024 * 1024) {
       toast({ title: "File too large", description: "Maximum file size is 10MB", variant: "destructive" });
       return;
     }
@@ -74,21 +62,11 @@ export default function CvManager() {
 
       setProgress(100);
 
-      const csrfToken = await getCsrfToken().catch(() => null);
-      const saveRes = await fetch("/api/v1/cv/settings", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          ...(csrfToken ? { "x-csrf-token": csrfToken } : {}),
-        },
-        body: JSON.stringify({ objectPath, fileName: file.name }),
-      });
-      if (!saveRes.ok) {
-        const errBody = await saveRes.text().catch(() => "");
+      const saveResult = await api.cv.updateSettings({ objectPath, fileName: file.name });
+      if (!saveResult.success) {
         await supabase.storage.from("cv").remove([objectPath]);
-        throw new Error(`Failed to save CV settings (${saveRes.status}): ${errBody.slice(0, 200)}`);
+        throw new Error(saveResult.message);
       }
-      await saveRes.json();
       await refetch();
       toast({ title: "CV uploaded successfully", description: `${file.name} is now live.` });
     } catch (err) {
@@ -123,16 +101,8 @@ export default function CvManager() {
       if (settings?.objectPath) {
         await supabase.storage.from("cv").remove([settings.objectPath]);
       }
-      const csrfToken = await getCsrfToken().catch(() => null);
-      const res = await fetch("/api/v1/cv/settings", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          ...(csrfToken ? { "x-csrf-token": csrfToken } : {}),
-        },
-        body: JSON.stringify({ objectPath: "", fileName: "" }),
-      });
-      if (!res.ok) throw new Error("Failed to update CV settings");
+      const result = await api.cv.updateSettings({ objectPath: "", fileName: "" });
+      if (!result.success) throw new Error(result.message);
       await refetch();
       toast({ title: "CV removed" });
     } catch (err) {
@@ -204,7 +174,7 @@ export default function CvManager() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="min-h-[44px] gap-1.5 text-xs" // FIX: UX-027
+                  className="min-h-[44px] gap-1.5 text-xs"
                   onClick={() => window.open("/api/v1/cv", "_blank")}
                 >
                   <ExternalLink size={12} />
@@ -213,7 +183,7 @@ export default function CvManager() {
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="min-h-[44px] min-w-[44px] text-destructive hover:text-destructive hover:bg-destructive/10" // STANDARDIZED: Type E — inline delete
+                  className="min-h-[44px] min-w-[44px] text-destructive hover:text-destructive hover:bg-destructive/10"
                   onClick={() => setShowRemoveConfirm(true)}
                   aria-label="Remove CV"
                 >

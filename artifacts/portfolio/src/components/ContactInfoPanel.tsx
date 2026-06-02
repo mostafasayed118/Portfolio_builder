@@ -1,6 +1,7 @@
 import { Mail, Phone, MapPin, Github, Linkedin } from "lucide-react";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
 import { trackEvent } from "@workspace/db/analytics";
+import { logWarn } from "@/lib/logger";
 
 interface Contact {
   email: string;
@@ -52,7 +53,7 @@ export default function ContactInfoPanel({ contact }: { contact: Contact }) {
                     const type = label.toLowerCase();
                     if (isSupabaseConfigured && (type === "email" || type === "github" || type === "linkedin")) {
                       const sb = getSupabase();
-                      if (sb) trackEvent(sb, "contact_click", "/", { type }).catch(() => {});
+                      if (sb) trackEvent(sb, "contact_click", "/", { type }).catch((err) => logWarn("trackEvent failed", err));
                     }
                   }}
                 >
@@ -72,6 +73,7 @@ export default function ContactInfoPanel({ contact }: { contact: Contact }) {
           src="https://www.openstreetmap.org/export/embed.html?bbox=31.2%2C30.0%2C31.4%2C30.15&layer=mapnik&marker=30.0626%2C31.2497"
           className="w-full h-full border-0"
           loading="lazy"
+          sandbox="allow-scripts allow-same-origin"
         />
       </div>
     </div>

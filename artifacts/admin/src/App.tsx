@@ -28,7 +28,19 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5,
-      retry: 1,
+      retry: (failureCount, error) => {
+        // Never retry 429 rate-limit responses — retrying amplifies the
+        // pressure on the very limiter that just rejected us. Surface the
+        // error to the user and let the manual "Try Again" button decide.
+        // Covers generalLimiter ("Too many requests…"),
+        // contactLimiter ("Too many messages sent…"), and
+        // adminLimiter ("Too many admin requests…") — all defined in
+        // artifacts/api-server/src/middleware/rateLimiter.ts.
+        if (error instanceof Error && /too many (requests|messages|admin)/i.test(error.message)) {
+          return false;
+        }
+        return failureCount < 1;
+      },
       refetchOnWindowFocus: false,
     },
   },

@@ -12,17 +12,9 @@ import { Button, Card, CardContent, Input, Skeleton, Textarea } from "@workspace
 import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
 import { SmartEmptyState } from "@/components/SmartEmptyState";
 import { getErrorMessage } from "@/lib/error-messages";
-import { MessageCard, type Message as Msg } from "@/components/MessageCard";
+import { MessageCard, type Message as Msg, isUnread, isArchived } from "@/components/MessageCard";
 import { MessageFilterBar } from "@/components/MessageFilterBar";
 import { MessagePagination } from "@/components/MessagePagination";
-
-function isUnread(msg: Msg): boolean {
-  return msg.status === "unread" || msg.status === undefined;
-}
-
-function isArchived(msg: Msg): boolean {
-  return msg.status === "archived";
-}
 
 function formatDate(ts: string): string {
   return new Date(ts).toLocaleDateString("en-US", {
@@ -99,12 +91,14 @@ export default function MessagesManager() {
     if (msg.id) {
       const res = await api.messages.markRead(msg.id);
       if (!res.success) throw new Error(res.message);
+      await queryClient.invalidateQueries({ queryKey: ["messages"] });
     }
   };
 
   const handleMarkAllRead = async () => {
     const allMsgs = msgs || [];
     await Promise.all(allMsgs.filter(m => isUnread(m)).map(m => api.messages.markRead(m.id)));
+    await queryClient.invalidateQueries({ queryKey: ["messages"] });
     toast({ title: "All marked as read" });
   };
 
@@ -263,6 +257,7 @@ export default function MessagesManager() {
           if (deleteTarget?.id) {
             const res = await api.messages.delete(deleteTarget.id);
             if (!res.success) throw new Error(res.message);
+            await queryClient.invalidateQueries({ queryKey: ["messages"] });
             toast({ title: "Message deleted" });
           }
           setDeleteTarget(null);

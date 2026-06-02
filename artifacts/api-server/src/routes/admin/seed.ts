@@ -4,10 +4,9 @@ import type { AuthenticatedRequest } from "../../middleware/adminAuth";
 import { requireSuperadmin } from "../../middleware/requireSuperadmin";
 import type { Response } from "express";
 import { getSupabaseClient } from "../../lib/supabase-client";
+import { badRequest, serverError } from "../../lib/api-response";
 
 const router: IRouter = Router();
-
-const supabase = getSupabaseClient();
 
 const HERO = {
   heading: "Hi, I'm",
@@ -45,31 +44,21 @@ const CERTIFICATIONS = [
 ];
 
 router.post("/", requireSuperadmin, doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
+  const supabase = getSupabaseClient();
   const errors: string[] = [];
   const summary: Record<string, number> = {};
   const force = req.query.force === "true";
   const userId = req.user?.id;
 
   if (force && req.query.confirm !== "true") {
-    return res.status(400).json({
-      success: false,
-      message: "Force re-seed requires confirm=true query param to prevent accidental data loss",
-      summary: {},
-      errors: [],
-    });
+    return badRequest(res, { _force: ["Force re-seed requires confirm=true query param to prevent accidental data loss"] });
   }
 
   if (!userId) {
-    return res.status(400).json({
-      success: false,
-      message: "No user context. Please log in again.",
-      summary: {},
-      errors: ["Missing user ID from authentication"],
-    });
+    return badRequest(res, { _auth: ["No user context. Please log in again."] });
   }
 
   try {
-    // If force re-seed, soft-delete existing data first (scoped to this user)
     if (force) {
       const now = new Date().toISOString();
       await supabase.from("skills").update({ deleted_at: now }).eq("user_id", userId).is("deleted_at", null);
@@ -257,11 +246,7 @@ router.post("/", requireSuperadmin, doubleCsrfProtection, async (req: Authentica
 
     return res.json({ success: true, summary, errors });
   } catch (e) {
-    return res.status(500).json({
-      success: false,
-      summary,
-      errors: [e instanceof Error ? e.message : "Failed to seed data"],
-    });
+    return serverError(res, e instanceof Error ? e.message : "Failed to seed data");
   }
 });
 

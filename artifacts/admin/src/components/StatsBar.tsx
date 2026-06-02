@@ -18,8 +18,6 @@ export function StatsBar() {
         return res.data;
       },
       enabled: isSupabaseConfigured,
-      retry: 2,
-      retryDelay: 1000,
     }),
     skills: useQuery({
       queryKey: ["skills", viewingUserId],
@@ -29,8 +27,6 @@ export function StatsBar() {
         return res.data;
       },
       enabled: isSupabaseConfigured,
-      retry: 2,
-      retryDelay: 1000,
     }),
     projects: useQuery({
       queryKey: ["projects", viewingUserId],
@@ -40,8 +36,6 @@ export function StatsBar() {
         return res.data;
       },
       enabled: isSupabaseConfigured,
-      retry: 2,
-      retryDelay: 1000,
     }),
   };
 

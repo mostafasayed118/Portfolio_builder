@@ -1,11 +1,13 @@
 # Feature Inventory — Mustafa Sayed Portfolio
 
-> **Project type:** Static single-page portfolio website  
-> **Stack:** React 18 · Vite · TailwindCSS v4 · wouter · lucide-react  
-> **Artifact path:** `artifacts/portfolio/`  
-> **Preview path:** `/` (root)  
-> **Data layer:** 100 % static — all content lives in `src/data/portfolio.ts`  
-> **Last audited:** 2026-05-03
+> **Project type:** Static single-page portfolio website (with optional API-backed dynamic data)
+> **Stack:** React 19 · Vite · TailwindCSS v4 · wouter · lucide-react
+> **Artifact path:** `artifacts/portfolio/`
+> **Preview path:** `/` (root)
+> **Data layer:** Static TypeScript constants in `src/data/portfolio.ts`; optionally hydrated by Supabase via `src/hooks/use-portfolio-data.ts` and a real-time sync hook
+> **Last audited:** 2026-06-01
+>
+> **Related docs:** [API Server README](../artifacts/api-server/README.md) — covers the backend that serves the contact form and CV download endpoints.
 
 ---
 
@@ -412,7 +414,7 @@ Visitor lands on page
 
 | Feature | Status | Gap |
 |---|---|---|
-| Contact form submission | ⚠️ UI-only | No backend, email service (e.g. EmailJS, Resend), or API endpoint — form shows success state but sends nothing |
+| Contact form submission | ✅ Wired | POST `/api/v1/contact` — see `artifacts/api-server/README.md`. Public endpoint with origin check, honeypot, 2s time-trap, 5/hr rate limit, input normalization, structured abuse logging |
 | Credential links | ⚠️ Placeholder | `credentialUrl` values point to issuer homepages, not actual credential verification URLs |
 | GitHub profile URL | ⚠️ Placeholder | `https://github.com/mustafa-sayed` — confirm this is the correct handle |
 | LinkedIn profile URL | ⚠️ Placeholder | `https://www.linkedin.com/in/mustafa-sayed` — confirm handle |
@@ -428,9 +430,9 @@ Visitor lands on page
 
 | Concern | Status | Notes |
 |---|---|---|
-| No backend = no auth surface | ✅ N/A | Purely static site |
+| No backend = no auth surface | ✅ N/A | Purely static site (the optional API is serverless, separated, and gated by Clerk + CSRF) |
 | No user data stored | ✅ N/A | Only `"theme"` key in `localStorage` |
-| Contact form data | ✅ Never transmitted | Form is UI-only; data stays in React state |
+| Contact form data | ✅ Sanitised + logged | Form is wired to `POST /api/v1/contact`; input is trimmed, email lowercased, control chars stripped; IP/UA/origin are logged but message content is not (PII) |
 | External links | ✅ `rel="noopener noreferrer"` | Applied on all `target="_blank"` anchors |
 | CV file served from same origin | ✅ Safe | PDF served from Vite's public directory |
 

@@ -29,11 +29,11 @@ const ISSUER_COLORS: Record<string, string> = {
 };
 
 export function CertCard({ cert, index, t }: { cert: Certificate; index: number; t: TranslationKeys }) {
-  const { ref, revealed } = useReveal(0.05);
+  const { ref, revealed } = useReveal<HTMLDivElement>(0.05);
 
   return (
     <div
-      ref={ref as React.RefObject<HTMLDivElement>}
+      ref={ref}
       className={`group relative section-reveal ${revealed ? "revealed" : ""}`}
       style={{ transitionDelay: `${index * 60}ms` }}
       data-testid={`cert-card-${cert.id}`}

@@ -96,5 +96,10 @@ vi.mock("@workspace/auth", () => ({
 vi.mock("@clerk/clerk-react", () => ({
   ClerkProvider: ({ children }: { children: React.ReactNode }) => children,
   useAuth: vi.fn(() => ({ isSignedIn: true, isLoaded: true, getToken: vi.fn() })),
+  useUser: vi.fn(() => ({
+    isLoaded: true,
+    isSignedIn: true,
+    user: { id: "user_test", primaryEmailAddress: { emailAddress: "admin@test.com" } },
+  })),
   SignIn: () => null,
 }));

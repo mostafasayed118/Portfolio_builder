@@ -3,11 +3,11 @@
   "apps": {
     "portfolio": {
       "url": "http://localhost:5173",
-      "startCommand": "cd artifacts/portfolio && npm run dev"
+      "startCommand": "pnpm --filter @workspace/portfolio dev"
     },
     "admin": {
       "url": "http://localhost:5174",
-      "startCommand": "cd artifacts/admin && npm run dev"
+      "startCommand": "pnpm --filter @workspace/admin dev"
     }
   },
   "env": {

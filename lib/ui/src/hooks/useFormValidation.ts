@@ -22,9 +22,12 @@ export function useFormValidation<T extends Record<string, unknown>>(
     setValues((prev: T) => ({ ...prev, [key]: value }));
     setTouched((prev: Partial<Record<keyof T, boolean>>) => {
       if (prev[key]) {
+        // Single-field validation: pass a single-key object to validateForm
+        // and cast the input to T. The schema arg has the same key shape
+        // as the full schema, so this is a safe cast.
         const fieldErrors = validateForm(
-          { [key]: value } as unknown as Partial<T>,
-          { [key]: schema[key] } as ValidationSchema<Partial<T>>,
+          { [key]: value } as T,
+          { [key]: schema[key] } as ValidationSchema<T>,
         );
         setErrors((prevErrors: FormErrors<T>) => ({
           ...prevErrors,
@@ -39,10 +42,10 @@ export function useFormValidation<T extends Record<string, unknown>>(
   const handleBlur = useCallback(<K extends keyof T>(key: K) => {
     setTouched((prev: Partial<Record<keyof T, boolean>>) => ({ ...prev, [key]: true }));
     const fieldErrors = validateForm(
-      { [key]: valuesRef.current[key] } as unknown as Partial<T>,
-      { [key]: schema[key] } as ValidationSchema<Partial<T>>,
+      { [key]: valuesRef.current[key] } as T,
+      { [key]: schema[key] } as ValidationSchema<T>,
     );
-    setErrors((prev: FormErrors<T>) => ({ ...prev, ...fieldErrors }));
+    setErrors((prevErrors: FormErrors<T>) => ({ ...prevErrors, ...fieldErrors }));
   }, [schema]);
 
   const validateAll = useCallback(() => {

@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useBranding } from "@/lib/branding";
 
 export function DynamicFavicon() {
-  const { faviconUrl, siteName } = useBranding();
+  const { faviconUrl } = useBranding();
 
   useEffect(() => {
     let link = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
@@ -17,10 +17,6 @@ export function DynamicFavicon() {
       link.href = "/favicon.ico";
     }
   }, [faviconUrl]);
-
-  useEffect(() => {
-    document.title = siteName;
-  }, [siteName]);
 
   return null;
 }

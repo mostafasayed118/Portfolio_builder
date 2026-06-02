@@ -1,5 +1,5 @@
 import { Github, Linkedin, Mail, Heart } from "lucide-react";
-import { HERO } from "@/data/portfolio";
+import { HERO, CONTACT } from "@/data/portfolio";
 import { useBranding } from "@/lib/branding";
 import { useLanguage } from "@/lib/language";
 
@@ -18,7 +18,7 @@ export default function Footer() {
           </div>
           <div>
             <span className="text-sm font-medium text-foreground">{siteName}</span>
-            <span className="block text-xs text-muted-foreground">Data Engineer · Cairo, Egypt</span>
+            <span className="block text-xs text-muted-foreground">Data Engineer · {CONTACT.location}</span>
           </div>
         </div>
 
@@ -43,7 +43,7 @@ export default function Footer() {
         </div>
 
         <p className="text-xs text-muted-foreground flex items-center gap-1">
-          {t.footer.madeWith} <Heart className="h-3 w-3 text-red-400 fill-red-400/30" /> Cairo
+          {t.footer.madeWith} <Heart className="h-3 w-3 text-red-400 fill-red-400/30" /> {CONTACT.location}
           <span className="hidden sm:inline"> · {new Date().getFullYear()}</span>
         </p>
       </div>

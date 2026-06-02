@@ -59,7 +59,7 @@ export default function ProjectsSection() {
           .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
           .map((p, i) => ({
             id: i + 1,
-            slug: p.title.toLowerCase().replace(/\s+/g, "-"),
+            slug: p.slug ?? p.title.toLowerCase().replace(/\s+/g, "-"),
             title: p.title,
             shortDescription: p.description,
             fullDescription: p.description,
@@ -90,12 +90,12 @@ export default function ProjectsSection() {
   return (
     <section
       id="projects"
-      ref={ref as React.RefObject<HTMLElement>}
+      ref={ref}
       className="py-24 px-6"
     >
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-12">
-          <SectionLabel>{t.projects.title}</SectionLabel> {/* FIX: UX-002 */}
+          <SectionLabel>{t.projects.title}</SectionLabel>
           <h2 className="font-display font-bold text-3xl md:text-4xl text-foreground mb-3">
             {t.projects.title}
           </h2>

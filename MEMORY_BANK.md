@@ -1,6 +1,7 @@
 # Portfolio-Fixer — Memory Bank
 
 > **Generated:** 2026-05-16
+> **Last updated:** 2026-06-01 (post reliability batch plan)
 > **Project Type:** Full-stack Portfolio CMS — pnpm monorepo
 > **Primary User:** Mustafa Sayed (Data Engineer, Cairo, Egypt)
 > **Architecture:** Supabase (DB) + Express 5 (API) + React 19 (SPA)
@@ -175,8 +176,19 @@ All tables live in the Supabase PostgreSQL database. 30 migration files in `supa
 | `artifacts/api-server/src/routes/images.ts` | Image upload with Supabase storage (sanitized entity types) |
 | `artifacts/api-server/src/routes/cv.ts` | CV PDF generation + download |
 | `artifacts/api-server/src/middleware/csrf.ts` | CSRF double-submit cookie protection |
-| `artifacts/api-server/src/middleware/rateLimiter.ts` | Rate limiting (general, contact, auth) |
+| `artifacts/api-server/src/middleware/rateLimiter.ts` | Rate limiting (general, contact, auth, admin, image, apiKey) |
 | `artifacts/api-server/src/middleware/upload.ts` | Multer file upload configuration |
+
+### API Server Lib Modules
+
+| File | Role |
+|---|---|
+| `artifacts/api-server/src/lib/env.ts` | Centralised env validation — typed accessors, startup `process.exit(1)` for missing required vars, `_setOverride()` test hook |
+| `artifacts/api-server/src/lib/supabase-client.ts` | Lazy Supabase client (created on first `getSupabaseClient()` call) |
+| `artifacts/api-server/src/lib/api-response.ts` | Response helpers — `ok()`, `created()`, `notFound()`, `forbidden()`, `unauthorized()`, `rateLimited()`, `badRequest()`, `serverError()`, `paginated()` |
+| `artifacts/api-server/src/lib/route-helpers.ts` | Shared collection helpers — `parsePagination`, `resolveTargetUserId`, `logSupabaseError`, `runCollectionQuery` |
+| `artifacts/api-server/src/lib/singleton-upsert.ts` | Upsert helper for settings tables (any cast now isolated to a local `_call()` helper) |
+| `artifacts/api-server/README.md` | API server docs — quickstart, env, architecture, conventions, test instructions |
 
 ---
 
@@ -203,12 +215,24 @@ All tables live in the Supabase PostgreSQL database. 30 migration files in `supa
 
 ### API Server (`artifacts/api-server/.env`)
 
+All env access goes through `src/lib/env.ts`. The server `process.exit(1)`s at
+boot if any **required** variable is missing (and `NODE_ENV !== "test"`).
+Tests can override values via `_setOverride()` without touching `process.env`.
+
 | Variable | Required | Description |
 |---|---|---|
 | `SUPABASE_URL` | Yes | Supabase project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Service role key (server-side operations) |
 | `CSRF_SECRET` | Yes | Secret for CSRF token generation |
+| `CLERK_SECRET_KEY` | No | Enables Clerk JWT verification (recommended in production) |
+| `CLERK_ISSUER` | No | Clerk issuer URL (optional) |
+| `ADMIN_API_KEY` | No | Alternative to Clerk JWT — `x-admin-key: <key>` header for machine-to-machine auth |
+| `VITE_ADMIN_EMAILS` | No | Comma-separated allowlist of admin emails (required if no `ADMIN_API_KEY`) |
+| `VITE_SITE_URL` / `VITE_ADMIN_URL` | No | CORS allowed origins (contact form enforces allowlist) |
+| `VERCEL_URL` | No | Auto-added CORS origin on Vercel |
 | `PORT` | No | HTTP port (default 3001) |
+| `LOG_LEVEL` | No | pino log level (default `info`) |
+| `DISABLE_RATE_LIMIT` | No | `true` disables all rate limiters (dev only) |
 
 ---
 
@@ -256,7 +280,7 @@ pnpm run build
 
 ## 8. Known Issues & Technical Debt
 
-See full report in [TECHNICAL_DEBT_REPORT.md](./TECHNICAL_DEBT_REPORT.md) — overall score: **7.5/10**.
+See full report in [TECHNICAL_DEBT_REPORT.md](./TECHNICAL_DEBT_REPORT.md) — overall score: **0/10** (post 2026-06-01 batch plan + 2026-06-01 session 2 follow-ups).
 
 ### Critical Issues (Resolved)
 
@@ -265,14 +289,29 @@ See full report in [TECHNICAL_DEBT_REPORT.md](./TECHNICAL_DEBT_REPORT.md) — ov
 - ~~CSP allowed `'unsafe-inline'` in script-src~~ — Removed; nonce-based CSP planned for future
 - ~~No pagination on messages manager~~ — Fixed with client-side pagination (20 per page)
 - ~~No soft-delete support~~ — Fixed with migration 030 adding `deleted_at` columns and updated RLS policies
+- ~~**`getSupabaseClient()` at module import time** (2026-06-01)~~ — Moved inside every route handler; env errors now surface at first request, not boot
+- ~~**`/healthz` uses `.single()` failing on empty `site_settings`** (2026-06-01)~~ — Switched to `.maybeSingle()`; locked by `src/test/routes/health.test.ts`
+- ~~**PUT /:id returns 200 even when no row matched** (2026-06-01)~~ — All routes now use `.select("id")` + count check; returns 404 on `count === 0`; locked by 14 new regression tests
+- ~~**Public contact: weak abuse controls** (2026-06-01)~~ — Honeypot + 2s time-trap + input normalization + structured abuse logging
+- ~~**Ad-hoc env validation** (2026-06-01)~~ — New `src/lib/env.ts` with typed accessors and startup `process.exit(1)`
+- ~~**Generic 500 errors with no route context** (2026-06-01)~~ — `logSupabaseError` and enriched `errorHandler` capture route + user + IP
+- ~~**Hardcoded TestSprite API key in `opencode.json`** (2026-06-01 session 2)~~ — Moved to `{env:TESTSPRITE_API_KEY}`; key should be rotated
+- ~~**Silent `localhost:3001` fallbacks in 4 places** (2026-06-01 session 2)~~ — `getApiUrl()` helper with explicit dev/prod behavior
+- ~~**Silent admin logger** (2026-06-01 session 2)~~ — Was emitting nothing in production; now uses `@workspace/logging` with Vite-aware env injection
+- ~~**No retry on transient Supabase errors in `syncUserFromClerk`** (2026-06-01 session 2)~~ — Added `withRetry()` with 3-attempt exponential backoff; 14 new unit tests
+- ~~**`as unknown as` double-casts in `use-mouse-tilt` and `useFormValidation`** (2026-06-01 session 2)~~ — Replaced with explicit single-step casts or optional types
+- ~~**HeroTypewriter empty-state: blinking cursor in empty space** (2026-06-01 session 2)~~ — Now shows localized fallback when roles array is empty
+- ~~**12 realtime subscriptions across all tables** (2026-06-01 session 2)~~ — Reduced to 3 (hero_content, projects, site_settings)
+- ~~**5-minute background polling** (2026-06-01 session 2)~~ — Removed; `staleTime` extended to 30 min; refresh on remount or window focus
 
-### Top 5 Remaining Issues
+### Top Remaining Issues
 
-1. **No component tests for admin** — Most mutation-heavy components (HeroEditor, ProjectsManager, SkillsManager, etc.) need unit tests.
-2. **`console.error` in structured logger** — The existing `admin/src/lib/logger.ts` is well-structured but could be shared across artifacts.
+1. **Pre-existing admin test infra issue** — 27 admin page tests fail to load due to a Vite/Vitest `react/jsx-dev-runtime` resolution issue in `lib/ui`. Not introduced by recent batches; needs a vitest config fix. Out of scope.
+2. **No component tests for admin** — Most mutation-heavy components (HeroEditor, ProjectsManager, SkillsManager, etc.) need unit tests.
 3. **Migration numbering** — Several skipped/preserved placeholder numbers (003, 010, 016-019) from earlier development.
 4. **CSP nonce migration** — `scriptSrc` still relies on `'self'` only; inline script bundles may need nonce injection for full CSP compliance.
-5. **Soft-delete API routes** — Migration 030 adds `deleted_at` columns but API routes still use hard deletes; needs route updates.
+5. **Service-role architecture** — API server uses `SUPABASE_SERVICE_ROLE_KEY` bypassing RLS, with all user-scoping enforced at the app layer. Documented in `artifacts/api-server/README.md` and `BACKEND_AUDIT_REPORT.md` (item C2 — accepted risk).
+6. **Hand-rolled `admin/src/lib/api-client.ts` reimplements what `lib/api-client-react` could provide** — 20 consumers; the generated client only covers 5 of 48 endpoints. Migration deferred until OpenAPI spec covers all endpoints.
 
 ---
 

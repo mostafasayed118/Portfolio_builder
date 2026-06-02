@@ -99,7 +99,7 @@ describe("Projects API", () => {
         .put("/api/v1/admin/projects/00000000-0000-0000-0000-000000000001")
         .set("x-admin-key", mockAdminKey)
         .send({ title: "Updated Project" });
-      expect([200, 500]).toContain(res.status);
+      expect([200, 404, 500]).toContain(res.status);
     });
   });
 

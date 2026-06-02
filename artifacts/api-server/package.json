@@ -7,7 +7,12 @@
     "dev": "pnpm run build && pnpm run start",
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "verify": "pnpm run typecheck && pnpm run test && pnpm run build",
+    "lint": "echo 'No linter configured for api-server yet'"
   },
   "dependencies": {
     "@clerk/backend": "^3.4.9",

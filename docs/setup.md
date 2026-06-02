@@ -140,7 +140,21 @@ curl http://localhost:5173
 
 # Check API health
 curl http://localhost:3001/api/v1/healthz
+
+# API server: dedicated verification (typecheck + test + build)
+pnpm --filter @workspace/api-server verify
 ```
+
+The API server reads its env through `src/lib/env.ts`. If any **required**
+variable is missing at boot (and `NODE_ENV !== "test"`), the server
+prints which vars are missing and `process.exit(1)`s. Required at boot:
+
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `CSRF_SECRET`
+
+Tests can override these via `_setOverride()` without touching
+`process.env` (which would leak across tests).
 
 ## Common Issues
 
@@ -158,3 +172,10 @@ Rate limiting is disabled when `NODE_ENV !== "production"`. If you set `NODE_ENV
 
 ### Clerk JWT verification fails
 Ensure `CLERK_SECRET_KEY` and `CLERK_ISSUER` are set in the API server's `.env`. The issuer URL must match your Clerk application's issuer exactly.
+
+### Contact form returns 403 with "Origin not allowed"
+The public `POST /api/v1/contact` endpoint enforces an origin allowlist
+via `VITE_SITE_URL` and `VITE_ADMIN_URL`. Both must be set in the API
+server's `.env`. In dev, missing origin is allowed (curl/Postman
+support); in production, missing origin returns `403`. See
+`docs/api.md` for the full abuse-control matrix.

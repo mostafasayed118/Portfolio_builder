@@ -25,7 +25,6 @@ type HeroFormData = {
     email?: string;
     [key: string]: string | undefined;
   };
-  custom_links: Array<{ label: string; url: string }>;
   stats: Array<{ label: string; value: string }>;
 };
 
@@ -50,7 +49,6 @@ export default function HeroEditor() {
       avatar_url: "",
       cv_url: "",
       social_links: {},
-      custom_links: [],
       stats: [],
     },
   });
@@ -78,7 +76,6 @@ export default function HeroEditor() {
           twitter: heroData.twitter_url || "",
           email: heroData.email || "",
         },
-        custom_links: [],
         stats: heroData.stats || [],
       });
     }
@@ -137,17 +134,6 @@ export default function HeroEditor() {
     const current = [...(watchedData.stats || [])];
     current.splice(index, 1);
     reset({ ...watchedData, stats: current });
-  };
-
-  const addCustomLink = () => {
-    const current = [...(watchedData.custom_links || [])];
-    reset({ ...watchedData, custom_links: [...current, { label: "", url: "" }] });
-  };
-
-  const removeCustomLink = (index: number) => {
-    const current = [...(watchedData.custom_links || [])];
-    current.splice(index, 1);
-    reset({ ...watchedData, custom_links: current });
   };
 
   if (isLoading) {
@@ -308,25 +294,6 @@ export default function HeroEditor() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Custom Links</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {watchedData.custom_links?.map((_: { label: string; url: string }, i: number) => (
-                <div key={i} className="flex gap-2">
-                  <Input {...register(`custom_links.${i}.label` as const)} placeholder="Label" />
-                  <Input {...register(`custom_links.${i}.url` as const)} placeholder="URL" />
-                  <Button type="button" variant="ghost" size="icon" onClick={() => removeCustomLink(i)} className="min-h-[44px] min-w-[44px]" aria-label={`Remove custom link ${i + 1}`}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-              <Button type="button" variant="outline" size="sm" onClick={addCustomLink} className="min-h-[44px]">
-                <Plus className="h-4 w-4 mr-2" /> Add custom link
-              </Button>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Live Preview */}

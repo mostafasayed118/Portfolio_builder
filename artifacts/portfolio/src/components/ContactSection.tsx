@@ -35,7 +35,7 @@ export default function ContactSection() {
   return (
     <section
       id="contact"
-      ref={ref as React.RefObject<HTMLElement>}
+      ref={ref}
       className="relative py-24 px-6 overflow-hidden"
     >
       <div aria-hidden="true" className="absolute inset-0 pointer-events-none">

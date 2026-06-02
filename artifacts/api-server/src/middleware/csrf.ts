@@ -1,11 +1,8 @@
 import { doubleCsrf } from "csrf-csrf";
 import type { Request } from "express";
+import { env } from "../lib/env";
 
-const CSRF_SECRET = process.env.CSRF_SECRET;
-if (!CSRF_SECRET) {
-  throw new Error("CSRF_SECRET environment variable is required");
-}
-const getSecret = (): string | string[] => CSRF_SECRET;
+const getSecret = (): string | string[] => env.CSRF_SECRET;
 
 export const {
   generateCsrfToken,
@@ -18,7 +15,7 @@ export const {
   cookieOptions: {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: env.IS_PRODUCTION,
     path: "/",
   },
   size: 64,

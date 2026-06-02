@@ -54,7 +54,7 @@ export default function CertificationsManager() {
 
   const handleSave = async () => {
     if (!editing) return;
-    if (!editing.title?.trim()) { toast({ title: "Title is required", variant: "destructive" }); return; } {/* FIX: UX-018 */}
+    if (!editing.title?.trim()) { toast({ title: "Title is required", variant: "destructive" }); return; }
     if (!editing.issuer?.trim()) { toast({ title: "Issuer is required", variant: "destructive" }); return; }
     if (!editing.date?.trim()) { toast({ title: "Date is required", variant: "destructive" }); return; }
     setSaving(true);
@@ -136,8 +136,8 @@ export default function CertificationsManager() {
                     <div className="text-xs text-muted-foreground">{cert.issuer} · {cert.date}</div>
                   </div>
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]" aria-label="Edit certification" onClick={() => openEdit(cert)}><Pencil className="h-4 w-4" /></Button> {/* STANDARDIZED: Type D — inline edit */}
-                    <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] text-destructive hover:text-destructive hover:bg-destructive/10" aria-label="Delete certification" onClick={() => setDeleteTarget(cert.id)}><Trash2 className="h-4 w-4" /></Button> {/* STANDARDIZED: Type E — inline delete */}
+                    <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]" aria-label="Edit certification" onClick={() => openEdit(cert)}><Pencil className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] text-destructive hover:text-destructive hover:bg-destructive/10" aria-label="Delete certification" onClick={() => setDeleteTarget(cert.id)}><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 </CardContent>
               </Card>

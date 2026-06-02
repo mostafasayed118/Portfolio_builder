@@ -3,6 +3,8 @@ import { Upload, X, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { useToast } from "@workspace/ui";
 import { Button } from "@workspace/ui";
 import { getCsrfToken } from "@/lib/api-client";
+import { getClerkToken } from "@/lib/auth-token";
+import { getApiUrl } from "@/lib/env";
 
 interface UploadedImage {
   id: string;
@@ -20,7 +22,7 @@ interface ImageUploaderProps {
   existingImages?: { id: string; url: string }[];
 }
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
+const API_BASE = getApiUrl();
 
 export default function ImageUploader({
   entityType,
@@ -73,6 +75,7 @@ export default function ImageUploader({
       };
 
       const csrfToken = await getCsrfToken().catch(() => null);
+      const clerkToken = await getClerkToken().catch(() => null);
 
       const result = await new Promise<UploadedImage>((resolve, reject) => {
         xhr.onload = () => {
@@ -89,14 +92,17 @@ export default function ImageUploader({
         };
         xhr.onerror = () => reject(new Error("Network error"));
         xhr.open("POST", `${API_BASE}/api/v1/images/upload`);
+        if (clerkToken) xhr.setRequestHeader("Authorization", `Bearer ${clerkToken}`);
         if (csrfToken) xhr.setRequestHeader("x-csrf-token", csrfToken);
         xhrRef.current = xhr;
         xhr.send(formData);
       });
 
-      const newUploaded = [...uploaded, result];
-      setUploaded(newUploaded);
-      onUploadComplete?.(newUploaded);
+      setUploaded(prev => {
+        const newUploaded = [...prev, result];
+        onUploadComplete?.(newUploaded);
+        return newUploaded;
+      });
       toast({ title: "Image uploaded", description: file.name });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Upload failed";
@@ -106,7 +112,7 @@ export default function ImageUploader({
       setUploading(false);
       setProgress(0);
     }
-  }, [entityType, entityId, maxFileSizeMB, onUploadComplete, uploaded, toast]);
+  }, [entityType, entityId, maxFileSizeMB, onUploadComplete, toast]);
 
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
@@ -126,14 +132,14 @@ export default function ImageUploader({
     dragCounter.current = 0;
     const files = Array.from(e.dataTransfer.files);
     for (const file of files) {
-      if (currentCount + uploaded.length < maxFiles) uploadFile(file);
+      if (currentCount < maxFiles) uploadFile(file);
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     for (const file of files) {
-      if (currentCount + uploaded.length < maxFiles) uploadFile(file);
+      if (currentCount < maxFiles) uploadFile(file);
     }
     e.target.value = "";
   };

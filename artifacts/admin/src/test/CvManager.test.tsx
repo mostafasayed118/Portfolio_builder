@@ -4,16 +4,28 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import CvManager from "@/pages/CvManager";
 
-const { mockToastSuccess, mockGetSupabase } = vi.hoisted(
+const { mockToastSuccess, mockGetSupabase, mockCvGetSettings, mockCvUpdateSettings } = vi.hoisted(
   () => ({
     mockToastSuccess: vi.fn(),
     mockGetSupabase: vi.fn(),
+    mockCvGetSettings: vi.fn(),
+    mockCvUpdateSettings: vi.fn(),
   }),
 );
 
 vi.mock("@/lib/supabase", () => ({
   getSupabase: mockGetSupabase,
   isSupabaseConfigured: true,
+}));
+
+vi.mock("@/lib/api-client", () => ({
+  api: {
+    cv: {
+      getSettings: (...args: any[]) => mockCvGetSettings(...args),
+      updateSettings: (...args: any[]) => mockCvUpdateSettings(...args),
+    },
+  },
+  getCsrfToken: vi.fn().mockResolvedValue("mock-csrf-token"),
 }));
 
 vi.mock("@workspace/ui", async (importOriginal) => {
@@ -40,16 +52,14 @@ function renderWithProviders(ui: React.ReactElement) {
   return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
 }
 
-const mockFetch = vi.fn();
-global.fetch = mockFetch;
-
 describe("CvManager", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ objectPath: null, fileName: null, updatedAt: "2024-01-01" }),
+    mockCvGetSettings.mockResolvedValue({
+      success: true,
+      data: { objectPath: null, fileName: null, updatedAt: "2024-01-01" },
     });
+    mockCvUpdateSettings.mockResolvedValue({ success: true });
     mockGetSupabase.mockReturnValue({
       storage: {
         from: () => ({
@@ -88,9 +98,9 @@ describe("CvManager", () => {
   });
 
   it("shows existing CV when available", async () => {
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ objectPath: "cv-123.pdf", fileName: "resume.pdf", updatedAt: "2024-01-01" }),
+    mockCvGetSettings.mockResolvedValue({
+      success: true,
+      data: { objectPath: "cv-123.pdf", fileName: "resume.pdf", updatedAt: "2024-01-01" },
     });
 
     renderWithProviders(<CvManager />);
