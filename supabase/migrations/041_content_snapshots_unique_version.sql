@@ -24,6 +24,11 @@ BEGIN
   END IF;
 END $$;
 
+-- Idempotent: drop the constraint first if it already exists (e.g. from
+-- a run under the pre-renumbering file names).
+ALTER TABLE content_snapshots
+  DROP CONSTRAINT IF EXISTS uq_content_snapshots_entity_version;
+
 ALTER TABLE content_snapshots
   ADD CONSTRAINT uq_content_snapshots_entity_version
   UNIQUE (entity_type, entity_id, version);
@@ -31,6 +36,9 @@ ALTER TABLE content_snapshots
 -- ---------------------------------------------------------------------------
 -- content_snapshots entity_id must be non-empty
 -- ---------------------------------------------------------------------------
+ALTER TABLE content_snapshots
+  DROP CONSTRAINT IF EXISTS chk_content_snapshots_entity_id_nonempty;
+
 ALTER TABLE content_snapshots
   ADD CONSTRAINT chk_content_snapshots_entity_id_nonempty
   CHECK (entity_id IS NOT NULL AND length(entity_id) > 0);
