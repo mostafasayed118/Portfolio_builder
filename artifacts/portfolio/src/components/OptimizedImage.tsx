@@ -79,7 +79,13 @@ export default function OptimizedImage({
           onLoad={() => setLoaded(true)}
           onError={() => { if (imgSrc !== fallback) setImgSrc(fallback); }}
           className={`w-full h-full object-cover transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"}`}
-          srcSet={imgSrc === src ? `${thumbnailUrl} 150w, ${smallUrl} 400w, ${mediumUrl} 800w, ${largeUrl} 1200w` : undefined}
+          srcSet={
+            imgSrc === src
+              ? [thumbnailUrl && `${thumbnailUrl} 150w`, `${smallUrl} 400w`, `${mediumUrl} 800w`, `${largeUrl} 1200w`]
+                  .filter(Boolean)
+                  .join(", ") || undefined
+              : undefined
+          }
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
         />
       )}

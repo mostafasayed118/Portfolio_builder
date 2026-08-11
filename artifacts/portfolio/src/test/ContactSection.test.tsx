@@ -49,7 +49,7 @@ vi.mock("@/components/SectionLabel", () => ({
   default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-import ContactSection from "@/components/ContactSection";
+import { ContactSection } from "@/features/contact";
 
 function renderWithProviders(ui: React.ReactElement) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });

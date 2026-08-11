@@ -3,16 +3,18 @@ import { doubleCsrfProtection } from "../../middleware/csrf";
 import type { AuthenticatedRequest } from "../../middleware/adminAuth";
 import { validateQueryUserId, validateParamId } from "../../middleware/validateUuid";
 import type { Response } from "express";
-import { z } from "zod";
+import { bulkDeleteMessagesSchema } from "@workspace/api-zod";
 import { getSupabaseClient } from "../../lib/supabase-client";
-import { ok, created, notFound, badRequest, serverError } from "../../lib/api-response";
-import { runCollectionQuery } from "../../lib/route-helpers";
+import { ok, badRequest, serverError } from "../../lib/api-response";
+import {
+  runCollectionQuery,
+  updateByIdAndUser,
+  softDeleteByIdAndUser,
+} from "../../lib/route-helpers";
 
 const router: IRouter = Router();
 
-const bulkDeleteSchema = z.object({
-  ids: z.array(z.string().uuid()).min(1, "At least one ID required"),
-});
+const bulkDeleteSchema = bulkDeleteMessagesSchema;
 
 router.get("/", validateQueryUserId, async (req: AuthenticatedRequest, res: Response) => {
   return runCollectionQuery(req, res, "messages", {
@@ -44,45 +46,15 @@ router.get("/unread-count", validateQueryUserId, async (req: AuthenticatedReques
 });
 
 router.patch("/:id/read", doubleCsrfProtection, validateParamId, async (req: AuthenticatedRequest, res: Response) => {
-  const supabase = getSupabaseClient();
-  const id = req.params.id as string;
-  const isSuperadmin = req.user?.role === "superadmin";
-  let query = supabase.from("messages").update({ status: "read" }).eq("id", id);
-  if (!isSuperadmin) {
-    query = query.eq("user_id", req.user?.id ?? "");
-  }
-  const { error, count } = await query.select("id");
-  if (error) return serverError(res, error.message);
-  if (!count || count === 0) return notFound(res, "Message not found");
-  return ok(res, undefined);
+  return updateByIdAndUser(req, res, "messages", req.params.id as string, { status: "read" }, "Message");
 });
 
 router.patch("/:id/unread", doubleCsrfProtection, validateParamId, async (req: AuthenticatedRequest, res: Response) => {
-  const supabase = getSupabaseClient();
-  const id = req.params.id as string;
-  const isSuperadmin = req.user?.role === "superadmin";
-  let query = supabase.from("messages").update({ status: "unread" }).eq("id", id);
-  if (!isSuperadmin) {
-    query = query.eq("user_id", req.user?.id ?? "");
-  }
-  const { error, count } = await query.select("id");
-  if (error) return serverError(res, error.message);
-  if (!count || count === 0) return notFound(res, "Message not found");
-  return ok(res, undefined);
+  return updateByIdAndUser(req, res, "messages", req.params.id as string, { status: "unread" }, "Message");
 });
 
 router.delete("/:id", doubleCsrfProtection, validateParamId, async (req: AuthenticatedRequest, res: Response) => {
-  const supabase = getSupabaseClient();
-  const id = req.params.id as string;
-  const isSuperadmin = req.user?.role === "superadmin";
-  let query = supabase.from("messages").update({ deleted_at: new Date().toISOString() }).eq("id", id);
-  if (!isSuperadmin) {
-    query = query.eq("user_id", req.user?.id ?? "");
-  }
-  const { error, count } = await query.select("id");
-  if (error) return serverError(res, error.message);
-  if (!count || count === 0) return notFound(res, "Message not found");
-  return ok(res, undefined);
+  return softDeleteByIdAndUser(req, res, "messages", req.params.id as string, "Message");
 });
 
 router.post("/bulk-delete", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {

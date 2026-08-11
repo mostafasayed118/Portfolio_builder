@@ -6,6 +6,7 @@ import pinoHttp from "pino-http";
 import cookieParser from "cookie-parser";
 import { randomUUID } from "crypto";
 import v1Router from "./routes/v1";
+import healthRouter from "./routes/health";
 import { logger } from "./lib/logger";
 import { env } from "./lib/env";
 import { errorHandler } from "./middleware/errorHandler";
@@ -28,8 +29,9 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      // 'unsafe-inline' kept for now because the SPA bundles inline scripts
-      // TODO: migrate to nonce-based CSP for production hardening
+      // The SPA bundles are built by Vite as external static assets, so
+      // script-src only needs 'self'. If the API server ever serves an
+      // HTML page with inline scripts, migrate to nonce-based CSP.
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
@@ -96,6 +98,14 @@ const csrfHandler = (req: Request, res: Response) => {
 };
 
 app.get("/api/v1/csrf-token", csrfHandler);
+
+// Health check (GET + HEAD) — mounted at the top-level /api prefix
+// BEFORE the v1 rate limiter and BEFORE the v1 router. The route
+// itself is unauthenticated, uncached, and does no I/O; it only
+// reports process.uptime() and the current timestamp. This is the
+// canonical liveness endpoint used by Docker / k8s / load
+// balancers.
+app.use("/api", healthRouter);
 
 app.use("/api/v1", generalLimiter);
 app.use("/api/v1", v1Router);

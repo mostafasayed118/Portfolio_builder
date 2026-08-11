@@ -1,7 +1,7 @@
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MessageCard, type Message } from "@/components/MessageCard";
+import { MessageCard, type Message } from "@/features/messages";
 
 const baseMessage: Message = {
   id: "msg-1",

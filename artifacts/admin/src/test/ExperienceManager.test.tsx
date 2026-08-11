@@ -2,7 +2,7 @@ import { vi, describe, it, expect, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import ExperienceManager from "@/pages/ExperienceManager";
+import { ExperienceManager } from "@/features/experience";
 
 const { mockList, mockCreate, mockUpdate, mockDelete, mockToastSuccess, mockToastError } = vi.hoisted(
   () => ({

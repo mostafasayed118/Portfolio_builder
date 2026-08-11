@@ -14,7 +14,478 @@ tags:
     description: CV/resume download and management
   - name: storage
     description: Object storage operations
+  - name: admin.hero
+    description: Hero section (singleton)
+  - name: admin.about
+    description: About section (singleton)
+  - name: admin.skills
+    description: Skills CRUD
+  - name: admin.projects
+    description: Projects CRUD
+  - name: admin.experience
+    description: Experience CRUD
+  - name: admin.certifications
+    description: Certifications CRUD
+  - name: admin.messages
+    description: Contact messages
+  - name: admin.contact-info
+    description: Contact info (singleton)
+  - name: admin.theme
+    description: Theme settings (singleton)
+  - name: admin.typography
+    description: Typography settings (singleton)
+  - name: admin.seo
+    description: SEO settings (singleton)
+  - name: admin.section
+    description: Section order settings
+  - name: admin.site
+    description: Site settings (singleton)
+  - name: admin.users
+    description: User management (superadmin)
 paths:
+  /v1/admin/hero:
+    get:
+      operationId: getHero
+      tags: [admin.hero]
+      summary: Get hero content
+      security: [{ adminAuth: [] }]
+      responses:
+        "200":
+          description: Hero content
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: "#/components/schemas/HeroContent" }
+    put:
+      operationId: updateHero
+      tags: [admin.hero]
+      summary: Update hero content
+      security: [{ adminAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/HeroInput" }
+      responses:
+        "200":
+          description: Updated
+
+  /v1/admin/about:
+    get:
+      operationId: getAbout
+      tags: [admin.about]
+      summary: Get about content
+      security: [{ adminAuth: [] }]
+      responses:
+        "200":
+          description: About content
+    put:
+      operationId: updateAbout
+      tags: [admin.about]
+      summary: Update about content
+      security: [{ adminAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AboutInput" }
+      responses:
+        "200":
+          description: Updated
+
+  /v1/admin/skills:
+    get:
+      operationId: listSkills
+      tags: [admin.skills]
+      summary: List all skills
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: userId
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: List of skills
+    post:
+      operationId: createSkill
+      tags: [admin.skills]
+      summary: Create a skill
+      security: [{ adminAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SkillInput" }
+      responses:
+        "201":
+          description: Created
+
+  /v1/admin/skills/{id}:
+    put:
+      operationId: updateSkill
+      tags: [admin.skills]
+      summary: Update a skill
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SkillInput" }
+      responses:
+        "200":
+          description: Updated
+    delete:
+      operationId: deleteSkill
+      tags: [admin.skills]
+      summary: Delete a skill
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: Deleted
+
+  /v1/admin/projects:
+    get:
+      operationId: listProjects
+      tags: [admin.projects]
+      summary: List all projects
+      security: [{ adminAuth: [] }]
+      responses:
+        "200":
+          description: List of projects
+    post:
+      operationId: createProject
+      tags: [admin.projects]
+      summary: Create a project
+      security: [{ adminAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProjectInput" }
+      responses:
+        "201":
+          description: Created
+
+  /v1/admin/projects/{id}:
+    put:
+      operationId: updateProject
+      tags: [admin.projects]
+      summary: Update a project
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProjectInput" }
+      responses:
+        "200":
+          description: Updated
+    delete:
+      operationId: deleteProject
+      tags: [admin.projects]
+      summary: Delete a project
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: Deleted
+
+  /v1/admin/experience:
+    get:
+      operationId: listExperience
+      tags: [admin.experience]
+      summary: List all experience entries
+      security: [{ adminAuth: [] }]
+      responses:
+        "200":
+          description: List of experience entries
+    post:
+      operationId: createExperience
+      tags: [admin.experience]
+      summary: Create an experience entry
+      security: [{ adminAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ExperienceInput" }
+      responses:
+        "201":
+          description: Created
+
+  /v1/admin/experience/{id}:
+    put:
+      operationId: updateExperience
+      tags: [admin.experience]
+      summary: Update an experience entry
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ExperienceInput" }
+      responses:
+        "200":
+          description: Updated
+    delete:
+      operationId: deleteExperience
+      tags: [admin.experience]
+      summary: Delete an experience entry
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: Deleted
+
+  /v1/admin/certifications:
+    get:
+      operationId: listCertifications
+      tags: [admin.certifications]
+      summary: List all certifications
+      security: [{ adminAuth: [] }]
+      responses:
+        "200":
+          description: List of certifications
+    post:
+      operationId: createCertification
+      tags: [admin.certifications]
+      summary: Create a certification
+      security: [{ adminAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CertificationInput" }
+      responses:
+        "201":
+          description: Created
+
+  /v1/admin/messages:
+    get:
+      operationId: listMessages
+      tags: [admin.messages]
+      summary: List all messages
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: userId
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: List of messages
+
+  /v1/admin/messages/unread-count:
+    get:
+      operationId: unreadMessageCount
+      tags: [admin.messages]
+      summary: Get unread message count
+      security: [{ adminAuth: [] }]
+      responses:
+        "200":
+          description: Unread count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count: { type: integer }
+
+  /v1/admin/messages/{id}/read:
+    patch:
+      operationId: markMessageRead
+      tags: [admin.messages]
+      summary: Mark a message as read
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Marked as read
+
+  /v1/admin/contact-info:
+    get:
+      operationId: getContactInfo
+      tags: [admin.contact-info]
+      summary: Get contact info
+      security: [{ adminAuth: [] }]
+      responses:
+        "200":
+          description: Contact info
+    put:
+      operationId: updateContactInfo
+      tags: [admin.contact-info]
+      summary: Update contact info
+      security: [{ adminAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        "200":
+          description: Updated
+
+  /v1/admin/theme-settings:
+    get:
+      operationId: getThemeSettings
+      tags: [admin.theme]
+      summary: Get theme settings
+      security: [{ adminAuth: [] }]
+      responses:
+        "200":
+          description: Theme settings
+    put:
+      operationId: updateThemeSettings
+      tags: [admin.theme]
+      summary: Update theme settings
+      security: [{ adminAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ThemeInput" }
+      responses:
+        "200":
+          description: Updated
+
+  /v1/admin/typography-settings:
+    get:
+      operationId: getTypographySettings
+      tags: [admin.typography]
+      summary: Get typography settings
+      security: [{ adminAuth: [] }]
+      responses:
+        "200":
+          description: Typography settings
+    put:
+      operationId: updateTypographySettings
+      tags: [admin.typography]
+      summary: Update typography settings
+      security: [{ adminAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TypographyInput" }
+      responses:
+        "200":
+          description: Updated
+
+  /v1/admin/seo-settings:
+    get:
+      operationId: getSeoSettings
+      tags: [admin.seo]
+      summary: Get SEO settings
+      security: [{ adminAuth: [] }]
+      responses:
+        "200":
+          description: SEO settings
+    put:
+      operationId: updateSeoSettings
+      tags: [admin.seo]
+      summary: Update SEO settings
+      security: [{ adminAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SeoInput" }
+      responses:
+        "200":
+          description: Updated
+
+  /v1/admin/site-settings:
+    get:
+      operationId: getSiteSettings
+      tags: [admin.site]
+      summary: Get site settings
+      security: [{ adminAuth: [] }]
+      responses:
+        "200":
+          description: Site settings
+    put:
+      operationId: updateSiteSettings
+      tags: [admin.site]
+      summary: Update site settings
+      security: [{ adminAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        "200":
+          description: Updated
+
+  /v1/admin/users:
+    get:
+      operationId: listUsers
+      tags: [admin.users]
+      summary: List all users (superadmin only)
+      security: [{ adminAuth: [] }]
+      responses:
+        "200":
+          description: List of users
+        "403":
+          description: Not a superadmin
+
+  /contact:
+    post:
+      operationId: submitContactForm
+      tags: [admin.messages]
+      summary: Submit contact form (public)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                email: { type: string, format: email }
+                message: { type: string }
+                _formLoadedAt: { type: integer }
+              required: [name, email, message]
+      responses:
+        "200":
+          description: Message submitted
+        "429":
+          description: Rate limited
+
   /healthz:
     get:
       operationId: healthCheck
@@ -50,7 +521,8 @@ paths:
     get:
       operationId: getCvSettings
       tags: [cv]
-      summary: Get current CV settings
+      summary: Get current CV settings (admin only)
+      security: [{ adminAuth: [] }]
       responses:
         "200":
           description: CV settings
@@ -205,5 +677,106 @@ components:
       properties:
         error:
           type: string
-      required:
-        - error
+        success:
+          type: boolean
+        message:
+          type: string
+    HeroContent:
+      type: object
+      properties:
+        heading: { type: string }
+        name: { type: string }
+        roles: { type: array, items: { type: string } }
+        description: { type: string }
+        github_url: { type: string }
+        linkedin_url: { type: string }
+        email: { type: string }
+        available: { type: boolean }
+        avatar_url: { type: string, nullable: true }
+        stats: { type: array, items: { type: object, properties: { label: { type: string }, value: { type: string } } } }
+    HeroInput:
+      type: object
+      properties:
+        heading: { type: string }
+        name: { type: string }
+        roles: { type: array, items: { type: string } }
+        description: { type: string }
+        github_url: { type: string }
+        linkedin_url: { type: string }
+        email: { type: string }
+        available: { type: boolean }
+    SkillInput:
+      type: object
+      properties:
+        name: { type: string }
+        category: { type: string }
+        proficiency: { type: integer, minimum: 0, maximum: 100 }
+        is_visible: { type: boolean }
+        sort_order: { type: integer }
+    ProjectInput:
+      type: object
+      properties:
+        title: { type: string }
+        slug: { type: string }
+        description: { type: string }
+        category: { type: string }
+        tech_stack: { type: array, items: { type: string } }
+        tags: { type: array, items: { type: string } }
+        featured: { type: boolean }
+        github_url: { type: string }
+        live_url: { type: string }
+        is_published: { type: boolean }
+    ExperienceInput:
+      type: object
+      properties:
+        title: { type: string }
+        company: { type: string }
+        location: { type: string }
+        period: { type: string }
+        description: { type: array, items: { type: string } }
+        technologies: { type: array, items: { type: string } }
+        type: { type: string, enum: [internship, certification, volunteer] }
+    CertificationInput:
+      type: object
+      properties:
+        title: { type: string }
+        issuer: { type: string }
+        date: { type: string }
+        category: { type: string }
+        credential_url: { type: string }
+    AboutInput:
+      type: object
+      properties:
+        bio1: { type: string }
+        bio2: { type: string }
+        location: { type: string }
+        years_of_experience: { type: integer }
+        education: { type: object }
+        languages: { type: array }
+    ThemeInput:
+      type: object
+      properties:
+        mode: { type: string, enum: [light, dark] }
+        light_primary: { type: string }
+        dark_primary: { type: string }
+        radius: { type: string }
+    TypographyInput:
+      type: object
+      properties:
+        body_font: { type: string }
+        display_font: { type: string }
+        base_font_size: { type: string }
+        line_height: { type: string }
+    SeoInput:
+      type: object
+      properties:
+        title: { type: string }
+        description: { type: string }
+        keywords: { type: string }
+        canonical_url: { type: string }
+  securitySchemes:
+    adminAuth:
+      type: apiKey
+      in: header
+      name: x-admin-key
+      description: Admin API key for server-side operations. Alternatively, use Bearer token from Clerk JWT.

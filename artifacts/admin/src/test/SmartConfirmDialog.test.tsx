@@ -66,4 +66,28 @@ describe("SmartConfirmDialog", () => {
     await userEvent.click(screen.getByText("Yes"));
     expect(onConfirm).toHaveBeenCalled();
   });
+
+  it("shows the error and keeps the dialog open when onConfirm rejects", async () => {
+    const onConfirm = vi.fn().mockRejectedValue(new Error("boom"));
+    render(
+      <SmartConfirmDialog
+        state={{
+          isOpen: true,
+          title: "Delete Item",
+          message: "This cannot be undone.",
+          confirmLabel: "Delete",
+          variant: "danger",
+          onConfirm,
+        }}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    await userEvent.click(screen.getByText("Delete"));
+
+    expect(await screen.findByText("boom")).toBeInTheDocument();
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+    const message = screen.getByText("This cannot be undone.");
+    expect(message).toBeInTheDocument();
+  });
 });

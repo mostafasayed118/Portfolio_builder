@@ -2,26 +2,12 @@ import { Router, type IRouter } from "express";
 import { doubleCsrfProtection } from "../../middleware/csrf";
 import type { AuthenticatedRequest } from "../../middleware/adminAuth";
 import type { Response } from "express";
-import { z } from "zod";
+import { sectionSettingSchema, sectionReorderSchema } from "@workspace/api-zod";
 import { getSupabaseClient } from "../../lib/supabase-client";
 import { validateParamId } from "../../middleware/validateUuid";
 import { ok, badRequest, serverError, notFound } from "../../lib/api-response";
 
 const router: IRouter = Router();
-
-const sectionSettingSchema = z.object({
-  key: z.string().max(50).optional(),
-  label: z.string().max(50).optional(),
-  is_visible: z.boolean().optional(),
-  sort_order: z.coerce.number().int().min(0).max(999).optional(),
-});
-
-const reorderItemSchema = z.object({
-  id: z.string().uuid(),
-  sort_order: z.coerce.number().int().min(0).max(999),
-});
-
-const reorderSchema = z.array(reorderItemSchema).min(1).max(50);
 
 router.get("/", async (_req: AuthenticatedRequest, res: Response) => {
   const supabase = getSupabaseClient();
@@ -48,13 +34,13 @@ router.put("/:id", validateParamId, doubleCsrfProtection, async (req: Authentica
 
 router.post("/reorder", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
   const supabase = getSupabaseClient();
-  const result = reorderSchema.safeParse(req.body);
+  const result = sectionReorderSchema.safeParse(req.body);
   if (!result.success) {
     return badRequest(res, result.error.flatten().fieldErrors as Record<string, string[]>);
   }
   const items = result.data;
-  const sectionIds = items.map((item) => item.id);
-  const sortOrders = items.map((item) => item.sort_order);
+  const sectionIds = items.map((item: { id: string }) => item.id);
+  const sortOrders = items.map((item: { sort_order: number }) => item.sort_order);
 
   const { error } = await supabase.rpc("reorder_sections", {
     section_ids: sectionIds,

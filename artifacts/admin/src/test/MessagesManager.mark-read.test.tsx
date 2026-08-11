@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderAdmin } from "./helpers";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import MessagesManager from "@/pages/MessagesManager";
+import { MessagesManager } from "@/features/messages";
 
 const { mockList, mockMarkRead, mockDelete, mockUnreadCount, mockToast } = vi.hoisted(
   () => ({

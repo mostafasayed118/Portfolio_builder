@@ -28,6 +28,9 @@ export interface TranslationKeys {
       intermediate: string;
       advanced: string;
       expert: string;
+      native: string;
+      fluent: string;
+      basic: string;
     };
   };
   projects: {
@@ -48,12 +51,25 @@ export interface TranslationKeys {
     present: string;
     years: string;
     months: string;
+    types: {
+      internship: string;
+      certification: string;
+      volunteer: string;
+    };
   };
   certifications: {
     title: string;
     all: string;
     viewCertificate: string;
     credentialId: string;
+    categories: {
+      python: string;
+      "data-engineering": string;
+      cloud: string;
+      database: string;
+      ai: string;
+      other: string;
+    };
   };
   contact: {
     title: string;
@@ -66,6 +82,13 @@ export interface TranslationKeys {
     successTitle: string;
     successMessage: string;
     errorMessage: string;
+    labels: {
+      email: string;
+      phone: string;
+      location: string;
+      github: string;
+      linkedin: string;
+    };
   };
   common: {
     loading: string;
@@ -75,6 +98,8 @@ export interface TranslationKeys {
     present: string;
     readMore: string;
     close: string;
+    welcomeTitle: string;
+    welcomeDescription: string;
   };
   language: {
     switch: string;
@@ -116,6 +141,9 @@ export const en: TranslationKeys = {
       intermediate: "Intermediate",
       advanced: "Advanced",
       expert: "Expert",
+      native: "Native",
+      fluent: "Fluent",
+      basic: "Basic",
     },
   },
   projects: {
@@ -136,12 +164,25 @@ export const en: TranslationKeys = {
     present: "Present",
     years: "yrs",
     months: "mos",
+    types: {
+      internship: "Internship",
+      certification: "Certification",
+      volunteer: "Volunteer",
+    },
   },
   certifications: {
     title: "Certifications",
     all: "All",
     viewCertificate: "View Certificate",
     credentialId: "Credential ID",
+    categories: {
+      python: "Python",
+      "data-engineering": "Data Engineering",
+      cloud: "Cloud",
+      database: "Database",
+      ai: "AI & Data Science",
+      other: "Other",
+    },
   },
   contact: {
     title: "Get In Touch",
@@ -154,6 +195,13 @@ export const en: TranslationKeys = {
     successTitle: "Message sent!",
     successMessage: "Thank you for reaching out. I'll get back to you soon.",
     errorMessage: "Failed to send message. Please try again.",
+    labels: {
+      email: "Email",
+      phone: "Phone",
+      location: "Location",
+      github: "GitHub",
+      linkedin: "LinkedIn",
+    },
   },
   common: {
     loading: "Loading...",
@@ -163,6 +211,8 @@ export const en: TranslationKeys = {
     present: "Present",
     readMore: "Read More",
     close: "Close",
+    welcomeTitle: "Welcome to my portfolio!",
+    welcomeDescription: "Explore my projects, skills, and experience. Feel free to reach out!",
   },
   language: {
     switch: "\u0627\u0644\u0639\u0631\u0628\u064a\u0629",

@@ -16,12 +16,16 @@ import siteSettingsRouter from "./site-settings";
 import seedRouter from "./seed";
 import aiAssistantRouter from "./ai-assistant";
 import usersRouter from "./users";
+import auditRouter from "./audit";
+import previewRouter from "./preview";
+import cvRouter from "./cv";
 
 const router: IRouter = Router();
 
 router.use(apiKeyLimiter);
 router.use(adminLimiter);
 
+router.use("/cv", cvRouter);
 router.use("/hero", heroRouter);
 router.use("/about", aboutRouter);
 router.use("/skills", skillsRouter);
@@ -38,5 +42,7 @@ router.use("/site-settings", siteSettingsRouter);
 router.use("/seed", seedRouter);
 router.use("/ai-assistant", aiAssistantRouter);
 router.use("/users", usersRouter);
+router.use("/audit", auditRouter);
+router.use("/preview", previewRouter);
 
 export default router;

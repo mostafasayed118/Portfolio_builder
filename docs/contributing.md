@@ -4,41 +4,70 @@
 
 ### Naming
 
-| Context | Convention | Example |
-|---------|-----------|---------|
-| Database columns | `snake_case` | `created_at`, `is_published`, `sort_order` |
-| TypeScript variables/functions | `camelCase` | `getHeroContent()`, `isPublished` |
-| React components | `PascalCase` | `HeroSection`, `SmartConfirmDialog` |
-| Files (components) | `PascalCase.tsx` | `HeroSection.tsx`, `AdminLayout.tsx` |
-| Files (utilities) | `camelCase.ts` or `kebab-case.ts` | `heroContent.ts`, `use-typewriter.ts` |
-| Files (hooks) | `use-*.ts` | `use-reveal.ts`, `use-before-unload.ts` |
-| Database tables | `snake_case` | `hero_content`, `section_settings` |
-| Supabase policies | `snake_case` descriptive | `public_read_hero`, `admin_all_skills` |
-| CSS classes | Tailwind utilities | `flex items-center gap-4` |
+| Context                        | Convention                        | Example                                    |
+| ------------------------------ | --------------------------------- | ------------------------------------------ |
+| Database columns               | `snake_case`                      | `created_at`, `is_published`, `sort_order` |
+| TypeScript variables/functions | `camelCase`                       | `getHeroContent()`, `isPublished`          |
+| React components               | `PascalCase`                      | `HeroSection`, `SmartConfirmDialog`        |
+| Files (components)             | `PascalCase.tsx`                  | `HeroSection.tsx`, `AdminLayout.tsx`       |
+| Files (utilities)              | `camelCase.ts` or `kebab-case.ts` | `heroContent.ts`, `use-typewriter.ts`      |
+| Files (hooks)                  | `use-*.ts`                        | `use-reveal.ts`, `use-before-unload.ts`    |
+| Database tables                | `snake_case`                      | `hero_content`, `section_settings`         |
+| Supabase policies              | `snake_case` descriptive          | `public_read_hero`, `admin_all_skills`     |
+| CSS classes                    | Tailwind utilities                | `flex items-center gap-4`                  |
 
-### File Structure
+### File Structure — Feature-Based
 
-| New file type | Location |
-|--------------|----------|
-| Portfolio component | `artifacts/portfolio/src/components/` |
-| Portfolio hook | `artifacts/portfolio/src/hooks/` |
-| Portfolio page | `artifacts/portfolio/src/pages/` |
-| Admin page | `artifacts/admin/src/pages/` |
-| Admin component | `artifacts/admin/src/components/` |
-| Admin hook | `artifacts/admin/src/hooks/` |
-| API route | `artifacts/api-server/src/routes/v1/` |
-| API middleware | `artifacts/api-server/src/middleware/` |
-| DB access module | `lib/db/src/` |
-| Validation schema | `lib/validation/src/schemas.ts` |
-| UI primitive | `lib/ui/src/components/primitives/` |
-| Database migration | `supabase/migrations/NNN_description.sql` |
+| New file type               | Location                                                 |
+| --------------------------- | -------------------------------------------------------- |
+| Portfolio feature component | `artifacts/portfolio/src/features/<feature>/components/` |
+| Portfolio feature hook      | `artifacts/portfolio/src/features/<feature>/hooks/`      |
+| Portfolio feature types     | `artifacts/portfolio/src/features/<feature>/types.ts`    |
+| Portfolio barrel export     | `artifacts/portfolio/src/features/<feature>/index.ts`    |
+| Shared portfolio component  | `artifacts/portfolio/src/components/`                    |
+| Admin feature component     | `artifacts/admin/src/features/<feature>/components/`     |
+| Admin feature hook          | `artifacts/admin/src/features/<feature>/hooks/`          |
+| Admin feature types         | `artifacts/admin/src/features/<feature>/types.ts`        |
+| Admin barrel export         | `artifacts/admin/src/features/<feature>/index.ts`        |
+| Shared admin component      | `artifacts/admin/src/components/`                        |
+| API route                   | `artifacts/api-server/src/routes/v1/`                    |
+| API middleware              | `artifacts/api-server/src/middleware/`                   |
+| DB access module            | `lib/db/src/`                                            |
+| Validation schema           | `lib/validation/src/schemas.ts`                          |
+| UI primitive                | `lib/ui/src/components/primitives/`                      |
+| Database migration          | `supabase/migrations/NNN_description.sql`                |
+
+### Feature Folder Structure
+
+Every new feature MUST follow this structure:
+
+```
+features/<feature>/
+  ├── components/
+  │   ├── FeaturePage.tsx        # Main page component
+  │   ├── FeatureSubComponent.tsx # Extracted sub-component if > 250 lines
+  │   └── FeatureSkeleton.tsx     # Loading state (optional)
+  ├── hooks/
+  │   └── useFeature.ts          # Data fetching and business logic
+  ├── types.ts                   # TypeScript interfaces
+  └── index.ts                   # Barrel export
+```
+
+**Rules:**
+
+- All imports from features use barrel files: `import { Feature } from "@/features/<feature>"`
+- No file exceeds 250 lines — split into sub-components
+- One component per file
+- Types extracted to separate file when shared across components
 
 ### TypeScript
 
-- Strict mode enabled (`tsconfig.base.json`)
-- `noImplicitAny: true` — no implicit `any`
-- `strictNullChecks: true` — null/undefined must be handled explicitly
-- `useUnknownInCatchVariables: true` — catch variables are `unknown`
+- **Strict mode** fully enabled in `tsconfig.base.json`:
+  - `strictFunctionTypes: true` — function parameter bivariance disabled
+  - `noUnusedLocals: true` — dead code flagged as error
+  - `strictNullChecks: true` — null/undefined must be handled explicitly
+  - `noImplicitAny: true` — no implicit `any`
+  - `useUnknownInCatchVariables: true` — catch variables are `unknown`
 - Avoid `any` — use `unknown` and narrow with type guards
 - Avoid type assertions (`as`) — prefer runtime validation
 
@@ -64,13 +93,24 @@ Checklist for adding a new CMS-managed content type:
 - [ ] **DB module:** Create `lib/db/src/newEntity.ts` with CRUD functions
 - [ ] **Validation:** Add schema in `lib/validation/src/schemas.ts`
 - [ ] **API routes:** Add Express routes in `artifacts/api-server/src/routes/v1/`
-- [ ] **Admin page:** Create manager page in `artifacts/admin/src/pages/`
-- [ ] **Portfolio component:** Create section component in `artifacts/portfolio/src/components/`
+- [ ] **Admin feature:** Create `artifacts/admin/src/features/<feature>/` with components, hooks, types, index.ts
+- [ ] **Portfolio feature:** Create `artifacts/portfolio/src/features/<feature>/` with components, hooks, types, index.ts
+- [ ] **Lazy import:** Add route in `App.tsx` with `lazy(() => import("@/features/<feature>"))`
 - [ ] **Section settings:** Add entry to `section_settings` table
 - [ ] **Static data:** Add fallback data in `artifacts/portfolio/src/data/`
 - [ ] **Tests:** Unit tests for DB module, API route, admin page, portfolio component
 - [ ] **Typecheck:** `pnpm run typecheck` passes
-- [ ] **Tests:** `pnpm run test` passes
+- [ ] **Tests:** `pnpm run test` passes (415+ tests expected)
+
+## Pre-commit Hooks
+
+The repo uses **husky** + **lint-staged** to enforce quality gates:
+
+- **ESLint + typecheck** runs on staged `.ts/.tsx` files
+- **Prettier** formats `.json` and `.md` files
+- **commitlint** enforces conventional commit format
+
+These run automatically on every `git commit`. If hooks reject the commit, fix the issues and retry.
 
 ## Git Conventions
 
@@ -84,15 +124,25 @@ refactor/description-of-refactor
 
 ### Commit Messages
 
-Follow conventional commits style:
+**Enforced by commitlint** — must follow conventional commits format:
 
 ```
-type: short description
+type(scope): short description
 
 Optional body explaining why the change was made.
 ```
 
-Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `style`
+Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `style`, `perf`, `ci`
+
+Examples:
+
+```
+feat(hero): add typewriter animation
+fix(api): handle null stats on hero update
+refactor(navbar): split into sub-components
+test(admin): add Overview page integration tests
+ci: add bundle analysis job to workflow
+```
 
 ## Running Tests
 
@@ -119,13 +169,13 @@ pnpm run test:e2e
 
 ### Test File Locations
 
-| Project | Test Files |
-|---------|-----------|
-| portfolio | `artifacts/portfolio/src/test/*.test.{ts,tsx}` |
-| admin | `artifacts/admin/src/test/*.test.{ts,tsx}`, `src/hooks/*.test.{ts,tsx}` |
-| api-server | `artifacts/api-server/src/test/**/*.test.ts` |
-| validation | `lib/validation/src/*.test.ts` |
-| db | `lib/db/src/*.test.ts` |
+| Project    | Test Files                                                              |
+| ---------- | ----------------------------------------------------------------------- |
+| portfolio  | `artifacts/portfolio/src/test/*.test.{ts,tsx}`                          |
+| admin      | `artifacts/admin/src/test/*.test.{ts,tsx}`, `src/hooks/*.test.{ts,tsx}` |
+| api-server | `artifacts/api-server/src/test/**/*.test.ts`                            |
+| validation | `lib/validation/src/*.test.ts`                                          |
+| db         | `lib/db/src/*.test.ts`                                                  |
 
 ## Pull Request Guidelines
 

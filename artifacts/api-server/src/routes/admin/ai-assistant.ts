@@ -2,24 +2,19 @@ import { Router, type IRouter } from "express";
 import type { AuthenticatedRequest } from "../../middleware/adminAuth";
 import { doubleCsrfProtection } from "../../middleware/csrf";
 import type { Response } from "express";
-import { z } from "zod";
+import {
+  aiGenerateDescriptionSchema,
+  aiSuggestCategoriesSchema,
+  aiSuggestTagsSchema,
+  aiAnalyzeContentSchema,
+} from "@workspace/api-zod";
+import { badRequest, ok } from "../../lib/api-response";
 
 const router: IRouter = Router();
 
-const generateDescriptionSchema = z.object({
-  techStack: z.array(z.string()).min(1),
-  title: z.string().optional(),
-});
-
-const suggestTagsSchema = z.object({
-  techStack: z.array(z.string()).min(1),
-  category: z.string().optional(),
-});
-
-const analyzeContentSchema = z.object({
-  content: z.string().min(1),
-  contentType: z.enum(["hero", "about", "project"]),
-});
+const generateDescriptionSchema = aiGenerateDescriptionSchema;
+const suggestTagsSchema = aiSuggestTagsSchema;
+const analyzeContentSchema = aiAnalyzeContentSchema;
 
 const skillKeywordCategories: Record<string, string[]> = {
   "Frontend": ["react", "vue", "angular", "javascript", "typescript", "css", "html", "tailwind", "sass", "next", "nuxt", "svelte", "astro", "remix", "gatsby", "bootstrap", "material", "chakra", "antd", "mui", "framer"],
@@ -164,8 +159,6 @@ function analyzeContent(content: string, contentType: string): { score: number; 
   let score = 100;
 
   const wordCount = content.split(/\s+/).length;
-  const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 0).length;
-
   if (contentType === "hero") {
     if (wordCount < 10) {
       suggestions.push("Add a brief introduction about yourself");
@@ -239,49 +232,49 @@ function analyzeContent(content: string, contentType: string): { score: number; 
 router.post("/generate-description", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
   const parseResult = generateDescriptionSchema.safeParse(req.body);
   if (!parseResult.success) {
-    return res.status(400).json({ success: false, message: parseResult.error.message });
+    return badRequest(res, parseResult.error.flatten().fieldErrors as Record<string, string[]>);
   }
 
   const { techStack, title } = parseResult.data;
   const description = generateProjectDescription(techStack, title);
 
-  return res.json({ success: true, data: { description } });
+  return ok(res, { description });
 });
 
 router.post("/suggest-categories", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
-  const parseResult = z.object({ skillName: z.string().min(1) }).safeParse(req.body);
+  const parseResult = aiSuggestCategoriesSchema.safeParse(req.body);
   if (!parseResult.success) {
-    return res.status(400).json({ success: false, message: parseResult.error.message });
+    return badRequest(res, parseResult.error.flatten().fieldErrors as Record<string, string[]>);
   }
 
   const { skillName } = parseResult.data;
   const categories = suggestCategories(skillName);
 
-  return res.json({ success: true, data: { categories } });
+  return ok(res, { categories });
 });
 
 router.post("/suggest-tags", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
   const parseResult = suggestTagsSchema.safeParse(req.body);
   if (!parseResult.success) {
-    return res.status(400).json({ success: false, message: parseResult.error.message });
+    return badRequest(res, parseResult.error.flatten().fieldErrors as Record<string, string[]>);
   }
 
   const { techStack, category } = parseResult.data;
   const tags = suggestProjectTags(techStack, category);
 
-  return res.json({ success: true, data: { tags } });
+  return ok(res, { tags });
 });
 
 router.post("/analyze-content", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
   const parseResult = analyzeContentSchema.safeParse(req.body);
   if (!parseResult.success) {
-    return res.status(400).json({ success: false, message: parseResult.error.message });
+    return badRequest(res, parseResult.error.flatten().fieldErrors as Record<string, string[]>);
   }
 
   const { content, contentType } = parseResult.data;
   const analysis = analyzeContent(content, contentType);
 
-  return res.json({ success: true, data: analysis });
+  return ok(res, analysis);
 });
 
 export default router;

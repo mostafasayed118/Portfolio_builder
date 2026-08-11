@@ -33,12 +33,12 @@ export default function Overview() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold mb-1">Portfolio CMS</h1>
-          <p className="text-muted-foreground text-sm">
+          <div className="text-muted-foreground text-sm">
             Manage every aspect of your portfolio from here.{" "}
             {!isSupabaseConfigured && (
               <Badge variant="destructive" className="ml-1 text-xs">Supabase not connected</Badge>
             )}
-          </p>
+          </div>
         </div>
         {isSupabaseConfigured && <SeedDialog />}
       </div>

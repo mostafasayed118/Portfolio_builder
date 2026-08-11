@@ -1,16 +1,16 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { TypographySettings, InsertTypographySettings } from "@workspace/supabase/types";
+import { queryOrThrow } from "./query";
+
+const TABLE = "typography_settings" as const;
 
 export async function getTypographySettings(
   supabase: SupabaseClient,
 ): Promise<TypographySettings | null> {
-  const { data, error } = await supabase
-    .from("typography_settings")
-    .select("*")
-    .limit(1)
-    .maybeSingle();
-  if (error) throw error;
-  return data;
+  return queryOrThrow(
+    supabase.from(TABLE).select("*").limit(1).maybeSingle(),
+    { table: TABLE, operation: "getTypographySettings" },
+  );
 }
 
 export async function upsertTypographySettings(
@@ -20,16 +20,14 @@ export async function upsertTypographySettings(
   const existing = await getTypographySettings(supabase);
   const now = new Date().toISOString();
   if (existing) {
-    const { error } = await supabase
-      .from("typography_settings")
-      .update({ ...args, updated_at: now })
-      .eq("id", existing.id);
-    if (error) throw error;
+    await queryOrThrow(
+      supabase.from(TABLE).update({ ...args, updated_at: now }).eq("id", existing.id),
+      { table: TABLE, operation: "upsertTypographySettings.update" },
+    );
     return existing.id;
   }
-  const { data, error } = await supabase
-    .from("typography_settings")
-    .insert({
+  const data = await queryOrThrow<{ id: string }>(
+    supabase.from(TABLE).insert({
       body_font: args.body_font ?? "Spline Sans",
       display_font: args.display_font ?? "Unbounded",
       body_font_url: args.body_font_url ?? null,
@@ -41,9 +39,8 @@ export async function upsertTypographySettings(
       font_weight_body: args.font_weight_body ?? "400",
       font_weight_heading: args.font_weight_heading ?? "700",
       updated_at: now,
-    })
-    .select("id")
-    .single();
-  if (error) throw error;
+    }).select("id").single(),
+    { table: TABLE, operation: "upsertTypographySettings.insert" },
+  );
   return data.id;
 }

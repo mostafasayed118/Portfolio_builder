@@ -3,16 +3,12 @@ import { doubleCsrfProtection } from "../../middleware/csrf";
 import type { AuthenticatedRequest } from "../../middleware/adminAuth";
 import { requireSuperadmin } from "../../middleware/requireSuperadmin";
 import type { Response } from "express";
-import { z } from "zod";
+import { updateRoleSchema } from "@workspace/api-zod";
 import { getSupabaseClient } from "../../lib/supabase-client";
 import { validateParamId } from "../../middleware/validateUuid";
 import { ok, notFound, badRequest, serverError } from "../../lib/api-response";
 
 const router: IRouter = Router();
-
-const updateRoleSchema = z.object({
-  role: z.enum(["user", "superadmin"]),
-});
 
 // GET /api/v1/admin/users/me — get current authenticated user (any admin)
 router.get("/me", async (req: AuthenticatedRequest, res: Response) => {
@@ -53,15 +49,16 @@ router.patch("/:id/role", requireSuperadmin, doubleCsrfProtection, validateParam
     return badRequest(res, { role: ["Cannot demote yourself"] });
   }
 
-  const { error, count } = await supabase
+  const { data, error } = await supabase
     .from("users")
     .update({ role: result.data.role })
     .eq("id", id)
-    .select("id");
+    .select("id, clerk_id, email, name, role, created_at")
+    .single();
 
   if (error) return serverError(res, error.message);
-  if (!count || count === 0) return notFound(res, "User not found");
-  return ok(res, null);
+  if (!data) return notFound(res, "User not found");
+  return ok(res, data);
 });
 
 export default router;

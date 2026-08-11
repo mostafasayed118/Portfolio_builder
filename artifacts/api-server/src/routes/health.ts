@@ -1,63 +1,48 @@
 import { Router, type IRouter } from "express";
-import { getSupabaseClient } from "../lib/supabase-client";
+import { env } from "../lib/env";
 
+/**
+ * GET / HEAD /api/healthz
+ *
+ * Liveness check used by Docker, Kubernetes, load balancers, and
+ * uptime monitors. Intentionally MINIMAL:
+ *
+ *   - No database ping (a transient DB blip should NOT trigger a
+ *     container restart — that's a readiness-check concern, not a
+ *     liveness one).
+ *   - No auth (every monitoring tool, including unauthenticated
+ *     load-balancer health probes, must be able to call this).
+ *   - No rate limiting (monitoring tools hit this on a tight
+ *     schedule; throttling them breaks alerting).
+ *   - No response cache (the call is cheap enough that caching
+ *     adds complexity without buying anything).
+ *
+ * HEAD is supported because most production health-probe systems
+ * (Docker HEALTHCHECK, AWS ALB target group, k8s livenessProbe)
+ * default to HEAD. The semantics are the same as GET: 200 if the
+ * process is alive, with no body (HEAD must never return a body
+ * per RFC 9110 §9.3.2).
+ */
 const router: IRouter = Router();
 
-// In-memory cache for health checks (5-second TTL)
-let healthCache: { data: unknown; expiresAt: number } | null = null;
-
-router.get("/healthz", async (_req, res) => {
-  const now = Date.now();
-  if (healthCache && now < healthCache.expiresAt) {
-    const cached = healthCache.data as Record<string, unknown>;
-    const status = cached.status === "ok" ? 200 : 503;
-    return res.status(status).json(cached);
-  }
-
-  const start = Date.now();
-
-  let dbStatus: "ok" | "error" = "ok";
-  let dbLatency = 0;
-
-  try {
-    const supabase = getSupabaseClient();
-    const t = Date.now();
-    const { error } = await supabase
-      .from("site_settings")
-      .select("id")
-      .limit(1)
-      .maybeSingle();
-    dbLatency = Date.now() - t;
-    if (error) dbStatus = "error";
-  } catch {
-    dbStatus = "error";
-  }
-
-  const overall = dbStatus === "ok" ? "ok" : "degraded";
-
-  const data = {
-    status: overall,
+function buildHealthPayload() {
+  return {
+    status: "ok",
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    db: {
-      status: dbStatus,
-      latency_ms: dbLatency,
-    },
-    api: {
-      status: "ok",
-      response_ms: Date.now() - start,
-    },
+    environment: env.NODE_ENV,
   };
+}
 
-  // Cache for 5 seconds
-  healthCache = { data, expiresAt: now + 5000 };
-
-  return res.status(dbStatus === "ok" ? 200 : 503).json(data);
+router.get("/healthz", (_req, res) => {
+  res.status(200).json(buildHealthPayload());
 });
 
-/** Clear the health cache — used by tests to reset state between runs */
-export function resetHealthCache() {
-  healthCache = null;
-}
+router.head("/healthz", (_req, res) => {
+  // HEAD must not return a body. Send the same status code GET
+  // would return so probe-side logic ("200 = healthy") is uniform
+  // across both methods.
+  res.status(200).end();
+});
 
 export default router;

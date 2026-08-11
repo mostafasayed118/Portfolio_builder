@@ -1,12 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ProtectedRoute } from "@/lib/auth";
+import { ProtectedRoute, POST_SIGN_IN_URL, SIGN_IN_URL } from "@/features/auth";
 
-const { mockUseAuthUser } = vi.hoisted(() => ({ mockUseAuthUser: vi.fn() }));
+const { mockUseAuthUser, mockUseAuth } = vi.hoisted(() => ({
+  mockUseAuthUser: vi.fn(),
+  mockUseAuth: vi.fn(),
+}));
 
 vi.mock("@workspace/auth", () => ({
   useAuthUser: mockUseAuthUser,
+}));
+
+vi.mock("@clerk/clerk-react", () => ({
+  useAuth: mockUseAuth,
+  useUser: vi.fn(),
+  SignIn: vi.fn(),
+  ClerkProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 function renderProtected({ children = <div data-testid="protected-child">OK</div> } = {}) {
@@ -18,25 +28,36 @@ function renderProtected({ children = <div data-testid="protected-child">OK</div
   );
 }
 
-describe("ProtectedRoute — Clerk auth gating (the entire auth layer was untested)", () => {
+describe("ProtectedRoute — auth gating", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseAuth.mockReturnValue({ isLoaded: true, isSignedIn: true, signOut: vi.fn(), getToken: vi.fn() });
   });
 
-  it("shows 'Loading…' while Clerk is still loading the session", () => {
+  it("shows 'Loading…' while Clerk is still loading", () => {
     mockUseAuthUser.mockReturnValue({ user: null, loading: true, isAdmin: false });
     renderProtected();
     expect(screen.getByText(/loading…/i)).toBeInTheDocument();
     expect(screen.queryByTestId("protected-child")).not.toBeInTheDocument();
   });
 
-  it("renders <Redirect to='/sign-in'/> when the user is not signed in (wouter <Redirect> swaps to SignInPage)", () => {
+  it("redirects to /sign-in when Clerk says not signed in AND user is null", () => {
     mockUseAuthUser.mockReturnValue({ user: null, loading: false, isAdmin: false });
+    mockUseAuth.mockReturnValue({ isLoaded: true, isSignedIn: false, signOut: vi.fn() });
     renderProtected();
     expect(screen.queryByTestId("protected-child")).not.toBeInTheDocument();
   });
 
-  it("shows the 'Access Denied' page when signed in but email is NOT in VITE_ADMIN_EMAILS", () => {
+  it("shows 'Session Expired' when Clerk signed in but backend user is null", () => {
+    mockUseAuthUser.mockReturnValue({ user: null, loading: false, isAdmin: false });
+    mockUseAuth.mockReturnValue({ isLoaded: true, isSignedIn: true, signOut: vi.fn() });
+    renderProtected();
+    expect(screen.getByText(/session expired/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /sign out/i })).toBeInTheDocument();
+    expect(screen.queryByTestId("protected-child")).not.toBeInTheDocument();
+  });
+
+  it("shows 'Access Denied' when signed in but NOT admin (visitor role)", () => {
     mockUseAuthUser.mockReturnValue({
       user: { id: "u1", email: "stranger@evil.com", role: "visitor" },
       loading: false,
@@ -47,7 +68,7 @@ describe("ProtectedRoute — Clerk auth gating (the entire auth layer was untest
     expect(screen.getByText(/stranger@evil\.com/)).toBeInTheDocument();
   });
 
-  it("renders the protected children when signed in with isAdmin=true", () => {
+  it("renders protected children when signed in with isAdmin=true", () => {
     mockUseAuthUser.mockReturnValue({
       user: { id: "u1", email: "admin@test.com", role: "admin" },
       loading: false,
@@ -58,14 +79,47 @@ describe("ProtectedRoute — Clerk auth gating (the entire auth layer was untest
     expect(screen.queryByText(/access denied/i)).not.toBeInTheDocument();
   });
 
-  it("'superadmin' role is not enough on its own — isAdmin must also be true (current bridge contract)", () => {
+  it("exports SIGN_IN_URL", () => {
+    expect(SIGN_IN_URL).toBe("/sign-in");
+  });
+
+  it("exports POST_SIGN_IN_URL", () => {
+    expect(POST_SIGN_IN_URL).toBe("/overview");
+  });
+
+  it("forces page reload on bfcache restore", () => {
     mockUseAuthUser.mockReturnValue({
-      user: { id: "u1", email: "root@test.com", role: "superadmin" },
+      user: { id: "u1", email: "admin@test.com", role: "admin" },
       loading: false,
-      isAdmin: false,
+      isAdmin: true,
+    });
+    const reloadSpy = vi.fn();
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: { ...window.location, reload: reloadSpy },
     });
     renderProtected();
-    expect(screen.queryByTestId("protected-child")).not.toBeInTheDocument();
-    expect(screen.getByText(/access denied/i)).toBeInTheDocument();
+    const ev = new Event("pageshow") as PageTransitionEvent;
+    Object.defineProperty(ev, "persisted", { value: true });
+    window.dispatchEvent(ev);
+    expect(reloadSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("does NOT reload on normal pageshow", () => {
+    mockUseAuthUser.mockReturnValue({
+      user: { id: "u1", email: "admin@test.com", role: "admin" },
+      loading: false,
+      isAdmin: true,
+    });
+    const reloadSpy = vi.fn();
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: { ...window.location, reload: reloadSpy },
+    });
+    renderProtected();
+    const ev = new Event("pageshow") as PageTransitionEvent;
+    Object.defineProperty(ev, "persisted", { value: false });
+    window.dispatchEvent(ev);
+    expect(reloadSpy).not.toHaveBeenCalled();
   });
 });

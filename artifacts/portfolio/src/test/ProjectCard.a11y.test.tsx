@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { TestRouter } from "@/test/test-router";
-import ProjectCard from "@/components/ProjectCard";
+import { ProjectCard } from "@/features/projects";
 
 const { mockSetLocation } = vi.hoisted(() => ({
   mockSetLocation: vi.fn(),

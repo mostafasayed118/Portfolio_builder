@@ -10,12 +10,14 @@
     "dev:admin": "pnpm --filter @workspace/admin run dev",
     "dev:api": "pnpm --filter @workspace/api-server run dev",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
-    "typecheck:libs": "tsc --build",
+    "typecheck:libs": "tsc --build --force && tsc -p lib/db --noEmit && tsc -p lib/logging --noEmit && tsc -p lib/supabase --noEmit && tsc -p lib/auth --noEmit && tsc -p lib/ui --noEmit",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "lint": "eslint artifacts/ lib/ scripts/ --max-warnings=300"
+    "lint": "eslint artifacts/ lib/ scripts/ --max-warnings=300",
+    "staged-typecheck": "node scripts/staged-typecheck.mjs",
+    "prepare": "husky"
   },
   "private": true,
   "pnpm": {
@@ -24,7 +26,18 @@
       "react-dom": "19.1.0"
     }
   },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "pnpm run staged-typecheck"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
+  },
   "devDependencies": {
+    "@commitlint/cli": "^21.0.2",
+    "@commitlint/config-conventional": "^21.0.2",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.60.0",
     "@testing-library/dom": "^10.4.1",
@@ -35,7 +48,9 @@
     "@vitest/coverage-v8": "^3.2.4",
     "eslint": "^9",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "husky": "^9.1.7",
     "jsdom": "^26.1.0",
+    "lint-staged": "^17.0.7",
     "prettier": "^3.8.1",
     "supertest": "^7.1.0",
     "typescript": "~5.9.2",

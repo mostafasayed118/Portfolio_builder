@@ -5,8 +5,8 @@ import { validateQueryUserId, validateParamId } from "../../middleware/validateU
 import type { Response } from "express";
 import { certificationSchema } from "@workspace/api-zod";
 import { getSupabaseClient } from "../../lib/supabase-client";
-import { ok, created, notFound, badRequest, serverError } from "../../lib/api-response";
-import { runCollectionQuery } from "../../lib/route-helpers";
+import { created, badRequest, serverError } from "../../lib/api-response";
+import { runCollectionQuery, updateByIdAndUser, softDeleteByIdAndUser, parseBody } from "../../lib/route-helpers";
 
 const router: IRouter = Router();
 
@@ -30,34 +30,13 @@ router.post("/", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Re
 });
 
 router.put("/:id", doubleCsrfProtection, validateParamId, async (req: AuthenticatedRequest, res: Response) => {
-  const supabase = getSupabaseClient();
-  const result = certificationSchema.partial().safeParse(req.body);
-  if (!result.success) {
-    return badRequest(res, result.error.flatten().fieldErrors);
-  }
-  const isSuperadmin = req.user?.role === "superadmin";
-  let query = supabase.from("certifications").update(result.data).eq("id", req.params.id as string);
-  if (!isSuperadmin) {
-    query = query.eq("user_id", req.user?.id ?? "");
-  }
-  const { error, count } = await query.select("id");
-  if (error) return serverError(res, error.message);
-  if (!count || count === 0) return notFound(res, "Certification not found");
-  return ok(res, undefined);
+  const patch = parseBody(res, certificationSchema.partial(), req.body);
+  if (!patch) return;
+  return updateByIdAndUser(req, res, "certifications", req.params.id as string, patch, "Certification");
 });
 
 router.delete("/:id", doubleCsrfProtection, validateParamId, async (req: AuthenticatedRequest, res: Response) => {
-  const supabase = getSupabaseClient();
-  const id = req.params.id as string;
-  const isSuperadmin = req.user?.role === "superadmin";
-  let query = supabase.from("certifications").update({ deleted_at: new Date().toISOString() }).eq("id", id);
-  if (!isSuperadmin) {
-    query = query.eq("user_id", req.user?.id ?? "");
-  }
-  const { error, count } = await query.select("id");
-  if (error) return serverError(res, error.message);
-  if (!count || count === 0) return notFound(res, "Certification not found");
-  return ok(res, undefined);
+  return softDeleteByIdAndUser(req, res, "certifications", req.params.id as string, "Certification");
 });
 
 export default router;

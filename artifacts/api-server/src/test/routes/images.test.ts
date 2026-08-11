@@ -58,6 +58,11 @@ vi.mock("../../middleware/adminAuth", () => ({
   }),
 }));
 
+/** Minimal valid magic-byte prefix for each format. */
+const JPEG_HEADER = Buffer.from([0xff, 0xd8, 0xff, 0xe0]);
+const PNG_HEADER = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+const WEBP_HEADER = Buffer.from([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50]);
+
 function resetMockChain() {
   mockSupabaseClient.from.mockReturnValue(mockSupabaseClient);
   mockSupabaseClient.select.mockReturnValue(mockSupabaseClient);
@@ -98,7 +103,8 @@ describe("Images API", () => {
         .set("x-admin-key", mockAdminKey)
         .field("entityType", "projects");
       expect(res.status).toBe(400);
-      expect(res.body.error).toMatch(/no file/i);
+      expect(res.body.success).toBe(false);
+      expect(res.body.errors.file[0]).toMatch(/no file/i);
     });
 
     it("returns 400 for invalid file type", async () => {
@@ -111,7 +117,25 @@ describe("Images API", () => {
           contentType: "text/plain",
         });
       expect(res.status).toBe(400);
-      expect(res.body.error).toMatch(/invalid file type/i);
+      expect(res.body.success).toBe(false);
+      expect(res.body.errors.file[0]).toMatch(/invalid file type/i);
+    });
+
+    it("returns 400 when content-type is spoofed (text/plain pretending to be jpeg)", async () => {
+      // Defense in depth: even if a future change loosened the
+      // Content-Type check, the magic-byte check would catch this.
+      const res = await request(app)
+        .post("/api/v1/images/upload")
+        .set("x-admin-key", mockAdminKey)
+        .field("entityType", "projects")
+        .attach("file", Buffer.from("definitely not an image"), {
+          filename: "spoof.jpg",
+          contentType: "image/jpeg",
+        });
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      // Could be caught at either the mime check or the magic-byte check.
+      expect(JSON.stringify(res.body.errors.file[0])).toMatch(/invalid file type|do not match/i);
     });
 
     it("returns 400 for invalid entity type", async () => {
@@ -119,12 +143,13 @@ describe("Images API", () => {
         .post("/api/v1/images/upload")
         .set("x-admin-key", mockAdminKey)
         .field("entityType", "invalid-type")
-        .attach("file", Buffer.from("fake-image-data"), {
+        .attach("file", JPEG_HEADER, {
           filename: "test.jpg",
           contentType: "image/jpeg",
         });
       expect(res.status).toBe(400);
-      expect(res.body.error).toMatch(/invalid entity type/i);
+      expect(res.body.success).toBe(false);
+      expect(res.body.errors.entityType[0]).toMatch(/invalid entity type/i);
     });
 
     it("returns 200 with valid admin key and valid JPEG file", async () => {
@@ -135,15 +160,16 @@ describe("Images API", () => {
         .post("/api/v1/images/upload")
         .set("x-admin-key", mockAdminKey)
         .field("entityType", "projects")
-        .attach("file", Buffer.from("fake-jpeg-data"), {
+        .attach("file", JPEG_HEADER, {
           filename: "photo.jpg",
           contentType: "image/jpeg",
         });
       expect(res.status).toBe(200);
-      expect(res.body.id).toBeDefined();
-      expect(res.body.url).toBeDefined();
-      expect(res.body.variants).toBeDefined();
-      expect(Array.isArray(res.body.variants)).toBe(true);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.id).toBeDefined();
+      expect(res.body.data.url).toBeDefined();
+      expect(res.body.data.variants).toBeDefined();
+      expect(Array.isArray(res.body.data.variants)).toBe(true);
     });
 
     it("returns 200 with valid PNG file", async () => {
@@ -153,12 +179,12 @@ describe("Images API", () => {
         .post("/api/v1/images/upload")
         .set("x-admin-key", mockAdminKey)
         .field("entityType", "about")
-        .attach("file", Buffer.from("fake-png-data"), {
+        .attach("file", PNG_HEADER, {
           filename: "screenshot.png",
           contentType: "image/png",
         });
       expect(res.status).toBe(200);
-      expect(res.body.variants.length).toBeGreaterThan(0);
+      expect(res.body.data.variants.length).toBeGreaterThan(0);
     });
 
     it("returns variants with correct URL structure", async () => {
@@ -168,18 +194,32 @@ describe("Images API", () => {
         .post("/api/v1/images/upload")
         .set("x-admin-key", mockAdminKey)
         .field("entityType", "hero")
-        .attach("file", Buffer.from("fake-image"), {
+        .attach("file", JPEG_HEADER, {
           filename: "avatar.jpg",
           contentType: "image/jpeg",
         });
       expect(res.status).toBe(200);
-      const variantTypes = res.body.variants.map((v: { type: string }) => v.type);
+      const variantTypes = res.body.data.variants.map((v: { type: string }) => v.type);
       expect(variantTypes).toContain("thumbnail");
       expect(variantTypes).toContain("medium");
       // Each variant URL should have width param
-      for (const v of res.body.variants) {
+      for (const v of res.body.data.variants) {
         expect(v.url).toContain("width=");
       }
+    });
+
+    it("returns 200 with valid WebP file", async () => {
+      mockSupabaseClient.single.mockResolvedValueOnce({ data: { ...mockImageMetadata, id: "webp-id" }, error: null });
+
+      const res = await request(app)
+        .post("/api/v1/images/upload")
+        .set("x-admin-key", mockAdminKey)
+        .field("entityType", "content")
+        .attach("file", WEBP_HEADER, {
+          filename: "anim.webp",
+          contentType: "image/webp",
+        });
+      expect(res.status).toBe(200);
     });
 
     it("returns 500 when storage upload fails", async () => {
@@ -192,15 +232,14 @@ describe("Images API", () => {
         .post("/api/v1/images/upload")
         .set("x-admin-key", mockAdminKey)
         .field("entityType", "projects")
-        .attach("file", Buffer.from("fake-image"), {
+        .attach("file", JPEG_HEADER, {
           filename: "test.jpg",
           contentType: "image/jpeg",
         });
       expect(res.status).toBe(500);
       expect(res.body).toBeDefined();
-      // Verify an error message exists (could be in .error or other field)
-      const bodyStr = JSON.stringify(res.body);
-      expect(bodyStr).toMatch(/upload failed|error/i);
+      // Verify an error message exists
+      expect(JSON.stringify(res.body)).toMatch(/upload failed/i);
     });
   });
 
@@ -209,7 +248,7 @@ describe("Images API", () => {
       // default mock returns { data: null, error: null } → route returns 404
       const res = await request(app).get("/api/v1/images/00000000-0000-0000-0000-000000000099/metadata");
       expect(res.status).toBe(404);
-      expect(res.body.error).toMatch(/not found/i);
+      expect(res.body.message).toMatch(/not found/i);
     });
 
     it("returns 200 with metadata for existing image", async () => {
@@ -220,9 +259,10 @@ describe("Images API", () => {
 
       const res = await request(app).get("/api/v1/images/00000000-0000-0000-0000-000000000001/metadata");
       expect(res.status).toBe(200);
-      expect(res.body.id).toBe(mockImageMetadata.id);
-      expect(res.body.original_filename).toBe("test.jpg");
-      expect(res.body.mime_type).toBe("image/jpeg");
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.id).toBe(mockImageMetadata.id);
+      expect(res.body.data.original_filename).toBe("test.jpg");
+      expect(res.body.data.mime_type).toBe("image/jpeg");
     });
   });
 
@@ -255,7 +295,7 @@ describe("Images API", () => {
         .delete("/api/v1/images/00000000-0000-0000-0000-000000000001")
         .set("x-admin-key", mockAdminKey);
       expect(res.status).toBe(404);
-      expect(res.body.error).toMatch(/not found/i);
+      expect(res.body.message).toMatch(/not found/i);
     });
 
     it("returns 400 for invalid UUID", async () => {
@@ -263,7 +303,7 @@ describe("Images API", () => {
         .delete("/api/v1/images/not-a-uuid")
         .set("x-admin-key", mockAdminKey);
       expect(res.status).toBe(400);
-      expect(res.body.error).toMatch(/invalid/i);
+      expect(res.body.errors.id[0]).toMatch(/invalid/i);
     });
   });
 });

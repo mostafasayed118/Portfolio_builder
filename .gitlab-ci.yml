@@ -4,7 +4,7 @@ stages:
   - build
 
 variables:
-  NODE_VERSION: "22"
+  NODE_VERSION: "20"
   PNPM_VERSION: "9.15.0"
 
 cache:
@@ -50,7 +50,7 @@ test:
   artifacts:
     when: always
     paths:
-      - test-results/
+      - artifacts/*/test-results/
     expire_in: 1 week
 
 build:

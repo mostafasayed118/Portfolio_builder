@@ -1,6 +1,7 @@
 import { type ReactElement, type ReactNode } from "react";
 import { render } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ViewingUserProvider } from "@/lib/viewing-user-context";
 import { vi } from "vitest";
 
 const clerkStateRef = vi.hoisted(() => ({
@@ -74,7 +75,13 @@ export function renderAdmin(
       mutations: { retry: false },
     },
   });
-  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
+  return render(
+    <QueryClientProvider client={qc}>
+      <ViewingUserProvider>
+        {ui}
+      </ViewingUserProvider>
+    </QueryClientProvider>,
+  );
 }
 
 export function MockProviders({ children }: { children: ReactNode }) {

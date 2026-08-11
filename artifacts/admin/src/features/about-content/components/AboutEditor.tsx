@@ -1,0 +1,313 @@
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useForm, useFieldArray, useWatch } from "react-hook-form";
+import { Plus, X } from "lucide-react";
+import { api } from "@/lib/api-client";
+import { useToast } from "@workspace/ui";
+import { Button, Card, CardContent, CardHeader, CardTitle, Input, Slider, Textarea } from "@workspace/ui";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { useBeforeUnload } from "@/hooks/use-before-unload";
+import { AboutLivePreview } from "@/features/about-content/components/AboutLivePreview";
+import { SkeletonForm, SkeletonPreview } from "@/components/EditorSkeletons";
+
+type AboutFormData = {
+  bio: string;
+  education: Array<{
+    degree: string;
+    institution: string;
+    year: string;
+    description?: string;
+  }>;
+  languages: Array<{
+    name: string;
+    level: number;
+  }>;
+  interests: string[];
+};
+
+function getLanguageLabel(level: number): string {
+  if (level <= 25) return "Beginner";
+  if (level <= 50) return "Intermediate";
+  if (level <= 75) return "Advanced";
+  if (level <= 90) return "Professional";
+  return "Native";
+}
+
+export default function AboutEditor() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { data: aboutData, isLoading, error, refetch } = useQuery({
+    queryKey: ["about"],
+    queryFn: async () => {
+      const res = await api.about.get();
+      if (!res.success) throw new Error(res.message);
+      return res.data ?? null;
+    },
+  });
+
+  const { register, control, handleSubmit, reset, formState: { isDirty } } = useForm<AboutFormData>({
+    defaultValues: {
+      bio: "",
+      education: [],
+      languages: [],
+      interests: [],
+    },
+  });
+
+  const { fields: educationFields, append: appendEducation, remove: removeEducation } = useFieldArray({
+    control,
+    name: "education",
+  });
+
+  const { fields: languageFields, append: appendLanguage, remove: removeLanguage } = useFieldArray({
+    control,
+    name: "languages",
+  });
+
+  const watchedData = useWatch({ control });
+  const [interestInput, setInterestInput] = useState("");
+  const [showPreview, setShowPreview] = useState(false);
+
+  useKeyboardShortcuts([
+    { key: "s", ctrl: true, handler: () => { if (isDirty) handleSubmit(onSubmit)(); }, description: "Save changes" },
+  ]);
+  useBeforeUnload(isDirty, "You have unsaved changes. Leave anyway?");
+
+  useEffect(() => {
+    if (aboutData) {
+      reset({
+        bio: aboutData.bio || "",
+        education: aboutData.education || [],
+        languages: aboutData.languages || [],
+        interests: aboutData.interests || [],
+      });
+    }
+  }, [aboutData, reset]);
+
+  const saveMutation = useMutation({
+    mutationFn: async (data: AboutFormData) => {
+      const res = await api.about.update({
+        bio: data.bio,
+        education: data.education,
+        languages: data.languages,
+        interests: data.interests,
+      });
+      if (!res.success) throw new Error(res.message);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["about"] });
+      toast({ title: "About section updated successfully" });
+    },
+    onError: (err) => {
+      toast({ title: `Save failed: ${err.message}`, variant: "destructive" });
+    },
+  });
+
+  const onSubmit = (data: AboutFormData) => {
+    saveMutation.mutate(data);
+  };
+
+  const handleInterestKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      const value = interestInput.trim();
+      if (value && !watchedData.interests?.includes(value)) {
+        const currentInterests = watchedData.interests || [];
+        reset({ ...watchedData, interests: [...currentInterests, value] }, { keepDirty: true });
+      }
+      setInterestInput("");
+    }
+  };
+
+  const removeInterest = (index: number) => {
+    const current = [...(watchedData.interests || [])];
+    current.splice(index, 1);
+    reset({ ...watchedData, interests: current }, { keepDirty: true });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">About Editor</h1>
+        </div>
+        <div className="lg:hidden mb-4">
+          <Button variant="outline" size="sm" onClick={() => setShowPreview(!showPreview)} className="min-h-[44px]" aria-pressed={showPreview} aria-label={showPreview ? "Hide preview panel" : "Show preview panel"}>
+            {showPreview ? "Hide Preview" : "Show Preview"}
+          </Button>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <SkeletonForm />
+          <SkeletonPreview />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="border-destructive">
+        <CardContent className="py-6">
+          <p className="text-destructive">Failed to load about content</p>
+          <Button variant="outline" size="sm" onClick={() => refetch()} className="mt-2 min-h-[44px]">
+            Retry
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">About Editor</h1>
+          <p className="text-sm text-muted-foreground">Edit your about section content</p>
+        </div>
+        <Button onClick={handleSubmit(onSubmit)} disabled={!isDirty || saveMutation.isPending} data-save-button>
+          {saveMutation.isPending ? "Saving..." : "Save Changes"}
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Edit Form */}
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Bio</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Textarea {...register("bio")} placeholder="Tell your story..." rows={6} className="resize-none" />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Education</CardTitle>
+              <Button type="button" variant="outline" size="sm" onClick={() => appendEducation({ degree: "", institution: "", year: "" })} className="min-h-[44px]">
+                <Plus className="h-4 w-4 mr-2" /> Add Education
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {educationFields.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No education entries yet.</p>
+              ) : (
+                educationFields.map((field, index) => (
+                  <div key={field.id} className="p-4 rounded-lg border border-border space-y-3">
+                    <div className="flex justify-between items-start">
+                      <span className="text-xs font-medium text-muted-foreground">Entry {index + 1}</span>
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removeEducation(index)} className="min-h-[44px] min-w-[44px]" aria-label={`Remove education entry ${index + 1}`}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs text-muted-foreground">Degree *</label>
+                        <Input {...register(`education.${index}.degree` as const)} placeholder="BSc Computer Science" />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground">Institution *</label>
+                        <Input {...register(`education.${index}.institution` as const)} placeholder="University Name" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground">Year</label>
+                      <Input {...register(`education.${index}.year` as const)} placeholder="2020 – 2024" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground">Description</label>
+                      <Textarea {...register(`education.${index}.description` as const)} placeholder="Optional description..." rows={2} />
+                    </div>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Languages</CardTitle>
+              <Button type="button" variant="outline" size="sm" onClick={() => appendLanguage({ name: "", level: 50 })} className="min-h-[44px]">
+                <Plus className="h-4 w-4 mr-2" /> Add Language
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {languageFields.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No language entries yet.</p>
+              ) : (
+                languageFields.map((field, index) => (
+                  <div key={field.id} className="p-4 rounded-lg border border-border space-y-3">
+                    <div className="flex justify-between items-start">
+                      <span className="text-xs font-medium text-muted-foreground">Language {index + 1}</span>
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removeLanguage(index)} className="min-h-[44px] min-w-[44px]" aria-label={`Remove language ${index + 1}`}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="flex gap-3 items-end">
+                      <div className="flex-1">
+                        <label className="text-xs text-muted-foreground">Language *</label>
+                        <Input {...register(`languages.${index}.name` as const)} placeholder="English" />
+                      </div>
+                      <div className="flex-1">
+                        <label className="text-xs text-muted-foreground">Level: {getLanguageLabel(watchedData.languages?.[index]?.level || 50)}</label>
+                        <Slider
+                          value={[watchedData.languages?.[index]?.level || 50]}
+                          min={0}
+                          max={100}
+                          step={1}
+                          onValueChange={([v]) => {
+                            const current = [...(watchedData.languages || [])];
+                            if (current[index]) current[index].level = v;
+                            reset({ ...watchedData, languages: current }, { keepDirty: true });
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Interests</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Input
+                placeholder="Type interest and press Enter..."
+                value={interestInput}
+                onChange={(e) => setInterestInput(e.target.value)}
+                onKeyDown={handleInterestKeyDown}
+              />
+              <div className="flex flex-wrap gap-2">
+                {watchedData.interests?.map((interest, index) => (
+                  <span key={index} className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-muted rounded-full">
+                    {interest}
+                    <button type="button" onClick={() => removeInterest(index)} className="relative flex items-center justify-center h-5 w-5 after:absolute after:inset-[-8px] after:content-[''] hover:text-destructive" aria-label={`Remove interest: ${interest}`}>
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Live Preview */}
+        <div className={showPreview ? "block" : "hidden lg:block"}>
+          <div className="sticky top-4">
+            <p className="text-xs text-muted-foreground mb-2">Live Preview — updates as you type</p>
+            <Card>
+              <CardContent className="pt-6">
+                <AboutLivePreview data={watchedData} />
+              </CardContent>
+            </Card>
+            <p className="text-xs text-muted-foreground mt-2">Actual appearance may vary slightly</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
