@@ -1,18 +1,16 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AboutContent, InsertAboutContent } from "@workspace/supabase/types";
+import { queryOrThrow } from "./query";
 
 export type { AboutContent };
 
 export async function getAboutContent(
   supabase: SupabaseClient,
 ): Promise<AboutContent | null> {
-  const { data, error } = await supabase
-    .from("about_content")
-    .select("*")
-    .limit(1)
-    .maybeSingle();
-  if (error) throw error;
-  return data;
+  return queryOrThrow(
+    supabase.from("about_content").select("*").limit(1).maybeSingle(),
+    { table: "about_content", operation: "getAboutContent" },
+  );
 }
 
 export async function upsertAboutContent(
@@ -22,22 +20,16 @@ export async function upsertAboutContent(
   const existing = await getAboutContent(supabase);
   const now = new Date().toISOString();
   if (existing) {
-    const { error } = await supabase
-      .from("about_content")
-      .update({ ...args, updated_at: now })
-      .eq("id", existing.id);
-    if (error) throw error;
+    await queryOrThrow(
+      supabase.from("about_content").update({ ...args, updated_at: now }).eq("id", existing.id),
+      { table: "about_content", operation: "upsertAboutContent.update" },
+    );
     return existing.id;
   }
-  const { data, error } = await supabase
-    .from("about_content")
-    .insert({
-      bio1:
-        args.bio1 ??
-        "Data Engineer with 1+ years of experience building production ETL pipelines.",
-      bio2:
-        args.bio2 ??
-        "Skilled in transforming complex data into actionable insights using modern data stack tools.",
+  const data = await queryOrThrow<{ id: string }>(
+    supabase.from("about_content").insert({
+      bio1: args.bio1 ?? "Data Engineer with 1+ years of experience building production ETL pipelines.",
+      bio2: args.bio2 ?? "Skilled in transforming complex data into actionable insights using modern data stack tools.",
       location: args.location ?? "Cairo, Egypt",
       years_of_experience: args.years_of_experience ?? 1,
       degree: args.degree ?? "B.Sc. Statistics & Computer Science",
@@ -51,9 +43,8 @@ export async function upsertAboutContent(
       ],
       is_published: args.is_published ?? true,
       updated_at: now,
-    })
-    .select("id")
-    .single();
-  if (error) throw error;
+    }).select("id").single(),
+    { table: "about_content", operation: "upsertAboutContent.insert" },
+  );
   return data.id;
 }

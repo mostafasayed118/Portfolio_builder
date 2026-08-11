@@ -35,20 +35,22 @@ export async function fetchEventStats(
   const since = new Date();
   since.setDate(since.getDate() - days);
 
-  const { data: pageViewRows } = await supabase
+  const { data: pageViewRows, error: pvError } = await supabase
     .from("analytics_events")
     .select("created_at")
     .eq("type", "page_view")
     .gte("created_at", since.toISOString())
     .order("created_at", { ascending: true });
+  if (pvError) console.error("[analytics] page_view query failed:", pvError.message);
 
   const pageViews = aggregateByDate(pageViewRows ?? []);
 
-  const { data: projectViewRows } = await supabase
+  const { data: projectViewRows, error: projError } = await supabase
     .from("analytics_events")
     .select("project_id, path")
     .eq("type", "project_view")
     .gte("created_at", since.toISOString());
+  if (projError) console.error("[analytics] project_view query failed:", projError.message);
 
   const projectCounts = new Map<string, { slug: string; views: number }>();
   for (const row of projectViewRows ?? []) {

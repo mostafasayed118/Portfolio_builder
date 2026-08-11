@@ -3,17 +3,18 @@ import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
 import { trackEvent } from "@workspace/db/analytics";
 import { logWarn } from "@/lib/logger";
 import { useToast } from "@workspace/ui";
+import { useLanguage } from "@/lib/language";
 import { useRealtimeSync } from "@/hooks/use-realtime-sync";
-import HeroSection from "@/components/HeroSection";
+const HeroSection = lazy(() => import("@/features/hero").then((m) => ({ default: m.HeroSection })));
 import BackToTop from "@/components/BackToTop";
 import { SyncDebug } from "@/components/SyncDebug";
 
-const AboutSection = lazy(() => import("@/components/AboutSection"));
-const SkillsSection = lazy(() => import("@/components/SkillsSection"));
-const ProjectsSection = lazy(() => import("@/components/ProjectsSection"));
+const AboutSection = lazy(() => import("@/features/about").then((m) => ({ default: m.AboutSection })));
+const SkillsSection = lazy(() => import("@/features/skills").then((m) => ({ default: m.SkillsSection })));
+const ProjectsSection = lazy(() => import("@/features/projects").then((m) => ({ default: m.ProjectsSection })));
 const ExperienceSection = lazy(() => import("@/components/ExperienceSection"));
 const CertificationsSection = lazy(() => import("@/components/CertificationsSection"));
-const ContactSection = lazy(() => import("@/components/ContactSection"));
+const ContactSection = lazy(() => import("@/features/contact").then((m) => ({ default: m.ContactSection })));
 
 function SectionSkeleton() {
   return (
@@ -33,6 +34,7 @@ function SectionSkeleton() {
 
 export default function Home() {
   const { toast } = useToast();
+  const { t } = useLanguage();
   useRealtimeSync();
 
   useEffect(() => {
@@ -50,8 +52,8 @@ export default function Home() {
       sessionStorage.setItem("visited", "true");
       const timer = setTimeout(() => {
         toast({
-          title: "Welcome to my portfolio!",
-          description: "Explore my projects, skills, and experience. Feel free to reach out!",
+          title: t.common.welcomeTitle,
+          description: t.common.welcomeDescription,
           duration: 5000,
         });
       }, 1500);

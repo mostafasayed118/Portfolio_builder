@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { LanguageProvider } from "@/lib/language";
-import HeroSection from "@/components/HeroSection";
+import { HeroSection } from "@/features/hero";
 
 vi.mock("@/hooks/use-typewriter", () => ({
   useTypewriter: vi.fn(() => "Data Engineer"),

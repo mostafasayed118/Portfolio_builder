@@ -2,7 +2,7 @@ import type { ElementType } from "react";
 import {
   LayoutDashboard, Palette, Type, User, Briefcase, Code2,
   FolderKanban, Award, MessageSquare, Search, Layers,
-  Settings, Zap, FileText, ExternalLink, Plus
+  Settings, Zap, FileText, ExternalLink, Plus, Clock
 } from "lucide-react";
 
 export interface NavItem {
@@ -28,6 +28,7 @@ export const NAV_ITEMS: NavItem[] = [
   { path: "/sections", label: "Section Order", icon: Layers, group: "Site", keywords: ["sections", "order", "rearrange", "layout", "visibility"] },
   { path: "/theme", label: "Theme", icon: Palette, group: "Site", keywords: ["theme", "colors", "dark", "light", "palette"] },
   { path: "/settings", label: "Site Settings", icon: Settings, group: "Site", keywords: ["settings", "config", "site", "name", "tagline"] },
+  { path: "/audit", label: "Audit Log", icon: Clock, group: "Site", keywords: ["audit", "log", "history", "changes", "tracking"] },
 ];
 
 export const NAV_GROUPS = ["Dashboard", "Content", "Inbox", "Site"];

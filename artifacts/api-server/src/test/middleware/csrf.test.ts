@@ -10,7 +10,7 @@ describe("CSRF Protection", () => {
   });
 
   it("GET requests bypass CSRF check", async () => {
-    const res = await request(app).get("/api/v1/healthz");
+    const res = await request(app).get("/api/healthz");
     expect(res.status).toBe(200);
   });
 

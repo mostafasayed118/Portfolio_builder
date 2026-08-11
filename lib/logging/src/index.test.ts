@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { logError, logWarn, logInfo, configureLogger } from "./index";
+import { logError, logWarn, logInfo, logDebug, configureLogger } from "./index";
 
 let consoleSpy: {
   error: ReturnType<typeof vi.spyOn>;
@@ -107,6 +107,28 @@ describe("logInfo", () => {
     const parsed = JSON.parse(call);
     expect(parsed.level).toBe("info");
     expect(parsed.message).toBe("Prod info");
+    expect(parsed.timestamp).toBeDefined();
+  });
+});
+
+describe("logDebug", () => {
+  it("logs debug in dev mode", () => {
+    configureLogger(() => ({ dev: true }));
+
+    logDebug("Debug message", "DebugCtx");
+
+    expect(consoleSpy.info).toHaveBeenCalledWith("[DebugCtx] Debug message");
+  });
+
+  it("logs JSON in production mode via console.log (not stderr)", () => {
+    configureLogger(() => ({ dev: false }));
+
+    logDebug("Prod debug");
+
+    const call = consoleSpy.info.mock.calls[0][0] as string;
+    const parsed = JSON.parse(call);
+    expect(parsed.level).toBe("debug");
+    expect(parsed.message).toBe("Prod debug");
     expect(parsed.timestamp).toBeDefined();
   });
 });

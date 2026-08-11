@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { logWarn } from "@workspace/logging";
 
 const portfolioEnvSchema = z.object({
   VITE_SUPABASE_URL: z.string().url().optional(),
@@ -6,6 +7,7 @@ const portfolioEnvSchema = z.object({
   VITE_SITE_URL: z.string().url().optional(),
   VITE_API_URL: z.string().url().optional(),
   VITE_TWITTER_HANDLE: z.string().optional(),
+  VITE_SENTRY_DSN: z.string().url().optional(),
 });
 
 export type PortfolioEnv = z.infer<typeof portfolioEnvSchema>;
@@ -17,10 +19,7 @@ export function getPortfolioEnv(): PortfolioEnv {
   const result = portfolioEnvSchema.safeParse(import.meta.env);
   if (!result.success) {
     if (import.meta.env.DEV) {
-      console.warn(
-        "[portfolio] Env validation warnings:",
-        result.error.flatten().fieldErrors,
-      );
+      logWarn("[portfolio] Env validation warnings:", JSON.stringify(result.error.flatten().fieldErrors));
     }
     _env = {} as PortfolioEnv;
   } else {
@@ -33,7 +32,7 @@ export const portfolioEnv = getPortfolioEnv();
 
 /**
  * Returns the API server base URL, with explicit dev/prod behavior:
- *  - DEV: falls back to http://localhost:3001 with a one-time console.warn so
+ *  - DEV: falls back to http://localhost:3001 with a one-time logWarn so
  *    local `pnpm dev` still works without a `.env`.
  *  - PROD: returns "" (empty string). Callers MUST handle this — the
  *    previous behavior of silently using localhost:3001 in production
@@ -49,9 +48,7 @@ export function getApiUrl(): string {
   if (import.meta.env.DEV) {
     if (!_apiUrlWarned.has("dev-fallback")) {
       _apiUrlWarned.add("dev-fallback");
-      console.warn(
-        "[portfolio] VITE_API_URL not set — falling back to http://localhost:3001 (dev only)",
-      );
+      logWarn("[portfolio] VITE_API_URL not set — falling back to http://localhost:3001 (dev only)");
     }
     return "http://localhost:3001";
   }

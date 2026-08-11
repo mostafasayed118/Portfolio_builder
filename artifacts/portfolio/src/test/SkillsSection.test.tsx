@@ -38,7 +38,7 @@ vi.mock("@/components/EmptyState", () => ({
   default: ({ title }: { title: string }) => <div>{title}</div>,
 }));
 
-import SkillsSection from "@/components/SkillsSection";
+import { SkillsSection } from "@/features/skills";
 import { useSkills } from "@/hooks/use-portfolio-data";
 
 function renderWithProviders(ui: React.ReactElement) {

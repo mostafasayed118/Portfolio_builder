@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { TestRouter } from "@/test/test-router";
 import Navbar from "@/components/Navbar";
 
@@ -97,7 +97,7 @@ describe("Navbar — mobile menu (UX-013 regression: backdrop overlay closes men
     expect(menu).toHaveClass("opacity-0");
   });
 
-  it("Escape key closes the mobile menu", () => {
+  it("Escape key closes the mobile menu", async () => {
     render(
       <TestRouter>
         <Navbar />
@@ -106,8 +106,10 @@ describe("Navbar — mobile menu (UX-013 regression: backdrop overlay closes men
     fireEvent.click(screen.getByTestId("btn-mobile-menu"));
     fireEvent.keyDown(document, { key: "Escape" });
 
-    const menu = document.querySelector("[data-mobile-menu]");
-    expect(menu).toHaveClass("max-h-0");
+    await waitFor(() => {
+      const menu = document.querySelector("[data-mobile-menu]");
+      expect(menu).toHaveClass("max-h-0");
+    });
   });
 
   it("the hamburger button toggles aria-expanded", () => {

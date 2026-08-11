@@ -1,7 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Upload, X, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { useToast } from "@workspace/ui";
-import { Button } from "@workspace/ui";
+
+
 import { getCsrfToken } from "@/lib/api-client";
 import { getClerkToken } from "@/lib/auth-token";
 import { getApiUrl } from "@/lib/env";
@@ -36,6 +37,8 @@ export default function ImageUploader({
   const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
   const xhrRef = useRef<XMLHttpRequest | null>(null);
+  const xhrsRef = useRef<XMLHttpRequest[]>([]);
+  const pendingRef = useRef(0);
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -44,7 +47,10 @@ export default function ImageUploader({
   const dragCounter = useRef(0);
 
   useEffect(() => {
-    return () => { xhrRef.current?.abort(); };
+    return () => {
+      xhrsRef.current.forEach(xhr => xhr.abort());
+      xhrRef.current?.abort();
+    };
   }, []);
 
   const currentCount = (existingImages?.length ?? 0) + uploaded.length;
@@ -58,10 +64,17 @@ export default function ImageUploader({
       toast({ title: "File too large", description: `Max ${maxFileSizeMB}MB`, variant: "destructive" });
       return;
     }
+    if ((existingImages?.length ?? 0) + uploaded.length + pendingRef.current >= maxFiles) {
+      toast({ title: "Upload limit reached", description: `Max ${maxFiles} files`, variant: "destructive" });
+      return;
+    }
+    pendingRef.current++;
 
     setUploading(true);
     setProgress(0);
     setError(null);
+
+    let xhr: XMLHttpRequest | null = null;
 
     try {
       const formData = new FormData();
@@ -69,8 +82,10 @@ export default function ImageUploader({
       formData.append("entityType", entityType);
       if (entityId) formData.append("entityId", entityId);
 
-      const xhr = new XMLHttpRequest();
-      xhr.upload.onprogress = (e) => {
+      xhr = new XMLHttpRequest();
+      const request = xhr;
+      xhrsRef.current.push(request);
+      request.upload.onprogress = (e) => {
         if (e.lengthComputable) setProgress(Math.round((e.loaded / e.total) * 100));
       };
 
@@ -78,24 +93,24 @@ export default function ImageUploader({
       const clerkToken = await getClerkToken().catch(() => null);
 
       const result = await new Promise<UploadedImage>((resolve, reject) => {
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            resolve(JSON.parse(xhr.responseText));
+        request.onload = () => {
+          if (request.status >= 200 && request.status < 300) {
+            resolve(JSON.parse(request.responseText));
           } else {
             try {
-              const err = JSON.parse(xhr.responseText);
+              const err = JSON.parse(request.responseText);
               reject(new Error(err.error || "Upload failed"));
             } catch {
-              reject(new Error(`Upload failed (${xhr.status})`));
+              reject(new Error(`Upload failed (${request.status})`));
             }
           }
         };
-        xhr.onerror = () => reject(new Error("Network error"));
-        xhr.open("POST", `${API_BASE}/api/v1/images/upload`);
-        if (clerkToken) xhr.setRequestHeader("Authorization", `Bearer ${clerkToken}`);
-        if (csrfToken) xhr.setRequestHeader("x-csrf-token", csrfToken);
-        xhrRef.current = xhr;
-        xhr.send(formData);
+        request.onerror = () => reject(new Error("Network error"));
+        request.open("POST", `${API_BASE}/api/v1/images/upload`);
+        if (clerkToken) request.setRequestHeader("Authorization", `Bearer ${clerkToken}`);
+        if (csrfToken) request.setRequestHeader("x-csrf-token", csrfToken);
+        xhrRef.current = request;
+        request.send(formData);
       });
 
       setUploaded(prev => {
@@ -109,10 +124,15 @@ export default function ImageUploader({
       setError(msg);
       toast({ title: "Upload failed", description: msg, variant: "destructive" });
     } finally {
+      pendingRef.current--;
+      if (xhr) {
+        const idx = xhrsRef.current.indexOf(xhr);
+        if (idx !== -1) xhrsRef.current.splice(idx, 1);
+      }
       setUploading(false);
       setProgress(0);
     }
-  }, [entityType, entityId, maxFileSizeMB, onUploadComplete, toast]);
+  }, [entityType, entityId, maxFileSizeMB, maxFiles, existingImages, uploaded, onUploadComplete, toast]);
 
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
@@ -131,15 +151,21 @@ export default function ImageUploader({
     setDragging(false);
     dragCounter.current = 0;
     const files = Array.from(e.dataTransfer.files);
+    let fileCountSoFar = 0;
     for (const file of files) {
-      if (currentCount < maxFiles) uploadFile(file);
+      if (fileCountSoFar + uploaded.length >= maxFiles) break;
+      uploadFile(file);
+      fileCountSoFar++;
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
+    let fileCountSoFar = 0;
     for (const file of files) {
-      if (currentCount < maxFiles) uploadFile(file);
+      if (fileCountSoFar + uploaded.length >= maxFiles) break;
+      uploadFile(file);
+      fileCountSoFar++;
     }
     e.target.value = "";
   };

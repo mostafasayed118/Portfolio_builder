@@ -4,7 +4,7 @@ import { logger } from "../lib/logger";
 import { env } from "../lib/env";
 
 const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
-const ONE_HOUR_MS = 60 * 60 * 1000;
+const ONE_MINUTE_MS = 60 * 1000;
 
 const RATE_LIMIT_DISABLED = env.DISABLE_RATE_LIMIT;
 
@@ -26,8 +26,8 @@ export const generalLimiter = rateLimit({
 });
 
 export const contactLimiter = rateLimit({
-  windowMs: ONE_HOUR_MS,
-  max: 5,
+  windowMs: env.CONTACT_RATE_LIMIT_WINDOW_MS,
+  max: env.CONTACT_RATE_LIMIT_MAX,
   skip: skipIfDev,
   standardHeaders: true,
   legacyHeaders: false,
@@ -44,12 +44,27 @@ export const adminLimiter = rateLimit({
 });
 
 export const imageMetadataLimiter = rateLimit({
-  windowMs: 60 * 1000,
+  windowMs: ONE_MINUTE_MS,
   max: 60,
   skip: skipIfDev,
   standardHeaders: true,
   legacyHeaders: false,
   message: standardMessage,
+});
+
+/**
+ * Tight rate limit for the image upload endpoint.
+ * The Clerk-auth path skips this (the 200/adminLimiter covers it), but
+ * any caller holding ADMIN_API_KEY is rate-limited to 10 uploads/min to
+ * prevent storage exhaustion. Body size is already capped at 10MB by multer.
+ */
+export const imageUploadLimiter = rateLimit({
+  windowMs: ONE_MINUTE_MS,
+  max: 10,
+  skip: skipIfDev,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: "Upload rate limit exceeded — try again in a minute" },
 });
 
 export const apiKeyLimiter = rateLimit({

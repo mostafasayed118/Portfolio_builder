@@ -4,7 +4,7 @@ import { useBranding } from "@/lib/branding";
 import { useLanguage } from "@/lib/language";
 
 export default function Footer() {
-  const { siteName } = useBranding();
+  const { siteName, tagline } = useBranding();
   const { t } = useLanguage();
 
   return (
@@ -18,7 +18,7 @@ export default function Footer() {
           </div>
           <div>
             <span className="text-sm font-medium text-foreground">{siteName}</span>
-            <span className="block text-xs text-muted-foreground">Data Engineer · {CONTACT.location}</span>
+            <span className="block text-xs text-muted-foreground">{tagline || "Data Engineer"} · {CONTACT.location}</span>
           </div>
         </div>
 

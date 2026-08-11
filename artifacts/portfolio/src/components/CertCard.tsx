@@ -9,6 +9,7 @@ export const CATEGORY_COLORS: Record<Certificate["category"], string> = {
   cloud: "bg-secondary text-secondary-foreground border-secondary/30",
   database: "bg-muted text-muted-foreground border-border",
   ai: "bg-primary/15 text-primary border-primary/30",
+  other: "bg-muted text-muted-foreground border-border",
 };
 
 export const CATEGORY_LABELS: Record<Certificate["category"], string> = {
@@ -17,6 +18,7 @@ export const CATEGORY_LABELS: Record<Certificate["category"], string> = {
   cloud: "Cloud",
   database: "Database",
   ai: "AI & Data Science",
+  other: "Other",
 };
 
 const ISSUER_COLORS: Record<string, string> = {
@@ -60,7 +62,7 @@ export function CertCard({ cert, index, t }: { cert: Certificate; index: number;
                 <span
                   className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${CATEGORY_COLORS[cert.category]}`}
                 >
-                  {CATEGORY_LABELS[cert.category]}
+                  {t.certifications.categories[cert.category]}
                 </span>
               </div>
             </div>
@@ -69,16 +71,18 @@ export function CertCard({ cert, index, t }: { cert: Certificate; index: number;
               <span className="text-xs text-muted-foreground whitespace-nowrap font-medium">
                 {cert.date}
               </span>
-              <a
-                href={cert.credentialUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 text-xs font-semibold text-primary hover:opacity-80 transition-opacity"
-                aria-label={`View ${cert.title} credential`}
-                data-testid={`cert-link-${cert.id}`}
-              >
-                {t.certifications.viewCertificate} <ExternalLink className="h-3 w-3" />
-              </a>
+              {cert.credentialUrl ? (
+                <a
+                  href={cert.credentialUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-xs font-semibold text-primary hover:opacity-80 transition-opacity"
+                  aria-label={`View ${cert.title} credential`}
+                  data-testid={`cert-link-${cert.id}`}
+                >
+                  {t.certifications.viewCertificate} <ExternalLink className="h-3 w-3" />
+                </a>
+              ) : null}
             </div>
           </div>
         </div>

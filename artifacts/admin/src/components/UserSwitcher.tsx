@@ -1,9 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { Users, X, ChevronDown } from "lucide-react";
-import { api, type User } from "@/lib/api-client";
+import { Users, X } from "lucide-react";
+import { api } from "@/lib/api-client";
 import { useAuthUser } from "@workspace/auth";
 import {
-  Button,
   Select,
   SelectContent,
   SelectItem,

@@ -3,7 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { LanguageProvider } from "@/lib/language";
-import HeroSection from "@/components/HeroSection";
+import { HeroSection } from "@/features/hero";
 
 const { mockGetSupabase, mockIsSupabaseConfigured, mockTrackEvent } = vi.hoisted(
   () => ({

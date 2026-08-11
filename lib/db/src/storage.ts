@@ -95,6 +95,7 @@ export async function uploadFileWithProgress(
   file: File,
   folder: string | undefined,
   onProgress: (pct: number) => void,
+  signal?: AbortSignal,
 ): Promise<UploadResult> {
   const supabase = getSupabase();
   if (!supabase) return { error: "Supabase is not configured" };
@@ -103,10 +104,22 @@ export async function uploadFileWithProgress(
   const folderPart = folder ? `${folder}/` : "";
   const storagePath = `${folderPart}${timestamp}-${sanitized}`;
 
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) return { error: "Not authenticated — cannot upload" };
+
   return new Promise((resolve) => {
     const xhr = new XMLHttpRequest();
     const url = `${SUPABASE_URL}/storage/v1/object/${bucket}/${storagePath}`;
-    const token = supabase.auth.getSession();
+    // 5-minute timeout for large files
+    const timeoutId = setTimeout(() => { xhr.abort(); resolve({ error: "Upload timed out" }); }, 5 * 60 * 1000);
+
+    const cleanup = () => {
+      clearTimeout(timeoutId);
+      signal?.removeEventListener("abort", onAbort);
+    };
+
+    const onAbort = () => { xhr.abort(); resolve({ error: "Upload aborted" }); };
+    signal?.addEventListener("abort", onAbort);
 
     xhr.upload.addEventListener("progress", (e) => {
       if (e.lengthComputable) {
@@ -115,6 +128,7 @@ export async function uploadFileWithProgress(
     });
 
     xhr.addEventListener("load", () => {
+      cleanup();
       if (xhr.status >= 200 && xhr.status < 300) {
         const { data } = supabase.storage.from(bucket).getPublicUrl(storagePath);
         resolve({ url: data.publicUrl, path: storagePath });
@@ -131,19 +145,15 @@ export async function uploadFileWithProgress(
     });
 
     xhr.addEventListener("error", () => {
+      cleanup();
       resolve({ error: "Network error during upload" });
     });
 
     xhr.open("PUT", url);
     xhr.setRequestHeader("Content-Type", file.type);
     xhr.setRequestHeader("x-upsert", "false");
-
-    token.then(({ data: { session } }) => {
-      if (session?.access_token) {
-        xhr.setRequestHeader("Authorization", `Bearer ${session.access_token}`);
-      }
-      xhr.send(file);
-    });
+    xhr.setRequestHeader("Authorization", `Bearer ${session.access_token}`);
+    xhr.send(file);
   });
 }
 

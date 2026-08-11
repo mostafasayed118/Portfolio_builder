@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { logWarn } from "@workspace/logging";
 
 const adminEnvSchema = z.object({
   VITE_SUPABASE_URL: z.string().url().optional(),
@@ -9,6 +10,7 @@ const adminEnvSchema = z.object({
   VITE_SITE_URL: z.string().url().optional(),
   VITE_ADMIN_URL: z.string().url().optional(),
   VITE_PORTFOLIO_URL: z.string().url().optional(),
+  VITE_SENTRY_DSN: z.string().url().optional(),
 });
 
 export type AdminEnv = z.infer<typeof adminEnvSchema>;
@@ -20,10 +22,7 @@ export function getAdminEnv(): AdminEnv {
   const result = adminEnvSchema.safeParse(import.meta.env);
   if (!result.success) {
     if (import.meta.env.DEV) {
-      console.warn(
-        "[admin] Env validation warnings:",
-        result.error.flatten().fieldErrors,
-      );
+      logWarn("[admin] Env validation warnings:", JSON.stringify(result.error.flatten().fieldErrors));
     }
     _env = {} as AdminEnv;
   } else {
@@ -36,7 +35,7 @@ export const adminEnv = getAdminEnv();
 
 /**
  * Returns the API server base URL, with explicit dev/prod behavior:
- *  - DEV: falls back to http://localhost:3001 with a one-time console.warn so
+ *  - DEV: falls back to http://localhost:3001 with a one-time logWarn so
  *    local `pnpm dev` still works without a `.env`.
  *  - PROD: returns "" (empty string). Callers MUST handle this — the
  *    previous behavior of silently using localhost:3001 in production
@@ -52,9 +51,7 @@ export function getApiUrl(): string {
   if (import.meta.env.DEV) {
     if (!_apiUrlWarned.has("dev-fallback")) {
       _apiUrlWarned.add("dev-fallback");
-      console.warn(
-        "[admin] VITE_API_URL not set — falling back to http://localhost:3001 (dev only)",
-      );
+      logWarn("[admin] VITE_API_URL not set — falling back to http://localhost:3001 (dev only)");
     }
     return "http://localhost:3001";
   }

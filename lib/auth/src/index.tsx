@@ -1,4 +1,4 @@
-import { createContext, useContext, createElement, type ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from "react";
 
 export type AuthUser = {
   id: string;
@@ -9,7 +9,6 @@ export type AuthUser = {
 export interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
   isAdmin: boolean;
   isSuperadmin: boolean;
@@ -18,7 +17,7 @@ export interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthContextProvider({ value, children }: { value: AuthContextValue; children: ReactNode }) {
-  return createElement(AuthContext.Provider, { value }, children);
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuthUser(): AuthContextValue {

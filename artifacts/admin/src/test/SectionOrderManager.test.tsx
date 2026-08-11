@@ -2,7 +2,7 @@ import { vi, describe, it, expect, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import SectionOrderManager from "@/pages/SectionOrderManager";
+import { SectionOrderManager } from "@/features/settings";
 
 const { mockSectionList, mockSectionUpdate, mockSectionReorder, mockToastSuccess } = vi.hoisted(
   () => ({

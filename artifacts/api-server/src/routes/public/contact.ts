@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { contactLimiter } from "../../middleware/rateLimiter";
-import { z } from "zod";
 import type { Request, Response } from "express";
+import { contactSubmissionSchema } from "@workspace/api-zod";
 import { getSupabaseClient } from "../../lib/supabase-client";
 import { ok, badRequest, serverError, forbidden } from "../../lib/api-response";
 import { logger } from "../../lib/logger";
@@ -24,31 +24,7 @@ import { env } from "../../lib/env";
 
 const router: IRouter = Router();
 
-const contactSchema = z.object({
-  name: z.string()
-    .min(1, "Name is required")
-    .max(100, "Name must be under 100 characters")
-    .trim()
-    // eslint-disable-next-line no-control-regex -- intentionally stripping control chars for security
-    .transform((s) => s.replace(/[\u0000-\u001f\u007f]/g, "")),
-  email: z.string()
-    .email("Valid email is required")
-    .trim()
-    .toLowerCase()
-    .max(254), // RFC 5321 max email length
-  message: z.string()
-    .min(10, "Message must be at least 10 characters")
-    .max(2000, "Message must be under 2000 characters")
-    .trim()
-    // eslint-disable-next-line no-control-regex -- intentionally stripping control chars for security
-    .transform((s) => s.replace(/[\u0000-\u001f\u007f]/g, "")),
-  // Honeypot: must be empty. Real users won't see/fill this field.
-  // Bots that auto-fill all fields will trip this.
-  website: z.string().optional(),
-  // Time-trap: client supplies the timestamp at which the form was rendered.
-  // Must be at least 2s old — bots submit in < 100ms.
-  _formLoadedAt: z.number().int().nonnegative().optional(),
-});
+const contactSchema = contactSubmissionSchema;
 
 function logAbuse(req: Request, reason: string, extra: Record<string, unknown> = {}): void {
   logger.info(

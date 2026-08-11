@@ -145,7 +145,7 @@ describe("CV API", () => {
     });
   });
 
-  describe("GET /api/v1/cv/settings", () => {
+  describe("GET /api/v1/admin/cv/settings", () => {
     it("returns correct response shape", async () => {
       mockSupabaseClient.maybeSingle.mockResolvedValueOnce({
         data: {
@@ -156,7 +156,9 @@ describe("CV API", () => {
         error: null,
       });
 
-      const res = await request(app).get("/api/v1/cv/settings");
+      const res = await request(app)
+        .get("/api/v1/admin/cv/settings")
+        .set("x-admin-key", mockAdminKey);
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -173,7 +175,9 @@ describe("CV API", () => {
         error: null,
       });
 
-      const res = await request(app).get("/api/v1/cv/settings");
+      const res = await request(app)
+        .get("/api/v1/admin/cv/settings")
+        .set("x-admin-key", mockAdminKey);
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -187,24 +191,26 @@ describe("CV API", () => {
         error: { message: "Connection timeout" },
       });
 
-      const res = await request(app).get("/api/v1/cv/settings");
+      const res = await request(app)
+        .get("/api/v1/admin/cv/settings")
+        .set("x-admin-key", mockAdminKey);
 
       expect(res.status).toBe(500);
       expect(res.body.message).toMatch(/failed to fetch cv settings/i);
     });
   });
 
-  describe("PUT /api/v1/cv/settings", () => {
+  describe("PUT /api/v1/admin/cv/settings", () => {
     it("returns 401 without auth", async () => {
       const res = await request(app)
-        .put("/api/v1/cv/settings")
+        .put("/api/v1/admin/cv/settings")
         .send({ objectPath: "/path/to/file", fileName: "resume.pdf" });
       expect([400, 401]).toContain(res.status);
     });
 
     it("returns 400 for invalid data (non-PDF filename)", async () => {
       const res = await request(app)
-        .put("/api/v1/cv/settings")
+        .put("/api/v1/admin/cv/settings")
         .set("x-admin-key", mockAdminKey)
         .send({ objectPath: "/path/to/file", fileName: "resume.docx" });
       expect(res.status).toBe(400);
@@ -213,7 +219,7 @@ describe("CV API", () => {
 
     it("returns 400 when objectPath is missing", async () => {
       const res = await request(app)
-        .put("/api/v1/cv/settings")
+        .put("/api/v1/admin/cv/settings")
         .set("x-admin-key", mockAdminKey)
         .send({ fileName: "resume.pdf" });
       expect(res.status).toBe(400);
@@ -222,7 +228,7 @@ describe("CV API", () => {
 
     it("returns 400 when fileName is missing", async () => {
       const res = await request(app)
-        .put("/api/v1/cv/settings")
+        .put("/api/v1/admin/cv/settings")
         .set("x-admin-key", mockAdminKey)
         .send({ objectPath: "/cv/resume.pdf" });
       expect(res.status).toBe(400);
@@ -236,7 +242,7 @@ describe("CV API", () => {
       });
 
       const res = await request(app)
-        .put("/api/v1/cv/settings")
+        .put("/api/v1/admin/cv/settings")
         .set("x-admin-key", mockAdminKey)
         .send({ objectPath: "/cv/resume.pdf", fileName: "resume.pdf" });
       expect(res.status).toBe(200);
@@ -254,7 +260,7 @@ describe("CV API", () => {
       });
 
       const res = await request(app)
-        .put("/api/v1/cv/settings")
+        .put("/api/v1/admin/cv/settings")
         .set("x-admin-key", mockAdminKey)
         .send({ objectPath: "/cv/resume.pdf", fileName: "resume.pdf" });
       expect(res.status).toBe(200);
@@ -263,7 +269,7 @@ describe("CV API", () => {
 
     it("rejects non-PDF filenames with pattern validation", async () => {
       const res = await request(app)
-        .put("/api/v1/cv/settings")
+        .put("/api/v1/admin/cv/settings")
         .set("x-admin-key", mockAdminKey)
         .send({ objectPath: "/path/to/file", fileName: "resume.exe" });
       expect(res.status).toBe(400);

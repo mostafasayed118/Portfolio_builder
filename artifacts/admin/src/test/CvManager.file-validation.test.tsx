@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderAdmin } from "./helpers";
 import { screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import CvManager from "@/pages/CvManager";
+import { CvManager } from "@/features/cv";
 
 const { mockToast, mockUpdateSettings, mockGetSettings } = vi.hoisted(() => ({
   mockToast: vi.fn(),

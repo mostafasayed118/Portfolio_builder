@@ -17,20 +17,37 @@ import { SKILL_CATEGORIES } from "@/data/skills";
 // as "fresh" for 30 minutes, after which a background refetch fires
 // only when the component re-mounts or the window is focused.
 const STALE_TIME = 30 * 60_000; // 30 min
+const GC_TIME = 60 * 60_000; // 1 hour — keep the cached data around for navigation
 const POLL_OPTIONS = {
   refetchIntervalInBackground: false,
   refetchOnWindowFocus: false,
   staleTime: STALE_TIME,
+  gcTime: GC_TIME,
+  networkMode: "online" as const,
 };
+
+/**
+ * Reusable fetch wrapper that:
+ *   1. Resolves the Supabase client (or throws "Supabase not configured")
+ *   2. Calls the supplied fetcher
+ *   3. Returns the result, leaving nullability to the caller
+ *
+ * Kept as a plain function (not a React hook) so callers retain their
+ * own typed return shape via `useQuery<T, Error, T, ...>` without
+ * fighting the generic inference.
+ */
+async function fetchWithSupabase<T>(
+  fetcher: (supabase: NonNullable<ReturnType<typeof getSupabase>>) => Promise<T>,
+): Promise<T> {
+  const supabase = getSupabase();
+  if (!supabase) throw new Error("Supabase not configured");
+  return fetcher(supabase);
+}
 
 export function useHeroContent() {
   return useQuery({
     queryKey: ["hero"],
-    queryFn: async () => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("Supabase not configured");
-      return getHeroContent(supabase);
-    },
+    queryFn: () => fetchWithSupabase(getHeroContent),
     ...POLL_OPTIONS,
     retry: 2,
     enabled: isSupabaseConfigured,
@@ -40,11 +57,7 @@ export function useHeroContent() {
 export function useAboutContent() {
   return useQuery({
     queryKey: ["about"],
-    queryFn: async () => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("Supabase not configured");
-      return getAboutContent(supabase);
-    },
+    queryFn: () => fetchWithSupabase(getAboutContent),
     ...POLL_OPTIONS,
     retry: 2,
     enabled: isSupabaseConfigured,
@@ -54,11 +67,7 @@ export function useAboutContent() {
 export function useSkills() {
   return useQuery({
     queryKey: ["skills"],
-    queryFn: async () => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("Supabase not configured");
-      return listSkills(supabase);
-    },
+    queryFn: () => fetchWithSupabase(listSkills),
     ...POLL_OPTIONS,
     retry: 2,
     enabled: isSupabaseConfigured,
@@ -68,11 +77,7 @@ export function useSkills() {
 export function useProjects() {
   return useQuery({
     queryKey: ["projects"],
-    queryFn: async () => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("Supabase not configured");
-      return listPublishedProjects(supabase);
-    },
+    queryFn: () => fetchWithSupabase(listPublishedProjects),
     ...POLL_OPTIONS,
     retry: 2,
     enabled: isSupabaseConfigured,
@@ -82,11 +87,7 @@ export function useProjects() {
 export function useExperience() {
   return useQuery({
     queryKey: ["experience"],
-    queryFn: async () => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("Supabase not configured");
-      return listExperience(supabase);
-    },
+    queryFn: () => fetchWithSupabase(listExperience),
     ...POLL_OPTIONS,
     retry: 2,
     enabled: isSupabaseConfigured,
@@ -96,11 +97,7 @@ export function useExperience() {
 export function useCertifications() {
   return useQuery({
     queryKey: ["certifications"],
-    queryFn: async () => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("Supabase not configured");
-      return listCertifications(supabase);
-    },
+    queryFn: () => fetchWithSupabase(listCertifications),
     ...POLL_OPTIONS,
     retry: 2,
     enabled: isSupabaseConfigured,
@@ -110,11 +107,7 @@ export function useCertifications() {
 export function useProjectBySlug(slug: string | undefined) {
   return useQuery({
     queryKey: ["project", slug],
-    queryFn: async () => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("Supabase not configured");
-      return fetchProjectBySlug(supabase, slug!);
-    },
+    queryFn: () => fetchWithSupabase((s) => fetchProjectBySlug(s, slug!)),
     ...POLL_OPTIONS,
     retry: 2,
     enabled: isSupabaseConfigured && !!slug,

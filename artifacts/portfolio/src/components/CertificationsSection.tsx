@@ -35,7 +35,7 @@ function CertificationsSkeleton() {
             ))}
           </div>
         </div>
-        <div className="relative ml-2">
+        <div className="relative ms-2">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="mb-6">
               <div className="flex gap-4 items-start pb-6">
@@ -63,7 +63,7 @@ function CertificationsSkeleton() {
 export default function CertificationsSection() {
   const { t, lang } = useLanguage();
   const [active, setActive] = useState("all");
-  const { ref, revealed } = useReveal();
+  const { ref } = useReveal();
   const { data: certsData, isLoading } = useCertifications();
   const FILTERS = getFilters(t);
 
@@ -84,8 +84,8 @@ export default function CertificationsSection() {
             dateSort: c.date,
             category: (VALID_CATEGORIES.has(c.category ?? "")
               ? c.category
-              : "python") as Certificate["category"],
-            credentialUrl: c.cert_url ?? "#",
+              : "other") as Certificate["category"],
+            credentialUrl: c.cert_url ?? "",
           }))
       : CERTIFICATIONS;
 
@@ -160,13 +160,13 @@ export default function CertificationsSection() {
         ) : (
         <div className="relative">
           <div
-            className="absolute left-4 top-0 bottom-0 w-px bg-gradient-to-b from-primary/40 via-primary/20 to-transparent md:hidden"
+            className="absolute start-4 top-0 bottom-0 w-px bg-gradient-to-b from-primary/40 via-primary/20 to-transparent md:hidden"
             aria-hidden="true"
           />
           <div className="md:grid md:grid-cols-2 md:gap-x-12 md:gap-y-4 section-reveal">
             {sortedGroups.map(([monthKey, certs]) => (
               <div key={monthKey} className="mb-4">
-                <div className="flex items-center gap-2 mb-3 md:ml-0 ml-12">
+                <div className="flex items-center gap-2 mb-3 md:ms-0 ms-12">
                   <span className="text-sm font-bold text-primary uppercase tracking-wide">
                     {monthLabel(monthKey)}
                   </span>

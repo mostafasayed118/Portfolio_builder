@@ -41,6 +41,9 @@ export function useRealtimeSync() {
           },
           () => {
             queryClient.invalidateQueries({ queryKey });
+            if (table === "projects") {
+              queryClient.invalidateQueries({ queryKey: ["project"] });
+            }
           }
         )
         .subscribe();

@@ -5,7 +5,7 @@ export interface Certificate {
   issuerLogo: string;
   date: string;
   dateSort: string;
-  category: "python" | "data-engineering" | "cloud" | "database" | "ai";
+  category: "python" | "data-engineering" | "cloud" | "database" | "ai" | "other";
   credentialUrl: string;
 }
 

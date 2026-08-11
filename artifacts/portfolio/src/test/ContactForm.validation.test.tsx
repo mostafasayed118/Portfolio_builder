@@ -3,7 +3,7 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { LanguageProvider } from "@/lib/language";
-import ContactForm from "@/components/ContactForm";
+import { ContactForm } from "@/features/contact";
 
 const { mockGetCsrfToken, mockClearCsrfCache, mockTrackEvent } = vi.hoisted(
   () => ({

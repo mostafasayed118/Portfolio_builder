@@ -9,7 +9,7 @@ export type RuleFn = (value: unknown) => string | null;
 
 export const rules = {
   required: (label = "Field"): RuleFn =>
-    (v) => (!v || (typeof v === "string" && !v.trim()))
+    (v) => (v === undefined || v === null || (typeof v === "string" && !v.trim()))
       ? `${label} is required`
       : null,
 

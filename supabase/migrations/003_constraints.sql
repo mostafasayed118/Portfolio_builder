@@ -1,5 +1,5 @@
 -- ============================================================================
--- 002_constraints.sql — Layer 1: Database-level input validation
+-- 003_constraints.sql — Layer 1: Database-level input validation
 -- CHECK, NOT NULL, and UNIQUE constraints for all 18 tables
 -- ============================================================================
 
