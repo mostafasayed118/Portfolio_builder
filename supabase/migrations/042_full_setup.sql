@@ -13,18 +13,21 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- ============================================================================
 -- 2. ENUM types
 -- ============================================================================
-DO $$ BEGIN
-  CREATE TYPE theme_mode AS ENUM ('light', 'dark');
+DO $$
+BEGIN
+  EXECUTE 'CREATE TYPE theme_mode AS ENUM (''light'', ''dark'')';
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
-DO $$ BEGIN
-  CREATE TYPE msg_status AS ENUM ('unread', 'read', 'archived');
+DO $$
+BEGIN
+  EXECUTE 'CREATE TYPE msg_status AS ENUM (''unread'', ''read'', ''archived'')';
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
-DO $$ BEGIN
-  CREATE TYPE exp_type AS ENUM ('internship', 'certification', 'volunteer');
+DO $$
+BEGIN
+  EXECUTE 'CREATE TYPE exp_type AS ENUM (''internship'', ''certification'', ''volunteer'')';
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
@@ -78,14 +81,21 @@ COMMENT ON FUNCTION is_admin()
   IS 'Returns true when the calling user email is in app.admin_emails. Reads email from auth.jwt().';
 
 -- ============================================================================
--- 4. Database configuration (sets the admin email allowlist)
+-- 4. Admin authorization model
 -- ============================================================================
--- IMPORTANT: Replace 'mustafasayedsaeed@outlook.com' with YOUR admin email(s).
--- Multiple emails: comma-separated, e.g. 'admin@example.com,other@example.com'
-ALTER DATABASE postgres SET app.admin_emails = 'mustafasayedsaeed@outlook.com,mustafasayed20002@gmail.com,al3tar66@gmail.com';
-
--- Enable the legacy GUC fallback for local dev only (optional):
--- ALTER DATABASE postgres SET app.allow_guc_admin_fallback = 'on';
+-- Admin RLS authorization is resolved from the `users` table (see
+-- 045_admin_is_admin_users_table.sql): a signed-in email is admin when
+-- a matching row exists in `users`. The `users` table is populated by
+-- the API server when it syncs Clerk users whose email is in the
+-- VITE_ADMIN_EMAILS allowlist, so no database-level GUC is required.
+--
+-- NOTE: Supabase managed Postgres forbids `ALTER DATABASE ... SET` for
+-- custom parameters ("permission denied to set parameter"), so the
+-- former app.admin_emails database setting is intentionally not set here.
+-- The legacy GUC fallback in is_admin() only activates for local dev
+-- when explicitly enabled per-session:
+--   SET app.allow_guc_admin_fallback = 'on';
+--   SELECT set_config('app.admin_emails', 'admin@example.com', false);
 
 -- ============================================================================
 -- 5. Singleton tables
@@ -527,31 +537,46 @@ ALTER TABLE IF EXISTS users ENABLE ROW LEVEL SECURITY;
 
 -- 7b. Public read policies (for the portfolio SPA using anon key)
 -- Singleton settings tables: public read, admin write
+DROP POLICY IF EXISTS "public_read_theme_settings" ON theme_settings;
 CREATE POLICY "public_read_theme_settings" ON theme_settings FOR SELECT TO anon, authenticated USING (true);
+DROP POLICY IF EXISTS "public_read_typography_settings" ON typography_settings;
 CREATE POLICY "public_read_typography_settings" ON typography_settings FOR SELECT TO anon, authenticated USING (true);
+DROP POLICY IF EXISTS "public_read_site_settings" ON site_settings;
 CREATE POLICY "public_read_site_settings" ON site_settings FOR SELECT TO anon, authenticated USING (true);
+DROP POLICY IF EXISTS "public_read_seo_settings" ON seo_settings;
 CREATE POLICY "public_read_seo_settings" ON seo_settings FOR SELECT TO anon, authenticated USING (true);
+DROP POLICY IF EXISTS "public_read_hero_content" ON hero_content;
 CREATE POLICY "public_read_hero_content" ON hero_content FOR SELECT TO anon, authenticated USING (true);
+DROP POLICY IF EXISTS "public_read_about_content" ON about_content;
 CREATE POLICY "public_read_about_content" ON about_content FOR SELECT TO anon, authenticated USING (true);
+DROP POLICY IF EXISTS "public_read_contact_info" ON contact_info;
 CREATE POLICY "public_read_contact_info" ON contact_info FOR SELECT TO anon, authenticated USING (true);
+DROP POLICY IF EXISTS "public_read_cv" ON cv_settings;
 CREATE POLICY "public_read_cv" ON cv_settings FOR SELECT TO anon, authenticated USING (true);
 
 -- Collection tables: public read (only published, not deleted)
+DROP POLICY IF EXISTS "public_read_skills" ON skills;
 CREATE POLICY "public_read_skills" ON skills FOR SELECT TO anon, authenticated
   USING (is_visible = true AND deleted_at IS NULL);
+DROP POLICY IF EXISTS "public_read_projects" ON projects;
 CREATE POLICY "public_read_projects" ON projects FOR SELECT TO anon, authenticated
   USING (is_published = true AND deleted_at IS NULL);
+DROP POLICY IF EXISTS "public_read_experience" ON experience;
 CREATE POLICY "public_read_experience" ON experience FOR SELECT TO anon, authenticated
   USING (is_published = true AND deleted_at IS NULL);
+DROP POLICY IF EXISTS "public_read_certifications" ON certifications;
 CREATE POLICY "public_read_certifications" ON certifications FOR SELECT TO anon, authenticated
   USING (is_published = true AND deleted_at IS NULL);
 
 -- Section settings: public read (only visible sections)
+DROP POLICY IF EXISTS "public_read_section_settings" ON section_settings;
 CREATE POLICY "public_read_section_settings" ON section_settings FOR SELECT TO anon, authenticated
   USING (is_visible = true);
 
 -- Image metadata: public read
+DROP POLICY IF EXISTS "public_read_image_metadata" ON image_metadata;
 CREATE POLICY "public_read_image_metadata" ON image_metadata FOR SELECT TO anon, authenticated USING (true);
+DROP POLICY IF EXISTS "public_read_image_variants" ON image_variants;
 CREATE POLICY "public_read_image_variants" ON image_variants FOR SELECT TO anon, authenticated USING (true);
 
 -- 7c. Admin ALL policies (bypass RLS via is_admin())
@@ -654,10 +679,12 @@ DROP POLICY IF EXISTS "admin_upload_cv" ON storage.objects;
 CREATE POLICY "admin_upload_cv" ON storage.objects FOR INSERT
   WITH CHECK (bucket_id = 'cv' AND is_admin());
 
-DROP POLICY IF EXISTS "admin_update_cv" ON storage.objects FOR UPDATE
+DROP POLICY IF EXISTS "admin_update_cv" ON storage.objects;
+CREATE POLICY "admin_update_cv" ON storage.objects FOR UPDATE
   USING (bucket_id = 'cv' AND is_admin());
 
-DROP POLICY IF EXISTS "admin_delete_cv" ON storage.objects FOR DELETE
+DROP POLICY IF EXISTS "admin_delete_cv" ON storage.objects;
+CREATE POLICY "admin_delete_cv" ON storage.objects FOR DELETE
   USING (bucket_id = 'cv' AND is_admin());
 
 -- project_images bucket: public read, admin write
@@ -665,13 +692,16 @@ DROP POLICY IF EXISTS "public_read_project_images" ON storage.objects;
 CREATE POLICY "public_read_project_images" ON storage.objects FOR SELECT
   USING (bucket_id = 'project_images');
 
-DROP POLICY IF EXISTS "admin_insert_project_images" ON storage.objects FOR INSERT
+DROP POLICY IF EXISTS "admin_insert_project_images" ON storage.objects;
+CREATE POLICY "admin_insert_project_images" ON storage.objects FOR INSERT
   WITH CHECK (bucket_id = 'project_images' AND is_admin());
 
-DROP POLICY IF EXISTS "admin_update_project_images" ON storage.objects FOR UPDATE
+DROP POLICY IF EXISTS "admin_update_project_images" ON storage.objects;
+CREATE POLICY "admin_update_project_images" ON storage.objects FOR UPDATE
   USING (bucket_id = 'project_images' AND is_admin());
 
-DROP POLICY IF EXISTS "admin_delete_project_images" ON storage.objects FOR DELETE
+DROP POLICY IF EXISTS "admin_delete_project_images" ON storage.objects;
+CREATE POLICY "admin_delete_project_images" ON storage.objects FOR DELETE
   USING (bucket_id = 'project_images' AND is_admin());
 
 -- ============================================================================

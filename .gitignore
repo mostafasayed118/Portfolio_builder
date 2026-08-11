@@ -69,3 +69,4 @@ playwright-report/
 playwright/.auth/
 test-*.log
 
+supabase/.temp/
