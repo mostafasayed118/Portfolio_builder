@@ -56,6 +56,25 @@ describe("useEntityQuery", () => {
       expect(api.projects.list).toHaveBeenCalledWith(undefined);
     });
   });
+
+  it("unwraps the paginated envelope { data, pagination } returned by collection endpoints", async () => {
+    vi.mocked(api.projects.list).mockResolvedValue({
+      success: true,
+      data: {
+        data: [{ id: "p1", title: "P1" }],
+        pagination: { total: 1, limit: 50, offset: 0, hasMore: false },
+      },
+    } as never);
+    const wrapper = makeWrapper();
+    const { result } = renderHook(
+      () => useEntityQuery("projects", (uid) => api.projects.list(uid ?? undefined) as never),
+      { wrapper },
+    );
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual([{ id: "p1", title: "P1" }]);
+    });
+  });
 });
 
 describe("useUnreadCountQuery", () => {

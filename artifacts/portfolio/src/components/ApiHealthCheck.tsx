@@ -14,7 +14,11 @@ export function ApiHealthCheck() {
     const controller = new AbortController();
     fetch(`${apiUrl}/api/healthz`, { signal: controller.signal, method: "HEAD" })
       .then((r) => { if (!r.ok) setUnreachable(true); })
-      .catch(() => setUnreachable(true));
+      .catch((err) => {
+        // Ignore aborts (component unmounted / navigated away) — not a failure
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        setUnreachable(true);
+      });
     return () => controller.abort();
   }, []);
 

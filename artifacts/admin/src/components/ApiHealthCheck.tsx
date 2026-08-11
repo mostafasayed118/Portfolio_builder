@@ -49,6 +49,9 @@ export function ApiHealthCheck() {
       })
       .catch((err) => {
         clearTimeout(timeoutId);
+        // Ignore aborts (timeout/unmount) — the server may just be slow,
+        // and treating every abort as an outage produces false alarms.
+        if (err instanceof DOMException && err.name === "AbortError") return;
         console.warn("[ApiHealthCheck] Health check failed:", err.message);
         setUnreachable(true);
       });
@@ -64,6 +67,11 @@ export function ApiHealthCheck() {
     sessionStorage.setItem(WARNING_KEY, "true");
   };
 
+  const apiUrl = getApiUrl();
+  const portHint = apiUrl
+    ? (() => { try { return new URL(apiUrl).port; } catch { return null; } })()
+    : null;
+
   if (!unreachable || dismissed) return null;
 
   return (
@@ -73,7 +81,7 @@ export function ApiHealthCheck() {
         <div className="flex-1 text-sm">
           <p className="font-semibold text-destructive">API Server Unreachable</p>
           <p className="text-muted-foreground mt-1">
-            Admin operations require the API server. Check that it is running on port 3002.
+            Admin operations require the API server. Check that it is running{portHint ? ` on port ${portHint}` : ""}.
           </p>
         </div>
         <button onClick={handleDismiss} className="text-muted-foreground hover:text-foreground">
