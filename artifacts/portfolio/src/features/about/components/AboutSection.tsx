@@ -51,8 +51,8 @@ export default function AboutSection() {
                 <span className="font-semibold text-sm font-display">{t.about.languages}</span>
               </div>
               <div className="space-y-3">
-                {about.languages.map((lang) => (
-                  <div key={lang.lang}>
+                {about.languages.map((lang, i) => (
+                  <div key={`${lang.lang}-${i}`}>
                     <div className="flex justify-between text-xs font-medium mb-1">
                       <span className="text-foreground">{lang.lang}</span>
                       <span className="text-muted-foreground">{lang.level}</span>

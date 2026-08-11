@@ -13,7 +13,11 @@ export async function trackEvent(
       type: eventType,
       path: page,
       section_key: metadata?.section ?? null,
-      project_id: metadata?.project_slug ?? metadata?.project_id ?? null,
+      // project_id is a UUID FK — only pass real UUIDs. String identifiers
+      // (project slugs) belong in the TEXT preset_id column; sending a slug
+      // into project_id makes PostgREST reject the insert with a 400.
+      preset_id: metadata?.project_slug ?? null,
+      project_id: metadata?.project_id ?? null,
       referrer: metadata?.referrer ?? null,
       device: metadata?.device ?? null,
     });
@@ -47,14 +51,14 @@ export async function fetchEventStats(
 
   const { data: projectViewRows, error: projError } = await supabase
     .from("analytics_events")
-    .select("project_id, path")
+    .select("preset_id, project_id, path")
     .eq("type", "project_view")
     .gte("created_at", since.toISOString());
   if (projError) console.error("[analytics] project_view query failed:", projError.message);
 
   const projectCounts = new Map<string, { slug: string; views: number }>();
   for (const row of projectViewRows ?? []) {
-    const slug = row.project_id ?? row.path?.split("/").pop() ?? "unknown";
+    const slug = row.preset_id ?? row.project_id ?? row.path?.split("/").pop() ?? "unknown";
     const existing = projectCounts.get(slug);
     if (existing) {
       existing.views++;

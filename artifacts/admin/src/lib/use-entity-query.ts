@@ -30,7 +30,21 @@ export function useEntityQuery<T>(
     queryFn: async () => {
       const res = await fetcher(viewingUserId);
       if (!res.success) throw new Error(res.message);
-      return res.data as T;
+      const payload = res.data as { data?: T } | T;
+      // Collection endpoints return { data: [...], pagination } inside
+      // `res.data`. Unwrap the array so managers receive a real list —
+      // otherwise `projects?.filter(...)` etc. crash with
+      // "X.filter is not a function".
+      if (
+        payload &&
+        typeof payload === "object" &&
+        !Array.isArray(payload) &&
+        "data" in payload &&
+        Array.isArray((payload as { data: unknown }).data)
+      ) {
+        return (payload as { data: T }).data;
+      }
+      return payload as T;
     },
     ...options,
   });

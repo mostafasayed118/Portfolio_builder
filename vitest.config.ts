@@ -17,6 +17,10 @@ function reactAlias(nm: string) {
 
 export default defineConfig({
   test: {
+    // jsdom form-integration tests routinely exceed the 5s default under
+    // full-suite parallel load, causing flaky CI failures. 15s absorbs that.
+    testTimeout: 15_000,
+    hookTimeout: 15_000,
     projects: [
       {
         name: "portfolio",
