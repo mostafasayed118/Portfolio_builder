@@ -30,12 +30,20 @@ export function SmartConfirmDialog({ state, onCancel }: SmartConfirmDialogProps)
   const descId = useId();
   const cancelRef = useRef<HTMLButtonElement>(null);
   const [confirming, setConfirming] = useState(false);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
   const handleCancel = state.onCancel ?? onCancel ?? (() => {});
 
   // Reset confirming state when dialog closes
   useEffect(() => {
-    if (!state.isOpen) setConfirming(false);
+    if (!state.isOpen) {
+      setConfirming(false);
+      setConfirmError(null);
+    }
   }, [state.isOpen]);
+
+  useEffect(() => {
+    cancelRef.current?.focus();
+  }, []);
 
   useEffect(() => {
     if (!state.isOpen) return;
@@ -87,6 +95,9 @@ export function SmartConfirmDialog({ state, onCancel }: SmartConfirmDialogProps)
           <div className="flex-1">
             <h2 id={titleId} className="text-lg font-semibold">{state.title}</h2>
             <p id={descId} className="text-sm text-muted-foreground mt-1">{state.message}</p>
+            {confirmError && (
+              <p role="alert" className="text-sm text-destructive mt-2">{confirmError}</p>
+            )}
           </div>
         </div>
         <div className="flex justify-end gap-3 mt-6">
@@ -102,8 +113,11 @@ export function SmartConfirmDialog({ state, onCancel }: SmartConfirmDialogProps)
             onClick={async () => {
               if (confirming) return;
               setConfirming(true);
+              setConfirmError(null);
               try {
                 await state.onConfirm?.();
+              } catch (err) {
+                setConfirmError(err instanceof Error ? err.message : "Something went wrong");
               } finally {
                 setConfirming(false);
               }

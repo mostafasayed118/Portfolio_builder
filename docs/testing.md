@@ -1,15 +1,16 @@
 # Testing Guide
 
-> **Last Updated:** 2026-05-23
+> **Last Updated:** 2026-06-01
 > **Framework:** Vitest 3.2.4 + Testing Library + jsdom + supertest
 > **E2E:** Playwright (BLOCKED — config issue)
+> **Test count:** 250 tests across 32 files (api-server alone)
 
 ---
 
 ## Quick Start
 
 ```bash
-# Run all unit tests
+# Run all unit tests (workspace root)
 pnpm run test
 
 # Run with coverage
@@ -18,12 +19,18 @@ pnpm run test -- --coverage
 # Run in watch mode
 pnpm run test -- --watch
 
-# Run specific project
+# Run a single project
 pnpm run test -- --project portfolio
 pnpm run test -- --project admin
 pnpm run test -- --project api-server
 pnpm run test -- --project validation
 pnpm run test -- --project db
+
+# API server: dedicated commands (added 2026-06-01)
+pnpm --filter @workspace/api-server test          # run all 250 API tests once
+pnpm --filter @workspace/api-server test:watch    # watch mode
+pnpm --filter @workspace/api-server test:coverage # coverage
+pnpm --filter @workspace/api-server verify        # typecheck + test + build (CI gate)
 ```
 
 ---
@@ -50,11 +57,16 @@ artifacts/portfolio/src/hooks/         — 1 test file
 artifacts/admin/src/test/              — 26 test files
 artifacts/admin/src/hooks/             — 7 test files
 artifacts/admin/src/lib/               — 2 test files
-artifacts/api-server/src/test/         — 18 test files
+artifacts/api-server/src/test/         — 31 test files (was 18; +13 since 2026-05-23)
 lib/db/src/                            — 14 test files
 ```
 
-**Total:** 78 test files
+**Total:** 91 test files
+
+### Notable new test files (2026-06-01)
+
+- `artifacts/api-server/src/test/routes/collection-404.test.ts` — 14 tests covering the 404-on-missing-row contract for every `PUT /:id` and `DELETE /:id` collection route (skills, projects, experience, certifications, messages, section-settings, users, plus a count=null boundary case)
+- `artifacts/api-server/src/test/routes/health.test.ts` — updated to match `.maybeSingle()` (was `.single()`)
 
 ---
 

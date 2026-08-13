@@ -1,15 +1,13 @@
 import { doubleCsrf } from "csrf-csrf";
 import type { Request } from "express";
+import { env } from "../lib/env";
 
-const CSRF_SECRET = process.env.CSRF_SECRET;
-if (!CSRF_SECRET) {
-  throw new Error("CSRF_SECRET environment variable is required");
-}
-const getSecret = (): string | string[] => CSRF_SECRET;
+const getSecret = (): string | string[] => env.CSRF_SECRET;
 
 export const {
   generateCsrfToken,
   doubleCsrfProtection,
+  invalidCsrfTokenError,
 } = doubleCsrf({
   getSecret,
   getSessionIdentifier: (req: Request) =>
@@ -17,8 +15,15 @@ export const {
   cookieName: "x-csrf-token",
   cookieOptions: {
     httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    // The admin SPA is deployed on a separate origin from the API
+    // (e.g. portfolio-builder-admin.vercel.app → portfolio-builder-api-six.vercel.app).
+    // SameSite=Lax cookies are never attached to cross-site XHR/fetch,
+    // which silently broke every admin mutation (including seed/import).
+    // In production we must use SameSite=None (with Secure) so the
+    // double-submit token cookie travels with the request; the header
+    // + cookie value match is still enforced by doubleCsrfProtection.
+    sameSite: env.IS_PRODUCTION ? "none" : "lax",
+    secure: env.IS_PRODUCTION,
     path: "/",
   },
   size: 64,

@@ -48,6 +48,9 @@ export default function OptimizedImage({
   const mediumUrl = variants?.find(v => v.type === "medium")?.url ?? src;
   const largeUrl = variants?.find(v => v.type === "large")?.url ?? src;
 
+  // When imgSrc changes due to error, use it; otherwise use the best variant
+  const effectiveSrc = imgSrc !== src ? imgSrc : mediumUrl;
+
   return (
     <div
       ref={ref}
@@ -69,14 +72,20 @@ export default function OptimizedImage({
 
       {inView && (
         <img
-          src={mediumUrl}
+          src={effectiveSrc}
           alt={alt}
           loading={loading}
           fetchPriority={fetchPriority ?? (priority ? "high" : "auto")}
           onLoad={() => setLoaded(true)}
-          onError={() => setImgSrc(fallback)}
+          onError={() => { if (imgSrc !== fallback) setImgSrc(fallback); }}
           className={`w-full h-full object-cover transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"}`}
-          srcSet={`${thumbnailUrl} 150w, ${smallUrl} 400w, ${mediumUrl} 800w, ${largeUrl} 1200w`}
+          srcSet={
+            imgSrc === src
+              ? [thumbnailUrl && `${thumbnailUrl} 150w`, `${smallUrl} 400w`, `${mediumUrl} 800w`, `${largeUrl} 1200w`]
+                  .filter(Boolean)
+                  .join(", ") || undefined
+              : undefined
+          }
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
         />
       )}

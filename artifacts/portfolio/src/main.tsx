@@ -1,18 +1,20 @@
 import { createRoot } from "react-dom/client";
+import { setCaptureError } from "@workspace/logging";
 import App from "./App";
 import { RootErrorBoundary } from "./components/RootErrorBoundary";
+import "./lib/env";
 import "./index.css";
 
-const requiredEnvVars = [
-  'VITE_SUPABASE_URL',
-  'VITE_SUPABASE_ANON_KEY',
-];
-
-if (import.meta.env.DEV) {
-  requiredEnvVars.forEach(key => {
-    if (!import.meta.env[key]) {
-      console.warn(`⚠️ Missing env var: ${key} — some features will be disabled`);
-    }
+// Initialize Sentry error monitoring if VITE_SENTRY_DSN is configured.
+// Dynamic import ensures @sentry/react is tree-shaken out of the bundle
+// when the env var is not set.
+if (import.meta.env.VITE_SENTRY_DSN) {
+  import("@sentry/react").then(({ init, captureException }) => {
+    init({ dsn: import.meta.env.VITE_SENTRY_DSN, environment: import.meta.env.MODE });
+    setCaptureError((error, extra) => {
+      if (extra) captureException(error, { extra });
+      else captureException(error);
+    });
   });
 }
 

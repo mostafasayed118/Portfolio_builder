@@ -1,12 +1,88 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import request from "supertest";
 import app from "../app";
+import { _setOverride, _resetOverrides } from "../lib/env";
 
-describe("GET /api/healthz", () => {
-  it("returns 200 with OK status", async () => {
-    const res = await request(app).get("/api/v1/healthz");
+describe("GET /api/healthz — liveness check", () => {
+  beforeEach(() => {
+    // env.NODE_ENV falls back to "development" if unset, so this is
+    // mostly defensive: the test runner's process.env should already
+    // have NODE_ENV=test, but the test still works either way.
+    _setOverride("NODE_ENV", "development");
+  });
+  afterEach(() => {
+    _resetOverrides();
+  });
+
+  it("returns 200 with the spec response shape", async () => {
+    const res = await request(app).get("/api/healthz");
     expect(res.status).toBe(200);
-    expect(res.body).toHaveProperty("status", "ok");
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        status: "ok",
+        timestamp: expect.any(String),
+        uptime: expect.any(Number),
+        environment: expect.any(String),
+      }),
+    );
+    // ISO 8601 timestamp — sanity-check the format
+    expect(res.body.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+    // uptime is a non-negative float
+    expect(res.body.uptime).toBeGreaterThanOrEqual(0);
+  });
+
+  it("reports the configured environment", async () => {
+    _setOverride("NODE_ENV", "production");
+    const res = await request(app).get("/api/healthz");
+    expect(res.status).toBe(200);
+    expect(res.body.environment).toBe("production");
+  });
+
+  it("does NOT require any Authorization header", async () => {
+    const res = await request(app).get("/api/healthz");
+    expect(res.status).toBe(200);
+  });
+
+  it("does NOT require CSRF token (this is a state-mutating-method-free endpoint)", async () => {
+    const res = await request(app).get("/api/healthz");
+    expect(res.status).toBe(200);
+  });
+
+  it("sets the request-id header (monitoring tools correlate logs via this)", async () => {
+    const res = await request(app).get("/api/healthz");
+    expect(res.headers["x-request-id"]).toBeDefined();
+  });
+
+  it("sets security headers from helmet", async () => {
+    const res = await request(app).get("/api/healthz");
+    expect(res.headers["x-content-type-options"]).toBe("nosniff");
+  });
+});
+
+describe("HEAD /api/healthz — liveness check (used by Docker / k8s / load balancers)", () => {
+  it("returns 200 with no body", async () => {
+    const res = await request(app).head("/api/healthz");
+    expect(res.status).toBe(200);
+    // HEAD must not return a body per RFC 9110 §9.3.2. supertest
+    // discards the response body for HEAD requests at the HTTP
+    // client level, so `res.text` is `undefined` (not "") and the
+    // parsed `res.body` is an empty object — that's the load-bearing
+    // assertion. The `Content-Length` header is unreliable because
+    // the global `compression()` middleware may pre-compute a value
+    // from the equivalent GET response, so we don't assert on it.
+    expect(res.body).toEqual({});
+  });
+
+  it("sets the request-id header on HEAD too", async () => {
+    const res = await request(app).head("/api/healthz");
+    expect(res.headers["x-request-id"]).toBeDefined();
+  });
+});
+
+describe("/api/v1/healthz — the legacy mount was removed in favor of /api/healthz", () => {
+  it("returns 404 for the old v1 path", async () => {
+    const res = await request(app).get("/api/v1/healthz");
+    expect(res.status).toBe(404);
   });
 });
 

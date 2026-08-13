@@ -1,48 +1,15 @@
-import { useQuery } from "@tanstack/react-query";
 import { MessageSquare, Code2, FolderKanban, TrendingUp, AlertCircle, RefreshCw } from "lucide-react";
 import { Card, CardContent, Button, Skeleton } from "@workspace/ui";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { api } from "@/lib/api-client";
-import { useViewingUser } from "@/lib/viewing-user-context";
+import { useEntityQuery, useUnreadCountQuery } from "@/lib/use-entity-query";
 import { StatsCard } from "./StatsCard";
 
 export function StatsBar() {
-  const { viewingUserId } = useViewingUser();
-
   const queries = {
-    unread: useQuery({
-      queryKey: ["unreadCount", viewingUserId],
-      queryFn: async () => {
-        const res = await api.messages.unreadCount(viewingUserId ?? undefined);
-        if (!res.success) throw new Error(res.message);
-        return res.data;
-      },
-      enabled: isSupabaseConfigured,
-      retry: 2,
-      retryDelay: 1000,
-    }),
-    skills: useQuery({
-      queryKey: ["skills", viewingUserId],
-      queryFn: async () => {
-        const res = await api.skills.list(viewingUserId ?? undefined);
-        if (!res.success) throw new Error(res.message);
-        return res.data;
-      },
-      enabled: isSupabaseConfigured,
-      retry: 2,
-      retryDelay: 1000,
-    }),
-    projects: useQuery({
-      queryKey: ["projects", viewingUserId],
-      queryFn: async () => {
-        const res = await api.projects.list(viewingUserId ?? undefined);
-        if (!res.success) throw new Error(res.message);
-        return res.data;
-      },
-      enabled: isSupabaseConfigured,
-      retry: 2,
-      retryDelay: 1000,
-    }),
+    unread: useUnreadCountQuery(),
+    skills: useEntityQuery<unknown[]>("skills", (uid) => api.skills.list(uid ?? undefined) as unknown as Promise<{ success: true; data?: unknown[] } | { success: false; message: string }>, { enabled: isSupabaseConfigured }),
+    projects: useEntityQuery<unknown[]>("projects", (uid) => api.projects.list(uid ?? undefined) as unknown as Promise<{ success: true; data?: unknown[] } | { success: false; message: string }>, { enabled: isSupabaseConfigured }),
   };
 
   const { unread, skills, projects } = queries;

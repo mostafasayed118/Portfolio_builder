@@ -7,7 +7,12 @@
     "dev": "pnpm run build && pnpm run start",
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "verify": "pnpm run typecheck && pnpm run test && pnpm run build",
+    "lint": "echo 'No linter configured for api-server yet'"
   },
   "dependencies": {
     "@clerk/backend": "^3.4.9",
@@ -24,6 +29,7 @@
     "helmet": "^8.1.0",
     "jspdf": "^4.2.1",
     "multer": "^2.1.1",
+    "nodemailer": "^9.0.5",
     "pino": "^9",
     "pino-http": "^10",
     "qrcode": "^1.5.4",
@@ -35,6 +41,7 @@
     "@types/express": "^5.0.6",
     "@types/multer": "^1.4.12",
     "@types/node": "catalog:",
+    "@types/nodemailer": "^8.0.1",
     "@types/qrcode": "^1.5.6",
     "esbuild": "^0.27.3",
     "esbuild-plugin-pino": "^2.3.3",

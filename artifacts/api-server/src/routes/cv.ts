@@ -1,11 +1,14 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { cvSettingsUpdateSchema } from "@workspace/api-zod";
-import { adminAuth } from "../middleware/adminAuth";
-import { doubleCsrfProtection } from "../middleware/csrf";
 import { generateCvPdf } from "../utils/cv-generator";
 import { getSupabaseClient } from "../lib/supabase-client";
+import { env } from "../lib/env";
 
 const router: IRouter = Router();
+
+/** Sanitize a filename for safe use in Content-Disposition headers. */
+function sanitizeFileName(name: string): string {
+  return name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 128);
+}
 
 /**
  * GET /api/v1/cv
@@ -14,7 +17,7 @@ const router: IRouter = Router();
  * If CV contains sensitive info, add auth middleware here.
  */
 router.get("/cv", async (req: Request, res: Response) => {
-  const portfolioUrl = process.env.VITE_SITE_URL ?? "https://mustafasayed.replit.app";
+  const portfolioUrl = env.VITE_SITE_URL ?? "https://mustafasayed.replit.app";
 
   try {
     const supabase = getSupabaseClient();
@@ -42,23 +45,23 @@ router.get("/cv", async (req: Request, res: Response) => {
 
     if (error) {
       req.log.error({ err: error }, "Error fetching CV settings");
-      res.status(500).json({ error: "Failed to fetch CV settings." });
+      res.status(500).json({ success: false, message: "Failed to fetch CV settings." });
       return;
     }
 
     if (!settings?.object_path) {
-      res.status(404).json({ error: "No CV has been uploaded yet." });
+      res.status(404).json({ success: false, message: "No CV has been uploaded yet." });
       return;
     }
 
-    const fileName = settings.file_name ?? "Mustafa_Sayed_Resume.pdf";
+    const fileName = sanitizeFileName(settings.file_name ?? "Mustafa_Sayed_Resume.pdf");
     const { data: fileData, error: downloadError } = await supabase.storage
       .from("cv")
       .download(settings.object_path);
 
     if (downloadError || !fileData) {
       req.log.error({ err: downloadError }, "Error downloading CV from storage");
-      res.status(500).json({ error: "Failed to download CV file." });
+      res.status(500).json({ success: false, message: "Failed to download CV file." });
       return;
     }
 
@@ -70,78 +73,7 @@ router.get("/cv", async (req: Request, res: Response) => {
     res.end(buffer);
   } catch (err) {
     req.log.error({ err }, "Error serving CV");
-    res.status(500).json({ error: "Failed to serve CV." });
+    res.status(500).json({ success: false, message: "Failed to serve CV." });
   }
 });
-
-router.get("/cv/settings", async (_req: Request, res: Response) => {
-  const supabase = getSupabaseClient();
-  const { data: settings, error } = await supabase
-    .from("cv_settings")
-    .select("object_path, file_name, updated_at")
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    res.status(500).json({ error: "Failed to fetch CV settings." });
-    return;
-  }
-
-  res.json({
-    objectPath: settings?.object_path ?? null,
-    fileName: settings?.file_name ?? null,
-    updatedAt: settings?.updated_at ?? new Date().toISOString(),
-  });
-});
-
-router.put("/cv/settings", adminAuth, doubleCsrfProtection, async (req: Request, res: Response) => {
-  const result = cvSettingsUpdateSchema.safeParse(req.body);
-  if (!result.success) {
-    res.status(400).json({ error: "Validation failed", details: result.error.flatten().fieldErrors });
-    return;
-  }
-  const { objectPath, fileName } = result.data;
-  const supabase = getSupabaseClient();
-
-  const { data: existing } = await supabase
-    .from("cv_settings")
-    .select("id")
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (existing?.id) {
-    const { error } = await supabase
-      .from("cv_settings")
-      .update({
-        object_path: objectPath,
-        file_name: fileName,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", existing.id);
-
-    if (error) {
-      res.status(500).json({ error: "Failed to update CV settings." });
-      return;
-    }
-    res.json({ id: existing.id });
-  } else {
-    const { data, error } = await supabase
-      .from("cv_settings")
-      .insert({
-        object_path: objectPath,
-        file_name: fileName,
-      })
-      .select("id")
-      .single();
-
-    if (error) {
-      res.status(500).json({ error: "Failed to save CV settings." });
-      return;
-    }
-    res.json({ id: data?.id });
-  }
-});
-
 export default router;

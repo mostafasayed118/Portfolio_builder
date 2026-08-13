@@ -11,7 +11,6 @@ describe("usePrefetchRoutes", () => {
 
   beforeEach(() => {
     vi.stubEnv("VITE_API_URL", "http://localhost:3001");
-    vi.stubEnv("VITE_ADMIN_API_KEY", "test-key");
     mockFetch.mockReset();
     mockFetch.mockImplementation((url: string) => {
       if (url.includes("csrf-token")) {

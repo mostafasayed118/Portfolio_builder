@@ -58,5 +58,24 @@ testsprite_tests/.env
 
 .vercel
 
+# Local scratch / tooling artifacts
+.freebuff/
+section-check.tmp.mjs
+
+# Test artifacts (should never be tracked)
+playwright-report/
+test-results/
+
 # Windows NUL device artifacts
 nul
+
+testsprite_tests\tmp\config.json
+
+# test artifacts and e2e runtime state
+test-results/
+playwright-report/
+playwright/.auth/
+test-*.log
+
+supabase/.temp/
+testsprite_tests/tmp/config.json

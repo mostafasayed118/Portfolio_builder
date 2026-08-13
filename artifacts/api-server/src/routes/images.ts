@@ -4,8 +4,10 @@ import { createHash } from "crypto";
 import { z } from "zod";
 import { doubleCsrfProtection } from "../middleware/csrf";
 import { adminAuth } from "../middleware/adminAuth";
-import { imageMetadataLimiter } from "../middleware/rateLimiter";
+import { imageMetadataLimiter, imageUploadLimiter } from "../middleware/rateLimiter";
 import { getSupabaseClient } from "../lib/supabase-client";
+import { env } from "../lib/env";
+import { ok, badRequest, notFound, serverError } from "../lib/api-response";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -23,6 +25,49 @@ const ALLOWED_ENTITY_TYPES = [
   "branding",
   "content",
 ];
+
+/**
+ * Magic-byte signatures for the formats we accept. The HTTP `Content-Type`
+ * header is supplied by the client and trivially spoofable; we must
+ * inspect the actual file bytes to be sure the payload matches the
+ * declared format. Without this check, an attacker could upload a
+ * `.exe` renamed to `.jpg` and have it served as `image/jpeg` from
+ * the public `project_images` bucket (XSS / drive-by download risk).
+ */
+const MAGIC_BYTES: { mime: string; signatures: Uint8Array[] }[] = [
+  {
+    mime: "image/jpeg",
+    signatures: [
+      new Uint8Array([0xff, 0xd8, 0xff]), // JPEG (SOI + first APP0 marker byte)
+    ],
+  },
+  {
+    mime: "image/png",
+    signatures: [
+      new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), // PNG
+    ],
+  },
+  {
+    mime: "image/webp",
+    signatures: [
+      // RIFF + WEBP (at offset 0 / 8)
+      new Uint8Array([0x52, 0x49, 0x46, 0x46]), // 'RIFF'
+    ],
+  },
+];
+
+function verifyMagicBytes(buf: Buffer, declaredMime: string): boolean {
+  const head = new Uint8Array(buf.subarray(0, 12));
+  const expected = MAGIC_BYTES.find((m) => m.mime === declaredMime);
+  if (!expected) return false;
+  return expected.signatures.every((sig) => {
+    if (head.length < sig.length) return false;
+    for (let i = 0; i < sig.length; i++) {
+      if (head[i] !== sig[i]) return false;
+    }
+    return true;
+  });
+}
 const VARIANTS: { suffix: string; width: number; height?: number; fit?: string }[] = [
   { suffix: "thumbnail", width: 150, height: 150, fit: "cover" },
   { suffix: "small", width: 400, fit: "inside" },
@@ -32,7 +77,13 @@ const VARIANTS: { suffix: string; width: number; height?: number; fit?: string }
 ];
 
 // POST /api/images/upload — upload an image (admin only)
-router.post("/images/upload", adminAuth, doubleCsrfProtection, upload.single("file"), async (req: Request, res: Response) => {
+router.post(
+  "/images/upload",
+  adminAuth,
+  imageUploadLimiter,
+  doubleCsrfProtection,
+  upload.single("file"),
+  async (req: Request, res: Response) => {
   try {
     const supabase = getSupabaseClient();
     const entityType = req.body.entityType as string;
@@ -40,28 +91,31 @@ router.post("/images/upload", adminAuth, doubleCsrfProtection, upload.single("fi
     const file = req.file as Express.Multer.File | undefined;
 
     if (!file) {
-      res.status(400).json({ error: "No file provided" });
-      return;
+      return badRequest(res, { file: ["No file provided"] });
     }
 
     if (!ALLOWED_TYPES.includes(file.mimetype)) {
-      res.status(400).json({ error: `Invalid file type. Allowed: ${ALLOWED_TYPES.join(", ")}` });
-      return;
+      return badRequest(res, { file: [`Invalid file type. Allowed: ${ALLOWED_TYPES.join(", ")}`] });
+    }
+
+    // Defense in depth: verify the bytes actually match the declared
+    // MIME type. The Content-Type header is supplied by the client and
+    // can be anything; an attacker could otherwise upload an executable
+    // renamed to .jpg and have it served from the public bucket.
+    if (!verifyMagicBytes(file.buffer, file.mimetype)) {
+      return badRequest(res, { file: [`File contents do not match declared type "${file.mimetype}". Upload rejected as a safety check.`] });
     }
 
     if (!ALLOWED_ENTITY_TYPES.includes(entityType)) {
-      res.status(400).json({ error: `Invalid entity type. Allowed: ${ALLOWED_ENTITY_TYPES.join(", ")}` });
-      return;
+      return badRequest(res, { entityType: [`Invalid entity type. Allowed: ${ALLOWED_ENTITY_TYPES.join(", ")}`] });
     }
 
     if (entityId && typeof entityId !== "string") {
-      res.status(400).json({ error: "Invalid entityId" });
-      return;
+      return badRequest(res, { entityId: ["Invalid entityId"] });
     }
 
     if (entityId && !z.string().uuid().safeParse(entityId).success) {
-      res.status(400).json({ error: "entityId must be a valid UUID" });
-      return;
+      return badRequest(res, { entityId: ["entityId must be a valid UUID"] });
     }
 
     const imageId = createHash("sha256").update(file.buffer).digest("hex").slice(0, 16);
@@ -95,10 +149,10 @@ router.post("/images/upload", adminAuth, doubleCsrfProtection, upload.single("fi
     if (metaError) throw new Error(`Metadata insert failed: ${metaError.message}`);
 
     // Use Supabase's built-in image transformation via URL params
-    const supabaseUrl = process.env.SUPABASE_URL!;
+    const supabaseUrl = env.SUPABASE_URL;
     const publicUrl = `${supabaseUrl}/storage/v1/object/public/project_images/${storagePath}`;
 
-    res.json({
+    return ok(res, {
       id: meta.id,
       url: publicUrl,
       variants: VARIANTS.map((v) => ({
@@ -108,49 +162,58 @@ router.post("/images/upload", adminAuth, doubleCsrfProtection, upload.single("fi
     });
   } catch (err) {
     req.log.error({ err }, "Image upload failed");
-    res.status(500).json({ error: "Image upload failed. Please try again." });
+    return serverError(res, "Image upload failed. Please try again.");
   }
-});
+},
+);
 
 // GET /api/images/:id/metadata — get image metadata
 router.get("/images/:id/metadata", imageMetadataLimiter, async (req: Request, res: Response) => {
+  const imageId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  if (!z.string().uuid().safeParse(imageId).success) {
+    return badRequest(res, { id: ["Invalid image ID"] });
+  }
+
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from("image_metadata")
     .select("id, original_filename, mime_type, file_size_bytes, entity_type, entity_id, created_at")
-    .eq("id", req.params.id as string)
+    .eq("id", imageId)
     .single();
 
   if (error || !data) {
-    res.status(404).json({ error: "Image not found" });
-    return;
+    return notFound(res, "Image not found");
   }
 
-  res.json(data);
+  return ok(res, data);
 });
 
 // DELETE /api/images/:id — delete image (admin only)
 router.delete("/images/:id", adminAuth, doubleCsrfProtection, async (req: Request, res: Response) => {
+  const imageId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  if (!z.string().uuid().safeParse(imageId).success) {
+    return badRequest(res, { id: ["Invalid image ID"] });
+  }
+
   try {
     const supabase = getSupabaseClient();
     const { data: meta, error: metaError } = await supabase
       .from("image_metadata")
       .select("storage_path, id")
-      .eq("id", req.params.id as string)
+      .eq("id", imageId)
       .single();
 
     if (metaError || !meta) {
-      res.status(404).json({ error: "Image not found" });
-      return;
+      return notFound(res, "Image not found");
     }
 
     await supabase.storage.from("project_images").remove([meta.storage_path]);
     await supabase.from("image_metadata").delete().eq("id", meta.id);
 
-    res.json({ success: true });
+    return ok(res, undefined);
   } catch (err) {
     req.log.error({ err }, "Image delete failed");
-    res.status(500).json({ error: "Failed to delete image" });
+    return serverError(res, "Failed to delete image");
   }
 });
 

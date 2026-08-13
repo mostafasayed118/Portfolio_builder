@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import ProjectCard from "@/components/ProjectCard";
+import { ProjectCard } from "@/features/projects";
 
 const mockSetLocation = vi.fn();
 vi.mock("wouter", () => ({

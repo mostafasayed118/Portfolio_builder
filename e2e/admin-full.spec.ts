@@ -1,4 +1,12 @@
 import { test, expect } from "@playwright/test";
+import { resolve } from "path";
+
+// Consume the session captured by the `setup` project (real Clerk sign-in
+// when CLERK_TEST_EMAIL/CLERK_TEST_PASSWORD are set, documented stub
+// otherwise) so these tests run as the signed-in user.
+const STORAGE_STATE = resolve(process.cwd(), "playwright/.auth/admin.json");
+
+test.use({ storageState: STORAGE_STATE });
 
 test.describe("Admin Panel — Full Manual Test Suite", () => {
 
@@ -6,6 +14,10 @@ test.describe("Admin Panel — Full Manual Test Suite", () => {
   // 1. AUTHENTICATION
   // ═══════════════════════════════════════════════════════════════
   test.describe("Authentication", () => {
+    // These two tests intentionally verify the *unauthenticated* experience,
+    // so they must NOT use the captured session.
+    test.use({ storageState: { cookies: [], origins: [] } });
+
     test("sign-in page loads with Clerk", async ({ page }) => {
       await page.goto("/");
       // Should see sign-in form or redirect

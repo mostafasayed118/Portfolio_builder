@@ -1,7 +1,16 @@
 import { useMotionValue, useSpring, useTransform } from "framer-motion";
 import { useRef, useState, useEffect, useCallback } from "react";
 
-export function useMouseTilt(intensity = 15) {
+type MouseHandlers = {
+  onMouseMove?: React.MouseEventHandler<HTMLDivElement>;
+  onMouseEnter?: React.MouseEventHandler<HTMLDivElement>;
+  onMouseLeave?: React.MouseEventHandler<HTMLDivElement>;
+};
+
+export function useMouseTilt(intensity = 15): {
+  ref: React.RefObject<HTMLDivElement | null>;
+  style: React.CSSProperties | { rotateX: any; rotateY: any; scale: any; transformStyle: "preserve-3d"; perspective: number };
+} & MouseHandlers {
   const ref = useRef<HTMLDivElement>(null);
   const [reduced, setReduced] = useState(false);
 
@@ -50,13 +59,16 @@ export function useMouseTilt(intensity = 15) {
     scale.set(1);
   }, [mouseX, mouseY, scale]);
 
+  // When the user prefers reduced motion, return no handlers at all.
+  // The hook's return type marks these as optional, so `undefined` is
+  // valid without an `as unknown as` cast.
   if (reduced) {
     return {
       ref,
-      style: {} as React.CSSProperties,
-      onMouseMove: undefined as unknown as React.MouseEventHandler<HTMLDivElement>,
-      onMouseEnter: undefined as unknown as React.MouseEventHandler<HTMLDivElement>,
-      onMouseLeave: undefined as unknown as React.MouseEventHandler<HTMLDivElement>,
+      style: {},
+      onMouseMove: undefined,
+      onMouseEnter: undefined,
+      onMouseLeave: undefined,
     };
   }
 

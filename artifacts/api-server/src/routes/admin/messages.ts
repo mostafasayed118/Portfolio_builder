@@ -1,53 +1,39 @@
 import { Router, type IRouter } from "express";
+import { z } from "zod";
 import { doubleCsrfProtection } from "../../middleware/csrf";
 import type { AuthenticatedRequest } from "../../middleware/adminAuth";
 import { validateQueryUserId, validateParamId } from "../../middleware/validateUuid";
 import type { Response } from "express";
-import { z } from "zod";
+import { bulkDeleteMessagesSchema } from "@workspace/api-zod";
+import type { MsgStatus } from "@workspace/supabase/types";
 import { getSupabaseClient } from "../../lib/supabase-client";
+import { ok, badRequest, serverError, notFound } from "../../lib/api-response";
+import { sendMessageReply } from "../../lib/mailer";
+import {
+  runCollectionQuery,
+  updateByIdAndUser,
+  softDeleteByIdAndUser,
+} from "../../lib/route-helpers";
 
 const router: IRouter = Router();
 
-const supabase = getSupabaseClient();
+const bulkDeleteSchema = bulkDeleteMessagesSchema;
 
-const bulkDeleteSchema = z.object({
-  ids: z.array(z.string().uuid()).min(1, "At least one ID required"),
+const replySchema = z.object({
+  reply: z.string().trim().min(1, "Reply is required").max(5000, "Reply is too long"),
 });
 
 router.get("/", validateQueryUserId, async (req: AuthenticatedRequest, res: Response) => {
-  const userId = req.user?.id;
-  const isSuperadmin = req.user?.role === "superadmin";
-  const targetUserId = isSuperadmin && req.query.userId ? req.query.userId as string : userId;
-
-  const limit = Math.min(parseInt(req.query.limit as string ?? "50", 10), 200);
-  const offset = parseInt(req.query.offset as string ?? "0", 10);
-
-  let query = supabase.from("messages").select("*", { count: "exact" }).is("deleted_at", null);
-
-  if (targetUserId) {
-    query = query.eq("user_id", targetUserId);
-  } else if (!isSuperadmin) {
-    return res.json({ success: true, data: [], pagination: { total: 0, limit, offset, hasMore: false } });
-  }
-
-  const { data, error, count } = await query
-    .order("created_at", { ascending: false })
-    .range(offset, offset + limit - 1);
-
-  if (error) return res.status(500).json({ success: false, message: error.message });
-  return res.json({
-    success: true,
-    data,
-    pagination: {
-      total: count ?? 0,
-      limit,
-      offset,
-      hasMore: (count ?? 0) > offset + limit,
-    },
+  return runCollectionQuery(req, res, "messages", {
+    softDelete: true,
+    orderBy: "created_at",
+    orderAsc: false,
+    includeOrphans: true,
   });
 });
 
 router.get("/unread-count", validateQueryUserId, async (req: AuthenticatedRequest, res: Response) => {
+  const supabase = getSupabaseClient();
   const userId = req.user?.id;
   const isSuperadmin = req.user?.role === "superadmin";
   const targetUserId = isSuperadmin && req.query.userId ? req.query.userId as string : userId;
@@ -59,67 +45,95 @@ router.get("/unread-count", validateQueryUserId, async (req: AuthenticatedReques
     .is("deleted_at", null);
 
   if (targetUserId) {
-    query = query.eq("user_id", targetUserId);
+    query = query.or(`user_id.eq.${targetUserId},user_id.is.null`);
   }
 
   const { count, error } = await query;
-  if (error) return res.status(500).json({ success: false, message: error.message });
-  return res.json({ success: true, data: count ?? 0 });
+  if (error) return serverError(res, error.message);
+  return ok(res, count ?? 0);
 });
 
 router.patch("/:id/read", doubleCsrfProtection, validateParamId, async (req: AuthenticatedRequest, res: Response) => {
-  const id = req.params.id as string;
-  const isSuperadmin = req.user?.role === "superadmin";
-  let query = supabase.from("messages").update({ status: "read" }).eq("id", id);
-  if (!isSuperadmin) {
-    query = query.eq("user_id", req.user!.id);
-  }
-  const { error, count } = await query.select("id");
-  if (error) return res.status(500).json({ success: false, message: error.message });
-  if (!count || count === 0) return res.status(404).json({ success: false, message: "Message not found" });
-  return res.json({ success: true });
+  return updateByIdAndUser(req, res, "messages", req.params.id as string, { status: "read" }, "Message");
 });
 
 router.patch("/:id/unread", doubleCsrfProtection, validateParamId, async (req: AuthenticatedRequest, res: Response) => {
-  const id = req.params.id as string;
-  const isSuperadmin = req.user?.role === "superadmin";
-  let query = supabase.from("messages").update({ status: "unread" }).eq("id", id);
-  if (!isSuperadmin) {
-    query = query.eq("user_id", req.user!.id);
-  }
-  const { error, count } = await query.select("id");
-  if (error) return res.status(500).json({ success: false, message: error.message });
-  if (!count || count === 0) return res.status(404).json({ success: false, message: "Message not found" });
-  return res.json({ success: true });
+  return updateByIdAndUser(req, res, "messages", req.params.id as string, { status: "unread" }, "Message");
 });
 
 router.delete("/:id", doubleCsrfProtection, validateParamId, async (req: AuthenticatedRequest, res: Response) => {
-  const id = req.params.id as string;
-  const isSuperadmin = req.user?.role === "superadmin";
-  let query = supabase.from("messages").update({ deleted_at: new Date().toISOString() }).eq("id", id);
-  if (!isSuperadmin) {
-    query = query.eq("user_id", req.user!.id);
-  }
-  const { error, count } = await query.select("id");
-  if (error) return res.status(500).json({ success: false, message: error.message });
-  if (!count || count === 0) return res.status(404).json({ success: false, message: "Message not found" });
-  return res.json({ success: true });
+  return softDeleteByIdAndUser(req, res, "messages", req.params.id as string, "Message");
 });
 
+router.post(
+  "/:id/reply",
+  doubleCsrfProtection,
+  validateParamId,
+  async (req: AuthenticatedRequest, res: Response) => {
+    const supabase = getSupabaseClient();
+    const result = replySchema.safeParse(req.body);
+    if (!result.success) {
+      return badRequest(res, result.error.flatten().fieldErrors);
+    }
+    const messageId = req.params.id as string;
+    const isSuperadmin = req.user?.role === "superadmin";
+
+    let fetchQuery = supabase
+      .from("messages")
+      .select("id, name, email, message, subject")
+      .eq("id", messageId);
+    if (!isSuperadmin) {
+      fetchQuery = fetchQuery.eq("user_id", req.user?.id ?? "");
+    }
+    const { data, error } = await fetchQuery.single();
+    if (error) {
+      return error.code === "PGRST116" ? notFound(res, "Message not found") : serverError(res, error.message);
+    }
+
+    const reply = result.data.reply;
+    const updated: {
+      reply_email_draft: string;
+      replied_at: string;
+      status: MsgStatus;
+    } = {
+      reply_email_draft: reply,
+      replied_at: new Date().toISOString(),
+      status: "read",
+    };
+
+    const update = await supabase.from("messages").update(updated).eq("id", messageId);
+    if (update.error) {
+      return serverError(res, update.error.message);
+    }
+
+    // Send a branded reply to the original sender (opt-in via Gmail SMTP).
+    const sent = await sendMessageReply({
+      to: data.email,
+      recipientName: data.name,
+      reply,
+      originalSubject: data.subject,
+      quoted: data.message,
+    });
+
+    return ok(res, { id: messageId, sent });
+  },
+);
+
 router.post("/bulk-delete", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
+  const supabase = getSupabaseClient();
   const result = bulkDeleteSchema.safeParse(req.body);
   if (!result.success) {
-    return res.status(400).json({ success: false, errors: result.error.flatten().fieldErrors });
+    return badRequest(res, result.error.flatten().fieldErrors);
   }
   const { ids } = result.data;
   const isSuperadmin = req.user?.role === "superadmin";
   let query = supabase.from("messages").update({ deleted_at: new Date().toISOString() }).in("id", ids);
   if (!isSuperadmin) {
-    query = query.eq("user_id", req.user!.id);
+    query = query.eq("user_id", req.user?.id ?? "");
   }
   const { error } = await query;
-  if (error) return res.status(500).json({ success: false, message: error.message });
-  return res.json({ success: true });
+  if (error) return serverError(res, error.message);
+  return ok(res, undefined);
 });
 
 export default router;

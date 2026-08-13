@@ -24,7 +24,7 @@ vi.mock("@/hooks/use-localized", () => ({
   useLocalized: vi.fn(() => ({ localize: (v: string) => v })),
 }));
 
-import AboutSection from "@/components/AboutSection";
+import { AboutSection } from "@/features/about";
 import { useAboutContent } from "@/hooks/use-portfolio-data";
 
 function renderWithProviders(ui: React.ReactElement) {

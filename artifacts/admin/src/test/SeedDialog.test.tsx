@@ -123,10 +123,10 @@ describe("SeedDialog", () => {
       queryKey: ["certifications"],
     });
     expect(mockInvalidateQueries).toHaveBeenCalledWith({
-      queryKey: ["heroContent"],
+      queryKey: ["hero"],
     });
     expect(mockInvalidateQueries).toHaveBeenCalledWith({
-      queryKey: ["aboutContent"],
+      queryKey: ["about"],
     });
   });
 });
