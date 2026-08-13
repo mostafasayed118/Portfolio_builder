@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
+import { invalidCsrfTokenError } from "./csrf";
 import { logger } from "../lib/logger";
 
 /**
@@ -15,6 +16,14 @@ export function errorHandler(
   res: Response,
   _next: NextFunction,
 ): void {
+  // CSRF double-submit mismatch (missing/invalid token header+cookie).
+  // Rejected explicitly so the client sees a clear 403 instead of an
+  // opaque 500 "Internal server error".
+  if (err === invalidCsrfTokenError) {
+    res.status(403).json({ success: false, message: "Invalid or missing CSRF token" });
+    return;
+  }
+
   if (err.name === "ValidationError") {
     res.status(400).json({ success: false, message: err.message });
     return;

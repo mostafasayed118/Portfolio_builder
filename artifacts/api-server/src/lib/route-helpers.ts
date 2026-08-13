@@ -145,6 +145,7 @@ export async function runCollectionQuery<T = unknown>(
     orderAsc?: boolean;
     userColumn?: string; // default: "user_id"
     targetUserId?: string | null;
+    includeOrphans?: boolean; // also return rows with user_id IS NULL
   } = {},
 ): Promise<Response> {
   const supabase = getSupabaseClient();
@@ -166,7 +167,16 @@ export async function runCollectionQuery<T = unknown>(
   }
 
   if (targetUserId) {
-    query = query.eq(userColumn, targetUserId);
+    if (options.includeOrphans) {
+      // Public contact-form messages carry no user_id; admins must see them
+      // in addition to rows explicitly assigned to themselves.
+      query = query.or(`user_id.eq.${targetUserId},user_id.is.null`);
+    } else {
+      query = query.eq(userColumn, targetUserId);
+    }
+  } else if (options.includeOrphans) {
+    // Superadmin resolving no explicit target user — show only unowned rows.
+    query = query.is(userColumn, null);
   }
 
   if (options.orderBy) {

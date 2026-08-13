@@ -3,9 +3,11 @@ import { contactLimiter } from "../../middleware/rateLimiter";
 import type { Request, Response } from "express";
 import { contactSubmissionSchema } from "@workspace/api-zod";
 import { getSupabaseClient } from "../../lib/supabase-client";
-import { ok, badRequest, serverError, forbidden } from "../../lib/api-response";
+import { ok, badRequest, serverError, forbidden, rateLimited } from "../../lib/api-response";
 import { logger } from "../../lib/logger";
 import { env } from "../../lib/env";
+import { verifyTurnstileToken } from "../../lib/turnstile";
+import { notifyNewContact } from "../../lib/mailer";
 
 /**
  * @public contact routes
@@ -97,6 +99,14 @@ router.post("/", contactLimiter, async (req: Request, res: Response) => {
     }
   }
 
+  // 4.5 Cloudflare Turnstile (opt-in). When configured, require a valid
+  // client token before accepting the message.
+  const turnstileOk = await verifyTurnstileToken(body.cfTurnstileToken as string | undefined);
+  if (!turnstileOk) {
+    logAbuse(req, "turnstile_failed");
+    return forbidden(res, "CAPTCHA verification failed, please try again");
+  }
+
   // 5. Validate + normalize
   const result = contactSchema.safeParse(req.body);
   if (!result.success) {
@@ -114,6 +124,27 @@ router.post("/", contactLimiter, async (req: Request, res: Response) => {
   });
 
   if (error) {
+    // Distinguish the DB-level per-email spam guard (migration
+    // 044_contact_spam_guard.sql raises "Rate limit exceeded: too many
+    // messages from this email") from genuine insert failures. That rejection
+    // is expected anti-abuse behavior, not a server fault — return a friendly
+    // 429 so the UI can tell the user to slow down.
+    const isPerEmailRateLimit =
+      typeof error.message === "string" &&
+      /rate limit exceeded|too many messages/i.test(error.message);
+
+    if (isPerEmailRateLimit) {
+      logger.info(
+        {
+          ip: req.ip,
+          // Do NOT log message content (PII) — only metadata
+          email_domain: email.split("@")[1] ?? null,
+        },
+        "CONTACT: rejected by DB per-email spam guard",
+      );
+      return rateLimited(res, "Too many messages sent, please try again later");
+    }
+
     logger.error(
       {
         err: error.message,
@@ -134,6 +165,10 @@ router.post("/", contactLimiter, async (req: Request, res: Response) => {
     },
     "CONTACT: message accepted",
   );
+
+  // Fire-and-forget email notification to the site owner (opt-in).
+  // Never awaited/blocked-on; failures are logged by the mailer.
+  notifyNewContact({ name, email, message }).catch(() => {});
 
   return ok(res, undefined);
 });

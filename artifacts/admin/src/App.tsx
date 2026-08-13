@@ -18,6 +18,7 @@ const SkillsManager = lazy(() => import("@/features/skills").then(m => ({ defaul
 const ProjectsManager = lazy(() => import("@/features/projects").then(m => ({ default: m.ProjectsManager })));
 const ExperienceManager = lazy(() => import("@/features/experience").then(m => ({ default: m.ExperienceManager })));
 const CertificationsManager = lazy(() => import("@/features/certifications").then(m => ({ default: m.CertificationsManager })));
+const PostsManager = lazy(() => import("@/features/posts").then(m => ({ default: m.PostsManager })));
 const ContactManager = lazy(() => import("@/features/contact-info").then(m => ({ default: m.ContactManager })));
 const MessagesManager = lazy(() => import("@/features/messages").then(m => ({ default: m.MessagesManager })));
 const SeoManager = lazy(() => import("@/features/settings").then(m => ({ default: m.SeoManager })));
@@ -85,6 +86,7 @@ function App() {
                         <Route path="/skills"><Suspense fallback={<PageFallback />}><SkillsManager /></Suspense></Route>
                         <Route path="/experience"><Suspense fallback={<PageFallback />}><ExperienceManager /></Suspense></Route>
                         <Route path="/certifications"><Suspense fallback={<PageFallback />}><CertificationsManager /></Suspense></Route>
+                        <Route path="/posts"><Suspense fallback={<PageFallback />}><PostsManager /></Suspense></Route>
                         <Route path="/messages"><Suspense fallback={<PageFallback />}><MessagesManager /></Suspense></Route>
                         <Route path="/contact"><Suspense fallback={<PageFallback />}><ContactManager /></Suspense></Route>
                         <Route path="/cv"><Suspense fallback={<PageFallback />}><CvManager /></Suspense></Route>

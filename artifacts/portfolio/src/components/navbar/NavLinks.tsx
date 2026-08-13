@@ -22,7 +22,7 @@ export default function NavLinks({ activeSection, onNavClick }: NavLinksProps) {
   const { theme, toggle } = useTheme();
 
   return (
-    <nav className="hidden md:flex items-center gap-1">
+    <nav aria-label="Primary" className="hidden md:flex items-center gap-1">
       {NAV_LINKS.map((link) => {
         const isActive = activeSection === link.href.slice(1);
         const label = t.nav[link.key as keyof typeof t.nav] as string;

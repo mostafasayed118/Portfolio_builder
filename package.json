@@ -17,7 +17,15 @@
     "test:e2e:ui": "playwright test --ui",
     "lint": "eslint artifacts/ lib/ scripts/ --max-warnings=300",
     "staged-typecheck": "node scripts/staged-typecheck.mjs",
-    "prepare": "husky"
+    "prepare": "husky",
+    "turbo": "turbo",
+    "build:turbo": "turbo run build",
+    "typecheck:turbo": "turbo run typecheck",
+    "lint:turbo": "turbo run lint",
+    "test:turbo": "turbo run test --concurrency=1",
+    "changeset": "changeset",
+    "changeset:version": "changeset version",
+    "changeset:publish": "changeset publish"
   },
   "private": true,
   "pnpm": {
@@ -36,6 +44,7 @@
     ]
   },
   "devDependencies": {
+    "@changesets/cli": "^3.0.0",
     "@commitlint/cli": "^21.0.2",
     "@commitlint/config-conventional": "^21.0.2",
     "@eslint/js": "^10.0.1",
@@ -53,6 +62,7 @@
     "lint-staged": "^17.0.7",
     "prettier": "^3.8.1",
     "supertest": "^7.1.0",
+    "turbo": "^2.10.9",
     "typescript": "~5.9.2",
     "typescript-eslint": "^8.60.0",
     "vitest": "^3.2.4"

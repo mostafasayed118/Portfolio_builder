@@ -1,4 +1,5 @@
-import { Github, Linkedin, Mail, Heart } from "lucide-react";
+import { Github, Linkedin, Mail, Heart, Newspaper } from "lucide-react";
+import { Link } from "wouter";
 import { HERO, CONTACT } from "@/data/portfolio";
 import { useBranding } from "@/lib/branding";
 import { useLanguage } from "@/lib/language";
@@ -23,6 +24,15 @@ export default function Footer() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Link
+            href="/blog"
+            className="hidden sm:inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all border border-transparent hover:border-primary/20"
+            aria-label="Blog"
+            data-testid="footer-link-blog"
+          >
+            <Newspaper className="h-3.5 w-3.5" />
+            Blog
+          </Link>
           {[
             { href: HERO.github, icon: Github, label: "GitHub" },
             { href: HERO.linkedin, icon: Linkedin, label: "LinkedIn" },

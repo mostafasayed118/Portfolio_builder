@@ -8,6 +8,7 @@ const portfolioEnvSchema = z.object({
   VITE_API_URL: z.string().url().optional(),
   VITE_TWITTER_HANDLE: z.string().optional(),
   VITE_SENTRY_DSN: z.string().url().optional(),
+  VITE_TURNSTILE_SITE_KEY: z.string().min(1).optional(),
 });
 
 export type PortfolioEnv = z.infer<typeof portfolioEnvSchema>;

@@ -177,6 +177,32 @@ describe("Global Error Handler", () => {
     expect(mockError).toHaveBeenCalled();
   });
 
+  it("returns 403 with clear message for CSRF token failures", async () => {
+    vi.resetModules();
+
+    vi.doMock("../lib/logger", () => ({
+      logger: {
+        info: vi.fn(),
+        error: vi.fn(),
+        warn: vi.fn(),
+        debug: vi.fn(),
+        child: vi.fn(),
+        level: "silent",
+      },
+    }));
+
+    const { errorHandler } = await import("../middleware/errorHandler");
+    const { invalidCsrfTokenError } = await import("../middleware/csrf");
+
+    errorHandler(invalidCsrfTokenError, req as Request, res as Response, next);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      message: "Invalid or missing CSRF token",
+    });
+  });
+
   it("handles errors with empty message", async () => {
     vi.resetModules();
 

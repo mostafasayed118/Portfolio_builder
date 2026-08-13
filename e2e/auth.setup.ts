@@ -60,13 +60,41 @@ function writeStubStorage(reason: string) {
   writeFileSync(STORAGE_FILE, JSON.stringify(stub, null, 2));
 }
 
-async function clerkIsReachable(): Promise<boolean> {
-  try {
-    const res = await fetch("https://clerk.accounts.dev/v1/instance", { method: "GET" });
-    return res.status < 500;
-  } catch {
-    return false;
+/**
+ * Derive the Clerk frontend API host from the publishable key
+ * (pk_test_<base64(instance-domain)>) or the CLERK_ISSUER env var. The
+ * legacy hardcoded `clerk.accounts.dev` host is not reachable from every
+ * network, while the per-instance host always is.
+ */
+function clerkFrontendApi(): string | null {
+  if (process.env.CLERK_ISSUER) return process.env.CLERK_ISSUER;
+  const key = process.env.VITE_CLERK_PUBLISHABLE_KEY;
+  if (key?.startsWith("pk_test_")) {
+    try {
+      const decoded = Buffer.from(key.slice("pk_test_".length), "base64").toString("utf-8");
+      const domain = decoded.split("$")[0];
+      if (domain && domain.includes(".")) return `https://${domain}`;
+    } catch {
+      // fall through to the legacy check below
+    }
   }
+  return null;
+}
+
+async function clerkIsReachable(): Promise<boolean> {
+  const candidates = [
+    clerkFrontendApi(),
+    "https://clerk.accounts.dev/v1/instance", // legacy check
+  ].filter(Boolean) as string[];
+  for (const url of candidates) {
+    try {
+      const res = await fetch(url, { method: "GET" });
+      if (res.status < 500) return true;
+    } catch {
+      // try the next candidate
+    }
+  }
+  return false;
 }
 
 async function tryRealClerkSignIn(context: BrowserContext): Promise<boolean> {
@@ -78,17 +106,33 @@ async function tryRealClerkSignIn(context: BrowserContext): Promise<boolean> {
   const page = await context.newPage();
   try {
     await page.goto(`${BASE_URL}/sign-in`, { waitUntil: "domcontentloaded" });
-    // Clerk renders its sign-in form inside an iframe. The email field
-    // is identified by `name="identifier"`.
-    const frame = page.frameLocator("iframe[src*='clerk']").first();
-    await frame.locator('input[name="identifier"]').fill(email);
-    await frame.locator('input[name="identifier"]').press("Enter");
-    await frame.locator('input[name="password"]').fill(password);
-    await frame.locator('input[name="password"]').press("Enter");
+    // Clerk v5 renders the sign-in form in-page, but only after its JS
+    // hydrates — wait for the identifier field before choosing a path.
+    // Older Clerk versions rendered the form inside an iframe.
+    const inPageIdentifier = page.locator('input[name="identifier"]').first();
+    const inPage = await inPageIdentifier
+      .waitFor({ state: "visible", timeout: 10_000 })
+      .then(() => true)
+      .catch(() => false);
+
+    if (inPage) {
+      await inPageIdentifier.fill(email);
+      await inPageIdentifier.press("Enter");
+      const passwordField = page.locator('input[name="password"]');
+      await passwordField.fill(password);
+      await passwordField.press("Enter");
+    } else {
+      const frame = page.frameLocator("iframe[src*='clerk']").first();
+      await frame.locator('input[name="identifier"]').fill(email);
+      await frame.locator('input[name="identifier"]').press("Enter");
+      await frame.locator('input[name="password"]').fill(password);
+      await frame.locator('input[name="password"]').press("Enter");
+    }
     // Wait for the post-sign-in redirect to /overview.
-    await page.waitForURL(/\/overview/, { timeout: 15_000 });
+    await page.waitForURL(/\/overview/, { timeout: 20_000 });
     return true;
-  } catch {
+  } catch (err) {
+    console.warn("[auth.setup] real Clerk sign-in failed:", err);
     return false;
   } finally {
     await page.close();
@@ -108,11 +152,13 @@ setup("authenticate admin user", async ({ context, baseURL }) => {
   }
 
   // FALLBACK: synthesize a storageState that documents why we fell back.
+  const missingCreds =
+    !process.env.CLERK_TEST_EMAIL || !process.env.CLERK_TEST_PASSWORD;
+  const reachable = await clerkIsReachable();
   const reason = [
-    !process.env.CLERK_TEST_EMAIL || !process.env.CLERK_TEST_PASSWORD
-      ? "missing CLERK_TEST_EMAIL / CLERK_TEST_PASSWORD env vars"
-      : null,
-    "Clerk frontend API unreachable from this sandbox",
+    missingCreds ? "missing CLERK_TEST_EMAIL / CLERK_TEST_PASSWORD env vars" : null,
+    !reachable ? "Clerk frontend API unreachable from this sandbox" : null,
+    !missingCreds && reachable ? "real Clerk sign-in did not complete (2FA / credentials)" : null,
   ]
     .filter(Boolean)
     .join("; ");

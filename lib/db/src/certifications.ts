@@ -41,7 +41,12 @@ export async function listCertificationRows(
   supabase: SupabaseClient,
 ): Promise<DbCertification[]> {
   return queryOrThrow<DbCertification[]>(
-    supabase.from("certifications").select("*").is("deleted_at", null).order("sort_order", { ascending: true }),
+    supabase
+      .from("certifications")
+      .select("*")
+      .is("deleted_at", null)
+      .eq("is_published", true)
+      .order("sort_order", { ascending: true }),
     { table: "certifications", operation: "listCertificationRows" },
   );
 }
@@ -50,7 +55,12 @@ export async function fetchCertifications(
   supabase: SupabaseClient,
 ): Promise<Certification[]> {
   const data = await queryOrThrow<DbCertification[]>(
-    supabase.from("certifications").select("*").is("deleted_at", null).order("sort_order", { ascending: true }),
+    supabase
+      .from("certifications")
+      .select("*")
+      .is("deleted_at", null)
+      .eq("is_published", true)
+      .order("sort_order", { ascending: true }),
     { table: "certifications", operation: "fetchCertifications" },
   );
   return data.map(mapDbToCertification);

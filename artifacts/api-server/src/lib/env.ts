@@ -109,6 +109,20 @@ function int(key: string, fallback: number): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function port(key: string, fallback: number): number {
+  const raw = get(key);
+  if (raw === undefined || raw === "") return fallback;
+  const parsed = Number.parseInt(raw, 10);
+  // Only 1–65535 are valid TCP ports. PaaS/dev sandboxes frequently export
+  // a placeholder ambient value (e.g. PORT=0) that would otherwise win over
+  // the .env file and crash the server at startup — fall back instead.
+  if (!Number.isFinite(parsed) || parsed < 1 || parsed > 65535) {
+    console.error(`[env] Invalid value for ${key}: "${raw}". Falling back to "${fallback}".`);
+    return fallback;
+  }
+  return parsed;
+}
+
 function oneOf<T extends string>(key: string, allowed: readonly T[], fallback: T): T {
   const raw = get(key);
   if (raw === undefined || raw === "") return fallback;
@@ -143,6 +157,21 @@ export const env = {
   // CSRF / sessions
   get CSRF_SECRET() { return require_("CSRF_SECRET"); },
 
+  // Cloudflare Turnstile (optional CAPTCHA for the public contact form)
+  get TURNSTILE_SECRET_KEY() { return optional("TURNSTILE_SECRET_KEY"); },
+
+  // Email (Gmail SMTP via nodemailer, app password) — contact notifications + replies
+  get SMTP_HOST() { return optional("SMTP_HOST") ?? "smtp.gmail.com"; },
+  get SMTP_PORT() { return port("SMTP_PORT", 465); },
+  get SMTP_USER() { return optional("SMTP_USER"); },
+  get SMTP_PASS() { return optional("SMTP_PASS"); },
+  get SMTP_FROM() { return optional("SMTP_FROM"); },
+  get CONTACT_NOTIFY_EMAIL() { return optional("CONTACT_NOTIFY_EMAIL"); },
+  get ADMIN_URL() { return optional("ADMIN_URL"); },
+
+  // Branding used in email templates (optional)
+  get SITE_NAME() { return optional("SITE_NAME"); },
+
   // CORS / allowed origins
   get VITE_SITE_URL() { return optional("VITE_SITE_URL"); },
   get VITE_ADMIN_URL() { return optional("VITE_ADMIN_URL"); },
@@ -155,7 +184,7 @@ export const env = {
   // Dev / debug
   get NODE_ENV() { return oneOf("NODE_ENV", ["development", "test", "production"] as const, "development"); },
   get DISABLE_RATE_LIMIT() { return bool("DISABLE_RATE_LIMIT", false); },
-  get PORT() { return int("PORT", 3001); },
+  get PORT() { return port("PORT", 3001); },
   get LOG_LEVEL() { return oneOf("LOG_LEVEL", ["fatal", "error", "warn", "info", "debug", "trace", "silent"] as const, "info"); },
   get VISUALIZER_OPEN() { return bool("VISUALIZER_OPEN", false); },
 

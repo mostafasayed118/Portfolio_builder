@@ -4,6 +4,9 @@ import { logger } from "./lib/logger";
 import { env } from "./lib/env";
 
 const port = env.PORT;
+// env.PORT self-validates (invalid/placeholder values like PORT=0 fall back
+// to the 3001 default), so this is a defensive invariant rather than the
+// primary guard — it only trips if env.PORT is ever misconfigured directly.
 if (!Number.isFinite(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${port}"`);
 }

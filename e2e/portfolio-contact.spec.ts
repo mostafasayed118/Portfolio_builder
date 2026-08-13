@@ -1,26 +1,34 @@
 import { test, expect } from "@playwright/test";
 
+/**
+ * Portfolio contact section coverage.
+ *
+ * NOTE: the ContactForm was refactored to SmartInput fields addressed via
+ * `data-testid` (`input-name`, `input-email`, `input-message`) and the
+ * section heading is "Get In Touch". Selectors here target the current DOM.
+ * Full form *submission* is covered separately in
+ * `portfolio-contact-submit.spec.ts` (it performs real API writes and is
+ * rate-limited, so it lives in its own spec).
+ */
+
 test.describe("Portfolio contact form", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
     // Scroll to the contact section
     await page.evaluate(() => {
-      const contactSection = document.querySelector('[id*="contact"], section:last-of-type');
-      contactSection?.scrollIntoView({ behavior: "instant" });
+      document.querySelector("#contact")?.scrollIntoView({ behavior: "instant" });
     });
-    await page.waitForTimeout(1000);
   });
 
   test("contact section is visible when scrolled to", async ({ page }) => {
-    // Look for a contact heading or form
-    const contactHeading = page.getByRole("heading", { name: /contact/i });
+    const contactHeading = page.getByRole("heading", { name: /get in touch/i });
     await expect(contactHeading).toBeVisible();
   });
 
   test("contact form has name, email, and message fields", async ({ page }) => {
-    const nameInput = page.locator('input[name="name"], input[placeholder*="name" i]');
-    const emailInput = page.locator('input[name="email"], input[type="email"]');
-    const messageInput = page.locator('textarea[name="message"], textarea[placeholder*="message" i]');
+    const nameInput = page.getByTestId("input-name");
+    const emailInput = page.getByTestId("input-email");
+    const messageInput = page.getByTestId("input-message");
 
     await expect(nameInput).toBeVisible();
     await expect(emailInput).toBeVisible();
@@ -28,20 +36,20 @@ test.describe("Portfolio contact form", () => {
   });
 
   test("shows validation errors for empty submission", async ({ page }) => {
-    const submitBtn = page.getByRole("button", { name: /send|submit/i });
+    const submitBtn = page.getByTestId("btn-send-message");
     await submitBtn.click();
 
-    // Should show some validation feedback (error message or toast)
-    await page.waitForTimeout(500);
-    // The form should not have been submitted (still visible)
-    const nameInput = page.locator('input[name="name"], input[placeholder*="name" i]');
+    // Client-side validation marks the empty fields with error styling and
+    // alerts; the form must not navigate away or submit.
+    await expect(page.getByRole("alert").first()).toBeVisible();
+    const nameInput = page.getByTestId("input-name");
     await expect(nameInput).toBeVisible();
   });
 
   test("can fill in the contact form fields", async ({ page }) => {
-    const nameInput = page.locator('input[name="name"], input[placeholder*="name" i]');
-    const emailInput = page.locator('input[name="email"], input[type="email"]');
-    const messageInput = page.locator('textarea[name="message"], textarea[placeholder*="message" i]');
+    const nameInput = page.getByTestId("input-name");
+    const emailInput = page.getByTestId("input-email");
+    const messageInput = page.getByTestId("input-message");
 
     await nameInput.fill("Test User");
     await emailInput.fill("test@example.com");

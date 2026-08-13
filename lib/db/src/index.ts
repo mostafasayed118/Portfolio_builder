@@ -5,6 +5,7 @@ export * from "./cvSettings";
 export * from "./experience";
 export * from "./heroContent";
 export * from "./messages";
+export * from "./posts";
 export * from "./projects";
 export * from "./reorder";
 export * from "./sectionSettings";
