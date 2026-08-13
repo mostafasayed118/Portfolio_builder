@@ -5,8 +5,8 @@ import { resolve } from "path";
  * Critical-path smoke test for the Admin CV upload flow.
  *
  * Contract being verified:
- *   Browser → fetch /api/v1/cv/settings (GET)
- *     → fetch PUT /api/v1/cv/settings (with CSRF + admin key)
+ *   Browser → fetch /api/v1/admin/cv/settings (GET)
+ *     → fetch PUT /api/v1/admin/cv/settings (with CSRF + admin key)
  *     → response shape matches the contract the CvManager UI expects.
  *
  * Auth: the Admin UI is gated by Clerk. We consume the storage
@@ -35,8 +35,8 @@ async function fetchCsrfToken(request: import("@playwright/test").APIRequestCont
 }
 
 test.describe("Admin CV upload — critical-path smoke (Browser → API → Supabase contract)", () => {
-  test("API contract: /api/v1/cv/settings GET → 200 with the expected settings shape", async ({ request }) => {
-    const res = await request.get(`${API_BASE}/api/v1/cv/settings`, {
+  test("API contract: /api/v1/admin/cv/settings GET → 200 with the expected settings shape", async ({ request }) => {
+    const res = await request.get(`${API_BASE}/api/v1/admin/cv/settings`, {
       headers: { "x-admin-key": API_KEY },
     });
     expect(res.status()).toBe(200);
@@ -48,10 +48,10 @@ test.describe("Admin CV upload — critical-path smoke (Browser → API → Supa
     expect(body.data).toHaveProperty("updatedAt");
   });
 
-  test("API contract: PUT /api/v1/cv/settings with valid CSRF + admin key → 200 success", async ({ request }) => {
+  test("API contract: PUT /api/v1/admin/cv/settings with valid CSRF + admin key → 200 success", async ({ request }) => {
     const { token, cookie } = await fetchCsrfToken(request);
 
-    const res = await request.put(`${API_BASE}/api/v1/cv/settings`, {
+    const res = await request.put(`${API_BASE}/api/v1/admin/cv/settings`, {
       headers: {
         "x-admin-key": API_KEY,
         "x-csrf-token": token,
@@ -68,8 +68,8 @@ test.describe("Admin CV upload — critical-path smoke (Browser → API → Supa
     expect(body.success).toBe(true);
   });
 
-  test("API contract: PUT /api/v1/cv/settings without admin key is rejected with 401", async ({ request }) => {
-    const res = await request.put(`${API_BASE}/api/v1/cv/settings`, {
+  test("API contract: PUT /api/v1/admin/cv/settings without admin key is rejected with 401", async ({ request }) => {
+    const res = await request.put(`${API_BASE}/api/v1/admin/cv/settings`, {
       headers: { "Content-Type": "application/json" },
       data: { objectPath: "x.pdf", fileName: "x.pdf" },
     });

@@ -184,6 +184,21 @@ export const bulkDeleteMessagesSchema = z.object({
   ids: z.array(z.string().uuid()).min(1, "At least one ID required"),
 });
 
+export const postSchema = z.object({
+  title: z.string().trim().min(1, "Title is required").max(180, "Title must be under 180 characters"),
+  slug: z
+    .string()
+    .trim()
+    .min(1, "Slug is required")
+    .max(180, "Slug must be under 180 characters")
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug must be kebab-case (lowercase letters, numbers, hyphens)"),
+  excerpt: z.string().trim().max(500, "Excerpt must be under 500 characters").optional().nullable(),
+  content: z.string().trim().min(1, "Content is required").max(200_000, "Content is too long"),
+  cover_image_url: nullableUrl,
+  tags: z.array(z.string().trim().min(1)).max(20).optional(),
+  is_published: z.boolean().optional(),
+});
+
 export const aiGenerateDescriptionSchema = z.object({
   techStack: z.array(z.string()).min(1),
   title: z.string().optional(),
@@ -207,6 +222,7 @@ export type HeroInput = z.infer<typeof heroSchema>;
 export type AboutInput = z.infer<typeof aboutSchema>;
 export type SkillInput = z.infer<typeof skillSchema>;
 export type ProjectInput = z.infer<typeof projectSchema>;
+export type PostInput = z.infer<typeof postSchema>;
 export type ExperienceInput = z.infer<typeof experienceSchema>;
 export type SectionSettingInput = z.infer<typeof sectionSettingSchema>;
 export type ContactSubmissionInput = z.infer<typeof contactSubmissionSchema>;

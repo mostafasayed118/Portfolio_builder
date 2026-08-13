@@ -7,6 +7,7 @@ import { listPublishedProjects } from "@workspace/db/projects";
 import { listExperience } from "@workspace/db/experience";
 import { listCertifications } from "@workspace/db/certifications";
 import { fetchProjectBySlug } from "@workspace/db/projects";
+import { listPublishedPosts, getPublishedPostBySlug } from "@workspace/db/posts";
 import type { Skill as DbSkill } from "@workspace/supabase/types";
 import { SKILL_CATEGORIES } from "@/data/skills";
 
@@ -108,6 +109,26 @@ export function useProjectBySlug(slug: string | undefined) {
   return useQuery({
     queryKey: ["project", slug],
     queryFn: () => fetchWithSupabase((s) => fetchProjectBySlug(s, slug!)),
+    ...POLL_OPTIONS,
+    retry: 2,
+    enabled: isSupabaseConfigured && !!slug,
+  });
+}
+
+export function usePosts() {
+  return useQuery({
+    queryKey: ["posts"],
+    queryFn: () => fetchWithSupabase(listPublishedPosts),
+    ...POLL_OPTIONS,
+    retry: 2,
+    enabled: isSupabaseConfigured,
+  });
+}
+
+export function usePostBySlug(slug: string | undefined) {
+  return useQuery({
+    queryKey: ["post", slug],
+    queryFn: () => fetchWithSupabase((s) => getPublishedPostBySlug(s, slug!)),
     ...POLL_OPTIONS,
     retry: 2,
     enabled: isSupabaseConfigured && !!slug,

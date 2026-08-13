@@ -25,6 +25,7 @@ describe("listExperience", () => {
     expect(supabase.from).toHaveBeenCalledWith("experience");
     expect(supabase.select).toHaveBeenCalledWith("*");
     expect(supabase.is).toHaveBeenCalledWith("deleted_at", null);
+    expect(supabase.eq).toHaveBeenCalledWith("is_published", true);
     expect(supabase.order).toHaveBeenCalledWith("sort_order", { ascending: true });
     expect(result).toEqual(rows);
   });

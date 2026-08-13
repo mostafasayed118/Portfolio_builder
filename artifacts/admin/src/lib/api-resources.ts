@@ -13,7 +13,7 @@ import type {
   HeroContent, AboutContent, Skill, Project, Experience,
   Certification, Message, ContactInfo, ThemeSettings,
   TypographySettings, SeoSettings, SectionSetting, SiteSettings,
-  User,
+  User, BlogPost,
 } from "@workspace/supabase/types";
 import { request, type CvSettings } from "./api-client";
 
@@ -59,6 +59,12 @@ export const api = {
     update: (id: string, data: Partial<Certification>) => request<Certification>("PUT", `/certifications/${id}`, data),
     delete: (id: string) => request("DELETE", `/certifications/${id}`),
   },
+  posts: {
+    list: (userId?: string) => request<BlogPost[]>("GET", `/posts${userIdParam(userId)}`),
+    create: (data: Partial<BlogPost>) => request<BlogPost>("POST", "/posts", data),
+    update: (id: string, data: Partial<BlogPost>) => request<BlogPost>("PUT", `/posts/${id}`, data),
+    delete: (id: string) => request("DELETE", `/posts/${id}`),
+  },
   messages: {
     list: (userId?: string) => request<Message[]>("GET", `/messages${userIdParam(userId)}`),
     unreadCount: (userId?: string) => request<number>("GET", `/messages/unread-count${userIdParam(userId)}`),
@@ -66,6 +72,7 @@ export const api = {
     markUnread: (id: string) => request("PATCH", `/messages/${id}/unread`),
     delete: (id: string) => request("DELETE", `/messages/${id}`),
     bulkDelete: (ids: string[]) => request("POST", "/messages/bulk-delete", { ids }),
+    reply: (id: string, reply: string) => request("POST", `/messages/${id}/reply`, { reply }),
   },
   contact: {
     submit: (data: { name: string; email: string; message: string }) =>

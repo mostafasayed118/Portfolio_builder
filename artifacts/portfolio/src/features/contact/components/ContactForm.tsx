@@ -4,6 +4,7 @@ import { useFormValidation, SmartInput, SmartTextarea, createValidationRules } f
 import { contactFormSchema } from "@workspace/validation/schemas";
 import { getCsrfToken, clearCsrfCache } from "@/lib/csrf";
 import { getApiUrl } from "@/lib/env";
+import TurnstileWidget, { isTurnstileConfigured, getTurnstileSiteKey } from "@/features/contact/components/TurnstileWidget";
 
 const apiBase = getApiUrl();
 
@@ -20,9 +21,14 @@ interface Labels {
 
 const HONEYPOT_FIELD = "website";
 
+const TURNSTILE_ENABLED = isTurnstileConfigured();
+const TURNSTILE_SITE_KEY = getTurnstileSiteKey();
+
 export default function ContactForm({ labels }: { labels: Labels }) {
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileTokenRef = useRef<string | null>(null);
   const form = useFormValidation({ name: "", email: "", message: "" }, contactFormSchema);
   const rules = createValidationRules();
   // Real form-mount timestamp for the server-side time-trap check
@@ -32,9 +38,18 @@ export default function ContactForm({ labels }: { labels: Labels }) {
     formLoadedAtRef.current = Date.now();
   }
 
+  const handleTurnstileToken = (token: string | null) => {
+    turnstileTokenRef.current = token;
+    setTurnstileToken(token);
+  };
+
   const submitContact = async () => {
     setSubmitError(null);
     if (!form.validateAll()) return;
+    if (TURNSTILE_ENABLED && !turnstileTokenRef.current) {
+      setSubmitError(labels.errorMessage);
+      return;
+    }
     form.setIsSubmitting(true);
     try {
       const csrfToken = await getCsrfToken();
@@ -48,6 +63,7 @@ export default function ContactForm({ labels }: { labels: Labels }) {
           message: form.values.message,
           [HONEYPOT_FIELD]: "", // hidden anti-bot field; bots that auto-fill it get silently dropped
           _formLoadedAt: formLoadedAtRef.current ?? Date.now(),
+          cfTurnstileToken: turnstileTokenRef.current ?? undefined,
         }),
       });
       if (!res.ok) {
@@ -174,6 +190,20 @@ export default function ContactForm({ labels }: { labels: Labels }) {
         <div className="text-xs text-muted-foreground text-right mt-1">{form.values.message.length}/2000</div>
       </div>
 
+      {TURNSTILE_ENABLED && TURNSTILE_SITE_KEY && (
+        <div>
+          <TurnstileWidget
+            siteKey={TURNSTILE_SITE_KEY}
+            onToken={handleTurnstileToken}
+          />
+          {!turnstileToken && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Complete the security check before sending.
+            </p>
+          )}
+        </div>
+      )}
+
       {submitError && (
         <div className="space-y-2">
           <p className="text-xs text-destructive mt-1" role="alert">{submitError}</p>
@@ -182,7 +212,7 @@ export default function ContactForm({ labels }: { labels: Labels }) {
       )}
       <button
         type="submit"
-        disabled={form.isSubmitting}
+        disabled={form.isSubmitting || (TURNSTILE_ENABLED && !turnstileToken)}
         className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-all shadow-[var(--shadow-float)] disabled:opacity-60"
         data-testid="btn-send-message"
       >

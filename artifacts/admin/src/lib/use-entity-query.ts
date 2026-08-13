@@ -20,7 +20,7 @@ import type { Certification, Experience, Project, Skill, Message } from "@worksp
  *   );
  */
 export function useEntityQuery<T>(
-  entity: "projects" | "skills" | "experience" | "certifications" | "messages",
+  entity: "projects" | "skills" | "experience" | "certifications" | "messages" | "posts",
   fetcher: (userId: string | null) => Promise<{ success: true; data?: T } | { success: false; message: string }>,
   options?: Omit<UseQueryOptions<T, Error, T, readonly unknown[]>, "queryKey" | "queryFn">,
 ) {

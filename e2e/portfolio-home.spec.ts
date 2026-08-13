@@ -12,8 +12,17 @@ test.describe("Portfolio home page", () => {
   });
 
   test("navigation bar is visible with links", async ({ page }) => {
-    const nav = page.locator("nav");
-    await expect(nav).toBeVisible();
+    // The desktop nav is hidden below the md breakpoint; on mobile the navbar
+    // exposes the hamburger button instead. Either is a valid navbar presence.
+    const desktopNavVisible = await page
+      .locator("nav[aria-label='Primary']")
+      .isVisible()
+      .catch(() => false);
+    const mobileBtnVisible = await page
+      .getByTestId("btn-mobile-menu")
+      .isVisible()
+      .catch(() => false);
+    expect(desktopNavVisible || mobileBtnVisible).toBe(true);
   });
 
   test("scrolling reveals all sections on the home page", async ({ page }) => {
@@ -28,10 +37,13 @@ test.describe("Portfolio home page", () => {
   });
 
   test("theme toggle is present in the navbar", async ({ page }) => {
-    // Look for a theme toggle button (sun/moon icon or similar)
-    const themeToggle = page.locator('button[aria-label*="theme" i], button[aria-label*="dark" i], button[aria-label*="light" i]');
-    // At least one theme-related button should exist
-    await expect(themeToggle.first()).toBeVisible();
+    // Two toggles render (desktop nav + mobile menu); the desktop one is
+    // display:none on mobile, so assert on whichever is visible in the viewport.
+    const themeToggle = page
+      .getByTestId("btn-theme-toggle")
+      .filter({ visible: true })
+      .first();
+    await expect(themeToggle).toBeVisible();
   });
 
   test("footer contains social links", async ({ page }) => {
@@ -41,8 +53,9 @@ test.describe("Portfolio home page", () => {
     const footer = page.locator("footer");
     await expect(footer).toBeVisible();
 
-    // Footer should contain at least one link
-    const links = footer.locator("a");
-    await expect(links.first()).toBeVisible();
+    // Footer should contain social links (the blog link is hidden below sm,
+    // so assert on a social link that renders on every viewport).
+    await expect(footer.getByTestId("footer-link-github")).toBeVisible();
+    await expect(footer.getByTestId("footer-link-linkedin")).toBeVisible();
   });
 });

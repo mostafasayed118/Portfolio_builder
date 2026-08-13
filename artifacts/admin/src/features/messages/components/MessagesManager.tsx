@@ -37,6 +37,7 @@ export default function MessagesManager() {
   const [replyTo, setReplyTo] = useState<Msg | null>(null);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  const [sendingReply, setSendingReply] = useState(false);
   const [filter, setFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -68,21 +69,43 @@ export default function MessagesManager() {
 
   const sendReply = async () => {
     if (!replyTo) return;
-    if (replyTo.id) {
-      try {
-        const res = await api.messages.markRead(replyTo.id);
-        if (res.success) {
-          queryClient.invalidateQueries({ queryKey: ["messages"] });
-          queryClient.invalidateQueries({ queryKey: ["unreadCount"] });
-        }
-      } catch {
-        // Non-critical — continue with reply
-      }
+    if (!body.trim()) {
+      toast({ title: "Reply message is required", variant: "destructive" });
+      return;
     }
-    const mailto = `mailto:${replyTo.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.location.href = mailto;
-    setReplyTo(null);
-    toast({ title: "Reply opened in email app" });
+    setSendingReply(true);
+    try {
+      let sent = false;
+      if (replyTo.id) {
+        const res = await api.messages.reply(replyTo.id, body);
+        sent = (res as { sent?: boolean }).sent === true;
+        if (!res.success) throw new Error(res.message);
+        await api.messages.markRead(replyTo.id).catch(() => {});
+        queryClient.invalidateQueries({ queryKey: ["messages"] });
+        queryClient.invalidateQueries({ queryKey: ["unreadCount"] });
+      }
+
+      if (sent) {
+        setReplyTo(null);
+        setBody("");
+        toast({ title: "Reply sent", description: `Replied to ${replyTo.email}` });
+      } else {
+        // Email delivery not configured — fall back to the user's mail client.
+        const mailto = `mailto:${replyTo.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        window.location.href = mailto;
+        setReplyTo(null);
+        setBody("");
+        toast({ title: "Reply opened in email app (sending not configured)" });
+      }
+    } catch (err) {
+      toast({
+        title: "Failed to send reply",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingReply(false);
+    }
   };
 
   const handleMarkRead = async (msg: Msg) => {
@@ -224,9 +247,10 @@ export default function MessagesManager() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Reply via email</DialogTitle>
+            <DialogTitle>Reply to {replyTo?.name}</DialogTitle>
             <DialogDescription>
-              Draft a reply and open your email client.
+              Send a reply to this message. If email sending isn't configured, it
+              opens your email client instead.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
@@ -260,8 +284,8 @@ export default function MessagesManager() {
             <Button variant="outline" onClick={() => setReplyTo(null)}>
               Cancel
             </Button>
-            <Button onClick={sendReply} disabled={!replyTo}>
-              Open Email
+            <Button onClick={sendReply} disabled={!replyTo || sendingReply || !body.trim()}>
+              {sendingReply ? "Sending…" : "Send Reply"}
             </Button>
           </DialogFooter>
         </DialogContent>

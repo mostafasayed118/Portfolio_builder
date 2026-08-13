@@ -36,6 +36,7 @@ describe("fetchCertifications", () => {
     expect(supabase.from).toHaveBeenCalledWith("certifications");
     expect(supabase.select).toHaveBeenCalledWith("*");
     expect(supabase.is).toHaveBeenCalledWith("deleted_at", null);
+    expect(supabase.eq).toHaveBeenCalledWith("is_published", true);
     expect(result).toEqual([
       {
         id: "1",

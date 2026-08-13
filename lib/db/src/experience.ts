@@ -8,7 +8,12 @@ export async function listExperience(
   supabase: SupabaseClient,
 ): Promise<Experience[]> {
   return queryOrThrow<Experience[]>(
-    supabase.from("experience").select("*").is("deleted_at", null).order("sort_order", { ascending: true }),
+    supabase
+      .from("experience")
+      .select("*")
+      .is("deleted_at", null)
+      .eq("is_published", true)
+      .order("sort_order", { ascending: true }),
     { table: "experience", operation: "listExperience" },
   );
 }

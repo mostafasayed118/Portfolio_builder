@@ -16,6 +16,8 @@ import { ApiHealthCheck } from "@/components/ApiHealthCheck";
 import { Loader2 } from "lucide-react";
 
 const ProjectDetail = lazy(() => import("@/pages/ProjectDetail"));
+const Blog = lazy(() => import("@/pages/Blog"));
+const BlogPost = lazy(() => import("@/pages/BlogPost"));
 
 function SuspenseWrapper({ children }: { children: React.ReactNode }) {
   return <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>{children}</Suspense>;
@@ -41,6 +43,16 @@ function App() {
                   {(params: { slug?: string }) => (
                     <SuspenseWrapper>
                       {params.slug ? <ProjectDetail slug={params.slug} /> : <NotFound />}
+                    </SuspenseWrapper>
+                  )}
+                </Route>
+                <Route path="/blog">
+                  <SuspenseWrapper><Blog /></SuspenseWrapper>
+                </Route>
+                <Route path="/blog/:slug">
+                  {(params: { slug?: string }) => (
+                    <SuspenseWrapper>
+                      {params.slug ? <BlogPost slug={params.slug} /> : <NotFound />}
                     </SuspenseWrapper>
                   )}
                 </Route>
