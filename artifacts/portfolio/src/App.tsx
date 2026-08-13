@@ -12,12 +12,15 @@ import Home from "@/pages/Home";
 import NotFound from "@/pages/not-found";
 import SEO from "@/components/SEO";
 import { Toaster } from "@workspace/ui";
+import { ApiHealthCheck } from "@/components/ApiHealthCheck";
 import { Loader2 } from "lucide-react";
 
 const ProjectDetail = lazy(() => import("@/pages/ProjectDetail"));
+const Blog = lazy(() => import("@/pages/Blog"));
+const BlogPost = lazy(() => import("@/pages/BlogPost"));
 
 function SuspenseWrapper({ children }: { children: React.ReactNode }) {
-  return <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>{children}</Suspense>; {/* FIX: UX-009 */}
+  return <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>{children}</Suspense>;
 }
 
 function App() {
@@ -30,6 +33,9 @@ function App() {
             <DynamicFavicon />
             {isSupabaseConfigured && <SupabaseThemeSync />}
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-background focus:text-foreground focus:rounded-lg focus:shadow-lg focus:outline-2 focus:outline-primary">
+                Skip to main content
+              </a>
               <Navbar />
               <Switch>
                 <Route path="/" component={Home} />
@@ -40,9 +46,20 @@ function App() {
                     </SuspenseWrapper>
                   )}
                 </Route>
+                <Route path="/blog">
+                  <SuspenseWrapper><Blog /></SuspenseWrapper>
+                </Route>
+                <Route path="/blog/:slug">
+                  {(params: { slug?: string }) => (
+                    <SuspenseWrapper>
+                      {params.slug ? <BlogPost slug={params.slug} /> : <NotFound />}
+                    </SuspenseWrapper>
+                  )}
+                </Route>
                 <Route component={NotFound} />
               </Switch>
               <Footer />
+              <ApiHealthCheck />
               <Toaster />
             </WouterRouter>
           </BrandingProvider>

@@ -94,7 +94,7 @@ export default function Sidebar({ open, onClose }: Props) {
                     <li key={path}>
                       <Link
                         href={path}
-                        aria-current={isActive(path) ? "page" : undefined} // FIX: UX-029
+                        aria-current={isActive(path) ? "page" : undefined}
                         data-preload="true"
                         onMouseEnter={() => handleMouseEnter(path)}
                         className={cn(

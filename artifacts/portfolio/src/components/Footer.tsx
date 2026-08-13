@@ -1,10 +1,11 @@
-import { Github, Linkedin, Mail, Heart } from "lucide-react";
-import { HERO } from "@/data/portfolio";
+import { Github, Linkedin, Mail, Heart, Newspaper } from "lucide-react";
+import { Link } from "wouter";
+import { HERO, CONTACT } from "@/data/portfolio";
 import { useBranding } from "@/lib/branding";
 import { useLanguage } from "@/lib/language";
 
 export default function Footer() {
-  const { siteName } = useBranding();
+  const { siteName, tagline } = useBranding();
   const { t } = useLanguage();
 
   return (
@@ -18,11 +19,20 @@ export default function Footer() {
           </div>
           <div>
             <span className="text-sm font-medium text-foreground">{siteName}</span>
-            <span className="block text-xs text-muted-foreground">Data Engineer · Cairo, Egypt</span>
+            <span className="block text-xs text-muted-foreground">{tagline || "Data Engineer"} · {CONTACT.location}</span>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
+          <Link
+            href="/blog"
+            className="hidden sm:inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all border border-transparent hover:border-primary/20"
+            aria-label="Blog"
+            data-testid="footer-link-blog"
+          >
+            <Newspaper className="h-3.5 w-3.5" />
+            Blog
+          </Link>
           {[
             { href: HERO.github, icon: Github, label: "GitHub" },
             { href: HERO.linkedin, icon: Linkedin, label: "LinkedIn" },
@@ -43,7 +53,7 @@ export default function Footer() {
         </div>
 
         <p className="text-xs text-muted-foreground flex items-center gap-1">
-          {t.footer.madeWith} <Heart className="h-3 w-3 text-red-400 fill-red-400/30" /> Cairo
+          {t.footer.madeWith} <Heart className="h-3 w-3 text-red-400 fill-red-400/30" /> {CONTACT.location}
           <span className="hidden sm:inline"> · {new Date().getFullYear()}</span>
         </p>
       </div>

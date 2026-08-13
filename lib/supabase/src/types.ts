@@ -434,6 +434,54 @@ export interface Database {
         };
         Relationships: [];
       };
+      blog_posts: {
+        Row: {
+          id: string;
+          title: string;
+          slug: string;
+          excerpt: string | null;
+          content: string;
+          cover_image_url: string | null;
+          tags: string[];
+          is_published: boolean | null;
+          published_at: string | null;
+          user_id: string | null;
+          deleted_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          slug: string;
+          excerpt?: string | null;
+          content?: string;
+          cover_image_url?: string | null;
+          tags?: string[];
+          is_published?: boolean | null;
+          published_at?: string | null;
+          user_id?: string | null;
+          deleted_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          slug?: string;
+          excerpt?: string | null;
+          content?: string;
+          cover_image_url?: string | null;
+          tags?: string[];
+          is_published?: boolean | null;
+          published_at?: string | null;
+          user_id?: string | null;
+          deleted_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       contact_info: {
         Row: {
           id: string;
@@ -1156,6 +1204,9 @@ export type AnalyticsEvent = TableRow<"analytics_events">;
 export type ContentHealthReport = TableRow<"content_health_reports">;
 export type ImageMetadata = TableRow<"image_metadata">;
 export type ImageVariant = TableRow<"image_variants">;
+export type BlogPost = TableRow<"blog_posts">;
+export type InsertBlogPost = TableInsert<"blog_posts">;
+export type UpdateBlogPost = TableUpdate<"blog_posts">;
 
 export type InsertThemeSettings = TableInsert<"theme_settings">;
 export type InsertTypographySettings = TableInsert<"typography_settings">;

@@ -7,27 +7,48 @@ import { listPublishedProjects } from "@workspace/db/projects";
 import { listExperience } from "@workspace/db/experience";
 import { listCertifications } from "@workspace/db/certifications";
 import { fetchProjectBySlug } from "@workspace/db/projects";
+import { listPublishedPosts, getPublishedPostBySlug } from "@workspace/db/posts";
 import type { Skill as DbSkill } from "@workspace/supabase/types";
 import { SKILL_CATEGORIES } from "@/data/skills";
 
-// Realtime sync handles live updates; polling is a fallback for missed events.
-const POLL_INTERVAL = 5 * 60_000; // 5 min
-const STALE_TIME = 5 * 60_000;    // 5 min
+// Realtime sync (use-realtime-sync.ts) handles live updates for the
+// 3 most-active tables. The remaining tables (about, skills,
+// experience, certifications, contact_info, theme, typography, seo,
+// section_settings) don't poll — their React Query cache is treated
+// as "fresh" for 30 minutes, after which a background refetch fires
+// only when the component re-mounts or the window is focused.
+const STALE_TIME = 30 * 60_000; // 30 min
+const GC_TIME = 60 * 60_000; // 1 hour — keep the cached data around for navigation
 const POLL_OPTIONS = {
-  refetchInterval: POLL_INTERVAL,
   refetchIntervalInBackground: false,
   refetchOnWindowFocus: false,
   staleTime: STALE_TIME,
+  gcTime: GC_TIME,
+  networkMode: "online" as const,
 };
+
+/**
+ * Reusable fetch wrapper that:
+ *   1. Resolves the Supabase client (or throws "Supabase not configured")
+ *   2. Calls the supplied fetcher
+ *   3. Returns the result, leaving nullability to the caller
+ *
+ * Kept as a plain function (not a React hook) so callers retain their
+ * own typed return shape via `useQuery<T, Error, T, ...>` without
+ * fighting the generic inference.
+ */
+async function fetchWithSupabase<T>(
+  fetcher: (supabase: NonNullable<ReturnType<typeof getSupabase>>) => Promise<T>,
+): Promise<T> {
+  const supabase = getSupabase();
+  if (!supabase) throw new Error("Supabase not configured");
+  return fetcher(supabase);
+}
 
 export function useHeroContent() {
   return useQuery({
     queryKey: ["hero"],
-    queryFn: async () => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("Supabase not configured");
-      return getHeroContent(supabase);
-    },
+    queryFn: () => fetchWithSupabase(getHeroContent),
     ...POLL_OPTIONS,
     retry: 2,
     enabled: isSupabaseConfigured,
@@ -37,11 +58,7 @@ export function useHeroContent() {
 export function useAboutContent() {
   return useQuery({
     queryKey: ["about"],
-    queryFn: async () => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("Supabase not configured");
-      return getAboutContent(supabase);
-    },
+    queryFn: () => fetchWithSupabase(getAboutContent),
     ...POLL_OPTIONS,
     retry: 2,
     enabled: isSupabaseConfigured,
@@ -51,11 +68,7 @@ export function useAboutContent() {
 export function useSkills() {
   return useQuery({
     queryKey: ["skills"],
-    queryFn: async () => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("Supabase not configured");
-      return listSkills(supabase);
-    },
+    queryFn: () => fetchWithSupabase(listSkills),
     ...POLL_OPTIONS,
     retry: 2,
     enabled: isSupabaseConfigured,
@@ -65,11 +78,7 @@ export function useSkills() {
 export function useProjects() {
   return useQuery({
     queryKey: ["projects"],
-    queryFn: async () => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("Supabase not configured");
-      return listPublishedProjects(supabase);
-    },
+    queryFn: () => fetchWithSupabase(listPublishedProjects),
     ...POLL_OPTIONS,
     retry: 2,
     enabled: isSupabaseConfigured,
@@ -79,11 +88,7 @@ export function useProjects() {
 export function useExperience() {
   return useQuery({
     queryKey: ["experience"],
-    queryFn: async () => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("Supabase not configured");
-      return listExperience(supabase);
-    },
+    queryFn: () => fetchWithSupabase(listExperience),
     ...POLL_OPTIONS,
     retry: 2,
     enabled: isSupabaseConfigured,
@@ -93,11 +98,7 @@ export function useExperience() {
 export function useCertifications() {
   return useQuery({
     queryKey: ["certifications"],
-    queryFn: async () => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("Supabase not configured");
-      return listCertifications(supabase);
-    },
+    queryFn: () => fetchWithSupabase(listCertifications),
     ...POLL_OPTIONS,
     retry: 2,
     enabled: isSupabaseConfigured,
@@ -107,11 +108,27 @@ export function useCertifications() {
 export function useProjectBySlug(slug: string | undefined) {
   return useQuery({
     queryKey: ["project", slug],
-    queryFn: async () => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("Supabase not configured");
-      return fetchProjectBySlug(supabase, slug!);
-    },
+    queryFn: () => fetchWithSupabase((s) => fetchProjectBySlug(s, slug!)),
+    ...POLL_OPTIONS,
+    retry: 2,
+    enabled: isSupabaseConfigured && !!slug,
+  });
+}
+
+export function usePosts() {
+  return useQuery({
+    queryKey: ["posts"],
+    queryFn: () => fetchWithSupabase(listPublishedPosts),
+    ...POLL_OPTIONS,
+    retry: 2,
+    enabled: isSupabaseConfigured,
+  });
+}
+
+export function usePostBySlug(slug: string | undefined) {
+  return useQuery({
+    queryKey: ["post", slug],
+    queryFn: () => fetchWithSupabase((s) => getPublishedPostBySlug(s, slug!)),
     ...POLL_OPTIONS,
     retry: 2,
     enabled: isSupabaseConfigured && !!slug,

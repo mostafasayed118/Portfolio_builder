@@ -1,13 +1,14 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useLanguage } from "@/lib/language";
 import { Link, useLocation } from "wouter";
 import { ArrowLeft, ExternalLink, Github, Calendar, Sparkles, FileX } from "lucide-react";
 import { PROJECTS } from "@/data/portfolio";
 import SEO, { generateProjectSchema } from "@/components/SEO";
-import ProjectCard from "@/components/ProjectCard";
+import { ProjectCard, mapDbProjectDetail } from "@/features/projects";
 import { useProjectBySlug } from "@/hooks/use-portfolio-data";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
 import { trackEvent } from "@workspace/db/analytics";
+import { logWarn } from "@/lib/logger";
 
 function ProjectDetailSkeleton() {
   return (
@@ -70,28 +71,19 @@ export default function ProjectDetail({ slug }: ProjectDetailProps) {
   const [, navigate] = useLocation();
   const { t } = useLanguage();
   const { data: dbProject, isLoading } = useProjectBySlug(slug);
+  const backTimer = useRef<number | null>(null);
+
+  const backToProjects = () => {
+    navigate("/");
+    if (backTimer.current !== null) return;
+    backTimer.current = window.setTimeout(() => {
+      document.getElementById("projects")?.scrollIntoView({ behavior: "smooth" });
+      backTimer.current = null;
+    }, 150);
+  };
 
   const project = useMemo(() => {
-    if (dbProject) {
-      return {
-        id: 0,
-        slug: dbProject.slug ?? slug,
-        title: dbProject.title,
-        shortDescription: dbProject.description,
-        fullDescription: dbProject.full_description ?? dbProject.description,
-        description: dbProject.description,
-        challenges: dbProject.challenges ?? null,
-        outcome: dbProject.outcome ?? null,
-        techStack: dbProject.tech_stack ?? [],
-        category: dbProject.category ?? "web",
-        featured: dbProject.featured ?? false,
-        githubUrl: dbProject.github_url ?? "",
-        liveUrl: dbProject.live_url ?? undefined,
-        metrics: dbProject.metrics ?? [],
-        images: [],
-        completedAt: dbProject.completed_at ?? dbProject.created_at?.slice(0, 4) ?? "",
-      };
-    }
+    if (dbProject) return mapDbProjectDetail(dbProject, slug);
     return PROJECTS.find((p) => p.slug === slug) ?? null;
   }, [dbProject, slug]);
 
@@ -111,7 +103,7 @@ export default function ProjectDetail({ slug }: ProjectDetailProps) {
       if (sb) trackEvent(sb, "project_view", `/projects/${project.slug}`, {
         project_slug: project.slug,
         title: project.title,
-      }).catch(() => {});
+      }).catch((err) => logWarn("trackEvent failed", err));
     }
   }, [project?.slug]);
 
@@ -129,7 +121,7 @@ export default function ProjectDetail({ slug }: ProjectDetailProps) {
             The project you're looking for doesn't exist or has been removed.
           </p>
           <button
-            onClick={() => navigate("/#projects")}
+            onClick={backToProjects}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -162,7 +154,11 @@ export default function ProjectDetail({ slug }: ProjectDetailProps) {
         </div>
         <div className="max-w-4xl mx-auto px-6 py-12 relative z-10">
           <Link
-            href="/#projects"
+            href="/"
+            onClick={(e) => {
+              e.preventDefault();
+              backToProjects();
+            }}
             className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors mb-8"
           >
             <ArrowLeft className="h-4 w-4" />

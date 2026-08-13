@@ -121,6 +121,8 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
 }
 
 buildAll().catch((err) => {
+  // eslint-disable-next-line no-undef -- build script runs in Node
   console.error(err);
+  // eslint-disable-next-line no-undef -- build script runs in Node
   process.exit(1);
 });

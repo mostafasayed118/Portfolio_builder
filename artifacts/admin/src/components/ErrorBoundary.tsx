@@ -39,7 +39,7 @@ export default class ErrorBoundary extends Component<Props, State> {
                 this.setState({ hasError: false, error: null });
                 window.location.reload();
               }}
-              className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-white min-h-[44px]" // STANDARDIZED: Type B — secondary action
+              className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-white min-h-[44px]"
               aria-label="Reload the page to try again"
             >
               Reload Page

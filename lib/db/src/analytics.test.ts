@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { trackEvent, fetchEventStats, fetchMessageStats } from "./analytics";
 
 // ─── trackEvent ──────────────────────────────────────────────────────────────
@@ -29,7 +29,7 @@ describe("trackEvent", () => {
     );
   });
 
-  it("maps metadata.project_slug to project_id", async () => {
+  it("maps metadata.project_slug to preset_id (not the UUID project_id column)", async () => {
     const insert = vi.fn().mockResolvedValue({ data: null, error: null });
     const from = vi.fn().mockReturnValue({ insert });
     const supabase = { from } as any;
@@ -37,7 +37,7 @@ describe("trackEvent", () => {
     await trackEvent(supabase, "project_view", "/projects/x", { project_slug: "my-project" });
 
     expect(insert).toHaveBeenCalledWith(
-      expect.objectContaining({ project_id: "my-project" }),
+      expect.objectContaining({ preset_id: "my-project", project_id: null }),
     );
   });
 
@@ -76,7 +76,7 @@ function buildEventStatsMock(pageViews: any[] = [], projectViews: any[] = [], co
               }),
             };
           }
-          if (cols === "project_id, path") {
+          if (cols === "preset_id, project_id, path") {
             return {
               eq: vi.fn().mockReturnValue({
                 gte: vi.fn().mockResolvedValue({ data: projectViews, error: null }),
@@ -116,9 +116,9 @@ describe("fetchEventStats", () => {
     const supabase = buildEventStatsMock(
       [],
       [
-        { project_id: "alpha", path: "/projects/alpha" },
-        { project_id: "alpha", path: "/projects/alpha" },
-        { project_id: "beta", path: "/projects/beta" },
+        { preset_id: "alpha", path: "/projects/alpha" },
+        { preset_id: "alpha", path: "/projects/alpha" },
+        { preset_id: "beta", path: "/projects/beta" },
       ],
       {},
     );

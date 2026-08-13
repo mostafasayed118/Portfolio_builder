@@ -39,6 +39,7 @@ vi.mock("@clerk/backend", () => ({
 vi.mock("../middleware/csrf", () => ({
   generateCsrfToken: vi.fn(() => "test-csrf-token"),
   doubleCsrfProtection: vi.fn((_req, _res, next: () => void) => next()),
+  invalidCsrfTokenError: Object.assign(new Error("invalid csrf token"), { statusCode: 403, code: "EBADCSRFTOKEN" }),
 }));
 
 vi.mock("../lib/supabase-client", () => ({

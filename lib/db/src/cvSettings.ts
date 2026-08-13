@@ -1,17 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { CvSettings, InsertCvSettings } from "@workspace/supabase/types";
+import type { CvSettings } from "@workspace/supabase/types";
+import { queryOrThrow } from "./query";
 
 export async function getLatestCvSettings(
   supabase: SupabaseClient,
 ): Promise<CvSettings | null> {
-  const { data, error } = await supabase
-    .from("cv_settings")
-    .select("*")
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (error) throw error;
-  return data;
+  return queryOrThrow(
+    supabase.from("cv_settings").select("*").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
+    { table: "cv_settings", operation: "getLatestCvSettings" },
+  );
 }
 
 export async function upsertCvSettings(
@@ -21,26 +18,15 @@ export async function upsertCvSettings(
   const existing = await getLatestCvSettings(supabase);
   const now = new Date().toISOString();
   if (existing) {
-    const { error } = await supabase
-      .from("cv_settings")
-      .update({
-        object_path: args.object_path,
-        file_name: args.file_name,
-        updated_at: now,
-      })
-      .eq("id", existing.id);
-    if (error) throw error;
+    await queryOrThrow(
+      supabase.from("cv_settings").update({ object_path: args.object_path, file_name: args.file_name, updated_at: now }).eq("id", existing.id),
+      { table: "cv_settings", operation: "upsertCvSettings.update" },
+    );
     return existing.id;
   }
-  const { data, error } = await supabase
-    .from("cv_settings")
-    .insert({
-      object_path: args.object_path,
-      file_name: args.file_name,
-      updated_at: now,
-    })
-    .select("id")
-    .single();
-  if (error) throw error;
+  const data = await queryOrThrow<{ id: string }>(
+    supabase.from("cv_settings").insert({ object_path: args.object_path, file_name: args.file_name, updated_at: now }).select("id").single(),
+    { table: "cv_settings", operation: "upsertCvSettings.insert" },
+  );
   return data.id;
 }

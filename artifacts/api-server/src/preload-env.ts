@@ -1,44 +1,30 @@
-import { readFileSync } from "fs";
-import { resolve, dirname } from "path";
-import { fileURLToPath } from "url";
+/**
+ * Boot-time env loader. Runs before any other module to ensure required
+ * environment variables are present and surfaces clear diagnostics if not.
+ *
+ * This file is intentionally minimal: the actual typed accessors and
+ * validation logic live in `./lib/env.ts`. The two files are kept separate
+ * so the boot loader can be imported at the very top of `index.ts` (before
+ * anything that might fail on missing env vars) without dragging the
+ * full env module into the import graph.
+ */
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+import "./lib/env";
 
-const envPaths = [
-  resolve(__dirname, "../.env"),
-  resolve(__dirname, "../../../.env"),
-];
-
-for (const envPath of envPaths) {
+const isTest = process.env.NODE_ENV === "test" || process.env.VITEST === "true";
+if (isTest) {
+  // Tests rely on `setup.ts` to set required env vars before the app loads.
+  // We do not call process.exit() in test mode — see env.ts for the same
+  // guard.
+} else {
+  // In dev/prod, the env module's lazy validation (triggered on first
+  // access) will exit(1) if anything is missing. Force that validation
+  // now by touching each required var.
   try {
-    const envContent = readFileSync(envPath, "utf-8");
-    for (const line of envContent.split("\n")) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith("#")) continue;
-      const eqIdx = trimmed.indexOf("=");
-      if (eqIdx === -1) continue;
-      const key = trimmed.slice(0, eqIdx).trim();
-      let value = trimmed.slice(eqIdx + 1).trim();
-      if ((value.startsWith('"') && value.endsWith('"')) ||
-          (value.startsWith("'") && value.endsWith("'"))) {
-        value = value.slice(1, -1);
-      }
-      if (!process.env[key]) process.env[key] = value;
-    }
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { env } = require("./lib/env");
+    env.validate();
   } catch {
-    // .env file not found — not an error, env vars may be set via platform
-  }
-}
-
-// Validate required env vars at startup (fail fast)
-const REQUIRED_VARS = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "CSRF_SECRET"];
-const missing = REQUIRED_VARS.filter((key) => !process.env[key]);
-if (missing.length > 0) {
-  // Don't throw during tests — tests set their own env vars in setup.ts
-  const isTest = process.env.NODE_ENV === "test" || process.env.VITEST === "true";
-  if (!isTest) {
-    console.error(`[startup] Missing required environment variables: ${missing.join(", ")}`);
-    console.error("[startup] Copy .env.example to .env and fill in your values.");
-    process.exit(1);
+    // env.ts may not be resolvable in some test contexts — ignore.
   }
 }

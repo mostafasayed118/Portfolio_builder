@@ -29,8 +29,8 @@ export function SeedDialog() {
       queryClient.invalidateQueries({ queryKey: ["skills"] });
       queryClient.invalidateQueries({ queryKey: ["experience"] });
       queryClient.invalidateQueries({ queryKey: ["certifications"] });
-      queryClient.invalidateQueries({ queryKey: ["heroContent"] });
-      queryClient.invalidateQueries({ queryKey: ["aboutContent"] });
+      queryClient.invalidateQueries({ queryKey: ["hero"] });
+      queryClient.invalidateQueries({ queryKey: ["about"] });
     } else {
       setResult({
         success: false,

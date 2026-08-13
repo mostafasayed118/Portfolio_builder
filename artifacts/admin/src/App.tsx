@@ -1,38 +1,32 @@
-import { lazy, Suspense } from "react";
-import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
+import { lazy, Suspense, useEffect, useState } from "react";
+import { Switch, Route, Router as WouterRouter, Redirect, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import AdminLayout from "@/components/AdminLayout";
-import Overview from "@/pages/Overview";
 import { Toaster, TooltipProvider } from "@workspace/ui";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { ViewingUserProvider } from "@/lib/viewing-user-context";
-import { ProtectedRoute, SignInPage } from "@/lib/auth";
+import { ProtectedRoute, SignInPage } from "@/features/auth";
+import { ApiHealthCheck } from "@/components/ApiHealthCheck";
+import { abortAllRequests, beginRequestGroup } from "@/lib/api-client";
 
-const ThemeManager = lazy(() => import("@/pages/ThemeManager"));
-const TypographyManager = lazy(() => import("@/pages/TypographyManager"));
-const HeroEditor = lazy(() => import("@/pages/HeroEditor"));
-const AboutEditor = lazy(() => import("@/pages/AboutEditor"));
-const SkillsManager = lazy(() => import("@/pages/SkillsManager"));
-const ProjectsManager = lazy(() => import("@/pages/ProjectsManager"));
-const ExperienceManager = lazy(() => import("@/pages/ExperienceManager"));
-const CertificationsManager = lazy(() => import("@/pages/CertificationsManager"));
-const ContactManager = lazy(() => import("@/pages/ContactManager"));
-const MessagesManager = lazy(() => import("@/pages/MessagesManager"));
-const SeoManager = lazy(() => import("@/pages/SeoManager"));
-const SectionOrderManager = lazy(() => import("@/pages/SectionOrderManager"));
-const SiteSettingsManager = lazy(() => import("@/pages/SiteSettingsManager"));
-const CvManager = lazy(() => import("@/pages/CvManager"));
+const Overview = lazy(() => import("@/pages/Overview"));
+const ThemeManager = lazy(() => import("@/features/settings").then(m => ({ default: m.ThemeManager })));
+const TypographyManager = lazy(() => import("@/features/settings").then(m => ({ default: m.TypographyManager })));
+const HeroEditor = lazy(() => import("@/features/hero-content").then(m => ({ default: m.HeroEditor })));
+const AboutEditor = lazy(() => import("@/features/about-content").then(m => ({ default: m.AboutEditor })));
+const SkillsManager = lazy(() => import("@/features/skills").then(m => ({ default: m.SkillsManager })));
+const ProjectsManager = lazy(() => import("@/features/projects").then(m => ({ default: m.ProjectsManager })));
+const ExperienceManager = lazy(() => import("@/features/experience").then(m => ({ default: m.ExperienceManager })));
+const CertificationsManager = lazy(() => import("@/features/certifications").then(m => ({ default: m.CertificationsManager })));
+const PostsManager = lazy(() => import("@/features/posts").then(m => ({ default: m.PostsManager })));
+const ContactManager = lazy(() => import("@/features/contact-info").then(m => ({ default: m.ContactManager })));
+const MessagesManager = lazy(() => import("@/features/messages").then(m => ({ default: m.MessagesManager })));
+const SeoManager = lazy(() => import("@/features/settings").then(m => ({ default: m.SeoManager })));
+const SectionOrderManager = lazy(() => import("@/features/settings").then(m => ({ default: m.SectionOrderManager })));
+const SiteSettingsManager = lazy(() => import("@/features/settings").then(m => ({ default: m.SiteSettingsManager })));
+const CvManager = lazy(() => import("@/features/cv").then(m => ({ default: m.CvManager })));
+const AuditLog = lazy(() => import("@/features/audit").then(m => ({ default: m.default })));
 const NotFound = lazy(() => import("@/pages/not-found"));
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5,
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
 
 function PageFallback() {
   return (
@@ -43,47 +37,72 @@ function PageFallback() {
 }
 
 function App() {
+  const [queryClient] = useState(() => new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 1000 * 60 * 5,
+        retry: (failureCount, error) => {
+          // Never retry 429 rate-limit responses — retrying amplifies the
+          // pressure on the very limiter that just rejected us. Surface the
+          // error to the user and let the manual "Try Again" button decide.
+          if (error instanceof Error && /too many (requests|messages|admin)/i.test(error.message)) {
+            return false;
+          }
+          return failureCount < 1;
+        },
+        refetchOnWindowFocus: false,
+      },
+    },
+  }));
+  const [location] = useLocation();
+  // Abort any in-flight admin mutations on every route change so the
+  // user never sees stale state from a request that completed after
+  // navigation.
+  useEffect(() => {
+    beginRequestGroup();
+    return () => abortAllRequests();
+  }, [location]);
+
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <ViewingUserProvider>
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-              <Suspense fallback={<PageFallback />}>
-                <Switch>
-                  {/* Public route — sign-in (no auth required) */}
-                  <Route path="/sign-in">
-                    <SignInPage />
-                  </Route>
+              <Switch>
+                <Route path="/sign-in">
+                  <SignInPage />
+                </Route>
 
-                  {/* All other routes require auth */}
-                  <Route>
-                    <ProtectedRoute>
-                      <AdminLayout>
-                        <Switch>
-                          <Route path="/" component={() => <Redirect to="/overview" />} />
-                          <Route path="/overview" component={Overview} />
-                          <Route path="/hero" component={HeroEditor} />
-                          <Route path="/about" component={AboutEditor} />
-                          <Route path="/projects" component={ProjectsManager} />
-                          <Route path="/skills" component={SkillsManager} />
-                          <Route path="/experience" component={ExperienceManager} />
-                          <Route path="/certifications" component={CertificationsManager} />
-                          <Route path="/messages" component={MessagesManager} />
-                          <Route path="/contact" component={ContactManager} />
-                          <Route path="/cv" component={CvManager} />
-                          <Route path="/seo" component={SeoManager} />
-                          <Route path="/typography" component={TypographyManager} />
-                          <Route path="/sections" component={SectionOrderManager} />
-                          <Route path="/theme" component={ThemeManager} />
-                          <Route path="/settings" component={SiteSettingsManager} />
-                          <Route component={NotFound} />
-                        </Switch>
-                      </AdminLayout>
-                    </ProtectedRoute>
-                  </Route>
-                </Switch>
-              </Suspense>
+                <Route>
+                  <ProtectedRoute>
+                    <AdminLayout>
+                      <Switch>
+                        <Route path="/" component={() => <Redirect to="/overview" />} />
+                        <Route path="/overview" component={Overview} />
+                        <Route path="/hero"><Suspense fallback={<PageFallback />}><HeroEditor /></Suspense></Route>
+                        <Route path="/about"><Suspense fallback={<PageFallback />}><AboutEditor /></Suspense></Route>
+                        <Route path="/projects"><Suspense fallback={<PageFallback />}><ProjectsManager /></Suspense></Route>
+                        <Route path="/skills"><Suspense fallback={<PageFallback />}><SkillsManager /></Suspense></Route>
+                        <Route path="/experience"><Suspense fallback={<PageFallback />}><ExperienceManager /></Suspense></Route>
+                        <Route path="/certifications"><Suspense fallback={<PageFallback />}><CertificationsManager /></Suspense></Route>
+                        <Route path="/posts"><Suspense fallback={<PageFallback />}><PostsManager /></Suspense></Route>
+                        <Route path="/messages"><Suspense fallback={<PageFallback />}><MessagesManager /></Suspense></Route>
+                        <Route path="/contact"><Suspense fallback={<PageFallback />}><ContactManager /></Suspense></Route>
+                        <Route path="/cv"><Suspense fallback={<PageFallback />}><CvManager /></Suspense></Route>
+                        <Route path="/seo"><Suspense fallback={<PageFallback />}><SeoManager /></Suspense></Route>
+                        <Route path="/typography"><Suspense fallback={<PageFallback />}><TypographyManager /></Suspense></Route>
+                        <Route path="/sections"><Suspense fallback={<PageFallback />}><SectionOrderManager /></Suspense></Route>
+                        <Route path="/theme"><Suspense fallback={<PageFallback />}><ThemeManager /></Suspense></Route>
+                        <Route path="/settings"><Suspense fallback={<PageFallback />}><SiteSettingsManager /></Suspense></Route>
+                        <Route path="/audit"><Suspense fallback={<PageFallback />}><AuditLog /></Suspense></Route>
+                        <Route component={NotFound} />
+                      </Switch>
+                    </AdminLayout>
+                  </ProtectedRoute>
+                </Route>
+              </Switch>
+              <ApiHealthCheck />
               <Toaster />
             </WouterRouter>
           </ViewingUserProvider>

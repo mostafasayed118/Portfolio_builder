@@ -1,7 +1,7 @@
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MessagePagination } from "@/components/MessagePagination";
+import { MessagePagination } from "@/features/messages";
 
 describe("MessagePagination", () => {
   const defaultProps = {

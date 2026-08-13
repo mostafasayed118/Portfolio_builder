@@ -1,5 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { useLocation } from "wouter";
 import { HERO, PROJECTS, CONTACT } from "@/data/portfolio";
 import { useBranding } from "@/lib/branding";
 import { useLanguage } from "@/lib/language";
@@ -33,10 +34,12 @@ function SEOContent({
 }: SEOProps) {
   const { siteName } = useBranding();
   const { lang } = useLanguage();
+  const [location] = useLocation();
+  const ownerId = useRef(`seo-${Math.random().toString(36).slice(2, 10)}`).current;
   const fullTitle = title ? `${title} — ${siteName}` : `${siteName} — ${JOB_TITLE}`;
   const metaDescription =
     description ||
-    `Portfolio of ${HERO.name}, ${JOB_TITLE} from Cairo, Egypt. ${HERO.description}`;
+    `Portfolio of ${HERO.name}, ${JOB_TITLE} from ${CONTACT.location}. ${HERO.description}`;
 
   useEffect(() => {
     const doc = document;
@@ -47,6 +50,7 @@ function SEOContent({
     if (!descMeta) {
       descMeta = doc.createElement("meta");
       descMeta.name = "description";
+      descMeta.setAttribute("data-seo-owner", ownerId);
       doc.head.appendChild(descMeta);
     }
     descMeta.content = metaDescription;
@@ -80,6 +84,7 @@ function SEOContent({
       if (!tag) {
         tag = doc.createElement("meta");
         tag.setAttribute("property", property);
+        tag.setAttribute("data-seo-owner", ownerId);
         doc.head.appendChild(tag);
       }
       tag.content = content;
@@ -100,6 +105,7 @@ function SEOContent({
       if (!tag) {
         tag = doc.createElement("meta");
         tag.setAttribute("name", name);
+        tag.setAttribute("data-seo-owner", ownerId);
         doc.head.appendChild(tag);
       }
       tag.content = content;
@@ -109,6 +115,7 @@ function SEOContent({
     if (!canonicalLink) {
       canonicalLink = doc.createElement("link");
       canonicalLink.rel = "canonical";
+      canonicalLink.setAttribute("data-seo-owner", ownerId);
       doc.head.appendChild(canonicalLink);
     }
     canonicalLink.href = url;
@@ -152,16 +159,20 @@ function SEOContent({
         script = doc.createElement("script");
         script.id = id;
         script.type = "application/ld+json";
+        script.setAttribute("data-seo-owner", ownerId);
         doc.head.appendChild(script);
       }
       script.textContent = JSON.stringify(schema);
     });
 
-    const existingScripts = doc.head.querySelectorAll("script[id^='schema-org-jsonld-']");
-    for (let i = defaultSchemas.length; i < existingScripts.length; i++) {
-      existingScripts[i]?.remove();
-    }
-  }, [fullTitle, metaDescription, image, url, type, publishedTime, tags, lang]);
+    const ownedScripts = doc.head.querySelectorAll(`script[data-seo-owner="${ownerId}"]`);
+    ownedScripts.forEach((script) => {
+      const match = script.id.match(/^schema-org-jsonld-(\d+)$/);
+      if (!match || Number(match[1]) >= defaultSchemas.length) {
+        script.remove();
+      }
+    });
+  }, [fullTitle, metaDescription, image, url, type, publishedTime, tags, lang, location, ownerId]);
 
   return null;
 }

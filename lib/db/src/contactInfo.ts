@@ -1,17 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ContactInfo, InsertContactInfo } from "@workspace/supabase/types";
 import { sanitizeUrl } from "./utils";
+import { queryOrThrow } from "./query";
 
 export async function getContactInfo(
   supabase: SupabaseClient,
 ): Promise<ContactInfo | null> {
-  const { data, error } = await supabase
-    .from("contact_info")
-    .select("*")
-    .limit(1)
-    .maybeSingle();
-  if (error) throw error;
-  return data;
+  return queryOrThrow(
+    supabase.from("contact_info").select("*").limit(1).maybeSingle(),
+    { table: "contact_info", operation: "getContactInfo" },
+  );
 }
 
 export async function upsertContactInfo(
@@ -21,16 +19,14 @@ export async function upsertContactInfo(
   const existing = await getContactInfo(supabase);
   const now = new Date().toISOString();
   if (existing) {
-    const { error } = await supabase
-      .from("contact_info")
-      .update({ ...args, updated_at: now })
-      .eq("id", existing.id);
-    if (error) throw error;
+    await queryOrThrow(
+      supabase.from("contact_info").update({ ...args, updated_at: now }).eq("id", existing.id),
+      { table: "contact_info", operation: "upsertContactInfo.update" },
+    );
     return existing.id;
   }
-  const { data, error } = await supabase
-    .from("contact_info")
-    .insert({
+  const data = await queryOrThrow<{ id: string }>(
+    supabase.from("contact_info").insert({
       email: args.email ?? "mustafasayedsaeed@outlook.com",
       phone: args.phone ?? "+20 100 000 0000",
       location: args.location ?? "Cairo, Egypt",
@@ -40,9 +36,8 @@ export async function upsertContactInfo(
       map_embed_url: sanitizeUrl(args.map_embed_url),
       availability_status: args.availability_status ?? "Open to opportunities",
       updated_at: now,
-    })
-    .select("id")
-    .single();
-  if (error) throw error;
+    }).select("id").single(),
+    { table: "contact_info", operation: "upsertContactInfo.insert" },
+  );
   return data.id;
 }

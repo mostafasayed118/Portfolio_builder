@@ -2,7 +2,7 @@ import type { ElementType } from "react";
 import {
   LayoutDashboard, Palette, Type, User, Briefcase, Code2,
   FolderKanban, Award, MessageSquare, Search, Layers,
-  Settings, Zap, FileText, ExternalLink, Plus
+  Settings, Zap, FileText, ExternalLink, Plus, Clock, NotebookPen
 } from "lucide-react";
 
 export interface NavItem {
@@ -21,6 +21,7 @@ export const NAV_ITEMS: NavItem[] = [
   { path: "/skills", label: "Skills", icon: Code2, group: "Content", keywords: ["skills", "abilities", "technologies", "tech"] },
   { path: "/experience", label: "Experience", icon: Briefcase, group: "Content", keywords: ["experience", "work", "jobs", "career"] },
   { path: "/certifications", label: "Certifications", icon: Award, group: "Content", keywords: ["certifications", "certificates", "credentials", "badges"] },
+  { path: "/posts", label: "Blog Posts", icon: NotebookPen, group: "Content", keywords: ["posts", "blog", "articles", "writing"] },
   { path: "/messages", label: "Messages", icon: MessageSquare, group: "Inbox", keywords: ["messages", "inbox", "contact", "emails"] },
   { path: "/cv", label: "CV / Resume", icon: FileText, group: "Site", keywords: ["cv", "resume", "download", "pdf"] },
   { path: "/seo", label: "SEO", icon: Search, group: "Site", keywords: ["seo", "meta", "search", "optimization", "keywords"] },
@@ -28,6 +29,7 @@ export const NAV_ITEMS: NavItem[] = [
   { path: "/sections", label: "Section Order", icon: Layers, group: "Site", keywords: ["sections", "order", "rearrange", "layout", "visibility"] },
   { path: "/theme", label: "Theme", icon: Palette, group: "Site", keywords: ["theme", "colors", "dark", "light", "palette"] },
   { path: "/settings", label: "Site Settings", icon: Settings, group: "Site", keywords: ["settings", "config", "site", "name", "tagline"] },
+  { path: "/audit", label: "Audit Log", icon: Clock, group: "Site", keywords: ["audit", "log", "history", "changes", "tracking"] },
 ];
 
 export const NAV_GROUPS = ["Dashboard", "Content", "Inbox", "Site"];

@@ -1,4 +1,11 @@
 import { test, expect } from "@playwright/test";
+import { resolve } from "path";
+
+// Signed-in session from the `setup` project (real Clerk sign-in when
+// CLERK_TEST_EMAIL/CLERK_TEST_PASSWORD are set, documented stub otherwise).
+const STORAGE_STATE = resolve(process.cwd(), "playwright/.auth/admin.json");
+
+test.use({ storageState: STORAGE_STATE });
 
 test.describe("Admin messages management", () => {
   test.beforeEach(async ({ page }) => {

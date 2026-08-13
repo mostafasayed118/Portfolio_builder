@@ -21,15 +21,18 @@ test.describe("Portfolio sections", () => {
   });
 
   test("navigation links scroll to correct sections", async ({ page }) => {
-    const nav = page.locator("nav");
-    await expect(nav).toBeVisible();
-
-    // Nav uses buttons for scroll-to-section, not anchor tags
-    const aboutBtn = nav.locator("button").filter({ hasText: /about/i }).first();
-    if (await aboutBtn.isVisible()) {
-      await aboutBtn.click();
-      await page.waitForTimeout(500);
+    const nav = page.locator("nav[aria-label='Primary']");
+    await expect(nav).toBeAttached();
+    if (!(await nav.isVisible())) {
+      // On mobile the desktop nav is hidden; the hamburger/mobile-menu flow
+      // is covered in portfolio-full.spec.ts.
+      return;
     }
+    const aboutBtn = nav.getByTestId("nav-about");
+    await expect(aboutBtn).toBeVisible();
+    await aboutBtn.click();
+    await page.waitForTimeout(800);
+    await expect(page.locator("#about")).toBeVisible();
   });
 
   test("footer renders with content", async ({ page }) => {

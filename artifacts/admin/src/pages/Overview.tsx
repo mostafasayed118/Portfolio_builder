@@ -1,16 +1,13 @@
-import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import {
   Palette, Type, User, Code2, FolderKanban, Briefcase,
   Award, Mail, MessageSquare, Search, Layers, Settings,
-  ArrowRight, Zap, TrendingUp, Sparkles, AlertCircle, CheckCircle2,
-  RefreshCw
+  ArrowRight, Zap
 } from "lucide-react";
 import { isSupabaseConfigured } from "@/lib/supabase";
-import { api } from "@/lib/api-client";
-import { useViewingUser } from "@/lib/viewing-user-context";
-import { Badge, Button, Card, CardContent, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Skeleton } from "@workspace/ui";
+import { Badge, Card, CardContent } from "@workspace/ui";
+import { StatsBar } from "@/components/StatsBar";
+import { SeedDialog } from "@/components/SeedDialog";
 
 const MODULES = [
   { path: "/theme", label: "Theme Manager", icon: Palette, desc: "Colors, palette, dark/light mode", group: "Appearance" },
@@ -30,209 +27,18 @@ const MODULES = [
 
 const GROUPS = ["Appearance", "Content", "Inbox", "Site"];
 
-function StatsBar() {
-  const { viewingUserId } = useViewingUser();
-
-  const { data: unread, isLoading: unreadLoading, isError: unreadError, error: unreadErrorObj, refetch: refetchUnread } = useQuery({
-    queryKey: ["unreadCount", viewingUserId],
-    queryFn: async () => {
-      const res = await api.messages.unreadCount(viewingUserId ?? undefined);
-      if (!res.success) throw new Error(res.message);
-      return res.data;
-    },
-    enabled: isSupabaseConfigured,
-    retry: 2,
-    retryDelay: 1000,
-  });
-  const { data: skills, isLoading: skillsLoading, isError: skillsError, error: skillsErrorObj, refetch: refetchSkills } = useQuery({
-    queryKey: ["skills", viewingUserId],
-    queryFn: async () => {
-      const res = await api.skills.list(viewingUserId ?? undefined);
-      if (!res.success) throw new Error(res.message);
-      return res.data;
-    },
-    enabled: isSupabaseConfigured,
-    retry: 2,
-    retryDelay: 1000,
-  });
-  const { data: projects, isLoading: projectsLoading, isError: projectsError, error: projectsErrorObj, refetch: refetchProjects } = useQuery({
-    queryKey: ["projects", viewingUserId],
-    queryFn: async () => {
-      const res = await api.projects.list(viewingUserId ?? undefined);
-      if (!res.success) throw new Error(res.message);
-      return res.data;
-    },
-    enabled: isSupabaseConfigured,
-    retry: 2,
-    retryDelay: 1000,
-  });
-
-  const isLoading = unreadLoading || skillsLoading || projectsLoading;
-  const isError = unreadError || skillsError || projectsError;
-  const showSeedWarning = projects?.length === 0;
-
-  if (isLoading) {
-    return (
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-        {[1,2,3,4].map(i => (
-          <Card key={i}>
-            <CardContent className="pt-5 pb-4">
-              <div className="flex items-center gap-3">
-                <Skeleton className="h-10 w-10 rounded-lg" />
-                <div className="space-y-2">
-                  <Skeleton className="h-5 w-16" />
-                  <Skeleton className="h-3 w-20" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div className="mb-8 flex flex-col items-center justify-center min-h-32 gap-3 p-6">
-        <AlertCircle className="h-10 w-10 text-destructive" />
-        <p className="text-destructive font-medium">Failed to load dashboard stats</p>
-        <p className="text-muted-foreground text-sm">{(unreadErrorObj || skillsErrorObj || projectsErrorObj)?.message}</p>
-        <Button onClick={() => { refetchUnread(); refetchSkills(); refetchProjects(); }} variant="outline">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Try Again
-        </Button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-      {[ // FIX: UX-008 — Color mapping: messages=blue, skills=emerald, projects=violet, status=green
-        { label: "Unread Messages", value: unread ?? "–", icon: MessageSquare, color: "text-blue-500" },
-        { label: "Skills", value: skills?.length ?? "–", icon: Code2, color: "text-emerald-500" },
-        { label: "Projects", value: projects?.length ?? "–", icon: FolderKanban, color: "text-violet-500" },
-        { label: "Status", value: "Live", icon: TrendingUp, color: "text-green-500" },
-      ].map(({ label, value, icon: Icon, color }) => (
-        <Card key={label}>
-          <CardContent className="pt-5 pb-4">
-            <div className="flex items-center gap-3">
-              <Icon size={20} className={color} />
-              <div>
-                <div className="text-xl font-bold">{value}</div>
-                <div className="text-xs text-muted-foreground">{label}</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-      {showSeedWarning && (
-        <Card className="col-span-full border-amber-500/30 bg-amber-500/5">
-          <CardContent className="pt-4 pb-4 flex items-center gap-3">
-            <AlertCircle className="h-5 w-5 text-amber-500" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
-                No portfolio data found. Click "Import Static Data" to populate content.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
-}
-
-function SeedDialog() {
-  const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{ success: boolean; summary: Record<string, number>; errors: string[] } | null>(null);
-  const queryClient = useQueryClient();
-
-  const handleSeed = async () => {
-    setLoading(true);
-    setResult(null);
-
-    try {
-      const res = await api.seed.run();
-      if (res.success && res.data) {
-        setResult({ success: true, summary: res.data.summary, errors: res.data.errors });
-        queryClient.invalidateQueries({ queryKey: ["projects"] });
-        queryClient.invalidateQueries({ queryKey: ["skills"] });
-        queryClient.invalidateQueries({ queryKey: ["experience"] });
-        queryClient.invalidateQueries({ queryKey: ["certifications"] });
-        queryClient.invalidateQueries({ queryKey: ["heroContent"] });
-        queryClient.invalidateQueries({ queryKey: ["aboutContent"] });
-      } else {
-        setResult({ success: false, summary: {}, errors: [(res as { message: string }).message || "Failed to seed data"] });
-      }
-    } catch (err) {
-      setResult({ success: false, summary: {}, errors: [err instanceof Error ? err.message : "Network error — please try again"] });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <>
-      <Button onClick={() => { setOpen(true); setResult(null); }} variant="outline" className="shrink-0 gap-2">
-        <Sparkles size={16} />
-        Import Static Data
-      </Button>
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Import Static Data</DialogTitle>
-            <DialogDescription className="sr-only">
-              Import static portfolio data into the database.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <Button onClick={handleSeed} disabled={loading} className="w-full">
-              {loading ? "Importing…" : "Import Now"}
-            </Button>
-
-            {result && (
-              <div className="mt-4 p-3 rounded-lg bg-muted/50">
-                <div className="text-sm font-medium mb-2">
-                  {result.success ? "Import Complete" : "Import Failed"}
-                </div>
-                {result.success && Object.entries(result.summary).length > 0 && (
-                  <div className="grid grid-cols-2 gap-2 text-xs min-w-0">
-                    {Object.entries(result.summary).map(([key, val]) => (
-                      <div key={key} className="flex justify-between">
-                        <span className="text-muted-foreground capitalize">{key}</span>
-                        <span>{val}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {result.errors.length > 0 && (
-                  <div className="mt-2 text-xs text-red-500">
-                    {result.errors.map((e) => <div key={e}>• {e}</div>)}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
-  );
-}
-
 export default function Overview() {
   return (
     <div className="max-w-5xl mx-auto space-y-8">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold mb-1">Portfolio CMS</h1>
-          <p className="text-muted-foreground text-sm">
+          <div className="text-muted-foreground text-sm">
             Manage every aspect of your portfolio from here.{" "}
             {!isSupabaseConfigured && (
               <Badge variant="destructive" className="ml-1 text-xs">Supabase not connected</Badge>
             )}
-          </p>
+          </div>
         </div>
         {isSupabaseConfigured && <SeedDialog />}
       </div>

@@ -1,16 +1,16 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ThemeSettings, InsertThemeSettings } from "@workspace/supabase/types";
+import { queryOrThrow } from "./query";
+
+const TABLE = "theme_settings" as const;
 
 export async function getThemeSettings(
   supabase: SupabaseClient,
 ): Promise<ThemeSettings | null> {
-  const { data, error } = await supabase
-    .from("theme_settings")
-    .select("*")
-    .limit(1)
-    .maybeSingle();
-  if (error) throw error;
-  return data;
+  return queryOrThrow(
+    supabase.from(TABLE).select("*").limit(1).maybeSingle(),
+    { table: TABLE, operation: "getThemeSettings" },
+  );
 }
 
 export async function upsertThemeSettings(
@@ -20,16 +20,14 @@ export async function upsertThemeSettings(
   const existing = await getThemeSettings(supabase);
   const now = new Date().toISOString();
   if (existing) {
-    const { error } = await supabase
-      .from("theme_settings")
-      .update({ ...args, updated_at: now })
-      .eq("id", existing.id);
-    if (error) throw error;
+    await queryOrThrow(
+      supabase.from(TABLE).update({ ...args, updated_at: now }).eq("id", existing.id),
+      { table: TABLE, operation: "upsertThemeSettings.update" },
+    );
     return existing.id;
   }
-  const { data, error } = await supabase
-    .from("theme_settings")
-    .insert({
+  const data = await queryOrThrow<{ id: string }>(
+    supabase.from(TABLE).insert({
       mode: args.mode ?? "light",
       light_primary: args.light_primary ?? "204 92% 42%",
       light_accent: args.light_accent ?? "189 90% 38%",
@@ -51,9 +49,8 @@ export async function upsertThemeSettings(
       dark_ring: args.dark_ring ?? "204 92% 62%",
       radius: args.radius ?? "0.9rem",
       updated_at: now,
-    })
-    .select("id")
-    .single();
-  if (error) throw error;
+    }).select("id").single(),
+    { table: TABLE, operation: "upsertThemeSettings.insert" },
+  );
   return data.id;
 }

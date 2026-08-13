@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { Briefcase, Award, Heart } from "lucide-react";
 import { useReveal } from "@/hooks/use-reveal";
+import { useLanguage } from "@/lib/language";
 
 interface TimelineItemProps {
   title: string;
@@ -39,13 +40,15 @@ const TYPE_CONFIG = {
 };
 
 const TimelineItem = memo(function TimelineItem({ title, company, location, period, description, technologies, type, index, isLast }: TimelineItemProps) {
-  const { ref, revealed } = useReveal(0.1);
+  const { ref, revealed } = useReveal<HTMLDivElement>(0.1);
+  const { t } = useLanguage();
   const config = TYPE_CONFIG[type] || TYPE_CONFIG.internship;
   const { Icon } = config;
+  const label = t.experience.types[type] ?? config.label;
 
   return (
     <div
-      ref={ref as React.RefObject<HTMLDivElement>}
+      ref={ref}
       className={`flex gap-4 section-reveal ${revealed ? "revealed" : ""}`}
       style={{ transitionDelay: `${index * 100}ms` }}
       data-testid={`timeline-item-${index}`}
@@ -68,7 +71,7 @@ const TimelineItem = memo(function TimelineItem({ title, company, location, peri
           </div>
           <div className="flex flex-col items-end gap-1.5">
             <span className={`text-xs font-semibold ${config.color} ${config.bg} border ${config.border} px-2 py-0.5 rounded-full capitalize`}>
-              {config.label}
+              {label}
             </span>
             <span className="text-xs text-muted-foreground">{period}</span>
           </div>

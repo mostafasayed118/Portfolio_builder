@@ -15,7 +15,7 @@ export default function NotFound() {
           <p className="mt-4 text-sm text-muted-foreground">
             Did you forget to add the page to the router?
           </p>
-          <Link href="/" className="text-primary hover:underline mt-4 inline-block"> {/* FIX: UX-022 */}
+          <Link href="/" className="text-primary hover:underline mt-4 inline-block">
             ← Back to Home
           </Link>
         </CardContent>

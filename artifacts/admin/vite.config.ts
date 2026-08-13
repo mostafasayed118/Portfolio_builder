@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
+import { visualizer } from "rollup-plugin-visualizer";
 
 const basePath = process.env.BASE_PATH || "/";
 
@@ -12,6 +13,13 @@ export default defineConfig({
     react(),
     tailwindcss(),
     runtimeErrorOverlay(),
+    visualizer({
+      filename: "dist/bundle-analysis.html",
+      open: process.env.VISUALIZER_OPEN === "true",
+      gzipSize: true,
+      brotliSize: true,
+      template: "treemap",
+    }),
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
       ? [
@@ -42,13 +50,36 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id: string) {
+          if (!id.includes("node_modules")) return;
+          if (id.includes("/node_modules/react-dom") || id.includes("/node_modules/react/")) return "vendor-react";
+          if (id.includes("@tanstack/react-query")) return "vendor-query";
+          if (id.includes("@radix-ui")) return "vendor-radix";
+          if (id.includes("@clerk")) return "vendor-clerk";
+          if (id.includes("framer-motion")) return "vendor-motion";
+          if (id.includes("lucide-react")) return "vendor-icons";
+          if (id.includes("@supabase")) return "vendor-supabase";
+        },
+      },
+    },
+    chunkSizeWarningLimit: 600,
   },
   ssr: { noExternal: ["@workspace/ui"] },
   server: {
     port: 5174,
     strictPort: true,
     host: "0.0.0.0",
-    allowedHosts: true,
+    allowedHosts: [
+      "localhost",
+      "127.0.0.1",
+      "0.0.0.0",
+      ".repl.co",
+      ".replit.dev",
+      ".replit.app",
+      "mustafasayed.replit.app",
+    ],
     headers: {
       "X-Content-Type-Options": "nosniff",
       "X-Frame-Options": "DENY",
@@ -71,6 +102,14 @@ export default defineConfig({
   preview: {
     port: 5174,
     host: "0.0.0.0",
-    allowedHosts: true,
+    allowedHosts: [
+      "localhost",
+      "127.0.0.1",
+      "0.0.0.0",
+      ".repl.co",
+      ".replit.dev",
+      ".replit.app",
+      "mustafasayed.replit.app",
+    ],
   },
 });
