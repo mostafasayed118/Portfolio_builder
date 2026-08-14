@@ -20,11 +20,13 @@
  * is today's behavior and never breaks the site.
  */
 
+// Note: explicit `.js` extension required — Vercel compiles middleware with
+// `--moduleResolution nodenext`, which rejects extensionless relative imports.
 import {
   buildCsp,
   generateNonce,
   transformHtml,
-} from "./src/lib/csp";
+} from "./src/lib/csp.js";
 
 export const config = {
   // Run only on document-style paths: skip static assets, dotfiles
