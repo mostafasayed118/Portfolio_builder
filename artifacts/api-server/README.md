@@ -28,40 +28,40 @@ check.
 
 Individual steps:
 
-| Command            | What it does                                |
-|--------------------|---------------------------------------------|
-| `pnpm typecheck`   | `tsc --noEmit` against the API tsconfig     |
-| `pnpm test`        | Runs the full Vitest suite (236 tests)      |
-| `pnpm test:watch`  | Vitest in watch mode                        |
-| `pnpm test:coverage` | Vitest with coverage report               |
-| `pnpm build`       | esbuild bundle to `dist/index.mjs`         |
-| `pnpm start`       | Run the built bundle                        |
-| `pnpm verify`      | typecheck + test + build (the CI gate)      |
-| `pnpm lint`        | Reserved for future linter integration     |
+| Command              | What it does                            |
+| -------------------- | --------------------------------------- |
+| `pnpm typecheck`     | `tsc --noEmit` against the API tsconfig |
+| `pnpm test`          | Runs the full Vitest suite (236 tests)  |
+| `pnpm test:watch`    | Vitest in watch mode                    |
+| `pnpm test:coverage` | Vitest with coverage report             |
+| `pnpm build`         | esbuild bundle to `dist/index.mjs`      |
+| `pnpm start`         | Run the built bundle                    |
+| `pnpm verify`        | typecheck + test + build (the CI gate)  |
+| `pnpm lint`          | Reserved for future linter integration  |
 
 ## Environment
 
 All env access goes through `src/lib/env.ts`. Required at startup:
 
-| Var                          | Purpose                                  |
-|------------------------------|------------------------------------------|
-| `SUPABASE_URL`               | Supabase project URL                     |
-| `SUPABASE_SERVICE_ROLE_KEY`  | Supabase service-role JWT (admin)        |
-| `CSRF_SECRET`                | Secret for double-submit CSRF tokens     |
+| Var                         | Purpose                              |
+| --------------------------- | ------------------------------------ |
+| `SUPABASE_URL`              | Supabase project URL                 |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service-role JWT (admin)    |
+| `CSRF_SECRET`               | Secret for double-submit CSRF tokens |
 
 Optional but commonly used:
 
-| Var                          | Purpose                                  |
-|------------------------------|------------------------------------------|
-| `CLERK_SECRET_KEY`           | Enables Clerk JWT verification           |
-| `CLERK_ISSUER`               | Clerk issuer (optional)                  |
-| `ADMIN_API_KEY`              | X-Admin-Key bypass for non-browser auth  |
-| `VITE_ADMIN_EMAILS`          | Comma-separated allowlist of admin emails|
-| `VITE_SITE_URL` / `VITE_ADMIN_URL` | CORS allowed origins              |
-| `VERCEL_URL`                 | Auto-added CORS origin on Vercel         |
-| `PORT`                       | Server port (default 3001)               |
-| `DISABLE_RATE_LIMIT`         | `true` disables all rate limiters (dev)   |
-| `LOG_LEVEL`                  | pino log level (default `info`)          |
+| Var                                | Purpose                                                                              |
+| ---------------------------------- | ------------------------------------------------------------------------------------ |
+| `CLERK_SECRET_KEY`                 | Enables Clerk JWT verification                                                       |
+| `CLERK_ISSUER`                     | Clerk issuer (optional)                                                              |
+| `ADMIN_API_KEY`                    | X-Admin-Key bypass for non-browser auth                                              |
+| `ADMIN_EMAILS`                     | Comma-separated allowlist of admin emails (server-only; do not use a `VITE_` prefix) |
+| `VITE_SITE_URL` / `VITE_ADMIN_URL` | CORS allowed origins                                                                 |
+| `VERCEL_URL`                       | Auto-added CORS origin on Vercel                                                     |
+| `PORT`                             | Server port (default 3001)                                                           |
+| `DISABLE_RATE_LIMIT`               | `true` disables all rate limiters (dev)                                              |
+| `LOG_LEVEL`                        | pino log level (default `info`)                                                      |
 
 The server `process.exit(1)` at boot if any required var is missing in
 non-test environments. Tests can override values via `_setOverride()`.
@@ -118,20 +118,20 @@ those instead of constructing `res.status(500).json(...)` inline.
 - **Public routes** (`/healthz`, `/contact`, `/cv`, `/images`): no auth
 - **Admin routes** (everything under `/api/v1/admin/*`): require
   - `Authorization: Bearer <clerk_jwt>` (verified against `CLERK_SECRET_KEY`) AND
-    email in `VITE_ADMIN_EMAILS`, **or**
+    email in `ADMIN_EMAILS`, **or**
   - `x-admin-key: <ADMIN_API_KEY>` (machine-to-machine)
 
   Admin JWTs map to a row in `users` (auto-provisioned on first login).
 
 ### Rate limits
 
-| Route group      | Limit              | Window     | Skip if            |
-|------------------|--------------------|------------|--------------------|
-| `/api/v1/*`      | 100 req            | 15 min     | `DISABLE_RATE_LIMIT=true` |
-| `/contact`       | 5 req              | 1 hour     | `DISABLE_RATE_LIMIT=true` |
-| `/admin/*`       | 200 req            | 15 min     | `DISABLE_RATE_LIMIT=true` |
-| `/images`        | 60 req             | 1 min      | `DISABLE_RATE_LIMIT=true` |
-| `/admin/*` (x-admin-key) | 50 req    | 15 min     | only when `x-admin-key` header is present |
+| Route group              | Limit   | Window | Skip if                                   |
+| ------------------------ | ------- | ------ | ----------------------------------------- |
+| `/api/v1/*`              | 100 req | 15 min | `DISABLE_RATE_LIMIT=true`                 |
+| `/contact`               | 5 req   | 1 hour | `DISABLE_RATE_LIMIT=true`                 |
+| `/admin/*`               | 200 req | 15 min | `DISABLE_RATE_LIMIT=true`                 |
+| `/images`                | 60 req  | 1 min  | `DISABLE_RATE_LIMIT=true`                 |
+| `/admin/*` (x-admin-key) | 50 req  | 15 min | only when `x-admin-key` header is present |
 
 ### CSRF
 
@@ -172,26 +172,26 @@ as a serverless function).
 A 12-task batch plan landed to tighten the API server. All changes are
 covered by the test suite (236 tests, 0 failures).
 
-| Area | What changed |
-|------|--------------|
-| Reliability | `getSupabaseClient()` is no longer called at module import time in any route — it now runs inside the handler, so missing env vars surface with a clear error at first request, not at boot |
-| Health check | `/healthz` now uses `.maybeSingle()` against `site_settings` so an empty table no longer marks the DB unhealthy |
-| Auth / Rate limit | `apiKeyLimiter` already correctly skipped when `x-admin-key` was absent (`skip: (req) => !req.headers["x-admin-key"]`); confirmed no change needed for Clerk users |
-| Data correctness | All `PUT /:id` and `DELETE /:id` collection routes now call `.select("id")` and return **404** when the row doesn't exist (or the user doesn't own it) — was previously returning 200 for `DELETE` and silently 200 for `PUT` even on 0 rows |
-| Public contact | Added honeypot (`website` field), 2-second time-trap (`_formLoadedAt` timestamp), input normalization (trim + lowercase email + strip control chars), and structured abuse logging — origin-only check was insufficient |
-| Error shape | Standardised on `{ success, message }` / `{ success, errors }`; added `forbidden()`, `unauthorized()`, `rateLimited()` helpers; rate limiters now use `message` not `error` |
-| Architecture | New `src/lib/route-helpers.ts` with `parsePagination`, `resolveTargetUserId`, `logSupabaseError`, and `runCollectionQuery` — 5 collection GET handlers refactored to a single one-liner each |
-| TypeScript | `singletonUpsert` `any` cast is now confined to a local `_call()` helper inside the function, instead of leaking through the whole client |
-| Env validation | New `src/lib/env.ts` replaces ad-hoc `process.env` reads with typed accessors, startup validation (calls `process.exit(1)` if required vars missing in non-test), and a `_setOverride()` test hook |
-| Tests | New `src/test/routes/collection-404.test.ts` (14 tests) covers the 404-on-missing-row behavior for every collection route |
-| Logging | `errorHandler` and `logSupabaseError` capture route context (`route`, `method`, `ip`, `userId`, `targetTable`, `targetId`) — never the request body (PII) |
-| DX | `pnpm test`, `pnpm test:watch`, `pnpm test:coverage`, and `pnpm verify` scripts (the last one runs typecheck + test + build — what CI uses) |
+| Area              | What changed                                                                                                                                                                                                                                 |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Reliability       | `getSupabaseClient()` is no longer called at module import time in any route — it now runs inside the handler, so missing env vars surface with a clear error at first request, not at boot                                                  |
+| Health check      | `/healthz` now uses `.maybeSingle()` against `site_settings` so an empty table no longer marks the DB unhealthy                                                                                                                              |
+| Auth / Rate limit | `apiKeyLimiter` already correctly skipped when `x-admin-key` was absent (`skip: (req) => !req.headers["x-admin-key"]`); confirmed no change needed for Clerk users                                                                           |
+| Data correctness  | All `PUT /:id` and `DELETE /:id` collection routes now call `.select("id")` and return **404** when the row doesn't exist (or the user doesn't own it) — was previously returning 200 for `DELETE` and silently 200 for `PUT` even on 0 rows |
+| Public contact    | Added honeypot (`website` field), 2-second time-trap (`_formLoadedAt` timestamp), input normalization (trim + lowercase email + strip control chars), and structured abuse logging — origin-only check was insufficient                      |
+| Error shape       | Standardised on `{ success, message }` / `{ success, errors }`; added `forbidden()`, `unauthorized()`, `rateLimited()` helpers; rate limiters now use `message` not `error`                                                                  |
+| Architecture      | New `src/lib/route-helpers.ts` with `parsePagination`, `resolveTargetUserId`, `logSupabaseError`, and `runCollectionQuery` — 5 collection GET handlers refactored to a single one-liner each                                                 |
+| TypeScript        | `singletonUpsert` `any` cast is now confined to a local `_call()` helper inside the function, instead of leaking through the whole client                                                                                                    |
+| Env validation    | New `src/lib/env.ts` replaces ad-hoc `process.env` reads with typed accessors, startup validation (calls `process.exit(1)` if required vars missing in non-test), and a `_setOverride()` test hook                                           |
+| Tests             | New `src/test/routes/collection-404.test.ts` (14 tests) covers the 404-on-missing-row behavior for every collection route                                                                                                                    |
+| Logging           | `errorHandler` and `logSupabaseError` capture route context (`route`, `method`, `ip`, `userId`, `targetTable`, `targetId`) — never the request body (PII)                                                                                    |
+| DX                | `pnpm test`, `pnpm test:watch`, `pnpm test:coverage`, and `pnpm verify` scripts (the last one runs typecheck + test + build — what CI uses)                                                                                                  |
 
 ### 2026-06-01 follow-up improvements
 
-| Area | What changed |
-|------|--------------|
-| Auth resilience | `syncUserFromClerk` now wraps all 3 Supabase calls in `withRetry` (3 attempts, exponential backoff 100→200→400ms with ±30% jitter). Only retries on transient errors (5xx, 408/429, network, transient PostgREST codes); 4xx and business-rule violations throw immediately. New `src/lib/retry.ts` (110 lines) + 14 unit tests. |
+| Area                 | What changed                                                                                                                                                                                                                                                                                                                                                                                         |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Auth resilience      | `syncUserFromClerk` now wraps all 3 Supabase calls in `withRetry` (3 attempts, exponential backoff 100→200→400ms with ±30% jitter). Only retries on transient errors (5xx, 408/429, network, transient PostgREST codes); 4xx and business-rule violations throw immediately. New `src/lib/retry.ts` (110 lines) + 14 unit tests.                                                                     |
 | API client stability | `lib/logging` was an orphan (0 consumers). Both `portfolio/src/lib/logger.ts` and `admin/src/lib/logger.ts` now re-export from `@workspace/logging` with Vite-aware env injection. **Also fixed a silent bug in the admin logger** — it was using `if (import.meta.env.DEV) console.*` for everything, meaning the production build emitted **nothing** to logs. Now prod logs go to stdout as JSON. |
 
 ### 404 on missing rows — the contract
@@ -200,12 +200,13 @@ Every `PUT /:id` and `DELETE /:id` collection route now follows the same pattern
 
 ```typescript
 const { error, count } = await withRetry(
-  () => supabase
-    .from(table)
-    .update(result.data)
-    .eq("id", req.params.id)
-    .eq("user_id", req.user!.id)   // or omitted for superadmin
-    .select("id"),                  // <-- this is the key
+  () =>
+    supabase
+      .from(table)
+      .update(result.data)
+      .eq("id", req.params.id)
+      .eq("user_id", req.user!.id) // or omitted for superadmin
+      .select("id"), // <-- this is the key
   { opName: "updateById", maxAttempts: 3 },
 );
 
@@ -248,12 +249,10 @@ const result = await withRetry(
 Transient error detection:
 
 ```typescript
-isTransientError({ status: 503 });                  // true
-isTransientError({ status: 401 });                  // false
-isTransientError({ code: "23505" });                // false (unique violation)
-isTransientError({ code: "57014" });                // true  (statement timeout)
-isTransientError({ message: "fetch failed" });     // true
-isTransientError({ message: "ECONNRESET" });        // true
+isTransientError({ status: 503 }); // true
+isTransientError({ status: 401 }); // false
+isTransientError({ code: "23505" }); // false (unique violation)
+isTransientError({ code: "57014" }); // true  (statement timeout)
+isTransientError({ message: "fetch failed" }); // true
+isTransientError({ message: "ECONNRESET" }); // true
 ```
-
-

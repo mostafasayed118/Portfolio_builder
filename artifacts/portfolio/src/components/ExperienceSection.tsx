@@ -1,7 +1,7 @@
 import { useLanguage } from "@/lib/language";
 import { Briefcase } from "lucide-react";
 import TimelineItem from "./TimelineItem";
-import SectionLabel from "./SectionLabel";
+import SectionHeader from "./SectionHeader";
 import EmptyState from "./EmptyState";
 import { EXPERIENCE } from "@/data/portfolio";
 import { useReveal } from "@/hooks/use-reveal";
@@ -75,16 +75,16 @@ export default function ExperienceSection() {
       className="py-24 px-6 bg-muted/20"
     >
       <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-12">
-          <SectionLabel>{t.experience.title}</SectionLabel>
-          <h2 className="font-display font-bold text-3xl md:text-4xl text-foreground mb-3">
-            {t.experience.title}
-          </h2>
-          <p className="text-muted-foreground text-sm max-w-xl mx-auto">
-            Scholarships, certifications, and community contributions that
-            shaped my data engineering career.
-          </p>
-        </div>
+        <SectionHeader
+          label={t.experience.title}
+          title={t.experience.title}
+          description={
+            <>
+              Scholarships, certifications, and community contributions that
+              shaped my data engineering career.
+            </>
+          }
+        />
 
         {items.length === 0 ? (
           <EmptyState

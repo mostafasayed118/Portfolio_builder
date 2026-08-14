@@ -1,16 +1,27 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@workspace/ui";
-import { Plus, Pencil, Trash2, AlertCircle, RefreshCw, Download } from "lucide-react";
+import { Plus, Pencil, Trash2, Download } from "lucide-react";
 import { logError } from "@/lib/logger";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, Skeleton, Slider, Switch } from "@workspace/ui";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, Slider, Switch } from "@workspace/ui";
 import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
 import { SmartEmptyState } from "@/components/SmartEmptyState";
-import { getErrorMessage } from "@/lib/error-messages";
+import { AdminErrorState } from "@/components/AdminErrorState";
+import { AdminLoadingState } from "@/components/AdminLoadingState";
 import { api } from "@/lib/api-client";
 import { useSkillsList } from "@/features/skills/hooks/useSkills";
 import { type SkillRow, BLANK_SKILL, mapToSkillRow } from "@/features/skills/types";
 import { exportToCsv } from "@/lib/export-csv";
+
+const UNCATEGORIZED = "Uncategorized";
+
+/** Normalize null/empty/whitespace categories into one stable bucket so a
+ *  blank category renders as a real heading (never an empty string) and all
+ *  uncategorized skills share a single group + React key. */
+function normalizeCategory(category: string | null | undefined): string {
+  const trimmed = category?.trim();
+  return trimmed ? trimmed : UNCATEGORIZED;
+}
 
 export default function SkillsManager() {
   const { toast } = useToast();
@@ -62,33 +73,12 @@ export default function SkillsManager() {
     }
   };
 
-  const cats = [...new Set(skills?.map(s => s.category) ?? [])];
+  const cats = [...new Set((skills ?? []).map(s => normalizeCategory(s.category)))];
 
-  if (isLoading) {
-    return (
-      <div className="p-6 space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-10 w-full" />
-        <div className="space-y-2">
-          {[1,2,3,4,5].map(i => (
-            <Skeleton key={i} className="h-16 w-full rounded-lg" />
-          ))}
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return <AdminLoadingState />;
 
   if (isError) {
-    return (
-      <div className="p-6 flex flex-col items-center justify-center min-h-64 gap-4">
-        <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-destructive font-medium">{getErrorMessage(error)}</p>
-        <Button onClick={() => refetch()} variant="outline">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Try Again
-        </Button>
-      </div>
-    );
+    return <AdminErrorState error={error} onRetry={() => refetch()} />;
   }
 
   return (
@@ -119,11 +109,11 @@ export default function SkillsManager() {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center gap-2">
               <span className="font-semibold">{cat}</span>
-              <Badge variant="secondary" className="text-xs">{skills?.filter(s => s.category === cat).length}</Badge>
+              <Badge variant="secondary" className="text-xs">{skills?.filter(s => normalizeCategory(s.category) === cat).length}</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {skills?.filter(s => s.category === cat).map(skill => {
+            {skills?.filter(s => normalizeCategory(s.category) === cat).map(skill => {
               const row = mapToSkillRow(skill);
               return (
               <div key={row.id} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/40 transition-colors group">

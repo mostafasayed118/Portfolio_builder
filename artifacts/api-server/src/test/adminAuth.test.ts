@@ -206,7 +206,7 @@ describe("adminAuth middleware", () => {
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({
         success: false,
-        message: "Admin access not configured. Set VITE_ADMIN_EMAILS or ADMIN_API_KEY.",
+        message: "Admin access not configured. Set ADMIN_EMAILS or ADMIN_API_KEY.",
       }),
     );
     expect(next).not.toHaveBeenCalled();

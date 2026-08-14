@@ -2,9 +2,10 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { logError } from "@/lib/logger";
-import { getErrorMessage } from "@/lib/error-messages";
-import { Plus, Pencil, Trash2, Star, AlertCircle, RefreshCw, Search, SearchX, Download } from "lucide-react";
-import { Badge, Button, Card, CardContent, Input, Skeleton, useToast } from "@workspace/ui";
+import { AdminErrorState } from "@/components/AdminErrorState";
+import { AdminLoadingState } from "@/components/AdminLoadingState";
+import { Plus, Pencil, Trash2, Star, Search, SearchX, Download } from "lucide-react";
+import { Badge, Button, Card, CardContent, Input, useToast } from "@workspace/ui";
 import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
 import { useProjectsList } from "@/features/projects/hooks/useProjects";
 import { ProjectEditor } from "@/features/projects/components/ProjectEditor";
@@ -59,23 +60,10 @@ export default function ProjectsManager() {
     finally { setSaving(false); }
   };
 
-  if (isLoading) {
-    return (
-      <div className="p-6 space-y-4">
-        <Skeleton className="h-8 w-48" /><Skeleton className="h-10 w-full" />
-        <div className="space-y-2">{[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}</div>
-      </div>
-    );
-  }
+  if (isLoading) return <AdminLoadingState />;
 
   if (isError) {
-    return (
-      <div className="p-6 flex flex-col items-center justify-center min-h-64 gap-4">
-        <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-destructive font-medium">{getErrorMessage(error)}</p>
-        <Button onClick={() => refetch()} variant="outline"><RefreshCw className="h-4 w-4 mr-2" />Try Again</Button>
-      </div>
-    );
+    return <AdminErrorState error={error} onRetry={() => refetch()} />;
   }
 
   return (

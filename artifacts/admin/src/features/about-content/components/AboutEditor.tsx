@@ -4,11 +4,14 @@ import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { Plus, X } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { useToast } from "@workspace/ui";
-import { Button, Card, CardContent, CardHeader, CardTitle, Input, Slider, Textarea } from "@workspace/ui";
+import { Button, Input, Slider, Textarea } from "@workspace/ui";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useBeforeUnload } from "@/hooks/use-before-unload";
 import { AboutLivePreview } from "@/features/about-content/components/AboutLivePreview";
-import { SkeletonForm, SkeletonPreview } from "@/components/EditorSkeletons";
+import { InterestsEditor } from "@/features/about-content/components/InterestsEditor";
+import { EditorErrorState, EditorLoadingState } from "@/components/EditorStates";
+import { EditorHeader, EditorLayout } from "@/components/EditorScaffold";
+import { EditorCard, EditorField } from "@/components/EditorForm";
 
 type AboutFormData = {
   bio: string;
@@ -45,7 +48,7 @@ export default function AboutEditor() {
     },
   });
 
-  const { register, control, handleSubmit, reset, formState: { isDirty } } = useForm<AboutFormData>({
+  const { register, control, handleSubmit, reset, setValue, formState: { isDirty } } = useForm<AboutFormData>({
     defaultValues: {
       bio: "",
       education: [],
@@ -65,7 +68,6 @@ export default function AboutEditor() {
   });
 
   const watchedData = useWatch({ control });
-  const [interestInput, setInterestInput] = useState("");
   const [showPreview, setShowPreview] = useState(false);
 
   useKeyboardShortcuts([
@@ -105,91 +107,66 @@ export default function AboutEditor() {
   });
 
   const onSubmit = (data: AboutFormData) => {
-    saveMutation.mutate(data);
-  };
-
-  const handleInterestKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" || e.key === ",") {
-      e.preventDefault();
-      const value = interestInput.trim();
-      if (value && !watchedData.interests?.includes(value)) {
-        const currentInterests = watchedData.interests || [];
-        reset({ ...watchedData, interests: [...currentInterests, value] }, { keepDirty: true });
-      }
-      setInterestInput("");
+    const hasIncompleteEducation = data.education.some(
+      (e) => !e.degree?.trim() || !e.institution?.trim(),
+    );
+    const hasIncompleteLanguage = data.languages.some((l) => !l.name?.trim());
+    if (hasIncompleteEducation || hasIncompleteLanguage) {
+      toast({
+        title: "Required fields missing",
+        description: "Each education entry needs a degree and institution, and each language needs a name.",
+        variant: "destructive",
+      });
+      return;
     }
-  };
-
-  const removeInterest = (index: number) => {
-    const current = [...(watchedData.interests || [])];
-    current.splice(index, 1);
-    reset({ ...watchedData, interests: current }, { keepDirty: true });
+    saveMutation.mutate(data);
   };
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">About Editor</h1>
-        </div>
-        <div className="lg:hidden mb-4">
-          <Button variant="outline" size="sm" onClick={() => setShowPreview(!showPreview)} className="min-h-[44px]" aria-pressed={showPreview} aria-label={showPreview ? "Hide preview panel" : "Show preview panel"}>
-            {showPreview ? "Hide Preview" : "Show Preview"}
-          </Button>
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <SkeletonForm />
-          <SkeletonPreview />
-        </div>
-      </div>
+      <EditorLoadingState title="About Editor" />
     );
   }
 
   if (error) {
     return (
-      <Card className="border-destructive">
-        <CardContent className="py-6">
-          <p className="text-destructive">Failed to load about content</p>
-          <Button variant="outline" size="sm" onClick={() => refetch()} className="mt-2 min-h-[44px]">
-            Retry
-          </Button>
-        </CardContent>
-      </Card>
+      <EditorErrorState
+        message="Failed to load about content"
+        onRetry={() => refetch()}
+      />
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">About Editor</h1>
-          <p className="text-sm text-muted-foreground">Edit your about section content</p>
-        </div>
-        <Button onClick={handleSubmit(onSubmit)} disabled={!isDirty || saveMutation.isPending} data-save-button>
-          {saveMutation.isPending ? "Saving..." : "Save Changes"}
-        </Button>
-      </div>
+      <EditorHeader
+        title="About Editor"
+        description="Edit your about section content"
+        actions={(
+          <Button onClick={handleSubmit(onSubmit)} disabled={!isDirty || saveMutation.isPending} data-save-button>
+            {saveMutation.isPending ? "Saving..." : "Save Changes"}
+          </Button>
+        )}
+      />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Edit Form */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Bio</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Textarea {...register("bio")} placeholder="Tell your story..." rows={6} className="resize-none" />
-            </CardContent>
-          </Card>
+      <EditorLayout
+        showPreview={showPreview}
+        onTogglePreview={() => setShowPreview((value) => !value)}
+        preview={<AboutLivePreview data={watchedData} />}
+      >
+          <EditorCard title="Bio">
+            <Textarea {...register("bio")} placeholder="Tell your story..." rows={6} className="resize-none" />
+          </EditorCard>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Education</CardTitle>
+          <EditorCard
+            title="Education"
+            headerActions={(
               <Button type="button" variant="outline" size="sm" onClick={() => appendEducation({ degree: "", institution: "", year: "" })} className="min-h-[44px]">
                 <Plus className="h-4 w-4 mr-2" /> Add Education
               </Button>
-            </CardHeader>
-            <CardContent className="space-y-4">
+            )}
+            contentClassName="space-y-4"
+          >
               {educationFields.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No education entries yet.</p>
               ) : (
@@ -202,37 +179,33 @@ export default function AboutEditor() {
                       </Button>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-xs text-muted-foreground">Degree *</label>
+                      <EditorField label="Degree" required className="" labelClassName="text-xs text-muted-foreground">
                         <Input {...register(`education.${index}.degree` as const)} placeholder="BSc Computer Science" />
-                      </div>
-                      <div>
-                        <label className="text-xs text-muted-foreground">Institution *</label>
+                      </EditorField>
+                      <EditorField label="Institution" required className="" labelClassName="text-xs text-muted-foreground">
                         <Input {...register(`education.${index}.institution` as const)} placeholder="University Name" />
-                      </div>
+                      </EditorField>
                     </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground">Year</label>
+                    <EditorField label="Year" className="" labelClassName="text-xs text-muted-foreground">
                       <Input {...register(`education.${index}.year` as const)} placeholder="2020 – 2024" />
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground">Description</label>
+                    </EditorField>
+                    <EditorField label="Description" className="" labelClassName="text-xs text-muted-foreground">
                       <Textarea {...register(`education.${index}.description` as const)} placeholder="Optional description..." rows={2} />
-                    </div>
+                    </EditorField>
                   </div>
                 ))
               )}
-            </CardContent>
-          </Card>
+          </EditorCard>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Languages</CardTitle>
+          <EditorCard
+            title="Languages"
+            headerActions={(
               <Button type="button" variant="outline" size="sm" onClick={() => appendLanguage({ name: "", level: 50 })} className="min-h-[44px]">
                 <Plus className="h-4 w-4 mr-2" /> Add Language
               </Button>
-            </CardHeader>
-            <CardContent className="space-y-4">
+            )}
+            contentClassName="space-y-4"
+          >
               {languageFields.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No language entries yet.</p>
               ) : (
@@ -245,69 +218,35 @@ export default function AboutEditor() {
                       </Button>
                     </div>
                     <div className="flex gap-3 items-end">
-                      <div className="flex-1">
-                        <label className="text-xs text-muted-foreground">Language *</label>
+                      <EditorField label="Language" required className="flex-1" labelClassName="text-xs text-muted-foreground">
                         <Input {...register(`languages.${index}.name` as const)} placeholder="English" />
-                      </div>
-                      <div className="flex-1">
-                        <label className="text-xs text-muted-foreground">Level: {getLanguageLabel(watchedData.languages?.[index]?.level || 50)}</label>
+                      </EditorField>
+                      <EditorField
+                        label={`Level: ${getLanguageLabel(watchedData.languages?.[index]?.level || 50)}`}
+                        className="flex-1"
+                        labelClassName="text-xs text-muted-foreground"
+                      >
                         <Slider
                           value={[watchedData.languages?.[index]?.level || 50]}
                           min={0}
                           max={100}
                           step={1}
                           onValueChange={([v]) => {
-                            const current = [...(watchedData.languages || [])];
-                            if (current[index]) current[index].level = v;
-                            reset({ ...watchedData, languages: current }, { keepDirty: true });
+                            setValue(`languages.${index}.level`, v, { shouldDirty: true });
                           }}
                         />
-                      </div>
+                      </EditorField>
                     </div>
                   </div>
                 ))
               )}
-            </CardContent>
-          </Card>
+          </EditorCard>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Interests</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Input
-                placeholder="Type interest and press Enter..."
-                value={interestInput}
-                onChange={(e) => setInterestInput(e.target.value)}
-                onKeyDown={handleInterestKeyDown}
-              />
-              <div className="flex flex-wrap gap-2">
-                {watchedData.interests?.map((interest, index) => (
-                  <span key={index} className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-muted rounded-full">
-                    {interest}
-                    <button type="button" onClick={() => removeInterest(index)} className="relative flex items-center justify-center h-5 w-5 after:absolute after:inset-[-8px] after:content-[''] hover:text-destructive" aria-label={`Remove interest: ${interest}`}>
-                      <X className="h-3 w-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Live Preview */}
-        <div className={showPreview ? "block" : "hidden lg:block"}>
-          <div className="sticky top-4">
-            <p className="text-xs text-muted-foreground mb-2">Live Preview — updates as you type</p>
-            <Card>
-              <CardContent className="pt-6">
-                <AboutLivePreview data={watchedData} />
-              </CardContent>
-            </Card>
-            <p className="text-xs text-muted-foreground mt-2">Actual appearance may vary slightly</p>
-          </div>
-        </div>
-      </div>
+          <InterestsEditor
+            interests={watchedData.interests ?? []}
+            onChange={(interests) => setValue("interests", interests, { shouldDirty: true })}
+          />
+      </EditorLayout>
     </div>
   );
 }

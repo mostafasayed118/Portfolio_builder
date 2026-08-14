@@ -26,6 +26,9 @@ export default defineConfig({
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.test.{ts,tsx}"],
     css: true,
+    env: {
+      VITE_API_URL: "http://localhost:3001",
+    },
     // `react` is a workspace symlink into the pnpm store; Vite 7's resolver
     // can't follow it for the `react/jsx-dev-runtime` subpath. Without these
     // aliases, every test file that imports from `@workspace/ui` fails to

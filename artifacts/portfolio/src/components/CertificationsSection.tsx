@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLanguage } from "@/lib/language";
 import { Award, ScrollText } from "lucide-react";
 import EmptyState from "./EmptyState";
-import SectionLabel from "./SectionLabel";
+import SectionHeader from "./SectionHeader";
 import { CertCard } from "./CertCard";
 import CertFilters, { getFilters } from "./CertFilters";
 import CertStats from "./CertStats";
@@ -125,16 +125,12 @@ export default function CertificationsSection() {
       className="py-24 px-6"
     >
       <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-12">
-          <SectionLabel><Award className="h-3.5 w-3.5" />{t.certifications.title}</SectionLabel>
-          <h2 className="font-display font-bold text-3xl md:text-4xl text-foreground mb-3">
-            {t.certifications.title}
-          </h2>
-          <p className="text-muted-foreground text-sm max-w-xl mx-auto mb-8">
-            {allCerts.length} verified certifications from IBM, DataCamp,
-            Microsoft, and HackerRank.
-          </p>
-
+        <SectionHeader
+          label={<><Award className="h-3.5 w-3.5" />{t.certifications.title}</>}
+          title={t.certifications.title}
+          description={`${allCerts.length} verified certifications from IBM, DataCamp, Microsoft, and HackerRank.`}
+          descriptionClassName="mb-8"
+        >
           <CertFilters
             filters={FILTERS}
             active={active}
@@ -148,7 +144,7 @@ export default function CertificationsSection() {
               ]),
             )}
           />
-        </div>
+        </SectionHeader>
 
         {allCerts.length === 0 ? (
           <EmptyState

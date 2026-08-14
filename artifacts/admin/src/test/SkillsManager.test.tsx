@@ -87,6 +87,27 @@ describe("SkillsManager", () => {
     expect(screen.getByText("3 skills across 2 categories.")).toBeInTheDocument();
   });
 
+  it("groups null, empty, and whitespace categories into one Uncategorized bucket", async () => {
+    mockListSkills.mockResolvedValue({
+      success: true,
+      data: [
+        { id: "1", name: "Python", category: "", proficiency: 90, is_visible: true, sort_order: 1 },
+        { id: "2", name: "SQL", category: "  ", proficiency: 85, is_visible: true, sort_order: 2 },
+        { id: "3", name: "Spark", category: null, proficiency: 80, is_visible: true, sort_order: 1 },
+        { id: "4", name: "Rust", category: "Languages", proficiency: 75, is_visible: true, sort_order: 1 },
+      ],
+    });
+
+    renderWithProviders(<SkillsManager />);
+
+    await screen.findByText("Skills Manager");
+
+    // Empty/whitespace/null categories collapse into a single visible group.
+    expect(screen.getByText("Uncategorized")).toBeInTheDocument();
+    expect(screen.getByText("Languages")).toBeInTheDocument();
+    expect(screen.getByText("4 skills across 2 categories.")).toBeInTheDocument();
+  });
+
   it("calls createSkill on form submit", async () => {
     renderWithProviders(<SkillsManager />);
 

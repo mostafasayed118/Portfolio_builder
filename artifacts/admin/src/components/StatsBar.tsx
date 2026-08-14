@@ -1,9 +1,10 @@
-import { MessageSquare, Code2, FolderKanban, TrendingUp, AlertCircle, RefreshCw } from "lucide-react";
-import { Card, CardContent, Button, Skeleton } from "@workspace/ui";
+import { MessageSquare, Code2, FolderKanban, TrendingUp, AlertCircle } from "lucide-react";
+import { Card, CardContent, Skeleton } from "@workspace/ui";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { api } from "@/lib/api-client";
 import { useEntityQuery, useUnreadCountQuery } from "@/lib/use-entity-query";
 import { StatsCard } from "./StatsCard";
+import { AdminErrorState } from "./AdminErrorState";
 
 export function StatsBar() {
   const queries = {
@@ -44,15 +45,13 @@ export function StatsBar() {
 
   if (unread.isError || skills.isError || projects.isError) {
     return (
-      <div className="mb-8 flex flex-col items-center justify-center min-h-32 gap-3 p-6">
-        <AlertCircle className="h-10 w-10 text-destructive" />
-        <p className="text-destructive font-medium">Failed to load dashboard stats</p>
-        <p className="text-muted-foreground text-sm">{errorObj?.message}</p>
-        <Button onClick={handleRetry} variant="outline">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Try Again
-        </Button>
-      </div>
+      <AdminErrorState
+        title="Failed to load dashboard stats"
+        error={errorObj}
+        onRetry={handleRetry}
+        wrapperClassName="mb-8 flex flex-col items-center justify-center min-h-32 gap-3 p-6"
+        iconClassName="h-10 w-10 text-destructive"
+      />
     );
   }
 

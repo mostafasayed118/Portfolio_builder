@@ -152,7 +152,11 @@ export const env = {
   get CLERK_SECRET_KEY() { return optional("CLERK_SECRET_KEY"); },
   get CLERK_ISSUER() { return optional("CLERK_ISSUER"); },
   get ADMIN_API_KEY() { return optional("ADMIN_API_KEY"); },
-  get VITE_ADMIN_EMAILS() { return optional("VITE_ADMIN_EMAILS") ?? ""; },
+  // Comma-separated allowlist of admin emails. The canonical source is the
+  // server-only `ADMIN_EMAILS`. `VITE_ADMIN_EMAILS` is accepted only as a
+  // legacy fallback — the client bundle must never reference it, otherwise
+  // Vite inlines the full admin allowlist into the public JS.
+  get ADMIN_EMAILS() { return optional("ADMIN_EMAILS") ?? optional("VITE_ADMIN_EMAILS") ?? ""; },
 
   // CSRF / sessions
   get CSRF_SECRET() { return require_("CSRF_SECRET"); },

@@ -1,13 +1,15 @@
 import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@workspace/ui";
-import { FileText, CheckCircle, ExternalLink, Trash2, Info, AlertCircle, RefreshCw } from "lucide-react";
+import { FileText, CheckCircle, ExternalLink, Trash2, Info } from "lucide-react";
 import { getSupabase } from "@/lib/supabase";
 import { logError } from "@/lib/logger";
-import { Badge, Button, Card, CardContent, Skeleton } from "@workspace/ui";
+import { Badge, Button, Card, CardContent } from "@workspace/ui";
 import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
 import { api } from "@/lib/api-client";
 import { CvUploadZone } from "@/features/cv/components/CvUploadZone";
+import { AdminErrorState } from "@/components/AdminErrorState";
+import { AdminLoadingState } from "@/components/AdminLoadingState";
 
 export default function CvManager() {
   const { toast } = useToast();
@@ -72,18 +74,17 @@ export default function CvManager() {
 
   const fmt = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
-  if (isLoading) return (
-    <div className="p-4 sm:p-6 max-w-2xl mx-auto space-y-4">
-      <Skeleton className="h-8 w-48" /><Skeleton className="h-40 w-full rounded-xl" /><Skeleton className="h-32 w-full rounded-xl" />
-    </div>
-  );
+  if (isLoading) return <AdminLoadingState variant="cv" />;
   if (isError) return (
-    <div className="p-4 sm:p-6 flex flex-col items-center justify-center min-h-64 gap-4">
-      <AlertCircle className="h-10 w-10 text-destructive" />
-      <div className="text-center"><p className="font-medium">Failed to load CV settings</p>
-        <p className="text-sm text-muted-foreground mt-1">{error instanceof Error ? error.message : "Unknown error"}</p></div>
-      <Button variant="outline" onClick={() => refetch()}><RefreshCw className="h-4 w-4 me-2" />Try Again</Button>
-    </div>
+    <AdminErrorState
+      title="Failed to load CV settings"
+      message={error instanceof Error ? error.message : "Unknown error"}
+      onRetry={() => refetch()}
+      wrapperClassName="p-4 sm:p-6 flex flex-col items-center justify-center min-h-64 gap-4"
+      iconClassName="h-10 w-10 text-destructive"
+      contentClassName="text-center"
+      messageClassName="text-sm text-muted-foreground mt-1"
+    />
   );
 
   return (
