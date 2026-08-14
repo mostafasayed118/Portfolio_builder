@@ -34,36 +34,35 @@ const ALLOWED_ENTITY_TYPES = [
  * `.exe` renamed to `.jpg` and have it served as `image/jpeg` from
  * the public `project_images` bucket (XSS / drive-by download risk).
  */
-const MAGIC_BYTES: { mime: string; signatures: Uint8Array[] }[] = [
+const MAGIC_BYTES: { mime: string; signatures: { bytes: Uint8Array; offset: number }[] }[] = [
   {
     mime: "image/jpeg",
     signatures: [
-      new Uint8Array([0xff, 0xd8, 0xff]), // JPEG (SOI + first APP0 marker byte)
+      { bytes: new Uint8Array([0xff, 0xd8, 0xff]), offset: 0 }, // JPEG (SOI + first APP0 marker byte)
     ],
   },
   {
     mime: "image/png",
     signatures: [
-      new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), // PNG
+      { bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), offset: 0 }, // PNG
     ],
   },
   {
     mime: "image/webp",
     signatures: [
-      // RIFF + WEBP (at offset 0 / 8)
-      new Uint8Array([0x52, 0x49, 0x46, 0x46]), // 'RIFF'
+      { bytes: new Uint8Array([0x52, 0x49, 0x46, 0x46]), offset: 0 }, // 'RIFF' container
+      { bytes: new Uint8Array([0x57, 0x45, 0x42, 0x50]), offset: 8 }, // 'WEBP' chunk at bytes 8-11
     ],
   },
 ];
 
 function verifyMagicBytes(buf: Buffer, declaredMime: string): boolean {
-  const head = new Uint8Array(buf.subarray(0, 12));
   const expected = MAGIC_BYTES.find((m) => m.mime === declaredMime);
   if (!expected) return false;
-  return expected.signatures.every((sig) => {
-    if (head.length < sig.length) return false;
-    for (let i = 0; i < sig.length; i++) {
-      if (head[i] !== sig[i]) return false;
+  return expected.signatures.every(({ bytes, offset }) => {
+    if (buf.length < offset + bytes.length) return false;
+    for (let i = 0; i < bytes.length; i++) {
+      if (buf[offset + i] !== bytes[i]) return false;
     }
     return true;
   });

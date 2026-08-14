@@ -1,15 +1,16 @@
 import { useState, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, Loader2, Plus, RefreshCw, NotebookPen, CalendarCheck2 } from "lucide-react";
+import { Loader2, Plus, NotebookPen, CalendarCheck2 } from "lucide-react";
 import { api } from "@/lib/api-client";
 import {
-  Button, Card, CardContent, Input, Textarea, Skeleton, Badge, Switch,
+  Button, Card, CardContent, Input, Textarea, Badge, Switch,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@workspace/ui";
 import { useToast } from "@workspace/ui";
 import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
 import { SmartEmptyState } from "@/components/SmartEmptyState";
-import { getErrorMessage } from "@/lib/error-messages";
+import { AdminErrorState } from "@/components/AdminErrorState";
+import { AdminLoadingState } from "@/components/AdminLoadingState";
 import { useEntityQuery } from "@/lib/use-entity-query";
 import type { BlogPost } from "@workspace/supabase/types";
 
@@ -151,28 +152,10 @@ export default function PostsManager() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="p-6 space-y-4">
-        <Skeleton className="h-8 w-40" />
-        <Skeleton className="h-10 w-full" />
-        <div className="grid md:grid-cols-2 gap-4">
-          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-40 w-full rounded-2xl" />)}
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return <AdminLoadingState variant="posts" />;
 
   if (isError) {
-    return (
-      <div className="p-6 flex flex-col items-center justify-center min-h-64 gap-4">
-        <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-destructive font-medium">{getErrorMessage(error)}</p>
-        <Button variant="outline" onClick={() => refetch()}>
-          <RefreshCw className="h-4 w-4 mr-2" /> Try Again
-        </Button>
-      </div>
-    );
+    return <AdminErrorState error={error} onRetry={() => refetch()} />;
   }
 
   return (

@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
-import { AlertCircle, RefreshCw, Clock } from "lucide-react";
-import { Badge, Button, Card, CardContent, Skeleton, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui";
+import { Clock } from "lucide-react";
+import { Badge, Button, Card, CardContent, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui";
+import { AdminErrorState } from "@/components/AdminErrorState";
+import { AdminLoadingState } from "@/components/AdminLoadingState";
 
 interface AuditEntry {
   id: string;
@@ -80,30 +82,16 @@ export default function AuditLogPage() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="max-w-5xl mx-auto space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-10 w-full" />
-        <div className="space-y-3">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <Skeleton key={i} className="h-20 w-full rounded-lg" />
-          ))}
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return <AdminLoadingState variant="audit" />;
 
   if (isError) {
     return (
-      <div className="p-6 flex flex-col items-center justify-center min-h-64 gap-4">
-        <AlertCircle className="h-10 w-10 text-destructive" />
-        <p className="text-destructive font-medium">Failed to load audit log</p>
-        <p className="text-sm text-muted-foreground">{error?.message}</p>
-        <Button variant="outline" onClick={() => refetch()}>
-          <RefreshCw className="h-4 w-4 mr-2" /> Try Again
-        </Button>
-      </div>
+      <AdminErrorState
+        title="Failed to load audit log"
+        message={error?.message}
+        onRetry={() => refetch()}
+        iconClassName="h-10 w-10 text-destructive"
+      />
     );
   }
 

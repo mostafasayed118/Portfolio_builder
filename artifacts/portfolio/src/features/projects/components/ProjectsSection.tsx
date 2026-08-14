@@ -5,7 +5,7 @@ import { useReveal } from "@/hooks/use-reveal";
 import { useProjects, mapDbProject, PROJECTS } from "@/features/projects/hooks/useProjects";
 import ProjectCard from "@/features/projects/components/ProjectCard";
 import { ProjectsSkeleton } from "@/features/projects/components/ProjectsSkeleton";
-import SectionLabel from "@/components/SectionLabel";
+import SectionHeader from "@/components/SectionHeader";
 import EmptyState from "@/components/EmptyState";
 
 export default function ProjectsSection() {
@@ -34,11 +34,11 @@ export default function ProjectsSection() {
   return (
     <section id="projects" ref={ref} className="py-24 px-6">
       <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-12">
-          <SectionLabel>{t.projects.title}</SectionLabel>
-          <h2 className="font-display font-bold text-3xl md:text-4xl text-foreground mb-3">{t.projects.title}</h2>
-          <p className="text-muted-foreground text-sm max-w-xl mx-auto">Data pipelines, web scrapers, full-stack apps, and mobile experiences.</p>
-        </div>
+        <SectionHeader
+          label={t.projects.title}
+          title={t.projects.title}
+          description="Data pipelines, web scrapers, full-stack apps, and mobile experiences."
+        />
         <div className="flex flex-wrap gap-2 mb-8 justify-center">
           {categories.map((cat) => (
             <button key={cat.key} onClick={() => setActive(cat.key)} aria-pressed={active === cat.key}

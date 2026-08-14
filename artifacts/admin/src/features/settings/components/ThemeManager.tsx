@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@workspace/ui";
-import { Save, RefreshCw, Sun, Moon, Eye, AlertCircle } from "lucide-react";
+import { Save, RefreshCw, Sun, Moon, Eye } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { logError } from "@/lib/logger";
-import { Button, Card, CardContent, CardHeader, CardTitle, Skeleton, Slider } from "@workspace/ui";
+import { Button, Card, CardContent, CardHeader, CardTitle, Slider } from "@workspace/ui";
+import { AdminErrorState } from "@/components/AdminErrorState";
+import { AdminLoadingState } from "@/components/AdminLoadingState";
 import { ColorField } from "@/features/settings/components/ThemeColorFields";
 import { PreviewPalette, type ThemePreviewData } from "@/features/settings/components/ThemePreview";
 
@@ -94,8 +96,8 @@ export default function ThemeManager() {
 
   const radiusNum = parseFloat(theme.radius) * 16;
 
-  if (isLoading) return <div className="p-6 space-y-4"><Skeleton className="h-8 w-48" /><Skeleton className="h-10 w-full" /><div className="space-y-2">{[1,2,3,4,5].map(i => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}</div></div>;
-  if (isError) return <div className="p-6 flex flex-col items-center justify-center min-h-64 gap-4"><AlertCircle className="h-12 w-12 text-destructive" /><p className="text-destructive font-medium">Failed to load data</p><p className="text-muted-foreground text-sm">{error?.message}</p><Button onClick={() => refetch()} variant="outline"><RefreshCw className="h-4 w-4 mr-2" />Try Again</Button></div>;
+  if (isLoading) return <AdminLoadingState />;
+  if (isError) return <AdminErrorState title="Failed to load data" message={error?.message} onRetry={() => refetch()} />;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">

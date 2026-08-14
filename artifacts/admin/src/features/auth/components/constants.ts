@@ -30,8 +30,4 @@ export const SIGN_IN_URL = "/sign-in";
  */
 export const BUNDLE_VERSION = "auth-fix-2026-06-05-jwt-template";
 
-export const ADMIN_EMAILS: string[] = (
-  import.meta.env.VITE_ADMIN_EMAILS as string | undefined
-)?.split(",").map(e => e.trim().toLowerCase()) ?? [];
-
 export { clerkPublishableKey };

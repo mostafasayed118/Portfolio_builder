@@ -5,7 +5,6 @@ const adminEnvSchema = z.object({
   VITE_SUPABASE_URL: z.string().url().optional(),
   VITE_SUPABASE_ANON_KEY: z.string().min(1).optional(),
   VITE_CLERK_PUBLISHABLE_KEY: z.string().min(1).optional(),
-  VITE_ADMIN_EMAILS: z.string().optional(),
   VITE_API_URL: z.string().url().optional(),
   VITE_SITE_URL: z.string().url().optional(),
   VITE_ADMIN_URL: z.string().url().optional(),

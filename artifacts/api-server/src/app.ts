@@ -25,6 +25,16 @@ function isValidUrl(url: string): boolean {
 
 const app: Express = express();
 
+// The API server runs behind a reverse proxy (Vercel edge and similar PaaS
+// proxies). Without `trust proxy`, `req.ip` is the proxy's address for every
+// request, which (a) collapses IP-based rate limiting to a single shared IP
+// and (b) reduces the CSRF session identifier (`ip + user-agent`) to
+// user-agent-only. Trust exactly one proxy hop in production so `req.ip`
+// reflects the real client address.
+if (env.IS_PRODUCTION) {
+  app.set("trust proxy", 1);
+}
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {

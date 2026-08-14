@@ -68,6 +68,8 @@ describe("HeroEditor", () => {
     expect(screen.getByPlaceholderText("Short bio...")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("https://github.com/...")).toBeInTheDocument();
     expect(screen.getByText("Avatar & CV")).toBeInTheDocument();
+    // The avatar URL label is programmatically associated with its input.
+    expect(screen.getByLabelText("Avatar URL")).toBeInTheDocument();
   });
 
   it("pre-fills form from fetched hero data", async () => {
