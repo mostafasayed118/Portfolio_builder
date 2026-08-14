@@ -28,19 +28,30 @@ import {
   transformHtml,
 } from "./src/lib/csp.js";
 
-export const config = {
-  // Run only on document-style paths: skip static assets, dotfiles
-  // (favicon, manifest, ...) and Vercel internals.
-  matcher: ["/((?!assets/|_vercel/|.*\\.).*)"],
-};
-
 const INTERNAL_HEADER = "x-csp-transform";
 const FETCH_TIMEOUT_MS = 7000;
+
+/**
+ * True only for document-style requests: GET requests for extensionless
+ * paths, which the SPA rewrite maps to index.html. Kept in-function rather
+ * than via a `config.matcher` because regex matchers are Next.js-specific;
+ * this runs for every route and returns undefined immediately otherwise.
+ */
+function isHtmlDocumentRequest(request: Request): boolean {
+  if (request.method !== "GET") return false;
+  const pathname = new URL(request.url).pathname;
+  if (pathname.startsWith("/assets/") || pathname.startsWith("/_vercel/")) {
+    return false;
+  }
+  const lastSegment = pathname.split("/").pop() ?? "";
+  if (lastSegment.includes(".")) return false; // favicon, manifest, hashed assets
+  return true;
+}
 
 export default async function middleware(
   request: Request,
 ): Promise<Response | undefined> {
-  if (request.method !== "GET") return undefined;
+  if (!isHtmlDocumentRequest(request)) return undefined;
   if (request.headers.get(INTERNAL_HEADER) === "1") return undefined;
 
   const headers = new Headers(request.headers);
