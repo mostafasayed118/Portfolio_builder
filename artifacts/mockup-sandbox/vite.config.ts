@@ -6,11 +6,9 @@ import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 import { mockupPreviewPlugin } from "./mockupPreviewPlugin";
 
 const rawPort = process.env.PORT || "5175";
-const port = Number(rawPort);
-
-if (Number.isNaN(port) || port <= 0) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
-}
+const parsedPort = Number(rawPort);
+// Treat unset/invalid PORT (e.g. "0" used by some environments) as "use the default".
+const port = Number.isNaN(parsedPort) || parsedPort <= 0 ? 5175 : parsedPort;
 
 const basePath = process.env.BASE_PATH || "/";
 
