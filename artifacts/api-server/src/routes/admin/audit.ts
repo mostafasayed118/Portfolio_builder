@@ -19,8 +19,10 @@ const router: IRouter = Router();
  */
 router.get("/", requireSuperadmin, async (req: AuthenticatedRequest, res: Response) => {
   const supabase = getSupabaseClient();
-  const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
-  const offset = parseInt(req.query.offset as string) || 0;
+  const rawLimit = Number.parseInt(req.query.limit as string, 10);
+  const rawOffset = Number.parseInt(req.query.offset as string, 10);
+  const limit = Math.min(Math.max(Number.isFinite(rawLimit) ? rawLimit : 50, 1), 200);
+  const offset = Math.max(Number.isFinite(rawOffset) ? rawOffset : 0, 0);
   const entityType = req.query.entityType as string | undefined;
   const entityId = req.query.entityId as string | undefined;
 

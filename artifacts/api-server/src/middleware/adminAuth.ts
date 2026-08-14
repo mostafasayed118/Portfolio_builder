@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { verifyToken, createClerkClient } from "@clerk/backend";
-import { timingSafeEqual } from "crypto";
+import { timingSafeEqual, createHash } from "crypto";
 import { logger } from "../lib/logger";
 import { env } from "../lib/env";
 import { syncUserFromClerk, getDefaultAdminUser } from "../lib/user-sync";
@@ -9,8 +9,12 @@ const ADMIN_EMAILS = env.ADMIN_EMAILS.split(",").map(e => e.trim().toLowerCase()
 const clerkClient = env.CLERK_SECRET_KEY ? createClerkClient({ secretKey: env.CLERK_SECRET_KEY }) : null;
 
 function isApiKeyValid(key: string | undefined): key is string {
-  if (!key || !env.ADMIN_API_KEY || key.length !== env.ADMIN_API_KEY.length) return false;
-  return timingSafeEqual(Buffer.from(key), Buffer.from(env.ADMIN_API_KEY));
+  if (!key || !env.ADMIN_API_KEY) return false;
+  // Compare fixed-length SHA-256 digests so the check is constant-time and
+  // reveals neither the configured key's length nor its contents via timing.
+  const supplied = createHash("sha256").update(key).digest();
+  const expected = createHash("sha256").update(env.ADMIN_API_KEY).digest();
+  return timingSafeEqual(supplied, expected);
 }
 
 export interface AuthenticatedRequest extends Request {
@@ -18,6 +22,9 @@ export interface AuthenticatedRequest extends Request {
   user?: { id: string; email: string; role: string };
 }
 
+// Cache of clerkId → verified email for tokens that lack an inline email
+// claim. TTL is 60s, so an email removed from ADMIN_EMAILS (or changed in
+// Clerk) is re-verified within a minute — acceptable staleness for this path.
 const emailCache = new Map<string, { email: string; ts: number }>();
 const CACHE_TTL = 60_000;
 const MAX_CACHE_SIZE = 100;

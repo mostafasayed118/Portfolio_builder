@@ -2,6 +2,7 @@ import { type ReactNode, useEffect, useCallback, useRef } from "react";
 import { useAuthUser } from "@workspace/auth";
 import { useAuth } from "@clerk/clerk-react";
 import { Redirect, useLocation } from "wouter";
+import { Button } from "@workspace/ui";
 import { diag } from "./diag";
 import { SIGN_IN_URL } from "./constants";
 import { NotAdminScreen } from "./NotAdminScreen";
@@ -41,13 +42,17 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
     return () => { mountedRef.current = false; };
   }, []);
 
-  diag("ProtectedRoute render", {
-    path: location,
-    isLoaded,
-    isSignedIn,
-    loading,
-    user: user ? { id: user.id, email: user.email, role: user.role } : null,
-    isAdmin,
+  // Log render diagnostics in an effect (not during render) so the render
+  // body stays side-effect-free.
+  useEffect(() => {
+    diag("ProtectedRoute render", {
+      path: location,
+      isLoaded,
+      isSignedIn,
+      loading,
+      user: user ? { id: user.id, email: user.email, role: user.role } : null,
+      isAdmin,
+    });
   });
 
   const handleSignOut = useCallback(() => {
@@ -135,12 +140,9 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
           <p className="text-muted-foreground text-sm mt-2">
             Sign out and sign back in to refresh your session.
           </p>
-          <button
-            onClick={handleSignOut}
-            className="mt-4 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary min-h-[44px]"
-          >
+          <Button onClick={handleSignOut} className="mt-4 min-h-[44px]">
             Sign Out
-          </button>
+          </Button>
         </div>
       </div>
     );

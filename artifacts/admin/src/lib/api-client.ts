@@ -114,6 +114,12 @@ async function doFetch<T>(
   withAuth: boolean,
   retryCount = 0,
 ): Promise<ApiResult<T>> {
+  // Fail fast with a clear message instead of issuing a relative fetch that
+  // would 404 when VITE_API_URL is missing in a production build.
+  if (!apiBase && !import.meta.env.DEV) {
+    return { success: false, message: "API server URL not configured — set VITE_API_URL" };
+  }
+
   const headers: Record<string, string> = { "Content-Type": "application/json" };
 
   if (withAuth) {
@@ -143,9 +149,13 @@ async function doFetch<T>(
     headers[CSRF_HEADER] = csrfToken;
   }
 
+  let timedOut = false;
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    const timeoutId = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, REQUEST_TIMEOUT_MS);
 
     // Link the per-navigation signal so navigation aborts in-flight requests
     const navSignal = getActiveSignal();
@@ -234,7 +244,11 @@ async function doFetch<T>(
   } catch (err) {
     const message = err instanceof Error ? err.message : "Network error";
     if (message.includes("aborted")) {
-      return { success: false, message: "Request timed out" };
+      // Distinguish the request timeout from a navigation-triggered cancel
+      // (beginRequestGroup / abortAllRequests). Only the former is an error.
+      return timedOut
+        ? { success: false, message: "Request timed out" }
+        : { success: false, message: "Request cancelled" };
     }
     return { success: false, message };
   }
