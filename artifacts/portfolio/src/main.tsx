@@ -18,6 +18,12 @@ if (import.meta.env.VITE_SENTRY_DSN) {
   });
 }
 
+// Google Fonts are loaded non-blocking (media="print"); apply them as soon
+// as the bundle runs. An inline `onload` swap would be blocked by the
+// nonce-based CSP enforced in production (middleware.ts).
+const fontsLink = document.getElementById("fonts-stylesheet") as HTMLLinkElement | null;
+if (fontsLink) fontsLink.media = "all";
+
 createRoot(document.getElementById("root")!).render(
   <RootErrorBoundary>
     <App />
