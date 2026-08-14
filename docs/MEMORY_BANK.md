@@ -137,7 +137,7 @@ Client-side JWT expired → isTokenLikelyValid() rejects → no request sent →
 | ---------------------------- | -------- | ------------------------------------------------------------ |
 | `VITE_CLERK_PUBLISHABLE_KEY` | Yes      | From Clerk Dashboard                                         |
 | `VITE_CLERK_JWT_TEMPLATE`    | No       | Default: `admin`. Must match JWT template in Clerk Dashboard |
-| `VITE_ADMIN_EMAILS`          | Yes      | Comma-separated admin email allowlist                        |
+| `ADMIN_EMAILS`               | Yes      | Comma-separated admin email allowlist                        |
 | `VITE_API_URL`               | Yes      | API server URL (default: `http://localhost:3002`)            |
 | `VITE_SUPABASE_URL`          | Yes      | Supabase project URL                                         |
 

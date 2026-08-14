@@ -158,16 +158,16 @@ All tables live in the Supabase PostgreSQL database. 30 migration files in `supa
 
 ### Key Components
 
-| File                                                     | Role                                                                |
-| -------------------------------------------------------- | ------------------------------------------------------------------- |
-| `artifacts/portfolio/src/components/HeroSection.tsx`     | Hero section with typewriter, social links, CV download             |
-| `artifacts/portfolio/src/components/Navbar.tsx`          | Sticky navbar with scroll-aware glass effect                        |
-| `artifacts/portfolio/src/components/ProjectsSection.tsx` | Project grid with Supabase data                                     |
-| `artifacts/admin/src/pages/HeroEditor.tsx`               | Hero content form with live preview                                 |
-| `artifacts/admin/src/pages/ProjectsManager.tsx`          | CRUD project management with sheet form                             |
-| `artifacts/admin/src/pages/MessagesViewer.tsx`           | Contact message inbox with read/unread/delete                       |
-| `artifacts/admin/src/pages/CvManager.tsx`                | CV file upload and settings                                         |
-| `artifacts/admin/src/lib/admin-utils.ts`                 | Admin authorization check (email allowlist from `APP_ADMIN_EMAILS`) |
+| File                                                               | Role                                                                         |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| `artifacts/portfolio/src/components/HeroSection.tsx`               | Hero section with typewriter, social links, CV download                      |
+| `artifacts/portfolio/src/components/Navbar.tsx`                    | Sticky navbar with scroll-aware glass effect                                 |
+| `artifacts/portfolio/src/components/ProjectsSection.tsx`           | Project grid with Supabase data                                              |
+| `artifacts/admin/src/pages/HeroEditor.tsx`                         | Hero content form with live preview                                          |
+| `artifacts/admin/src/pages/ProjectsManager.tsx`                    | CRUD project management with sheet form                                      |
+| `artifacts/admin/src/pages/MessagesViewer.tsx`                     | Contact message inbox with read/unread/delete                                |
+| `artifacts/admin/src/pages/CvManager.tsx`                          | CV file upload and settings                                                  |
+| `artifacts/admin/src/features/auth/components/ClerkAuthBridge.tsx` | Derives `isAdmin` from the server (`/users/me`) and arms the auth-ready gate |
 
 ### API Server Routes
 
@@ -211,7 +211,6 @@ All tables live in the Supabase PostgreSQL database. 30 migration files in `supa
 | `VITE_SUPABASE_SERVICE_ROLE_KEY` | Yes      | Service role key (admin mutations)       |
 | `VITE_CLERK_PUBLISHABLE_KEY`     | Yes      | Clerk publishable key for authentication |
 | `VITE_SITE_URL`                  | No       | Admin site URL (default localhost:5174)  |
-| `APP_ADMIN_EMAILS`               | Yes      | Comma-separated admin email allowlist    |
 
 ### API Server (`artifacts/api-server/.env`)
 
@@ -227,7 +226,7 @@ Tests can override values via `_setOverride()` without touching `process.env`.
 | `CLERK_SECRET_KEY`                 | No       | Enables Clerk JWT verification (recommended in production)                         |
 | `CLERK_ISSUER`                     | No       | Clerk issuer URL (optional)                                                        |
 | `ADMIN_API_KEY`                    | No       | Alternative to Clerk JWT — `x-admin-key: <key>` header for machine-to-machine auth |
-| `VITE_ADMIN_EMAILS`                | No       | Comma-separated allowlist of admin emails (required if no `ADMIN_API_KEY`)         |
+| `ADMIN_EMAILS`                     | No       | Comma-separated allowlist of admin emails (required if no `ADMIN_API_KEY`)         |
 | `VITE_SITE_URL` / `VITE_ADMIN_URL` | No       | CORS allowed origins (contact form enforces allowlist)                             |
 | `VERCEL_URL`                       | No       | Auto-added CORS origin on Vercel                                                   |
 | `PORT`                             | No       | HTTP port (default 3001)                                                           |
@@ -355,8 +354,8 @@ See full report in [TECHNICAL_DEBT_REPORT.md](./TECHNICAL_DEBT_REPORT.md) — ov
 
 ### Admin Authorization
 
-- Admin pages validate email against `APP_ADMIN_EMAILS` env var
-- Clerk provides JWT authentication; the `useAdminAuth` hook checks the allowlist
+- The API server enforces the `ADMIN_EMAILS` allowlist (server-side)
+- Clerk provides JWT authentication; the client derives `isAdmin` from the server's `/users/me` response
 - Service role key is used for admin Supabase operations (bypasses RLS)
 
 ### Section Ordering

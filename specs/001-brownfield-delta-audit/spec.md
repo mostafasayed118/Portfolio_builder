@@ -27,17 +27,20 @@ earlier) lists 5 unresolved items. The report appears to have been overwritten p
 ## PHASE A — Baseline Mental Map
 
 ### What was broken (baseline, pre-2026-05-18)
+
 - 47 total issues across critical/high/medium/low
 - 5 critical, 8 high
 - Key areas: input validation, CSP, rate limiting, soft-delete, CSRF, auth bypass
 
 ### What was in-progress (as of 2026-05-16)
+
 - Soft-delete migration (030) created but API routes still used hard deletes
 - CSP nonce migration planned
 - Admin component tests missing
 - Migration numbering gaps (003, 010, 016-019)
 
 ### What was done (claimed by 2026-05-18)
+
 - Zod input validation on all 8 admin routes
 - console.error → console.warn changes
 - Soft-delete migration + RLS policies
@@ -73,6 +76,7 @@ The `verifyClerkJWT` function (line 45) calls `verifyToken(token, { secretKey: C
 which validates against Clerk's JWKS — not the old `JSON.parse(Buffer.from(..., "base64"))` pattern.
 
 **Evidence**:
+
 - `adminAuth.ts:2` — imports `verifyToken` from `@clerk/backend`
 - `adminAuth.ts:52` — `await verifyToken(token, { secretKey: CLERK_SECRET_KEY })`
 - No `Buffer.from` or `base64` decode pattern anywhere in the auth middleware
@@ -87,6 +91,7 @@ which validates against Clerk's JWKS — not the old `JSON.parse(Buffer.from(...
 ### [C3] `any` types — ✅ FIXED
 
 **Files checked**:
+
 - `artifacts/admin/src/pages/HeroEditor.tsx:12-28` — Uses typed `HeroFormData` interface,
   no `useQuery<any>`. Query uses explicit typing via `api` client.
 - `artifacts/admin/src/pages/AboutEditor.tsx:11-24` — Uses typed `AboutFormData` interface,
@@ -109,6 +114,7 @@ All query hooks go through `api` client which returns typed responses.
 from `@/pages/HeroEditor`). No `HeroManager` reference anywhere.
 
 **Evidence**:
+
 - Glob for `artifacts/admin/src/pages/HeroManager.tsx` → No files found
 - `App.tsx:13` — `const HeroEditor = lazy(() => import("@/pages/HeroEditor"))`
 - `App.tsx:66` — `<Route path="/hero" component={HeroEditor} />`
@@ -127,6 +133,7 @@ from `@/pages/HeroEditor`). No `HeroManager` reference anywhere.
 **scripts/setup.sh**: Glob → **No files found.**
 
 **.env.example files exist** at:
+
 - `artifacts/portfolio/.env.example` (4 vars)
 - `artifacts/admin/.env.example` (9 vars)
 - `artifacts/api-server/.env.example` (11 vars)
@@ -158,6 +165,7 @@ Not a production blocker.
 files in their component trees. Both import from `@workspace/ui` (the shared `lib/ui/` package).
 
 **Evidence**:
+
 - Glob for `artifacts/**/components/ui/button.tsx` → only `artifacts/mockup-sandbox/...`
 - `artifacts/admin/src/pages/HeroEditor.tsx:7` — `import { Button, ... } from "@workspace/ui"`
 - `lib/ui/src/components/primitives/button.tsx` — canonical shared component
@@ -174,6 +182,7 @@ is out of scope (not a deployed artifact).
 **File**: `lib/api-spec/openapi.yaml` (210 lines)
 
 **Paths defined**: 5 paths, 6 operations:
+
 1. `GET /healthz` — health check
 2. `GET /cv` — download CV PDF
 3. `GET /cv/settings` — get CV settings
@@ -183,6 +192,7 @@ is out of scope (not a deployed artifact).
 
 **Routes actually registered** (from `artifacts/api-server/src/routes/v1/index.ts` and
 `artifacts/api-server/src/routes/admin/index.ts`):
+
 - `/healthz`, `/cv`, `/images`, `/contact` (public)
 - `/admin/hero`, `/admin/about`, `/admin/skills`, `/admin/projects`,
   `/admin/experience`, `/admin/certifications`, `/admin/messages`,
@@ -233,6 +243,7 @@ No `import ... from "api-client-react"` or `import ... from "@workspace/api-clie
 Both Vite configs conditionally load Replit plugins:
 
 **Portfolio** (`artifacts/portfolio/vite.config.ts:16-27`):
+
 ```ts
 ...(process.env.NODE_ENV !== "production" && process.env.REPL_ID !== undefined
   ? [await import("@replit/vite-plugin-cartographer"), await import("@replit/vite-plugin-dev-banner")]
@@ -243,6 +254,7 @@ Both Vite configs conditionally load Replit plugins:
 
 The `REPL_ID` check gates these to Replit dev environments only. They do NOT load
 in production or non-Replit environments. However:
+
 - `@replit/vite-plugin-runtime-error-overlay` loads unconditionally (line 5 in both)
 - The Replit packages remain in `pnpm-workspace.yaml:71-73` catalog
 
@@ -266,6 +278,7 @@ not on Replit), but adds unnecessary bundle/work.
 **File**: `artifacts/api-server/src/routes/admin/messages.ts:17-48`
 
 The GET `/` handler now implements proper pagination:
+
 - `limit` parameter with max cap of 200 (line 22)
 - `offset` parameter (line 23)
 - `.range(offset, offset + limit - 1)` (line 35)
@@ -285,6 +298,7 @@ and `const offset = parseInt(..."0", 10)`. `.range()` call at line 35.
 ### E2E Tests (TestSprite)
 
 **Config** (`testsprite.config.json`):
+
 - `baseUrl`: `http://localhost:5173` — **correct** (portfolio port)
 - `apps.portfolio.url`: `http://localhost:5173` — correct
 - `apps.admin.url`: `http://localhost:5174` — correct
@@ -294,12 +308,14 @@ and `const offset = parseInt(..."0", 10)`. `.range()` call at line 35.
 **Root Cause of E2E Failure**: The TestSprite config uses `npm run dev` instead of
 `pnpm run dev`. In this pnpm workspace, `npm` may fail to resolve workspace dependencies
 (`@workspace/*`), causing white screen. Additionally:
+
 - TestSprite config assumes servers are pre-running (has `startCommand` but unclear
   if TestSprite auto-starts them)
 - Playwright config (`playwright.config.ts`) has no `webServer` block — it also assumes
   servers are pre-running
 
 **Minimal Fix**:
+
 1. Change `startCommand` in `testsprite.config.json` to use `pnpm`
 2. Add a root `dev` script to `package.json` that starts all 3 services
 3. Consider adding `webServer` config to `playwright.config.ts` for auto-start
@@ -332,13 +348,18 @@ Lists `VITE_ADMIN_EMAILS=admin@example.com`
 
 **MEMORY_BANK.md** references `APP_ADMIN_EMAILS` as the env var name (line 203).
 
-**Root cause**: The VITE_ prefix is a Vite convention for client-side env vars. The
+**Root cause**: The VITE\_ prefix is a Vite convention for client-side env vars. The
 API server reads `VITE_ADMIN_EMAILS` — this works but is semantically wrong for a
 server-side process. MEMORY_BANK.md documents the older `APP_ADMIN_EMAILS` name.
 
 **Severity**: [LOW] — Works correctly, but misleading naming. MEMORY_BANK.md is stale.
 
 **Scope**: [api-server] [admin]
+
+> **✅ RESOLVED (2026-08-14):** Renamed to the server-only `ADMIN_EMAILS` env var. The
+> `VITE_`-prefixed name (which leaked the admin email list into the client bundle) was
+> removed; the client now derives `isAdmin` from the server's `/users/me` endpoint, and
+> the docs (`MEMORY_BANK.md`, `docs/auth.md`, etc.) were updated to match.
 
 ### [E2] Unhandled async route handlers — [NEW] (POTENTIAL)
 
@@ -391,24 +412,24 @@ minimum release age check (`minimumReleaseAgeExclude`). This is documented as in
 
 ## VERIFIED FIXES (since 2026-05-18)
 
-| # | Issue | Severity | Status | Evidence |
-|---|-------|----------|--------|----------|
-| C1 | Hardcoded credentials in test file | CRITICAL | ✅ FIXED | `testsprite_tests/run_all.py` does not exist |
-| C2 | JWT bypass via base64 decode | CRITICAL | ✅ FIXED | `adminAuth.ts:2,52` — uses `verifyToken()` from `@clerk/backend` |
-| C3 | `useQuery<any>` in editors | CRITICAL | ✅ FIXED | `HeroEditor.tsx:12-28`, `AboutEditor.tsx:11-24` — typed interfaces |
-| C4 | Dual HeroManager/HeroEditor routing | CRITICAL | ✅ FIXED | `HeroManager.tsx` deleted, `App.tsx:66` routes to `HeroEditor` only |
-| H1 | Triple-copied UI components | HIGH | ✅ FIXED | Only `lib/ui` shared package; 0 copies in admin/portfolio |
-| H7 | No pagination on messages API | HIGH | ✅ FIXED | `messages.ts:22-35` — limit/offset/range with hasMore |
+| #   | Issue                               | Severity | Status   | Evidence                                                            |
+| --- | ----------------------------------- | -------- | -------- | ------------------------------------------------------------------- |
+| C1  | Hardcoded credentials in test file  | CRITICAL | ✅ FIXED | `testsprite_tests/run_all.py` does not exist                        |
+| C2  | JWT bypass via base64 decode        | CRITICAL | ✅ FIXED | `adminAuth.ts:2,52` — uses `verifyToken()` from `@clerk/backend`    |
+| C3  | `useQuery<any>` in editors          | CRITICAL | ✅ FIXED | `HeroEditor.tsx:12-28`, `AboutEditor.tsx:11-24` — typed interfaces  |
+| C4  | Dual HeroManager/HeroEditor routing | CRITICAL | ✅ FIXED | `HeroManager.tsx` deleted, `App.tsx:66` routes to `HeroEditor` only |
+| H1  | Triple-copied UI components         | HIGH     | ✅ FIXED | Only `lib/ui` shared package; 0 copies in admin/portfolio           |
+| H7  | No pagination on messages API       | HIGH     | ✅ FIXED | `messages.ts:22-35` — limit/offset/range with hasMore               |
 
 ---
 
 ## STILL OPEN — CRITICAL & HIGH
 
-| # | Issue | Severity | Effort | Fix Required |
-|---|-------|----------|--------|--------------|
-| H2 | Incomplete OpenAPI spec (~23% coverage) | [MEDIUM] | L | Add ~17 admin route schemas to `openapi.yaml` |
-| H5 | Replit `runtimeErrorOverlay` unconditional | [LOW] | S | Gate behind `REPL_ID` check in both vite configs |
-| E2E | TestSprite E2E tests blocked (npm vs pnpm) | [HIGH] | S | Fix `testsprite.config.json` startCommand to use pnpm |
+| #   | Issue                                      | Severity | Effort | Fix Required                                          |
+| --- | ------------------------------------------ | -------- | ------ | ----------------------------------------------------- |
+| H2  | Incomplete OpenAPI spec (~23% coverage)    | [MEDIUM] | L      | Add ~17 admin route schemas to `openapi.yaml`         |
+| H5  | Replit `runtimeErrorOverlay` unconditional | [LOW]    | S      | Gate behind `REPL_ID` check in both vite configs      |
+| E2E | TestSprite E2E tests blocked (npm vs pnpm) | [HIGH]   | S      | Fix `testsprite.config.json` startCommand to use pnpm |
 
 **Note**: No CRITICAL issues remain open. All 4 baseline criticals are fixed.
 
@@ -416,13 +437,13 @@ minimum release age check (`minimumReleaseAgeExclude`). This is documented as in
 
 ## NEW ISSUES FOUND
 
-| # | Issue | Severity | Scope |
-|---|-------|----------|-------|
-| E1 | `VITE_ADMIN_EMAILS` used server-side (misleading prefix) | [LOW] | [api-server] |
-| E2 | Error handler only categorizes `ValidationError` | [LOW] | [api-server] |
-| E3 | Migration numbering gaps (010, 016-019) | [INFO] | [supabase/migrations] |
-| E4 | `isProduction` referenced before declaration in app.ts | [INFO] | [api-server] |
-| E5 | `@replit/*` supply-chain age bypass | [LOW] | [root] |
+| #   | Issue                                                                                   | Severity | Scope                 |
+| --- | --------------------------------------------------------------------------------------- | -------- | --------------------- |
+| E1  | `VITE_ADMIN_EMAILS` used server-side (misleading prefix) — ✅ RESOLVED → `ADMIN_EMAILS` | [LOW]    | [api-server]          |
+| E2  | Error handler only categorizes `ValidationError`                                        | [LOW]    | [api-server]          |
+| E3  | Migration numbering gaps (010, 016-019)                                                 | [INFO]   | [supabase/migrations] |
+| E4  | `isProduction` referenced before declaration in app.ts                                  | [INFO]   | [api-server]          |
+| E5  | `@replit/*` supply-chain age bypass                                                     | [LOW]    | [root]                |
 
 ---
 
@@ -439,6 +460,7 @@ white screen (React app fails to mount).
 it expects servers to be pre-running on ports 5173/5174/3001.
 
 **Minimal fix**:
+
 1. `testsprite.config.json` — change `startCommand` to `pnpm --filter @workspace/portfolio dev`
    and `pnpm --filter @workspace/admin dev`
 2. `package.json` — add `"dev": "pnpm -r --parallel run dev"` script
@@ -452,20 +474,20 @@ it expects servers to be pre-running on ports 5173/5174/3001.
 
 **Re-scored: 3.5/10**
 
-| Category | Score | Notes |
-|----------|-------|-------|
-| Critical Debt | 0/10 ✅ | All 4 criticals fixed |
-| High Debt | 2/10 ⚠️ | E2E tests blocked, OpenAPI incomplete |
-| Medium Debt | 1/10 | OpenAPI coverage gap |
-| Low Debt | 3/10 | Env naming, error handler, Replit plugins, dead lib |
-| Dependency Debt | 0/10 ✅ | Supply-chain protections in place |
-| Database Debt | 0.5/10 | Migration numbering gaps only |
-| Security Debt | 0/10 ✅ | Clerk JWT, CSRF, rate limiting, input validation |
-| Testing Debt | 2/10 | Unit tests pass; E2E blocked by config |
-| Architecture Debt | 0.5/10 | `isProduction` hoisting, dead api-client-react |
-| Frontend Debt | 0/10 ✅ | UI consolidated, typed queries |
-| Documentation Debt | 2/10 | MEMORY_BANK stale references, OpenAPI incomplete |
-| **OVERALL** | **3.5/10** | Significant improvement from 6.8/10 baseline |
+| Category           | Score      | Notes                                               |
+| ------------------ | ---------- | --------------------------------------------------- |
+| Critical Debt      | 0/10 ✅    | All 4 criticals fixed                               |
+| High Debt          | 2/10 ⚠️    | E2E tests blocked, OpenAPI incomplete               |
+| Medium Debt        | 1/10       | OpenAPI coverage gap                                |
+| Low Debt           | 3/10       | Env naming, error handler, Replit plugins, dead lib |
+| Dependency Debt    | 0/10 ✅    | Supply-chain protections in place                   |
+| Database Debt      | 0.5/10     | Migration numbering gaps only                       |
+| Security Debt      | 0/10 ✅    | Clerk JWT, CSRF, rate limiting, input validation    |
+| Testing Debt       | 2/10       | Unit tests pass; E2E blocked by config              |
+| Architecture Debt  | 0.5/10     | `isProduction` hoisting, dead api-client-react      |
+| Frontend Debt      | 0/10 ✅    | UI consolidated, typed queries                      |
+| Documentation Debt | 2/10       | MEMORY_BANK stale references, OpenAPI incomplete    |
+| **OVERALL**        | **3.5/10** | Significant improvement from 6.8/10 baseline        |
 
 **Baseline comparison**: 6.8/10 → 3.5/10 = **49% debt reduction** in 4 days.
 
@@ -475,6 +497,7 @@ it expects servers to be pre-running on ports 5173/5174/3001.
 
 1. **MEMORY_BANK.md accuracy**: References `APP_ADMIN_EMAILS` (line 203) but code uses
    `VITE_ADMIN_EMAILS`. Should MEMORY_BANK.md be updated, or should the env var be renamed?
+   → ✅ RESOLVED (2026-08-14): renamed to server-only `ADMIN_EMAILS`; docs updated.
 
 2. **api-client-react disposition**: Dead code generated by orval. Should it be deleted,
    or is there a planned consumer?

@@ -25,8 +25,7 @@ The public portfolio has no authentication. It uses the Supabase anon key with p
    d. Fetches `/users/me` to determine the user's role
 7. ProtectedRoute component checks:
    a. Is user signed in? (Clerk session active)
-   b. Is user's email in VITE_ADMIN_EMAILS allowlist?
-   c. Is isAdmin = true (from auth context)?
+   b. Is isAdmin = true (from auth context, derived from the server's /users/me response)?
 8. If all pass → render admin page
 9. If any fails → "Access Denied" screen or redirect to /sign-in
 ```
@@ -72,7 +71,7 @@ A compile-time `AUTH_MISSING_KILL_SWITCH` flag (default: `false`) in `auth-token
 4. If Clerk JWT present → verifyToken() from @clerk/backend
    → Extract email from JWT claims (email or emailAddress)
    → If no email in JWT, fall back to clerkClient.users.getUser(clerkId)
-   → Check email against VITE_ADMIN_EMAILS allowlist
+   → Check email against ADMIN_EMAILS allowlist
    → If match → request proceeds with admin email
    → Sync user via syncUserFromClerk() (lib/user-sync.ts)
      - Lookup by clerk_id → by email → auto-create
@@ -92,18 +91,18 @@ If Clerk JWT verification fails but a valid `x-admin-key` header is present, the
 
 ## Email Allowlist Guard
 
-The `VITE_ADMIN_EMAILS` environment variable controls who can access admin features. It is a comma-separated list of email addresses:
+The `ADMIN_EMAILS` environment variable controls who can access admin features. It is a comma-separated list of email addresses:
 
 ```
-VITE_ADMIN_EMAILS=admin@example.com,other@example.com
+ADMIN_EMAILS=admin@example.com,other@example.com
 ```
 
-This is checked at two layers:
+This allowlist is server-only (the `VITE_` prefix was removed so it is never inlined into the client bundle). It is enforced at the API server:
 
-- **Frontend** (`admin/src/features/auth/components/auth.tsx`): `ProtectedRoute` reads `VITE_ADMIN_EMAILS` and compares against the Clerk user's primary email
-- **Backend** (`api-server/middleware/adminAuth.ts`): The middleware parses `VITE_ADMIN_EMAILS` at startup and checks against the verified JWT email
+- **Backend** (`api-server/middleware/adminAuth.ts`): The middleware checks the verified JWT email against the allowlist
+- **Frontend** (`admin/src/features/auth/components/ClerkAuthBridge.tsx`): `isAdmin` is derived from the server (`/users/me`, which is gated by the allowlist) rather than a bundled email list
 
-If `VITE_ADMIN_EMAILS` is empty and no `ADMIN_API_KEY` is set, the API server rejects all admin requests with 401.
+If `ADMIN_EMAILS` is empty and no `ADMIN_API_KEY` is set, the API server rejects all admin requests with 401.
 
 ## Protected Routes
 
@@ -224,10 +223,9 @@ CSP is applied via three independent layers:
 ## Adding a New Admin
 
 1. Add their email to the `app.admin_emails` database GUC (via Supabase SQL: `ALTER DATABASE postgres SET app.admin_emails = '...,new@email.com'`)
-2. Add their email to `VITE_ADMIN_EMAILS` in `artifacts/admin/.env.local`
-3. Add their email to `VITE_ADMIN_EMAILS` in `artifacts/api-server/.env`
-4. Invite them to the Clerk application
-5. The admin must create a JWT template named `admin` (or match `VITE_CLERK_JWT_TEMPLATE`) with the `email` claim
-6. They sign in via Clerk
-7. The `adminAuth` middleware syncs them to the `users` table on first authenticated request
-8. They can now access all admin features
+2. Add their email to `ADMIN_EMAILS` in `artifacts/api-server/.env`
+3. Invite them to the Clerk application
+4. The admin must create a JWT template named `admin` (or match `VITE_CLERK_JWT_TEMPLATE`) with the `email` claim
+5. They sign in via Clerk
+6. The `adminAuth` middleware syncs them to the `users` table on first authenticated request
+7. They can now access all admin features

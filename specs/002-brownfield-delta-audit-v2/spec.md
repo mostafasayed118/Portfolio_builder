@@ -175,6 +175,7 @@ Found 6 verified fixes, 3 still-open items, 5 new issues. Re-scored at 3.5/10.
 **Verification**: `artifacts/api-server/src/middleware/adminAuth.ts:2` imports `verifyToken` from `@clerk/backend`. Line 52 calls `await verifyToken(token, { secretKey: CLERK_SECRET_KEY })`. No `Buffer.from` or base64 decode pattern anywhere in the file. API key auth uses `timingSafeEqual` (line 17).
 
 **Evidence**:
+
 - `adminAuth.ts:2` — `import { verifyToken, createClerkClient } from "@clerk/backend"`
 - `adminAuth.ts:52` — `const payload = await verifyToken(token, { secretKey: CLERK_SECRET_KEY })`
 - No `Buffer.from` or `base64` in the file
@@ -238,6 +239,7 @@ Found 6 verified fixes, 3 still-open items, 5 new issues. Re-scored at 3.5/10.
 **Baseline claim**: UI components were triple-copied across artifacts.
 
 **Verification**: The two main artifacts (`portfolio`, `admin`) correctly import from `@workspace/ui` (`lib/ui/`). No `button.tsx` exists in either artifact. However:
+
 - `artifacts/mockup-sandbox/src/components/ui/button.tsx` — standalone sandbox, imports from `@/lib/utils`
 - `.local/skills/artifacts/*/src/components/ui/button.tsx` — Replit scaffolding templates (2 copies)
 - Same pattern for `input.tsx`, `dialog.tsx`, `card.tsx` (4 copies each)
@@ -297,6 +299,7 @@ Found 6 verified fixes, 3 still-open items, 5 new issues. Re-scored at 3.5/10.
 **Verification**: Both `portfolio/vite.config.ts:5,15` and `admin/vite.config.ts:5,14` unconditionally load `runtimeErrorOverlay()` from `@replit/vite-plugin-runtime-error-modal`. The `cartographer` and `dev-banner` plugins are properly gated behind `REPL_ID` (lines 16-27 in both). The `pnpm-workspace.yaml` catalog still lists all 3 `@replit/*` packages (lines 71-73) and excludes `@replit/*` from minimum release age (line 34).
 
 **Evidence**:
+
 - `portfolio/vite.config.ts:5` — `import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal"`
 - `portfolio/vite.config.ts:15` — `runtimeErrorOverlay()` (unconditional)
 - `admin/vite.config.ts:5,14` — same pattern
@@ -316,6 +319,7 @@ Found 6 verified fixes, 3 still-open items, 5 new issues. Re-scored at 3.5/10.
 **Baseline claim**: Messages API used `.select("*")` with no limit/offset.
 
 **Verification**: `artifacts/api-server/src/routes/admin/messages.ts` implements proper pagination:
+
 - Line 22: `const limit = Math.min(parseInt(..."50", 10), 200)` (capped at 200)
 - Line 23: `const offset = parseInt(..."0", 10)`
 - Line 25: `.select("*", { count: "exact" })`
@@ -337,11 +341,13 @@ Found 6 verified fixes, 3 still-open items, 5 new issues. Re-scored at 3.5/10.
 **Root cause**: Server not auto-started.
 
 `testsprite.config.json` defines `startCommand` fields (`cd artifacts/portfolio && npm run dev`) but:
+
 1. TestSprite MCP agent expects the server to already be running — it does not execute `startCommand`
 2. The `startCommand` uses `npm` instead of `pnpm` (line 6-7), which would fail to resolve `@workspace/*` dependencies even if executed
 3. No wrapper script exists to start servers before running tests
 
 **Evidence**:
+
 - `testsprite.config.json:6` — `"startCommand": "cd artifacts/portfolio && npm run dev"` (npm, not pnpm)
 - `testsprite_tests/tmp/raw_report.md` — "ERR_EMPTY_RESPONSE" / blank white page
 - No `run_all.py` or server-startup script exists
@@ -361,6 +367,7 @@ Found 6 verified fixes, 3 still-open items, 5 new issues. Re-scored at 3.5/10.
 ### Minimal Fix
 
 1. `playwright.config.ts` — Add `webServer` block:
+
    ```ts
    webServer: [
      {
@@ -397,6 +404,9 @@ Root `package.json:12` has `"test": "vitest run"`. `vitest.config.ts` defines 5 
 `artifacts/api-server/src/middleware/adminAuth.ts:7` reads `process.env.VITE_ADMIN_EMAILS`. The `VITE_` prefix is a Vite convention for client-side env vars. Using it server-side works but is semantically misleading. MEMORY_BANK.md references the older `APP_ADMIN_EMAILS` name.
 
 **Severity**: [LOW] — Works correctly, but misleading naming.
+
+> **✅ RESOLVED (2026-08-14):** Renamed to the server-only `ADMIN_EMAILS` env var (the
+> `VITE_`-prefixed name was removed and the client now derives `isAdmin` from `/users/me`).
 
 ### [E2] `isProduction` referenced before declaration in app.ts — [NEW] [INFO]
 
@@ -438,25 +448,25 @@ MEMORY_BANK.md:203 references `APP_ADMIN_EMAILS` but code uses `VITE_ADMIN_EMAIL
 
 ## VERIFIED FIXES (since 2026-05-18)
 
-| # | Issue | Severity | Status | Evidence |
-|---|-------|----------|--------|----------|
-| C1 | Hardcoded credentials in test file | CRITICAL | ✅ FIXED | `testsprite_tests/run_all.py` does not exist |
-| C2 | JWT bypass via base64 decode | CRITICAL | ✅ FIXED | `adminAuth.ts:2,52` — uses `verifyToken()` from `@clerk/backend` |
-| C3 | `useQuery<any>` in editors | CRITICAL | ✅ FIXED | Grep in `artifacts/admin/src/pages/` → 0 matches |
-| C4 | Dual HeroManager/HeroEditor routing | CRITICAL | ✅ FIXED | `HeroManager.tsx` deleted, `App.tsx:66` routes to `HeroEditor` only |
-| H7 | No pagination on messages API | HIGH | ✅ FIXED | `messages.ts:22-46` — limit/offset/range with hasMore |
+| #   | Issue                               | Severity | Status   | Evidence                                                            |
+| --- | ----------------------------------- | -------- | -------- | ------------------------------------------------------------------- |
+| C1  | Hardcoded credentials in test file  | CRITICAL | ✅ FIXED | `testsprite_tests/run_all.py` does not exist                        |
+| C2  | JWT bypass via base64 decode        | CRITICAL | ✅ FIXED | `adminAuth.ts:2,52` — uses `verifyToken()` from `@clerk/backend`    |
+| C3  | `useQuery<any>` in editors          | CRITICAL | ✅ FIXED | Grep in `artifacts/admin/src/pages/` → 0 matches                    |
+| C4  | Dual HeroManager/HeroEditor routing | CRITICAL | ✅ FIXED | `HeroManager.tsx` deleted, `App.tsx:66` routes to `HeroEditor` only |
+| H7  | No pagination on messages API       | HIGH     | ✅ FIXED | `messages.ts:22-46` — limit/offset/range with hasMore               |
 
 ---
 
 ## STILL OPEN — CRITICAL & HIGH
 
-| # | Issue | Severity | Effort | Fix Required |
-|---|-------|----------|--------|--------------|
-| C5 | Missing .env automation | [LOW] | S | Add `setup` script to root `package.json` |
-| H2 | Incomplete OpenAPI spec (~15% coverage) | [MEDIUM] | L | Add ~17 admin route schemas to `openapi.yaml` |
-| H3 | Unused api-client-react (dead code) | [LOW] | S | Remove from workspace config and delete directory |
-| H5 | Replit `runtimeErrorOverlay` unconditional | [LOW] | S | Gate behind `REPL_ID` check in both vite configs |
-| E2E | TestSprite + Playwright E2E tests blocked | [HIGH] | S | Add `webServer` to Playwright config; fix npm→pnpm in TestSprite config |
+| #   | Issue                                      | Severity | Effort | Fix Required                                                            |
+| --- | ------------------------------------------ | -------- | ------ | ----------------------------------------------------------------------- |
+| C5  | Missing .env automation                    | [LOW]    | S      | Add `setup` script to root `package.json`                               |
+| H2  | Incomplete OpenAPI spec (~15% coverage)    | [MEDIUM] | L      | Add ~17 admin route schemas to `openapi.yaml`                           |
+| H3  | Unused api-client-react (dead code)        | [LOW]    | S      | Remove from workspace config and delete directory                       |
+| H5  | Replit `runtimeErrorOverlay` unconditional | [LOW]    | S      | Gate behind `REPL_ID` check in both vite configs                        |
+| E2E | TestSprite + Playwright E2E tests blocked  | [HIGH]   | S      | Add `webServer` to Playwright config; fix npm→pnpm in TestSprite config |
 
 **Note**: No CRITICAL issues remain open. All 4 baseline criticals are verified fixed.
 
@@ -464,15 +474,15 @@ MEMORY_BANK.md:203 references `APP_ADMIN_EMAILS` but code uses `VITE_ADMIN_EMAIL
 
 ## NEW ISSUES FOUND
 
-| # | Issue | Severity | Scope |
-|---|-------|----------|-------|
-| E1 | `VITE_ADMIN_EMAILS` used server-side (misleading prefix) | [LOW] | [api-server] |
-| E2 | `isProduction` referenced before declaration in app.ts | [INFO] | [api-server] |
-| E3 | Migration numbering gaps (010, 016-019) | [INFO] | [supabase/migrations] |
-| E4 | `@replit/*` supply-chain age bypass | [LOW] | [root] |
-| E5 | CSP still uses `'unsafe-inline'` for styles | [LOW] | [api-server] |
-| E6 | MEMORY_BANK.md stale references (env var name, debt score) | [LOW] | [documentation] |
-| E7 | Error handler only categorizes `ValidationError` | [LOW] | [api-server] |
+| #   | Issue                                                                                   | Severity | Scope                 |
+| --- | --------------------------------------------------------------------------------------- | -------- | --------------------- |
+| E1  | `VITE_ADMIN_EMAILS` used server-side (misleading prefix) — ✅ RESOLVED → `ADMIN_EMAILS` | [LOW]    | [api-server]          |
+| E2  | `isProduction` referenced before declaration in app.ts                                  | [INFO]   | [api-server]          |
+| E3  | Migration numbering gaps (010, 016-019)                                                 | [INFO]   | [supabase/migrations] |
+| E4  | `@replit/*` supply-chain age bypass                                                     | [LOW]    | [root]                |
+| E5  | CSP still uses `'unsafe-inline'` for styles                                             | [LOW]    | [api-server]          |
+| E6  | MEMORY_BANK.md stale references (env var name, debt score)                              | [LOW]    | [documentation]       |
+| E7  | Error handler only categorizes `ValidationError`                                        | [LOW]    | [api-server]          |
 
 ---
 
@@ -489,6 +499,7 @@ MEMORY_BANK.md:203 references `APP_ADMIN_EMAILS` but code uses `VITE_ADMIN_EMAIL
 3. **Secondary**: Both configs assume servers are pre-running on ports 5173/5174/3001. No documentation tells developers to start servers before running E2E tests.
 
 **Minimal fix** (config-only, < 1hr):
+
 1. `playwright.config.ts` — Add `webServer` array with commands for portfolio (5173) and admin (5174)
 2. `testsprite.config.json` — Change `npm run dev` to `pnpm --filter @workspace/portfolio dev` and `pnpm --filter @workspace/admin dev`
 3. `package.json` — Add `"dev": "pnpm -r --parallel run dev"` convenience script
@@ -499,20 +510,20 @@ MEMORY_BANK.md:203 references `APP_ADMIN_EMAILS` but code uses `VITE_ADMIN_EMAIL
 
 **Re-scored: 3.5/10** (confirmed — matches prior audit)
 
-| Category | Score | Notes |
-|----------|-------|-------|
-| Critical Debt | 0/10 ✅ | All 4 criticals verified fixed |
-| High Debt | 2/10 ⚠️ | E2E tests blocked (config), OpenAPI incomplete |
-| Medium Debt | 1/10 | OpenAPI coverage gap |
-| Low Debt | 3/10 | Env naming, error handler, Replit plugins, dead lib, CSP |
-| Dependency Debt | 0/10 ✅ | Supply-chain protections in place |
-| Database Debt | 0.5/10 | Migration numbering gaps only |
-| Security Debt | 0/10 ✅ | Clerk JWT, CSRF, rate limiting, input validation |
-| Testing Debt | 2/10 | Unit tests pass; E2E blocked by config |
-| Architecture Debt | 0.5/10 | `isProduction` hoisting, dead api-client-react |
-| Frontend Debt | 0/10 ✅ | UI consolidated, typed queries |
-| Documentation Debt | 2/10 | MEMORY_BANK stale, OpenAPI incomplete |
-| **OVERALL** | **3.5/10** | Significant improvement from 7.5/10 MEMORY_BANK baseline |
+| Category           | Score      | Notes                                                    |
+| ------------------ | ---------- | -------------------------------------------------------- |
+| Critical Debt      | 0/10 ✅    | All 4 criticals verified fixed                           |
+| High Debt          | 2/10 ⚠️    | E2E tests blocked (config), OpenAPI incomplete           |
+| Medium Debt        | 1/10       | OpenAPI coverage gap                                     |
+| Low Debt           | 3/10       | Env naming, error handler, Replit plugins, dead lib, CSP |
+| Dependency Debt    | 0/10 ✅    | Supply-chain protections in place                        |
+| Database Debt      | 0.5/10     | Migration numbering gaps only                            |
+| Security Debt      | 0/10 ✅    | Clerk JWT, CSRF, rate limiting, input validation         |
+| Testing Debt       | 2/10       | Unit tests pass; E2E blocked by config                   |
+| Architecture Debt  | 0.5/10     | `isProduction` hoisting, dead api-client-react           |
+| Frontend Debt      | 0/10 ✅    | UI consolidated, typed queries                           |
+| Documentation Debt | 2/10       | MEMORY_BANK stale, OpenAPI incomplete                    |
+| **OVERALL**        | **3.5/10** | Significant improvement from 7.5/10 MEMORY_BANK baseline |
 
 **Baseline comparison**: 7.5/10 (MEMORY_BANK) → 3.5/10 = **53% debt reduction**.
 
@@ -521,6 +532,7 @@ MEMORY_BANK.md:203 references `APP_ADMIN_EMAILS` but code uses `VITE_ADMIN_EMAIL
 ## OPEN QUESTIONS
 
 1. **MEMORY_BANK.md accuracy**: References `APP_ADMIN_EMAILS` (line 203) but code uses `VITE_ADMIN_EMAILS`. Should MEMORY_BANK.md be updated, or should the env var be renamed?
+   → ✅ RESOLVED (2026-08-14): renamed to server-only `ADMIN_EMAILS`; docs updated.
 
 2. **api-client-react disposition**: Dead code generated by orval. Should it be deleted, or is there a planned consumer?
 

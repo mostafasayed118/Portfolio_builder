@@ -87,7 +87,7 @@ COMMENT ON FUNCTION is_admin()
 -- 045_admin_is_admin_users_table.sql): a signed-in email is admin when
 -- a matching row exists in `users`. The `users` table is populated by
 -- the API server when it syncs Clerk users whose email is in the
--- VITE_ADMIN_EMAILS allowlist, so no database-level GUC is required.
+-- ADMIN_EMAILS allowlist, so no database-level GUC is required.
 --
 -- NOTE: Supabase managed Postgres forbids `ALTER DATABASE ... SET` for
 -- custom parameters ("permission denied to set parameter"), so the

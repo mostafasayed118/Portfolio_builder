@@ -41,7 +41,7 @@ cp artifacts/api-server/.env.example artifacts/api-server/.env
 | `VITE_ADMIN_URL`                 | admin, api-server     | Yes      | Admin site URL (for CORS)                      | `http://localhost:5174`                     |
 | `VITE_CLERK_PUBLISHABLE_KEY`     | admin, api-server     | Yes      | Clerk publishable key                          | `pk_test_...`                               |
 | `VITE_CLERK_JWT_TEMPLATE`        | admin                 | No       | Clerk JWT template name (default: `admin`)     | `admin`                                     |
-| `VITE_ADMIN_EMAILS`              | admin, api-server     | Yes      | Comma-separated admin emails                   | `admin@example.com`                         |
+| `ADMIN_EMAILS`                   | api-server            | Yes      | Comma-separated admin emails                   | `admin@example.com`                         |
 | `SUPABASE_URL`                   | api-server            | Yes      | Supabase project URL (server-side)             | `https://xxx.supabase.co`                   |
 | `SUPABASE_SERVICE_ROLE_KEY`      | api-server            | Yes      | Supabase service role key                      | `eyJ...`                                    |
 | `CSRF_SECRET`                    | api-server            | Yes      | Random hex string for CSRF tokens              | `openssl rand -hex 32`                      |
