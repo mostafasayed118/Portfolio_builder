@@ -255,7 +255,7 @@ export async function getClerkToken(forceRefresh = false): Promise<string | null
       }
       // Retry once after a short delay (session hydration race condition)
       await new Promise((r) => setTimeout(r, 250));
-      const retryToken = await _getToken();
+      const retryToken = await _getToken(forceRefresh);
       if (import.meta.env.DEV) {
         const preview = retryToken ? `${retryToken.slice(0, 12)}…(${retryToken.length})` : "null";
         logDebug(`[auth-token] _getToken() retry returned: ${preview}`, "auth-token");

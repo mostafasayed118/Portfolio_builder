@@ -153,9 +153,14 @@ export async function runCollectionQuery<T = unknown>(
   const userColumn = options.userColumn ?? "user_id";
   const targetUserId = options.targetUserId ?? resolveTargetUserId(req, req.query.userId as string | undefined);
 
-  // Non-superadmin with no userId — return empty result immediately
+  // Non-superadmin with no userId — return an empty paginated result so the
+  // response shape matches the normal success path (consumers unwrap `data`
+  // and would otherwise receive a bare array).
   if (!targetUserId && req.user?.role !== "superadmin") {
-    return ok(res, []) as Response;
+    return ok(res, {
+      data: [],
+      pagination: { total: 0, limit, offset, hasMore: false },
+    }) as Response;
   }
 
   let query = supabase

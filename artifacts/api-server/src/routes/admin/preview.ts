@@ -1,6 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { getSupabaseClient } from "../../lib/supabase-client";
 import { ok, notFound, serverError } from "../../lib/api-response";
+import { requireSuperadmin } from "../../middleware/requireSuperadmin";
 
 /**
  * GET /api/v1/admin/preview/:entityType/:entityId
@@ -10,8 +11,8 @@ import { ok, notFound, serverError } from "../../lib/api-response";
  * draft content before publishing.
  *
  * Unlike the public GET endpoints which filter `.eq("is_published", true)`,
- * this endpoint always returns the row regardless of publish status,
- * but it requires adminAuth middleware (mounted via admin router).
+ * this endpoint always returns the row regardless of publish status. It is
+ * gated behind both adminAuth (mounted via admin router) and requireSuperadmin.
  */
 const router: IRouter = Router();
 
@@ -32,6 +33,7 @@ const VALID_TABLES = new Set([
 
 router.get(
   "/:entityType/:entityId",
+  requireSuperadmin,
   async (req: Request, res: Response) => {
     const entityType = req.params.entityType as string;
     const entityId = req.params.entityId as string;

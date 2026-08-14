@@ -78,8 +78,15 @@ router.post("/", contactLimiter, async (req: Request, res: Response) => {
   // 3. Honeypot: silently reject if the hidden "website" field has any value.
   // Return success to avoid tipping off the bot, but do not insert.
   const body = req.body as Record<string, unknown>;
-  if (typeof body.website === "string" && body.website.trim() !== "") {
-    logAbuse(req, "honeypot_triggered", { website_length: body.website.length });
+  // Honeypot: any non-empty value (string, array, object, number, boolean)
+  // signals a bot. A missing field or empty string is a real user.
+  const website = body.website;
+  const honeypotFilled =
+    typeof website === "string"
+      ? website.trim() !== ""
+      : website !== undefined && website !== null;
+  if (honeypotFilled) {
+    logAbuse(req, "honeypot_triggered", { website_type: typeof website });
     return ok(res, undefined); // silently drop
   }
 

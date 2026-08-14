@@ -1,5 +1,6 @@
 import { useAuth } from "@clerk/clerk-react";
 import { useLocation } from "wouter";
+import { Button } from "@workspace/ui";
 import { diag } from "./diag";
 import { SIGN_IN_URL } from "./constants";
 
@@ -34,12 +35,9 @@ export function NotAdminScreen({ email }: { email: string }) {
         <p className="text-muted-foreground text-sm">
           If you believe this is an error, contact the system administrator.
         </p>
-        <button
-          onClick={handleSignOut}
-          className="mt-4 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary min-h-[44px]"
-        >
+        <Button onClick={handleSignOut} className="mt-4 min-h-[44px]">
           Sign Out
-        </button>
+        </Button>
       </div>
     </div>
   );
