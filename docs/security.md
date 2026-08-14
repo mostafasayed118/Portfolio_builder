@@ -86,14 +86,14 @@ That is a follow-up task — see `TECHNICAL_DEBT_REPORT.md`.
 
 ## Authentication
 
-| Surface             | Mechanism                                                              | Where                                                         |
-| ------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------- |
-| Public portfolio    | None (intentional)                                                     | —                                                             |
-| Public contact POST | Honeypot + time-trap + rate limit + origin check                       | `public/contact.ts`                                           |
-| Admin sign-in       | Clerk JWT template (includes email claim)                              | `lib/auth/src/index.tsx` + `admin/src/features/auth/auth.tsx` |
-| Admin API           | Clerk JWT verified server-side + email allowlist (`VITE_ADMIN_EMAILS`) | `middleware/adminAuth.ts`                                     |
-| API key             | `timingSafeEqual` constant-time compare                                | `middleware/adminAuth.ts`                                     |
-| CV download         | Public (anon)                                                          | `routes/cv.ts` (with `is_published` gate on settings)         |
+| Surface             | Mechanism                                                         | Where                                                         |
+| ------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------- |
+| Public portfolio    | None (intentional)                                                | —                                                             |
+| Public contact POST | Honeypot + time-trap + rate limit + origin check                  | `public/contact.ts`                                           |
+| Admin sign-in       | Clerk JWT template (includes email claim)                         | `lib/auth/src/index.tsx` + `admin/src/features/auth/auth.tsx` |
+| Admin API           | Clerk JWT verified server-side + email allowlist (`ADMIN_EMAILS`) | `middleware/adminAuth.ts`                                     |
+| API key             | `timingSafeEqual` constant-time compare                           | `middleware/adminAuth.ts`                                     |
+| CV download         | Public (anon)                                                     | `routes/cv.ts` (with `is_published` gate on settings)         |
 
 The api-server's `getDefaultAdminUser()` provisions the API-key user with
 `role: "user"` (not `superadmin`) by default. Run
@@ -193,7 +193,7 @@ CSRF tokens are fetched on every mutating request by `admin/src/lib/api-client.t
 - [ ] A JWT template named `admin` exists in Clerk Dashboard with the `email` claim.
 - [ ] `VITE_CLERK_JWT_TEMPLATE` matches the template name in Clerk Dashboard.
 - [ ] RLS is enabled on every table (`SELECT * FROM pg_tables WHERE
-  rowsecurity = false;` should return 0 rows in `public`).
+rowsecurity = false;` should return 0 rows in `public`).
 - [ ] The `app.admin_emails` GUC is set at the database level.
 - [ ] The TestSprite / TestSprite API key in `opencode.json` uses
       `{env:TESTSPRITE_API_KEY}` substitution (not a hardcoded literal).

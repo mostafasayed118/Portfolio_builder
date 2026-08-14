@@ -55,7 +55,7 @@ high-severity issues.
 - **Timing-safe API-key comparison** in `adminAuth`
 - **HTML-escaped user input** in every React component (React's
   default escaping); no `dangerouslySetInnerHTML` is used
-- **Production fail-closed** for `VITE_ADMIN_EMAILS` — empty list
+- **Production fail-closed** for `ADMIN_EMAILS` — empty list
   grants nobody admin
 - **Email allowlist + DB role** dual-gate for superadmin elevation
 - **AbortController timeouts** on every fetch (5s CSRF, 15s API)

@@ -25,15 +25,15 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 
 ## Environment Variables
 
-| Variable | Used By | Description |
-|----------|---------|-------------|
-| `VITE_SUPABASE_URL` | portfolio, admin | Supabase project URL |
-| `VITE_SUPABASE_ANON_KEY` | portfolio, admin | Anon/publishable key for client-side queries |
-| `VITE_SUPABASE_SERVICE_ROLE_KEY` | admin | Service role key for admin operations |
-| `SUPABASE_URL` | api-server | Supabase project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | api-server | Service role key for server operations |
-| `VITE_CLERK_PUBLISHABLE_KEY` | admin | Clerk publishable key for admin auth |
-| `VITE_ADMIN_EMAILS` | admin | Comma-separated list of admin email addresses |
+| Variable                         | Used By          | Description                                   |
+| -------------------------------- | ---------------- | --------------------------------------------- |
+| `VITE_SUPABASE_URL`              | portfolio, admin | Supabase project URL                          |
+| `VITE_SUPABASE_ANON_KEY`         | portfolio, admin | Anon/publishable key for client-side queries  |
+| `VITE_SUPABASE_SERVICE_ROLE_KEY` | admin            | Service role key for admin operations         |
+| `SUPABASE_URL`                   | api-server       | Supabase project URL                          |
+| `SUPABASE_SERVICE_ROLE_KEY`      | api-server       | Service role key for server operations        |
+| `VITE_CLERK_PUBLISHABLE_KEY`     | admin            | Clerk publishable key for admin auth          |
+| `ADMIN_EMAILS`                   | api-server       | Comma-separated list of admin email addresses |
 
 ## Artifacts
 
@@ -73,6 +73,7 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 ## Database Schema (Supabase)
 
 18 tables migrated from Convex:
+
 - 8 singleton tables: `theme_settings`, `typography_settings`, `site_settings`,
   `seo_settings`, `hero_content`, `about_content`, `contact_info`, `cv_settings`
 - 10 collection tables: `skills`, `projects`, `experience`, `certifications`,
