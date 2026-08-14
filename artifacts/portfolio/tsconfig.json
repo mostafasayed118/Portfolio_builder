@@ -3,7 +3,6 @@
   "include": ["src/**/*", "middleware.ts"],
   "exclude": ["node_modules", "build", "dist", "src/test", "**/*.test.ts"],
   "compilerOptions": {
-    "noEmit": true,
     "jsx": "preserve",
     "lib": ["esnext", "dom", "dom.iterable"],
     "resolveJsonModule": true,
