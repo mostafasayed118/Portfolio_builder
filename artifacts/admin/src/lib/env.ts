@@ -36,17 +36,15 @@ export const adminEnv = getAdminEnv();
  * Returns the API server base URL, with explicit dev/prod behavior:
  *  - DEV: falls back to http://localhost:3001 with a one-time logWarn so
  *    local `pnpm dev` still works without a `.env`.
- *  - PROD: returns "" (empty string). Callers MUST handle this — the
- *    previous behavior of silently using localhost:3001 in production
- *    meant a misconfigured deploy would appear to "work" but every
- *    fetch would 404. Empty string forces the calling UI to show a
- *    visible error (or skip the action).
+ *  - PROD: uses the deployed API fallback when VITE_API_URL is absent.
+ *    Deployments can still point to another API by setting VITE_API_URL.
  */
+const DEFAULT_PRODUCTION_API_URL = "https://portfolio-builder-api-six.vercel.app";
 const _apiUrlWarned = new Set<string>();
 export function getApiUrl(): string {
   const env = getAdminEnv();
   const url = env.VITE_API_URL;
-  if (url) return url;
+  if (url) return url.replace(/\/$/, "");
   if (import.meta.env.DEV) {
     if (!_apiUrlWarned.has("dev-fallback")) {
       _apiUrlWarned.add("dev-fallback");
@@ -54,5 +52,9 @@ export function getApiUrl(): string {
     }
     return "http://localhost:3001";
   }
-  return "";
+  if (!_apiUrlWarned.has("production-fallback")) {
+    _apiUrlWarned.add("production-fallback");
+    logWarn(`[admin] VITE_API_URL not set — using the production API fallback ${DEFAULT_PRODUCTION_API_URL}`);
+  }
+  return DEFAULT_PRODUCTION_API_URL;
 }

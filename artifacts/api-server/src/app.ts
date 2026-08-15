@@ -78,8 +78,12 @@ app.use(
   }),
 );
 
+// Keep the known admin deployment usable even if VITE_ADMIN_URL was omitted
+// from the API deployment. An explicit VITE_ADMIN_URL still takes priority
+// and is required for custom domains.
+const DEFAULT_ADMIN_ORIGIN = "https://portfolio-builder-admin.vercel.app";
 const allowedOrigins = [
-  ...(env.IS_PRODUCTION ? [] : ["http://localhost:5173", "http://localhost:5174"]),
+  ...(env.IS_PRODUCTION ? [DEFAULT_ADMIN_ORIGIN] : ["http://localhost:5173", "http://localhost:5174"]),
   env.VITE_SITE_URL,
   env.VITE_ADMIN_URL,
   env.VERCEL_URL ? `https://${env.VERCEL_URL}` : undefined,
