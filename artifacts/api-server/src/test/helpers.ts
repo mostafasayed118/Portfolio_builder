@@ -11,6 +11,9 @@ import { vi } from "vitest";
 /** Shared admin-key used by route tests to authenticate as admin. */
 export const mockAdminKey = "test-admin-key";
 
+/** Shared Clerk JWT the route-test adminAuth mock also accepts as a Bearer token. */
+export const mockAdminToken = "mock-clerk-jwt-token";
+
 /** Build the chained Supabase client mock shared across route tests. */
 export function makeMockSupabase() {
   return {
@@ -27,11 +30,19 @@ export function makeMockSupabase() {
   };
 }
 
-/** Build the adminAuth middleware mock that accepts the given admin key. */
-export function makeAdminAuth(key: string = mockAdminKey) {
+/**
+ * Build the adminAuth middleware mock. Accepts the given admin key and,
+ * when a `token` is provided, also accepts `Authorization: Bearer <token>`.
+ * Mirrors the real middleware, which authenticates via either the
+ * `x-admin-key` header or a Clerk JWT bearer token.
+ */
+export function makeAdminAuth(key: string = mockAdminKey, token?: string) {
   return vi.fn((req: any, res: any, next: () => void) => {
     const adminKey = req.headers["x-admin-key"];
-    if (adminKey === key) {
+    const authHeader = req.headers.authorization;
+    const authorized =
+      adminKey === key || (!!token && authHeader === `Bearer ${token}`);
+    if (authorized) {
       (req as Record<string, unknown>).adminEmail = "admin@test.com";
       return next();
     }
@@ -102,5 +113,5 @@ vi.mock("@supabase/supabase-js", () => ({
 }));
 
 vi.mock("../middleware/adminAuth", () => ({
-  adminAuth: makeAdminAuth(),
+  adminAuth: makeAdminAuth(mockAdminKey, mockAdminToken),
 }));
