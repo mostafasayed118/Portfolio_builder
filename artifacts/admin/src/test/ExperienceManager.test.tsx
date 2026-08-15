@@ -1,17 +1,21 @@
 import { vi, describe, it, expect, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  renderWithProviders,
+  smartConfirmDialogMock,
+  smartEmptyStateMock,
+  stubUseToast,
+} from "./helpers";
 import { ExperienceManager } from "@/features/experience";
 
-const { mockList, mockCreate, mockUpdate, mockDelete, mockToastSuccess, mockToastError } = vi.hoisted(
+const { mockList, mockCreate, mockUpdate, mockDelete, mockToastSuccess } = vi.hoisted(
   () => ({
     mockList: vi.fn(),
     mockCreate: vi.fn(),
     mockUpdate: vi.fn(),
     mockDelete: vi.fn(),
     mockToastSuccess: vi.fn(),
-    mockToastError: vi.fn(),
   }),
 );
 
@@ -26,38 +30,11 @@ vi.mock("@/lib/api-client", () => ({
   },
 }));
 
-vi.mock("@workspace/ui", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@workspace/ui")>();
-  return {
-    ...actual,
-    useToast: () => ({ toast: mockToastSuccess }),
-  };
-});
+vi.mock("@workspace/ui", (importOriginal) => stubUseToast(importOriginal, mockToastSuccess));
 
-vi.mock("@/components/SmartConfirmDialog", () => ({
-  SmartConfirmDialog: ({ state, onCancel }: any) =>
-    state.isOpen ? (
-      <div data-testid="confirm-dialog">
-        <p>{state.title}</p>
-        <button onClick={state.onConfirm}>{state.confirmLabel}</button>
-        <button onClick={onCancel}>Cancel</button>
-      </div>
-    ) : null,
-}));
+vi.mock("@/components/SmartConfirmDialog", () => smartConfirmDialogMock());
 
-vi.mock("@/components/SmartEmptyState", () => ({
-  SmartEmptyState: ({ onAction }: any) => (
-    <div data-testid="empty-state">
-      <p>No experience entries</p>
-      <button onClick={onAction}>Add Entry</button>
-    </div>
-  ),
-}));
-
-function renderWithProviders(ui: React.ReactElement) {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
-}
+vi.mock("@/components/SmartEmptyState", () => smartEmptyStateMock("No experience entries", "Add Entry"));
 
 const mockExpItems = [
   {

@@ -87,3 +87,50 @@ export function renderAdmin(
 export function MockProviders({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
+
+/** Render a component in a fresh QueryClient (no Clerk/viewing-user providers). */
+export function renderWithProviders(ui: ReactElement) {
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
+}
+
+/**
+ * Returns the `@workspace/ui` module with `useToast` stubbed to record calls
+ * on `mockToast`. Use it lazily so vitest's `vi.mock` hoisting can resolve it:
+ *   vi.mock("@workspace/ui", (importOriginal) => stubUseToast(importOriginal, mockToast));
+ */
+export async function stubUseToast(
+  importOriginal: () => Promise<any>,
+  mockToast: ReturnType<typeof vi.fn>,
+) {
+  const actual = await importOriginal();
+  return { ...actual, useToast: () => ({ toast: mockToast }) };
+}
+
+/** Returns the shared `@/components/SmartConfirmDialog` mock module shape. */
+export function smartConfirmDialogMock() {
+  return {
+    SmartConfirmDialog: ({ state, onCancel }: any) =>
+      state.isOpen ? (
+        <div data-testid="confirm-dialog">
+          <p>{state.title}</p>
+          <button onClick={state.onConfirm}>{state.confirmLabel}</button>
+          <button onClick={onCancel}>Cancel</button>
+        </div>
+      ) : null,
+  };
+}
+
+/** Returns the shared `@/components/SmartEmptyState` mock module shape. */
+export function smartEmptyStateMock(emptyText: string, actionLabel: string) {
+  return {
+    SmartEmptyState: ({ onAction }: any) => (
+      <div data-testid="empty-state">
+        <p>{emptyText}</p>
+        <button onClick={onAction}>{actionLabel}</button>
+      </div>
+    ),
+  };
+}
