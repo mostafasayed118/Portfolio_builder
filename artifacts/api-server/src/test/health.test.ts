@@ -31,6 +31,21 @@ describe("GET /api/healthz — liveness check", () => {
     expect(res.body.uptime).toBeGreaterThanOrEqual(0);
   });
 
+  it("does NOT include the legacy db / api nested objects", async () => {
+    const res = await request(app).get("/api/healthz");
+    expect(res.body).not.toHaveProperty("db");
+    expect(res.body).not.toHaveProperty("api");
+  });
+
+  it("returns identical status for two back-to-back calls (no caching, no state)", async () => {
+    const res1 = await request(app).get("/api/healthz");
+    const res2 = await request(app).get("/api/healthz");
+    expect(res1.status).toBe(200);
+    expect(res2.status).toBe(200);
+    expect(res1.body.status).toBe("ok");
+    expect(res2.body.status).toBe("ok");
+  });
+
   it("reports the configured environment", async () => {
     _setOverride("NODE_ENV", "production");
     const res = await request(app).get("/api/healthz");
