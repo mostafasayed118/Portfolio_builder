@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, NotebookPen, CalendarCheck2 } from "lucide-react";
+import { Loader2, Plus, NotebookPen, CalendarCheck2, Image as ImageIcon } from "lucide-react";
 import { api } from "@/lib/api-client";
 import {
   Button, Card, CardContent, Input, Textarea, Badge, Switch,
@@ -11,6 +11,8 @@ import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
 import { SmartEmptyState } from "@/components/SmartEmptyState";
 import { AdminErrorState } from "@/components/AdminErrorState";
 import { AdminLoadingState } from "@/components/AdminLoadingState";
+import ImageUploader, { type UploadedImage } from "@/components/ImageUploader";
+import MarkdownEditor from "@/features/posts/components/MarkdownEditor";
 import { useEntityQuery } from "@/lib/use-entity-query";
 import type { BlogPost } from "@workspace/supabase/types";
 
@@ -97,6 +99,15 @@ export default function PostsManager() {
 
   const removeTag = (tag: string) => {
     setEditing((prev) => ({ ...prev, tags: (prev.tags ?? []).filter((t) => t !== tag) }));
+  };
+
+  const handleCoverUpload = (images: UploadedImage[]) => {
+    const image = images.at(-1);
+    const coverUrl = image?.variants.find((variant) => variant.type === "social")?.url
+      ?? image?.variants.find((variant) => variant.type === "medium")?.url
+      ?? image?.url
+      ?? null;
+    setEditing((prev) => ({ ...prev, cover_image_url: coverUrl }));
   };
 
   const handleSave = async () => {
@@ -258,19 +269,23 @@ export default function PostsManager() {
               <Textarea value={editing.excerpt ?? ""} onChange={(e) => setEditing((p) => ({ ...p, excerpt: e.target.value }))} rows={2} maxLength={500} />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Cover image URL</label>
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                <ImageIcon className="h-3.5 w-3.5" /> Cover image
+              </label>
               <Input value={editing.cover_image_url ?? ""} onChange={(e) => setEditing((p) => ({ ...p, cover_image_url: e.target.value || null }))} placeholder="https://…" />
+              <ImageUploader
+                entityType="content"
+                maxFiles={1}
+                onUploadComplete={handleCoverUpload}
+              />
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">Content (Markdown) *</label>
-              <Textarea
+              <MarkdownEditor
                 value={editing.content ?? ""}
-                onChange={(e) => setEditing((p) => ({ ...p, content: e.target.value }))}
-                rows={10}
-                placeholder={"## Heading\n\nWrite your article in Markdown…"}
-                className="font-mono text-sm"
+                onChange={(content) => setEditing((p) => ({ ...p, content }))}
               />
             </div>
 
