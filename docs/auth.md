@@ -32,11 +32,11 @@ The public portfolio has no authentication. It uses the Supabase anon key with p
 
 ### JWT Expiration Handling
 
-Clerk session tokens expire after ~59 minutes (Clerk's default). The client now detects expiration proactively:
+Clerk session tokens expire after ~59 minutes (Clerk's default). The client refreshes them proactively:
 
-1. **`isTokenLikelyValid()`** calls `isJwtExpired()` which decodes the JWT payload and checks `exp` with a 30-second buffer. If expired, the token is rejected before the request is sent.
-2. **`getClerkToken(forceRefresh)`** supports a `forceRefresh` parameter. When `true`, it re-invokes the Clerk `getToken()` to bypass any stale cache. The api-client uses this for 401 auto-refresh.
-3. **401 auto-refresh in `doFetch()`**: When a server returns 401, the api-client force-refreshes the token and retries once. Only after the second 401 does it fire the auth-missing handler (sign-out + redirect).
+1. **`isTokenLikelyValid()`** calls `isJwtExpired()` which decodes the JWT payload and checks `exp` with a 30-second buffer.
+2. **`getClerkToken(forceRefresh)`** requests a fresh Clerk token when a cached token is expired or near expiry. When `forceRefresh` is `true`, it bypasses Clerk's token cache.
+3. **401 auto-refresh in `doFetch()`**: When a server returns 401, the api-client force-refreshes the token, reuses that exact token for one retry, and only fires the auth-missing handler if refresh and retry both fail.
 4. **`auth-token.ts` file structure**: `ClerkAuthBridge.tsx`, `ProtectedRoute.tsx`, `SignInPage.tsx`, `AdminProviders.tsx` — split from the former 375-line `auth.tsx`.
 
 ### JWT Template Requirement

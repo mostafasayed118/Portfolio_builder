@@ -187,9 +187,9 @@ export function isJwtExpired(token: string): boolean {
  *
  * The expiration check was added after the server logs showed expired
  * JWTs (59 minutes after login — Clerk's default) being sent to the
- * backend without detection. The client must detect expiration so the
- * auth-missing handler fires BEFORE the 401 arrives, enabling a
- * proactive redirect to /sign-in instead of a failed API call.
+ * backend without detection. The client detects expiration and requests a
+ * fresh Clerk token before sending the request. The auth-missing handler
+ * fires only when that refresh also fails, avoiding false logout redirects.
  */
 export function isTokenLikelyValid(token: string | null | undefined): token is string {
   if (typeof token !== "string") return false;
@@ -253,9 +253,11 @@ export async function getClerkToken(forceRefresh = false): Promise<string | null
           "auth-token",
         );
       }
-      // Retry once after a short delay (session hydration race condition)
+      // Retry once after a short delay (session hydration race condition).
+      // Bypass Clerk's cache on the retry so a normal token rotation is not
+      // mistaken for a signed-out session.
       await new Promise((r) => setTimeout(r, 250));
-      const retryToken = await _getToken(forceRefresh);
+      const retryToken = await _getToken(true);
       if (import.meta.env.DEV) {
         const preview = retryToken ? `${retryToken.slice(0, 12)}…(${retryToken.length})` : "null";
         logDebug(`[auth-token] _getToken() retry returned: ${preview}`, "auth-token");
@@ -268,13 +270,29 @@ export async function getClerkToken(forceRefresh = false): Promise<string | null
 
     const observedLength = token.length;
     if (!isTokenLikelyValid(token)) {
+      // Clerk can briefly return a cached token that is at or near expiry.
+      // Refresh it once before treating the session as missing; otherwise a
+      // normal session refresh can look like a logout to the admin app.
+      if (!forceRefresh) {
+        if (import.meta.env.DEV) {
+          logInfo("[auth-token] Token is expired or expiring soon — requesting a fresh Clerk token", "auth-token");
+        }
+        const refreshedToken = await _getToken(true);
+        if (isTokenLikelyValid(refreshedToken)) {
+          if (import.meta.env.DEV) {
+            logDebug(`[auth-token] Returning refreshed token (length=${refreshedToken.length})`, "auth-token");
+          }
+          return refreshedToken;
+        }
+      }
+
       fireAuthMissing("token_invalid");
       if (import.meta.env.DEV) {
         logError(
-          "[auth-token] Clerk getToken() returned a token that failed validation. Refusing to attach to request.",
+          "[auth-token] Clerk getToken() returned a token that failed validation after refresh. Refusing to attach to request.",
           new Error("token_invalid"),
           "auth-token",
-          { length: observedLength },
+          { length: observedLength, forceRefresh },
         );
       }
       return null;
