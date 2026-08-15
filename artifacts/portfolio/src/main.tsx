@@ -31,3 +31,15 @@ createRoot(rootEl).render(
     <App />
   </RootErrorBoundary>
 );
+
+// Offline support: register the app-shell service worker in production only.
+// Registration is best-effort — failures (private browsing, unsupported
+// browsers) are ignored. Dev/e2e servers never register it, so they stay
+// uncached and deterministic.
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {
+      // Ignore: SW support is an enhancement, not a requirement.
+    });
+  });
+}
