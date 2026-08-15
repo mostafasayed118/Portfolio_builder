@@ -17,8 +17,10 @@ import { resolve } from "path";
  * with the stub, only the API contract is exercised.
  */
 
-const API_KEY = "dev-admin-key-12345";
-const API_BASE = "http://localhost:3001";
+// Overridable so the same suite can run against any environment:
+//   E2E_API_BASE=https://… E2E_ADMIN_KEY=… playwright test
+const API_KEY = process.env.E2E_ADMIN_KEY ?? "dev-admin-key-12345";
+const API_BASE = process.env.E2E_API_BASE ?? "http://localhost:3001";
 const STORAGE_STATE = resolve(process.cwd(), "playwright/.auth/admin.json");
 
 test.use({ storageState: STORAGE_STATE });
