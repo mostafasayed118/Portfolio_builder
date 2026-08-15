@@ -21,6 +21,7 @@
     "./storage": "./src/storage.ts",
     "./analytics": "./src/analytics.ts",
     "./posts": "./src/posts.ts",
+    "./images": "./src/images.ts",
     "./reorder": "./src/reorder.ts"
   },
   "dependencies": {

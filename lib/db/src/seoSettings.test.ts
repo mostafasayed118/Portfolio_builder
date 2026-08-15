@@ -55,7 +55,7 @@ describe("seoSettings", () => {
       const insertCall = supabase.insert.mock.calls[0][0];
       expect(insertCall.title).toBe("Mustafa Sayed — Data Engineer");
       expect(insertCall.twitter_card).toBe("summary_large_image");
-      expect(insertCall.canonical_url).toBe("https://mustafasayed.replit.app");
+      expect(insertCall.canonical_url).toBe("https://mustafa-sayed-portfolio.vercel.app");
     });
 
     it("throws on insert error", async () => {

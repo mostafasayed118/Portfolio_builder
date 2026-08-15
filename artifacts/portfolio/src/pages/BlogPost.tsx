@@ -110,7 +110,7 @@ export default function BlogPostPage({ slug }: BlogPostPageProps) {
     );
   }
 
-  const baseUrl = import.meta.env.VITE_SITE_URL ?? "https://mustafasayed.replit.app";
+  const baseUrl = import.meta.env.VITE_SITE_URL ?? "https://mustafa-sayed-portfolio.vercel.app";
   const articleUrl = `${baseUrl}/blog/${post.slug}`;
 
   return (

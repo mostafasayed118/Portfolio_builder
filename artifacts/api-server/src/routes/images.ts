@@ -69,9 +69,10 @@ function verifyMagicBytes(buf: Buffer, declaredMime: string): boolean {
 }
 const VARIANTS: { suffix: string; width: number; height?: number; fit?: string }[] = [
   { suffix: "thumbnail", width: 150, height: 150, fit: "cover" },
-  { suffix: "small", width: 400, fit: "inside" },
-  { suffix: "medium", width: 800, fit: "inside" },
-  { suffix: "large", width: 1200, fit: "inside" },
+  // Supabase's transform API supports only cover/contain ("inside" returns 400).
+  { suffix: "small", width: 400, fit: "contain" },
+  { suffix: "medium", width: 800, fit: "contain" },
+  { suffix: "large", width: 1200, fit: "contain" },
   { suffix: "social", width: 1200, height: 630, fit: "cover" },
 ];
 
@@ -165,6 +166,33 @@ router.post(
   }
 },
 );
+
+const imageReorderSchema = z.object({
+  ordered_ids: z.array(z.string().uuid()).min(1).max(30),
+});
+
+// POST /api/images/reorder — persist gallery image order (admin only)
+router.post("/images/reorder", adminAuth, doubleCsrfProtection, async (req: Request, res: Response) => {
+  const result = imageReorderSchema.safeParse(req.body);
+  if (!result.success) {
+    return badRequest(res, result.error.flatten().fieldErrors as Record<string, string[]>);
+  }
+  try {
+    const supabase = getSupabaseClient();
+    // sort_order is 0-based and matches the array position of each id.
+    const updates = await Promise.all(
+      result.data.ordered_ids.map((id, index) =>
+        supabase.from("image_metadata").update({ sort_order: index }).eq("id", id),
+      ),
+    );
+    const failed = updates.find((u) => u.error);
+    if (failed?.error) throw new Error(failed.error.message);
+    return ok(res, undefined);
+  } catch (err) {
+    req.log.error({ err }, "Image reorder failed");
+    return serverError(res, "Failed to reorder images");
+  }
+});
 
 // GET /api/images/:id/metadata — get image metadata
 router.get("/images/:id/metadata", imageMetadataLimiter, async (req: Request, res: Response) => {

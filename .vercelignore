@@ -1,0 +1,16 @@
+# Keep deploys lean, but ONLY skip root-level tooling/deps — bare patterns
+# match at ANY depth, so e.g. "skills" would also strip
+# artifacts/portfolio/src/features/skills and break the build (EISDIR on
+# deploy). Anchor everything to the repo root with a leading slash.
+/.git
+/.vercel
+/node_modules
+/artifacts/*/node_modules
+/lib/*/node_modules
+/skills
+/testsprite_tests
+/graphify-out
+/.tmp-img
+/coverage
+/artifacts/*/coverage
+/lib/*/coverage

@@ -4,8 +4,8 @@ import { Link, useLocation } from "wouter";
 import { ArrowLeft, ExternalLink, Github, Calendar, Sparkles, FileX } from "lucide-react";
 import { PROJECTS } from "@/data/portfolio";
 import SEO, { generateProjectSchema } from "@/components/SEO";
-import { ProjectCard, mapDbProjectDetail } from "@/features/projects";
-import { useProjectBySlug } from "@/hooks/use-portfolio-data";
+import { ProjectCard, ProjectGallery, GalleryEmpty, GalleryPlaceholder, mapDbProjectDetail } from "@/features/projects";
+import { useProjectBySlug, useProjectImages } from "@/hooks/use-portfolio-data";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
 import { trackEvent } from "@workspace/db/analytics";
 import { logWarn } from "@/lib/logger";
@@ -71,6 +71,7 @@ export default function ProjectDetail({ slug }: ProjectDetailProps) {
   const [, navigate] = useLocation();
   const { t } = useLanguage();
   const { data: dbProject, isLoading } = useProjectBySlug(slug);
+  const { data: projectImages, isLoading: galleryLoading } = useProjectImages(dbProject?.id);
   const backTimer = useRef<number | null>(null);
 
   const backToProjects = () => {
@@ -141,7 +142,7 @@ export default function ProjectDetail({ slug }: ProjectDetailProps) {
       <SEO
         title={project.title}
         description={project.shortDescription}
-        url={`${import.meta.env.VITE_SITE_URL ?? "https://mustafasayed.replit.app"}/projects/${project.slug}`}
+        url={`${import.meta.env.VITE_SITE_URL ?? "https://mustafa-sayed-portfolio.vercel.app"}/projects/${project.slug}`}
         type="article"
         publishedTime={project.completedAt}
         tags={project.techStack}
@@ -182,6 +183,21 @@ export default function ProjectDetail({ slug }: ProjectDetailProps) {
                   {project.completedAt}
                 </span>
               </div>
+
+              {galleryLoading ? (
+                <GalleryPlaceholder />
+              ) : (projectImages && projectImages.length > 0) || dbProject?.image_url ? (
+                <ProjectGallery
+                  images={projectImages ?? []}
+                  title={project.title}
+                  fallbackUrl={dbProject?.image_url}
+                />
+              ) : (
+                <GalleryEmpty
+                  title={t.projects.galleryEmptyTitle}
+                  hint={t.projects.galleryEmptyHint}
+                />
+              )}
 
               <h1 className="text-4xl md:text-5xl font-display font-bold text-foreground">
                 {project.title}

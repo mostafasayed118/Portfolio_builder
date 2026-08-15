@@ -12,6 +12,9 @@
 
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve, join, basename } from "node:path";
+import { logInfo, logWarn, logError } from "@workspace/logging";
+
+const LOG_CTX = "verify-migrations";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -91,20 +94,19 @@ function findGaps(numbers: number[]): [number, number][] {
 // ─── Main ────────────────────────────────────────────────────────────────────
 
 function main(): void {
-  console.log("=== Migration Verification (TASK-015) ===\n");
+  logInfo("=== Migration Verification (TASK-015) ===", LOG_CTX);
 
   // Read migration directory
   let files: string[];
   try {
     files = readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith(".sql"));
   } catch (err) {
-    console.error(`ERROR: Cannot read migrations directory: ${MIGRATIONS_DIR}`);
-    console.error(err);
+    logError(`Cannot read migrations directory: ${MIGRATIONS_DIR}`, err, LOG_CTX);
     process.exit(1);
   }
 
   if (files.length === 0) {
-    console.error("ERROR: No .sql files found in migrations directory.");
+    logError("No .sql files found in migrations directory.", undefined, LOG_CTX);
     process.exit(1);
   }
 
@@ -118,7 +120,7 @@ function main(): void {
   for (const file of files) {
     const num = parseMigrationNumber(file);
     if (num === null) {
-      console.warn(`WARN: ${file} has no numeric prefix — skipping numbering.`);
+      logWarn(`${file} has no numeric prefix — skipping numbering.`, LOG_CTX);
       continue;
     }
 
@@ -144,28 +146,28 @@ function main(): void {
   const gaps = findGaps(numbers);
   const corrective = migrations.filter((m) => m.isCorrective);
 
-  console.log(`Total migrations: ${total}`);
-  console.log(`Numbered range:   ${String(minNum).padStart(3, "0")} — ${String(maxNum).padStart(3, "0")}`);
-  console.log(`Expected count:   ${maxNum - minNum + 1} (if no gaps)`);
+  logInfo(`Total migrations: ${total}`, LOG_CTX);
+  logInfo(`Numbered range:   ${String(minNum).padStart(3, "0")} — ${String(maxNum).padStart(3, "0")}`, LOG_CTX);
+  logInfo(`Expected count:   ${maxNum - minNum + 1} (if no gaps)`, LOG_CTX);
 
   // Gaps
   if (gaps.length === 0) {
-    console.log(`Gaps:             None`);
+    logInfo("Gaps:             None", LOG_CTX);
   } else {
-    console.log(`Gaps:             ${gaps.length} gap(s) found:`);
+    logInfo(`Gaps:             ${gaps.length} gap(s) found:`, LOG_CTX);
     for (const [from, to] of gaps) {
       const label = from === to
         ? `0${from}`.slice(-3)
         : `0${from}`.slice(-3) + "–" + `0${to}`.slice(-3);
-      console.log(`                  - ${label} (${to - from + 1} missing)`);
+      logInfo(`                  - ${label} (${to - from + 1} missing)`, LOG_CTX);
     }
   }
 
   // Corrective migrations
-  console.log(`\n--- Corrective Migrations (${corrective.length}) ---\n`);
+  logInfo(`\n--- Corrective Migrations (${corrective.length}) ---`, LOG_CTX);
 
   if (corrective.length === 0) {
-    console.log("  None found.");
+    logInfo("  None found.", LOG_CTX);
   } else {
     // Table header
     const hdr = [
@@ -174,35 +176,35 @@ function main(): void {
       "Keyword".padEnd(10),
       "Purpose",
     ].join(" | ");
-    console.log(hdr);
-    console.log("-".repeat(hdr.length + 4));
+    logInfo(hdr, LOG_CTX);
+    logInfo("-".repeat(hdr.length + 4), LOG_CTX);
 
     for (const m of corrective) {
       const num = String(m.number).padStart(3, "0");
       const kw = (m.correctiveKeyword ?? "").padEnd(10);
       const purpose = m.firstComment ?? "(no comment found)";
-      console.log(`${num} | ${m.filename.padEnd(48)} | ${kw} | ${purpose}`);
+      logInfo(`${num} | ${m.filename.padEnd(48)} | ${kw} | ${purpose}`, LOG_CTX);
     }
   }
 
   // Full listing
-  console.log(`\n--- All Migrations (${total}) ---\n`);
+  logInfo(`\n--- All Migrations (${total}) ---`, LOG_CTX);
 
   const listHdr = [
     "#".padStart(3),
     "File".padEnd(48),
     "Corrective?",
   ].join(" | ");
-  console.log(listHdr);
-  console.log("-".repeat(listHdr.length + 2));
+  logInfo(listHdr, LOG_CTX);
+  logInfo("-".repeat(listHdr.length + 2), LOG_CTX);
 
   for (const m of migrations) {
     const num = String(m.number).padStart(3, "0");
     const flag = m.isCorrective ? `YES (${m.correctiveKeyword})` : "no";
-    console.log(`${num} | ${m.filename.padEnd(48)} | ${flag}`);
+    logInfo(`${num} | ${m.filename.padEnd(48)} | ${flag}`, LOG_CTX);
   }
 
-  console.log("\n=== Verification complete ===");
+  logInfo("\n=== Verification complete ===", LOG_CTX);
 }
 
 main();

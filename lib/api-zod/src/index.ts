@@ -1,6 +1,8 @@
 export * from "./generated/api";
 export { certificationSchema } from "./certifications";
 export type { CertificationInput } from "./certifications";
+export { themePresetSchema } from "./theme-presets";
+export type { ThemePresetInput } from "./theme-presets";
 export { cvSettingsUpdateSchema } from "./cv";
 export type { CvSettingsUpdateInput } from "./cv";
 export {

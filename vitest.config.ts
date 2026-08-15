@@ -77,6 +77,16 @@ export default defineConfig({
         },
       },
       {
+        name: "logging",
+        test: {
+          root: path.resolve(dirname, "lib/logging"),
+          environment: "node",
+          include: ["src/**/*.test.ts"],
+          globals: true,
+          testTimeout: 15_000,
+        },
+      },
+      {
         name: "validation",
         test: {
           root: path.resolve(dirname, "lib/validation"),
