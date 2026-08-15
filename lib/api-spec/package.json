@@ -3,6 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "codegen": "echo 'orval config removed'"
+    "codegen": "orval --config ./orval.config.ts"
+  },
+  "devDependencies": {
+    "orval": "^8.5.2"
   }
 }

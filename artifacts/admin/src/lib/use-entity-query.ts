@@ -3,6 +3,15 @@ import { useViewingUser } from "./viewing-user-context";
 import { api } from "./api-client";
 import type { Certification, Experience, Project, Skill, Message } from "@workspace/supabase/types";
 
+/** The `{ success, data }` envelope the API returns on success. */
+type ApiResult<T> = { success: true; data?: T } | { success: false; message: string };
+
+/** The paginated wrapper collection endpoints nest inside `data`. */
+type Paginated<T> = {
+  data?: T;
+  pagination?: { total: number; limit: number; offset: number; hasMore: boolean };
+};
+
 /**
  * Hook factory that produces a React Query for a given admin entity,
  * properly keyed by `viewingUserId` so superadmin user-switching
@@ -21,7 +30,7 @@ import type { Certification, Experience, Project, Skill, Message } from "@worksp
  */
 export function useEntityQuery<T>(
   entity: "projects" | "skills" | "experience" | "certifications" | "messages" | "posts",
-  fetcher: (userId: string | null) => Promise<{ success: true; data?: T } | { success: false; message: string }>,
+  fetcher: (userId: string | null) => Promise<ApiResult<Paginated<T>>>,
   options?: Omit<UseQueryOptions<T, Error, T, readonly unknown[]>, "queryKey" | "queryFn">,
 ) {
   const { viewingUserId } = useViewingUser();
@@ -30,21 +39,15 @@ export function useEntityQuery<T>(
     queryFn: async () => {
       const res = await fetcher(viewingUserId);
       if (!res.success) throw new Error(res.message);
-      const payload = res.data as { data?: T } | T;
       // Collection endpoints return { data: [...], pagination } inside
       // `res.data`. Unwrap the array so managers receive a real list —
       // otherwise `projects?.filter(...)` etc. crash with
       // "X.filter is not a function".
-      if (
-        payload &&
-        typeof payload === "object" &&
-        !Array.isArray(payload) &&
-        "data" in payload &&
-        Array.isArray((payload as { data: unknown }).data)
-      ) {
-        return (payload as { data: T }).data;
+      const payload = res.data;
+      if (payload && Array.isArray(payload.data)) {
+        return payload.data as T;
       }
-      return payload as T;
+      return payload as unknown as T;
     },
     ...options,
   });

@@ -19,11 +19,11 @@ export function SeedDialog() {
     setResult(null);
 
     const res = await api.seed.run();
-    if (res.success && res.data) {
+    if (res.success && "summary" in res) {
       setResult({
         success: true,
-        summary: res.data.summary,
-        errors: res.data.errors,
+        summary: res.summary,
+        errors: res.errors,
       });
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       queryClient.invalidateQueries({ queryKey: ["skills"] });

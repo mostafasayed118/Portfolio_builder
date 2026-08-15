@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { setCaptureError } from "@workspace/logging";
 import App from "./App";
 import "./index.css";
+import "./lib/api-client-setup";
 import { AdminProviders } from "@/features/auth";
 
 // Initialize Sentry error monitoring if VITE_SENTRY_DSN is configured.
