@@ -287,4 +287,26 @@ router.post("/bulk-archive", doubleCsrfProtection, async (req: AuthenticatedRequ
   return ok(res, undefined);
 });
 
+/**
+ * Bulk unarchive — clears `deleted_at` back to null for the whole batch,
+ * restoring every row to the inbox in one statement. The inverse of
+ * bulk-archive, with the same `{ ids }` contract and user scoping.
+ */
+router.post("/bulk-unarchive", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
+  const supabase = getSupabaseClient();
+  const result = bulkDeleteSchema.safeParse(req.body);
+  if (!result.success) {
+    return badRequest(res, result.error.flatten().fieldErrors);
+  }
+  const { ids } = result.data;
+  const isSuperadmin = req.user?.role === "superadmin";
+  let query = supabase.from("messages").update({ deleted_at: null }).in("id", ids);
+  if (!isSuperadmin) {
+    query = query.eq("user_id", req.user?.id ?? "");
+  }
+  const { error } = await query;
+  if (error) return serverError(res, error.message);
+  return ok(res, undefined);
+});
+
 export default router;

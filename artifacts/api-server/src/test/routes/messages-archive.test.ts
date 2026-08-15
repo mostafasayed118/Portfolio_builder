@@ -164,6 +164,65 @@ describe("POST /api/v1/admin/messages/bulk-archive", () => {
   });
 });
 
+describe("POST /api/v1/admin/messages/bulk-unarchive", () => {
+  it("returns 401 without auth", async () => {
+    const res = await request(app)
+      .post("/api/v1/admin/messages/bulk-unarchive")
+      .send({ ids: [UUID] });
+    expect(res.status).toBe(401);
+  });
+
+  it("clears deleted_at back to null on every id in the batch", async () => {
+    const res = await request(app)
+      .post("/api/v1/admin/messages/bulk-unarchive")
+      .set("x-admin-key", mockAdminKey)
+      .send({ ids: [UUID, "22222222-2222-2222-2222-222222222222"] });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty("success", true);
+    const patch = mockSupabase.update.mock.calls[0][0] as Record<string, unknown>;
+    expect(patch).toHaveProperty("deleted_at", null);
+    // `.in()` runs on the chain returned by `update`; it must carry all
+    // batch ids — no partial restore.
+    const chain = mockSupabase.update.mock.results[0].value as { in: ReturnType<typeof vi.fn> };
+    expect(chain.in).toHaveBeenCalledWith("id", [
+      UUID,
+      "22222222-2222-2222-2222-222222222222",
+    ]);
+  });
+
+  it("rejects an empty ids array", async () => {
+    const res = await request(app)
+      .post("/api/v1/admin/messages/bulk-unarchive")
+      .set("x-admin-key", mockAdminKey)
+      .send({ ids: [] });
+
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects non-uuid ids", async () => {
+    const res = await request(app)
+      .post("/api/v1/admin/messages/bulk-unarchive")
+      .set("x-admin-key", mockAdminKey)
+      .send({ ids: ["nope"] });
+
+    expect(res.status).toBe(400);
+  });
+
+  it("surfaces a Supabase error as a 500", async () => {
+    mockSupabase.update.mockReturnValue({
+      in: vi.fn().mockResolvedValue({ error: { message: "boom" } }),
+    });
+    const res = await request(app)
+      .post("/api/v1/admin/messages/bulk-unarchive")
+      .set("x-admin-key", mockAdminKey)
+      .send({ ids: [UUID] });
+
+    expect(res.status).toBe(500);
+    expect(res.body).toHaveProperty("success", false);
+  });
+});
+
 describe("POST /api/v1/admin/messages/:id/unarchive", () => {
   it("returns 401 without auth", async () => {
     const res = await request(app).post(`/api/v1/admin/messages/${UUID}/unarchive`);

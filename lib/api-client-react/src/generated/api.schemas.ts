@@ -1149,6 +1149,10 @@ export type BulkArchiveMessages200 = SuccessEnvelope & ({
   data?: { [key: string]: unknown } | null;
 }) | ApiError;
 
+export type BulkUnarchiveMessages200 = SuccessEnvelope & ({
+  data?: { [key: string]: unknown } | null;
+}) | ApiError;
+
 export type ArchiveTestSubmissions200 = SuccessEnvelope & {
   data?: {
   archived: number;

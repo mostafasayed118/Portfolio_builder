@@ -32,6 +32,7 @@ import type {
   BulkArchiveMessages200,
   BulkDeleteInput,
   BulkDeleteMessages200,
+  BulkUnarchiveMessages200,
   CertificationInput,
   ContactInfoInput,
   ContactSubmissionInput,
@@ -3670,6 +3671,77 @@ export const useBulkArchiveMessages = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getBulkArchiveMessagesMutationOptions(options));
+    }
+
+export const getBulkUnarchiveMessagesUrl = () => {
+
+
+
+
+  return `/api/v1/admin/messages/bulk-unarchive`
+}
+
+/**
+ * @summary Bulk-unarchive messages (restore to inbox)
+ */
+export const bulkUnarchiveMessages = async (bulkDeleteInput: BulkDeleteInput, options?: Parameters<typeof customFetch>[1]): Promise<BulkUnarchiveMessages200> => {
+
+  return customFetch<BulkUnarchiveMessages200>(getBulkUnarchiveMessagesUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(bulkDeleteInput)
+  }
+);}
+
+
+
+
+
+export const getBulkUnarchiveMessagesMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkUnarchiveMessages>>, TError,{data: BodyType<BulkDeleteInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof bulkUnarchiveMessages>>, TError,{data: BodyType<BulkDeleteInput>}, TContext> => {
+
+const mutationKey = ['bulkUnarchiveMessages'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bulkUnarchiveMessages>>, {data: BodyType<BulkDeleteInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  bulkUnarchiveMessages(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BulkUnarchiveMessagesMutationResult = NonNullable<Awaited<ReturnType<typeof bulkUnarchiveMessages>>>
+    export type BulkUnarchiveMessagesMutationBody = BodyType<BulkDeleteInput>
+    export type BulkUnarchiveMessagesMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Bulk-unarchive messages (restore to inbox)
+ */
+export const useBulkUnarchiveMessages = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkUnarchiveMessages>>, TError,{data: BodyType<BulkDeleteInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof bulkUnarchiveMessages>>,
+        TError,
+        {data: BodyType<BulkDeleteInput>},
+        TContext
+      > => {
+      return useMutation(getBulkUnarchiveMessagesMutationOptions(options));
     }
 
 export const getArchiveTestSubmissionsUrl = () => {

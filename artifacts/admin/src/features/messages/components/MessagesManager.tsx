@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@workspace/ui";
 import { useToast } from "@workspace/ui";
 import {
@@ -83,6 +83,35 @@ export default function MessagesManager() {
     const list = msgs ?? [];
     return list.slice((page - 1) * pageSize, page * pageSize);
   }, [msgs, page, pageSize]);
+
+  // Selection toolbar state: the "Select all on page" checkbox operates on
+  // the currently rendered page only (not the whole fetched list, which can
+  // span multiple pages at 20–50 rows).
+  const pageIds = useMemo(
+    () => paginatedMessages.map((m) => m.id).filter((id): id is string => !!id),
+    [paginatedMessages],
+  );
+  const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
+  const somePageSelected = pageIds.some((id) => selectedIds.has(id));
+
+  const selectAllRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = somePageSelected && !allPageSelected;
+    }
+  }, [somePageSelected, allPageSelected]);
+
+  const toggleSelectAllOnPage = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allPageSelected) {
+        pageIds.forEach((id) => next.delete(id));
+      } else {
+        pageIds.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  };
 
   const openReply = (msg: Msg) => {
     setReplyTo(msg);
@@ -211,6 +240,27 @@ export default function MessagesManager() {
     }
   };
 
+  const handleBulkUnarchive = async () => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    try {
+      const res = await api.messages.bulkUnarchive(ids);
+      if (!res.success) throw new Error(res.message);
+      await queryClient.invalidateQueries({ queryKey: ["messages"] });
+      await queryClient.invalidateQueries({ queryKey: ["unreadCount"] });
+      setSelectedIds(new Set());
+      toast({
+        title: `Restored ${ids.length} message${ids.length === 1 ? "" : "s"}`,
+      });
+    } catch (err) {
+      toast({
+        title: "Failed to restore messages",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleArchive = async (msg: Msg) => {
     try {
       if (!msg.id) return;
@@ -303,22 +353,40 @@ export default function MessagesManager() {
         </Button>
       </div>
 
-      {selectedIds.size > 0 && (
+      {msgs && msgs.length > 0 && (
         <div className="flex flex-wrap items-center gap-3 rounded-md border bg-muted/40 px-3 py-2">
+          <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+            <input
+              type="checkbox"
+              ref={selectAllRef}
+              className="h-4 w-4 cursor-pointer accent-primary"
+              checked={allPageSelected}
+              aria-label="Select all on page"
+              onChange={toggleSelectAllOnPage}
+            />
+            Select all on page
+          </label>
           <span className="text-sm font-medium">
             {selectedIds.size} selected
           </span>
-          <Button size="sm" onClick={handleBulkArchive} className="min-h-[44px]">
-            Archive selected
-          </Button>
           <Button
             size="sm"
-            variant="ghost"
-            onClick={() => setSelectedIds(new Set())}
+            onClick={filter === "archived" ? handleBulkUnarchive : handleBulkArchive}
+            disabled={selectedIds.size === 0}
             className="min-h-[44px]"
           >
-            Clear
+            {filter === "archived" ? "Restore selected" : "Archive selected"}
           </Button>
+          {selectedIds.size > 0 && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setSelectedIds(new Set())}
+              className="min-h-[44px]"
+            >
+              Clear
+            </Button>
+          )}
         </div>
       )}
 
