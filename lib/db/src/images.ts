@@ -27,3 +27,37 @@ export async function listEntityImages(
     { table: IMAGE_TABLE, operation: "listEntityImages" },
   );
 }
+
+/**
+ * Fetches the cover image (lowest sort_order) for each entity in one query.
+ * Rows are ordered by sort_order then creation time, so the first row seen
+ * per entity is its cover. Returns exactly one row per entity, keyed by
+ * `entity_id`, for entity types where a card grid needs a single thumbnail
+ * (e.g. the portfolio projects section).
+ */
+export async function listCoversByEntity(
+  supabase: SupabaseClient,
+  entityType: string,
+  entityIds: string[],
+): Promise<ImageMetadata[]> {
+  if (entityIds.length === 0) return [];
+  const rows = await queryOrThrow<ImageMetadata[]>(
+    supabase
+      .from(IMAGE_TABLE)
+      .select("*")
+      .eq("entity_type", entityType)
+      .in("entity_id", entityIds)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true }),
+    { table: IMAGE_TABLE, operation: "listCoversByEntity" },
+  );
+  const seen = new Set<string>();
+  const covers: ImageMetadata[] = [];
+  for (const row of rows) {
+    if (row.entity_id && !seen.has(row.entity_id)) {
+      seen.add(row.entity_id);
+      covers.push(row);
+    }
+  }
+  return covers;
+}

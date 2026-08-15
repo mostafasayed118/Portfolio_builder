@@ -12,7 +12,7 @@ function safeHref(url: string | undefined): string | undefined {
   }
 }
 
-type HeroFormData = {
+export type HeroFormData = {
   name: string;
   typewriter_lines: string[];
   subtitle: string;

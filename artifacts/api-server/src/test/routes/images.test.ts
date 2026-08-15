@@ -266,6 +266,55 @@ describe("Images API", () => {
     });
   });
 
+  describe("POST /api/v1/images/reorder", () => {
+    const IDS = [
+      "00000000-0000-0000-0000-000000000001",
+      "00000000-0000-0000-0000-000000000002",
+      "00000000-0000-0000-0000-000000000003",
+    ];
+
+    it("returns 401 without auth", async () => {
+      const res = await request(app)
+        .post("/api/v1/images/reorder")
+        .send({ ordered_ids: IDS.slice(0, 1) });
+      expect([400, 401, 403]).toContain(res.status);
+    });
+
+    it("returns 400 for a non-UUID id or non-array body", async () => {
+      const res = await request(app)
+        .post("/api/v1/images/reorder")
+        .set("x-admin-key", mockAdminKey)
+        .send({ ordered_ids: ["not-a-uuid"] });
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+    });
+
+    it("returns 200 and assigns sort_order by array position", async () => {
+      const res = await request(app)
+        .post("/api/v1/images/reorder")
+        .set("x-admin-key", mockAdminKey)
+        .send({ ordered_ids: IDS });
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(mockSupabaseClient.update).toHaveBeenCalledWith({ sort_order: 0 });
+      expect(mockSupabaseClient.update).toHaveBeenCalledWith({ sort_order: 1 });
+      expect(mockSupabaseClient.update).toHaveBeenCalledWith({ sort_order: 2 });
+      expect(mockSupabaseClient.eq).toHaveBeenCalledWith("id", IDS[2]);
+    });
+
+    it("returns 500 when an update fails", async () => {
+      // First update's chain resolves to an error → Promise.all finds it.
+      mockSupabaseClient.eq.mockResolvedValueOnce({ data: null, error: { message: "boom" } });
+
+      const res = await request(app)
+        .post("/api/v1/images/reorder")
+        .set("x-admin-key", mockAdminKey)
+        .send({ ordered_ids: IDS.slice(0, 1) });
+      expect(res.status).toBe(500);
+      expect(JSON.stringify(res.body)).toMatch(/reorder/i);
+    });
+  });
+
   describe("DELETE /api/v1/images/:id", () => {
     it("returns 401 without auth", async () => {
       const res = await request(app).delete("/api/v1/images/00000000-0000-0000-0000-000000000001");

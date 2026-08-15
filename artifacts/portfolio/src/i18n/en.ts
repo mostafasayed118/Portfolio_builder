@@ -45,6 +45,8 @@ export interface TranslationKeys {
     challenges: string;
     outcome: string;
     completedAt: string;
+    galleryEmptyTitle: string;
+    galleryEmptyHint: string;
   };
   experience: {
     title: string;
@@ -161,6 +163,8 @@ export const en: TranslationKeys = {
     challenges: "Challenges",
     outcome: "Outcome",
     completedAt: "Completed",
+    galleryEmptyTitle: "No screenshots yet",
+    galleryEmptyHint: "Gallery images added from the admin dashboard's Project Editor will appear here.",
   },
   experience: {
     title: "Work Experience",

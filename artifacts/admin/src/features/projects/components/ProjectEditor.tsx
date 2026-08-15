@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { X, Image as ImageIcon, Plus } from "lucide-react";
-import { Badge, Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, Switch, Textarea } from "@workspace/ui";
+import { Badge, Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, Switch, Textarea, useToast } from "@workspace/ui";
 import ImageUploader from "@/components/ImageUploader";
 import { getSupabase } from "@/lib/supabase";
+import { api } from "@/lib/api-client";
+import { logError } from "@/lib/logger";
 import { listEntityImages } from "@workspace/db/images";
 import type { Project } from "@/features/projects/types";
 
@@ -17,6 +19,7 @@ interface ProjectEditorProps {
 }
 
 export function ProjectEditor({ editing, isNew, saving, onEdit, onSaved }: ProjectEditorProps) {
+  const { toast } = useToast();
   const [techInput, setTechInput] = useState("");
   const [metricInput, setMetricInput] = useState("");
   const [projectImages, setProjectImages] = useState<{ id: string; url: string }[]>([]);
@@ -58,6 +61,36 @@ export function ProjectEditor({ editing, isNew, saving, onEdit, onSaved }: Proje
   const removeTag = (field: "tech_stack" | "metrics", val: string) =>
     onEdit(e => ({ ...e!, [field]: (e![field] as string[]).filter(x => x !== val) }));
 
+  /** Permanently delete an attached gallery image (storage file + metadata). */
+  const deleteProjectImage = async (imageId: string) => {
+    try {
+      const res = await api.images.delete(imageId);
+      if (!res.success) throw new Error(res.message);
+      setProjectImages(prev => prev.filter(img => img.id !== imageId));
+      toast({ title: "Image deleted" });
+    } catch (err) {
+      logError("Failed to delete image", err, "ProjectEditor");
+      toast({ title: "Delete failed", variant: "destructive" });
+    }
+  };
+
+  /** Apply the new order optimistically, reverting on failure. */
+  const reorderProjectImages = async (orderedIds: string[]) => {
+    const previous = projectImages;
+    const byId = new Map(previous.map(img => [img.id, img]));
+    const next = orderedIds.map(id => byId.get(id)).filter(Boolean) as { id: string; url: string }[];
+    if (next.length !== previous.length) return; // ids changed mid-flight — ignore
+    setProjectImages(next);
+    try {
+      const res = await api.images.reorder(orderedIds);
+      if (!res.success) throw new Error(res.message);
+    } catch (err) {
+      logError("Failed to reorder images", err, "ProjectEditor");
+      setProjectImages(previous);
+      toast({ title: "Reorder failed", variant: "destructive" });
+    }
+  };
+
   return (
     <Dialog open={!!editing} onOpenChange={o => !o && onEdit(null)}>
       <DialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-xl max-h-[90vh] overflow-y-auto">
@@ -75,7 +108,14 @@ export function ProjectEditor({ editing, isNew, saving, onEdit, onSaved }: Proje
               <Textarea value={editing.description} onChange={e => onEdit(x => ({ ...x!, description: e.target.value }))} rows={3} /></div>
             <div className="space-y-2">
               <Label className="text-xs flex items-center gap-1.5"><ImageIcon size={12} /> Project Images</Label>
-              <ImageUploader entityType="projects" entityId={editing.id} maxFiles={5} existingImages={projectImages} />
+              <ImageUploader
+                entityType="projects"
+                entityId={editing.id}
+                maxFiles={5}
+                existingImages={projectImages}
+                onDeleteExisting={deleteProjectImage}
+                onReorderExisting={reorderProjectImages}
+              />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5"><Label className="text-xs">Category</Label>

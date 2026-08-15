@@ -99,6 +99,10 @@ export const api = {
     update: (id: string, data: Partial<SectionSetting>) => request<SectionSetting>("PUT", `/section-settings/${id}`, data),
     reorder: (items: { id: string; sort_order: number }[]) => request("POST", "/section-settings/reorder", { items }),
   },
+  images: {
+    delete: (id: string) => request("DELETE", `/images/${id}`),
+    reorder: (orderedIds: string[]) => request("POST", "/images/reorder", { ordered_ids: orderedIds }),
+  },
   siteSettings: {
     get: () => request<SiteSettings>("GET", "/site-settings"),
     update: (data: Partial<SiteSettings>) => request<SiteSettings>("PUT", "/site-settings", data),

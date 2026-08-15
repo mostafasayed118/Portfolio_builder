@@ -1,6 +1,6 @@
 import { useProjects as useDbProjects } from "@/hooks/use-portfolio-data";
 import { PROJECTS } from "@/data/portfolio";
-import type { Project } from "@/features/projects/types";
+import type { ImageVariant, Project } from "@/features/projects/types";
 
 export function useProjects() {
   const query = useDbProjects();
@@ -10,6 +10,7 @@ export function useProjects() {
 export function mapDbProject(
   p: { slug?: string | null; title: string; description: string; full_description?: string | null; tech_stack?: string[]; category?: string | null; featured?: boolean | null; github_url?: string | null; live_url?: string | null; metrics?: string[]; completed_at?: string | null; created_at?: string; sort_order?: number | null; is_published?: boolean | null },
   index: number,
+  cover?: { url: string; variants?: ImageVariant[] },
 ): Project {
   return {
     id: index + 1,
@@ -25,6 +26,7 @@ export function mapDbProject(
     metrics: p.metrics ?? [],
     images: [],
     completedAt: p.completed_at ?? p.created_at?.slice(0, 4) ?? "",
+    ...(cover ? { imageId: cover.url, imageVariants: cover.variants } : {}),
   };
 }
 

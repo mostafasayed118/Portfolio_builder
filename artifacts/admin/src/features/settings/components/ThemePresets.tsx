@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import { Check, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ThemePreviewData } from "@/features/settings/components/ThemePreview";
 
@@ -21,6 +21,56 @@ export interface ThemePreset {
   theme: ThemePreviewData;
 }
 
+/**
+ * Custom templates are stored in localStorage (client-side, per browser):
+ * they are the admin's personal workflow state, not site content, so they
+ * don't need a database table or API. The key is versioned so a future shape
+ * change can migrate rather than silently mis-parse.
+ */
+const CUSTOM_PRESETS_KEY = "pf-theme-custom-presets-v1";
+const MAX_CUSTOM_PRESETS = 10;
+
+const REQUIRED_THEME_KEYS: (keyof ThemePreviewData)[] = [
+  "mode", "lightPrimary", "lightAccent", "lightBackground", "lightForeground", "lightCard",
+  "lightBorder", "lightMuted", "lightMutedForeground", "lightRing",
+  "darkPrimary", "darkAccent", "darkBackground", "darkForeground", "darkCard",
+  "darkBorder", "darkMuted", "darkMutedForeground", "darkRing", "radius",
+];
+
+function isValidPreset(value: unknown): value is ThemePreset {
+  if (typeof value !== "object" || value === null) return false;
+  const p = value as Record<string, unknown>;
+  if (typeof p.id !== "string" || typeof p.name !== "string") return false;
+  if (typeof p.description !== "string") return false;
+  const theme = p.theme as Record<string, unknown> | undefined;
+  if (typeof theme !== "object" || theme === null) return false;
+  return REQUIRED_THEME_KEYS.every((key) => typeof theme[key] === "string");
+}
+
+/** Load the admin's saved custom templates (corrupt/legacy data is dropped). */
+export function loadCustomPresets(): ThemePreset[] {
+  try {
+    const raw = localStorage.getItem(CUSTOM_PRESETS_KEY);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(isValidPreset).slice(0, MAX_CUSTOM_PRESETS);
+  } catch {
+    return [];
+  }
+}
+
+/** Persist the admin's custom templates, newest first (capped). */
+export function saveCustomPresets(presets: ThemePreset[]): void {
+  try {
+    localStorage.setItem(CUSTOM_PRESETS_KEY, JSON.stringify(presets.slice(0, MAX_CUSTOM_PRESETS)));
+  } catch {
+    // Quota exceeded / storage disabled — non-fatal for the Theme Manager.
+  }
+}
+
+export const MAX_CUSTOM_TEMPLATES = MAX_CUSTOM_PRESETS;
+
 const COLOR_KEYS: (keyof ThemePreviewData)[] = [
   "lightPrimary", "lightAccent", "lightBackground", "lightForeground", "lightCard",
   "lightBorder", "lightMuted", "lightMutedForeground", "lightRing",
@@ -28,9 +78,16 @@ const COLOR_KEYS: (keyof ThemePreviewData)[] = [
   "darkBorder", "darkMuted", "darkMutedForeground", "darkRing", "radius",
 ];
 
-/** Returns the preset whose palette exactly matches `theme`, or null (custom). */
-export function findActivePreset(theme: ThemePreviewData): ThemePreset | null {
-  for (const preset of THEME_PRESETS) {
+/**
+ * Returns the preset whose palette exactly matches `theme`, or null (custom).
+ * Accepts the merged built-in + saved list so saved templates are recognized
+ * too — pass `[...THEME_PRESETS, ...customPresets]` from the caller.
+ */
+export function findActivePreset(
+  theme: ThemePreviewData,
+  presets: ThemePreset[] = THEME_PRESETS,
+): ThemePreset | null {
+  for (const preset of presets) {
     if (COLOR_KEYS.every((key) => preset.theme[key] === theme[key])) return preset;
   }
   return null;
@@ -210,14 +267,25 @@ function PresetSwatch({ theme }: { theme: ThemePreviewData }) {
 interface PresetPickerProps {
   activePresetId: string | null;
   onApply: (preset: ThemePreset) => void;
+  /** Saved custom templates to show alongside the built-ins (newest first). */
+  customPresets?: ThemePreset[];
+  /** When provided, custom templates render a delete button that calls this. */
+  onDeleteCustom?: (id: string) => void;
 }
 
 /** Selectable grid of theme templates shown above the manual color controls. */
-export function PresetPicker({ activePresetId, onApply }: PresetPickerProps) {
+export function PresetPicker({
+  activePresetId,
+  onApply,
+  customPresets = [],
+  onDeleteCustom,
+}: PresetPickerProps) {
+  const allPresets = [...customPresets, ...THEME_PRESETS];
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-      {THEME_PRESETS.map((preset) => {
+      {allPresets.map((preset) => {
         const active = preset.id === activePresetId;
+        const isCustom = customPresets.some((p) => p.id === preset.id);
         return (
           <button
             key={preset.id}
@@ -237,9 +305,29 @@ export function PresetPicker({ activePresetId, onApply }: PresetPickerProps) {
                 <Check className="h-3 w-3" aria-hidden="true" />
               </span>
             )}
+            {isCustom && onDeleteCustom && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteCustom(preset.id);
+                }}
+                aria-label={`Delete ${preset.name} template`}
+                className="absolute top-2 left-2 h-6 w-6 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+              </button>
+            )}
             <PresetSwatch theme={preset.theme} />
             <div className="mt-2">
-              <div className="text-sm font-medium">{preset.name}</div>
+              <div className="text-sm font-medium">
+                {preset.name}
+                {isCustom && (
+                  <span className="ml-1.5 align-middle text-[10px] uppercase tracking-wide text-muted-foreground border border-border rounded px-1 py-px">
+                    Custom
+                  </span>
+                )}
+              </div>
               <div className="text-xs text-muted-foreground mt-0.5 leading-snug">{preset.description}</div>
             </div>
           </button>
