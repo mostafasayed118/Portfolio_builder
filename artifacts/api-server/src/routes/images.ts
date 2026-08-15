@@ -69,9 +69,10 @@ function verifyMagicBytes(buf: Buffer, declaredMime: string): boolean {
 }
 const VARIANTS: { suffix: string; width: number; height?: number; fit?: string }[] = [
   { suffix: "thumbnail", width: 150, height: 150, fit: "cover" },
-  { suffix: "small", width: 400, fit: "inside" },
-  { suffix: "medium", width: 800, fit: "inside" },
-  { suffix: "large", width: 1200, fit: "inside" },
+  // Supabase's transform API supports only cover/contain ("inside" returns 400).
+  { suffix: "small", width: 400, fit: "contain" },
+  { suffix: "medium", width: 800, fit: "contain" },
+  { suffix: "large", width: 1200, fit: "contain" },
   { suffix: "social", width: 1200, height: 630, fit: "cover" },
 ];
 

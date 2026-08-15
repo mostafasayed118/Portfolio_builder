@@ -7,6 +7,7 @@ import { listPublishedProjects } from "@workspace/db/projects";
 import { listExperience } from "@workspace/db/experience";
 import { listCertifications } from "@workspace/db/certifications";
 import { fetchProjectBySlug } from "@workspace/db/projects";
+import { listEntityImages } from "@workspace/db/images";
 import { listPublishedPosts, getPublishedPostBySlug } from "@workspace/db/posts";
 import type { Skill as DbSkill } from "@workspace/supabase/types";
 import { SKILL_CATEGORIES } from "@/data/skills";
@@ -112,6 +113,27 @@ export function useProjectBySlug(slug: string | undefined) {
     ...POLL_OPTIONS,
     retry: 2,
     enabled: isSupabaseConfigured && !!slug,
+  });
+}
+
+/**
+ * Gallery images for a project, fetched from `image_metadata` (public RLS)
+ * and resolved to public storage URLs in the `project_images` bucket.
+ */
+export function useProjectImages(entityId: string | undefined) {
+  return useQuery({
+    queryKey: ["project-images", entityId],
+    queryFn: () =>
+      fetchWithSupabase(async (s) => {
+        const rows = await listEntityImages(s, "projects", entityId!);
+        return rows.map((row) => {
+          const { data } = s.storage.from("project_images").getPublicUrl(row.storage_path);
+          return { id: row.id, url: data.publicUrl };
+        });
+      }),
+    ...POLL_OPTIONS,
+    retry: 2,
+    enabled: isSupabaseConfigured && !!entityId,
   });
 }
 
