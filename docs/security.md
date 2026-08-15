@@ -69,20 +69,21 @@ Three independent CSP layers, scoped to each app:
 
 All three set `frame-ancestors 'none'` and `object-src 'none'`.
 
-### Production migration to nonces
+### Script loading policy
 
-The current `script-src` for api-server and the two SPAs is
-`'self' 'unsafe-inline'`. `'unsafe-inline'` is **required** by Vite-injected
-`<script type="module">` and by React 19's hydration helpers. To remove
-it, we would need to:
+Script loading is already fully hardened; there is no pending nonce
+migration.
 
-1. Configure Vite to emit a CSP nonce per request.
-2. Replace each inline `<script>` with the nonce attribute.
-3. Migrate the JSON-LD `<script type="application/ld+json">` blocks
-   (currently inlined by `SEO.tsx` via `createPortal`) to data attributes
-   that a runtime helper converts to JSON-LD.
-
-That is a follow-up task — see `TECHNICAL_DEBT_REPORT.md`.
+- **api-server** — serves no HTML or scripts (JSON plus a PDF download for
+  `/cv`), so its `script-src` is `'none'`. There is nothing to nonce.
+- **portfolio** (`artifacts/portfolio`) — a static Vite build on Vercel's
+  CDN. `middleware.ts` generates a fresh per-request nonce, stamps it into
+  the `__CSP_NONCE__` placeholder in inline scripts, and returns the
+  matching `Content-Security-Policy` header. Policy helpers live in
+  `src/lib/csp.ts` (unit-tested).
+- **admin** (`artifacts/admin`) — same mechanism as portfolio:
+  `middleware.ts` + `src/lib/csp.ts`, with Clerk (`*.clerk.accounts.dev`)
+  in `script-src` per Clerk's CSP guidance.
 
 ## Authentication
 

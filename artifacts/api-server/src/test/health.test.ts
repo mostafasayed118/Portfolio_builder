@@ -57,6 +57,20 @@ describe("GET /api/healthz — liveness check", () => {
     const res = await request(app).get("/api/healthz");
     expect(res.headers["x-content-type-options"]).toBe("nosniff");
   });
+
+  it("serves no scripts, so script-src is the strictest value 'none'", async () => {
+    const res = await request(app).get("/api/healthz");
+    const csp = res.headers["content-security-policy"] as string;
+    expect(csp).toBeDefined();
+    // Only script-src matters here — style-src legitimately keeps
+    // 'unsafe-inline' (styles cannot execute code). Match the exact
+    // directive (not script-src-attr, which also starts with "script-src").
+    const scriptSrc = csp
+      .split(";")
+      .map((directive) => directive.trim())
+      .find((directive) => directive.startsWith("script-src "));
+    expect(scriptSrc).toBe("script-src 'none'");
+  });
 });
 
 describe("HEAD /api/healthz — liveness check (used by Docker / k8s / load balancers)", () => {
