@@ -15,7 +15,7 @@ interface ProjectGalleryProps {
 }
 
 /** Responsive variants backed by Supabase's on-the-fly image transforms. */
-function imageVariants(url: string) {
+export function imageVariants(url: string) {
   return [
     { type: "thumbnail", url: `${url}?width=150&height=150&resize=cover` },
     { type: "small", url: `${url}?width=400&resize=contain` },
@@ -85,8 +85,32 @@ export default function ProjectGallery({ images, title, fallbackUrl }: ProjectGa
 /** Small placeholder shown while gallery images load from Supabase. */
 export function GalleryPlaceholder() {
   return (
-    <div className="aspect-video w-full rounded-2xl bg-muted animate-pulse flex items-center justify-center">
+    <div
+      data-testid="gallery-placeholder"
+      className="aspect-video w-full rounded-2xl bg-muted animate-pulse flex items-center justify-center"
+    >
       <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
+    </div>
+  );
+}
+
+/**
+ * Empty state shown when a project has no gallery images and no cover
+ * fallback yet. Keeps the detail page from collapsing to an invisible
+ * gap — it renders a tasteful card prompting the owner to add images
+ * from the admin Project Editor.
+ */
+export function GalleryEmpty({ title, hint }: { title: string; hint: string }) {
+  return (
+    <div
+      data-testid="gallery-empty"
+      role="img"
+      aria-label={title}
+      className="aspect-video w-full rounded-2xl border border-dashed border-border/70 bg-muted/30 flex flex-col items-center justify-center gap-2 text-center px-6"
+    >
+      <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
+      <p className="text-sm font-medium text-foreground">{title}</p>
+      <p className="text-xs text-muted-foreground max-w-md">{hint}</p>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import ProjectGallery from "@/features/projects/components/ProjectGallery";
+import ProjectGallery, { GalleryEmpty } from "@/features/projects/components/ProjectGallery";
 
 // OptimizedImage uses IntersectionObserver — stub it for jsdom.
 class MockObserver {
@@ -24,6 +24,15 @@ describe("ProjectGallery", () => {
   it("uses the fallback cover when no gallery images exist", () => {
     render(<ProjectGallery images={[]} title="P" fallbackUrl="https://img.example.com/cover.png" />);
     expect(screen.getByAltText(/P — screenshot 1/i)).toBeInTheDocument();
+  });
+
+  it("GalleryEmpty renders a prompt card with title and hint", () => {
+    render(
+      <GalleryEmpty title="No screenshots yet" hint="Gallery images added from the admin will appear here." />,
+    );
+    expect(screen.getByTestId("gallery-empty")).toBeInTheDocument();
+    expect(screen.getByText("No screenshots yet")).toBeInTheDocument();
+    expect(screen.getByText("Gallery images added from the admin will appear here.")).toBeInTheDocument();
   });
 
   it("renders thumbnails and switches the main image on click", () => {

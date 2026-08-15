@@ -10,7 +10,8 @@
     "generate-sitemap": "tsx ./generate-sitemap.ts",
     "scan-duplicates": "tsx ./src/scan-duplicates.ts",
     "check-bom": "tsx ./src/check-bom.ts",
-    "check-ts-twin": "tsx ./src/check-ts-twin.ts"
+    "check-ts-twin": "tsx ./src/check-ts-twin.ts",
+    "check-duplication": "tsx ./src/check-duplication.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2",

@@ -3,6 +3,7 @@ import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
 import { trackEvent } from "@workspace/db/analytics";
 import { logWarn } from "@/lib/logger";
 import { useLanguage } from "@/lib/language";
+import { buildWhatsAppHref } from "@/features/contact/lib/whatsapp";
 
 interface Contact {
   email: string;
@@ -36,10 +37,7 @@ export default function ContactInfoPanel({ contact }: { contact: Contact }) {
   const items = buildItems(contact, t.contact.labels);
 
   // WhatsApp click-to-chat: https://wa.me/<digits>?text=<prefilled message>
-  const waDigits = (contact.whatsapp ?? "").replace(/\D/g, "");
-  const waHref = waDigits
-    ? `https://wa.me/${waDigits}?text=${encodeURIComponent(t.contact.whatsappPrefill)}`
-    : null;
+  const waHref = buildWhatsAppHref(contact.whatsapp, t.contact.whatsappPrefill);
 
   return (
     <div className="space-y-6">

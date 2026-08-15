@@ -8,11 +8,12 @@ import { DynamicFavicon } from "@/components/DynamicFavicon";
 import SupabaseThemeSync from "@/components/SupabaseThemeSync";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import WhatsAppFloat from "@/features/contact/components/WhatsAppFloat";
 import Home from "@/pages/Home";
 import NotFound from "@/pages/not-found";
 import SEO from "@/components/SEO";
-import { Toaster } from "@workspace/ui";
-import { ApiHealthCheck } from "@/components/ApiHealthCheck";
+import { Toaster, ApiHealthCheck } from "@workspace/ui";
+import { getApiUrl } from "@/lib/env";
 import { Loader2 } from "lucide-react";
 
 const ProjectDetail = lazy(() => import("@/pages/ProjectDetail"));
@@ -59,7 +60,12 @@ function App() {
                 <Route component={NotFound} />
               </Switch>
               <Footer />
-              <ApiHealthCheck />
+              <WhatsAppFloat />
+              <ApiHealthCheck
+                apiUrl={getApiUrl()}
+                title="API Unreachable"
+                message="Some features like CV download and the contact form may not work."
+              />
               <Toaster />
             </WouterRouter>
           </BrandingProvider>

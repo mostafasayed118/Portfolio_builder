@@ -9,27 +9,11 @@ import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useBeforeUnload } from "@/hooks/use-before-unload";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
 import ImageUploader, { type UploadedImage } from "@/components/ImageUploader";
-import { HeroLivePreview } from "@/features/hero-content/components/HeroLivePreview";
+import { HeroLivePreview, type HeroFormData } from "@/features/hero-content/components/HeroLivePreview";
 import { EditorErrorState, EditorLoadingState } from "@/components/EditorStates";
 import { EditorHeader, EditorLayout } from "@/components/EditorScaffold";
 import { EditorCard, EditorField } from "@/components/EditorForm";
 
-type HeroFormData = {
-  name: string;
-  typewriter_lines: string[];
-  subtitle: string;
-  bio: string;
-  avatar_url: string;
-  cv_url: string;
-  social_links: {
-    github?: string;
-    linkedin?: string;
-    twitter?: string;
-    email?: string;
-    [key: string]: string | undefined;
-  };
-  stats: Array<{ label: string; value: string }>;
-};
 
 export default function HeroEditor() {
   const queryClient = useQueryClient();

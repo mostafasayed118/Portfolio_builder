@@ -56,4 +56,6 @@ export * from "./components/primitives/tooltip";
 
 export * from "./components/primitives/smart-form";
 
+export * from "./components/api-health-check";
+
 export * from "./hooks/index";

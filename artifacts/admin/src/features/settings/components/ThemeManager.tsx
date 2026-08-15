@@ -1,15 +1,24 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@workspace/ui";
-import { Save, RefreshCw, Sun, Moon, Eye } from "lucide-react";
+import { Save, RefreshCw, Sun, Moon, Eye, Dices, BookmarkPlus } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { logError } from "@/lib/logger";
-import { Button, Card, CardContent, CardHeader, CardTitle, Slider } from "@workspace/ui";
+import { Button, Card, CardContent, CardHeader, CardTitle, Slider, Input } from "@workspace/ui";
 import { AdminErrorState } from "@/components/AdminErrorState";
 import { AdminLoadingState } from "@/components/AdminLoadingState";
 import { ColorField } from "@/features/settings/components/ThemeColorFields";
 import { PreviewPalette, type ThemePreviewData } from "@/features/settings/components/ThemePreview";
-import { PresetPicker, findActivePreset, THEME_PRESETS, type ThemePreset } from "@/features/settings/components/ThemePresets";
+import {
+  PresetPicker,
+  findActivePreset,
+  THEME_PRESETS,
+  loadCustomPresets,
+  saveCustomPresets,
+  MAX_CUSTOM_TEMPLATES,
+  type ThemePreset,
+} from "@/features/settings/components/ThemePresets";
+import { randomizeTheme } from "@/features/settings/lib/randomize-theme";
 
 type ThemeData = ThemePreviewData;
 
@@ -44,6 +53,8 @@ export default function ThemeManager() {
   });
   const [theme, setTheme] = useState<ThemeData>(DEFAULTS);
   const [saving, setSaving] = useState(false);
+  const [customPresets, setCustomPresets] = useState<ThemePreset[]>(() => loadCustomPresets());
+  const [newTemplateName, setNewTemplateName] = useState("");
 
   useEffect(() => {
     if (themeData) {
@@ -74,12 +85,49 @@ export default function ThemeManager() {
 
   const set = (key: keyof ThemeData, val: string) => setTheme(t => ({ ...t, [key]: val }));
 
-  const activePreset = findActivePreset(theme);
+  const allPresets = [...customPresets, ...THEME_PRESETS];
+  const activePreset = findActivePreset(theme, allPresets);
 
   /** Pre-fill the form with a template's palette; the current mode is kept. */
   const applyPreset = (preset: ThemePreset) => {
     setTheme(t => ({ ...preset.theme, mode: t.mode }));
     toast({ title: `${preset.name} applied`, description: "Fine-tune any color below, then click Save Changes." });
+  };
+
+  /** Replace the palette with a freshly generated harmonious light/dark scheme. */
+  const applyRandomPalette = () => {
+    setTheme(t => randomizeTheme(t));
+    toast({ title: "Random palette generated", description: "Harmonious light/dark scheme — fine-tune any color, then click Save Changes." });
+  };
+
+  /** Save the current palette as a named custom template (client-side, capped). */
+  const saveCurrentAsTemplate = () => {
+    const name = newTemplateName.trim();
+    if (!name) return;
+    if (customPresets.length >= MAX_CUSTOM_TEMPLATES) {
+      toast({ title: "Template limit reached", description: `You can save up to ${MAX_CUSTOM_TEMPLATES} custom templates. Delete one to save another.`, variant: "destructive" });
+      return;
+    }
+    const preset: ThemePreset = {
+      id: `custom-${Date.now()}`,
+      name,
+      description: `Custom palette saved on ${new Date().toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}`,
+      theme: { ...theme },
+    };
+    const next = [preset, ...customPresets];
+    setCustomPresets(next);
+    saveCustomPresets(next);
+    setNewTemplateName("");
+    toast({ title: "Template saved", description: `"${name}" is now available in the template grid.` });
+  };
+
+  /** Remove a saved custom template. */
+  const deleteCustomPreset = (id: string) => {
+    const target = customPresets.find((p) => p.id === id);
+    const next = customPresets.filter((p) => p.id !== id);
+    setCustomPresets(next);
+    saveCustomPresets(next);
+    toast({ title: "Template deleted", description: target ? `"${target.name}" was removed.` : undefined });
   };
 
   const handleSave = async () => {
@@ -113,6 +161,7 @@ export default function ThemeManager() {
       <div className="flex items-center justify-between">
         <div><h1 className="text-2xl font-bold">Theme Manager</h1><p className="text-sm text-muted-foreground mt-0.5">Start from a template or edit color tokens — changes apply to the live portfolio instantly.</p></div>
         <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={applyRandomPalette} className="min-h-[44px]"><Dices size={14} className="mr-1.5" /> Randomize</Button>
           <Button variant="outline" size="sm" onClick={() => { setTheme(t => ({ ...THEME_PRESETS[0].theme, mode: t.mode })); toast({ title: "Reset to Modern Indigo", description: "Click Save to apply." }); }} className="min-h-[44px]"><RefreshCw size={14} className="mr-1.5" /> Reset</Button>
           <Button size="sm" onClick={handleSave} disabled={saving} className="min-h-[44px]"><Save size={14} className="mr-1.5" />{saving ? "Saving…" : "Save Changes"}</Button>
         </div>
@@ -126,8 +175,26 @@ export default function ThemeManager() {
             Currently using <span className="font-medium text-foreground">{activePreset ? activePreset.name : "custom colors"}</span>.
           </p>
         </CardHeader>
-        <CardContent>
-          <PresetPicker activePresetId={activePreset?.id ?? null} onApply={applyPreset} />
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <Input
+              value={newTemplateName}
+              onChange={(e) => setNewTemplateName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && saveCurrentAsTemplate()}
+              placeholder="Name this palette…"
+              aria-label="Name for the new template"
+              className="h-9 flex-1"
+            />
+            <Button size="sm" onClick={saveCurrentAsTemplate} disabled={!newTemplateName.trim()} className="min-h-[44px]">
+              <BookmarkPlus size={14} className="mr-1.5" /> Save as template
+            </Button>
+          </div>
+          <PresetPicker
+            activePresetId={activePreset?.id ?? null}
+            onApply={applyPreset}
+            customPresets={customPresets}
+            onDeleteCustom={deleteCustomPreset}
+          />
         </CardContent>
       </Card>
 

@@ -60,6 +60,7 @@ const mockThemeData = {
 describe("ThemeManager", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     mockThemeGet.mockResolvedValue({ success: true, data: mockThemeData });
     mockThemeUpdate.mockResolvedValue({ success: true });
   });
@@ -125,6 +126,76 @@ describe("ThemeManager", () => {
     await screen.findByText("Theme Manager");
     expect(screen.getByText(/currently using/i)).toBeInTheDocument();
     expect(screen.getByText("custom colors")).toBeInTheDocument();
+  });
+
+  it("randomize generates a fresh palette and pre-fills the fields", async () => {
+    renderWithProviders(<ThemeManager />);
+
+    await screen.findByDisplayValue("204 92% 42%");
+
+    await userEvent.click(screen.getByRole("button", { name: /randomize/i }));
+
+    // The original light primary value is replaced by the generated palette.
+    await waitFor(() => {
+      expect(screen.queryByDisplayValue("204 92% 42%")).not.toBeInTheDocument();
+    });
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Random palette generated" }),
+    );
+    // Mode and radius survive the roll: the radius text is still the saved one.
+    expect(screen.getByText("0.5rem")).toBeInTheDocument();
+  });
+
+  it("saves the current palette as a named custom template", async () => {
+    renderWithProviders(<ThemeManager />);
+
+    await screen.findByDisplayValue("204 92% 42%");
+
+    await userEvent.type(screen.getByLabelText("Name for the new template"), "My Teal");
+    await userEvent.click(screen.getByRole("button", { name: /save as template/i }));
+
+    // Appears in the template grid (and as the active "Currently using" name).
+    expect((await screen.findAllByText("My Teal")).length).toBeGreaterThan(0);
+    expect(screen.getByText("Custom")).toBeInTheDocument();
+    expect(localStorage.getItem("pf-theme-custom-presets-v1")).toContain("My Teal");
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Template saved" }),
+    );
+  });
+
+  it("applies a saved custom template and then deletes it", async () => {
+    localStorage.setItem("pf-theme-custom-presets-v1", JSON.stringify([{
+      id: "custom-1",
+      name: "My Teal",
+      description: "Custom palette saved on Aug 15, 2026",
+      theme: {
+        mode: "dark",
+        lightPrimary: "175 84% 38%", lightAccent: "189 90% 38%", lightBackground: "220 30% 97%",
+        lightForeground: "222 40% 10%", lightCard: "0 0% 100%", lightBorder: "220 18% 84%",
+        lightMuted: "220 20% 91%", lightMutedForeground: "220 15% 42%", lightRing: "175 84% 42%",
+        darkPrimary: "175 84% 62%", darkAccent: "189 95% 53%", darkBackground: "222 48% 6%",
+        darkForeground: "210 30% 96%", darkCard: "222 40% 9%", darkBorder: "220 22% 18%",
+        darkMuted: "222 32% 12%", darkMutedForeground: "215 18% 72%", darkRing: "175 84% 62%",
+        radius: "0.5rem",
+      },
+    }]));
+
+    renderWithProviders(<ThemeManager />);
+
+    await screen.findByDisplayValue("204 92% 42%");
+
+    // Saved template is rendered and can be applied.
+    await userEvent.click(screen.getByRole("button", { name: "Apply My Teal template" }));
+    await screen.findByDisplayValue("175 84% 38%");
+    expect(screen.getByText(/currently using/i).textContent).toContain("My Teal");
+
+    // And deleted again.
+    await userEvent.click(screen.getByRole("button", { name: "Delete My Teal template" }));
+    expect(screen.queryByText("My Teal")).not.toBeInTheDocument();
+    expect(localStorage.getItem("pf-theme-custom-presets-v1")).not.toContain("My Teal");
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Template deleted" }),
+    );
   });
 
   it("applying a preset pre-fills the color fields (still fully editable)", async () => {
