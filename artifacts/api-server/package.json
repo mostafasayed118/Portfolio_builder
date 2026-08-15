@@ -12,7 +12,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "verify": "pnpm run typecheck && pnpm run test && pnpm run build",
-    "lint": "echo 'No linter configured for api-server yet'"
+    "lint": "eslint src scripts build.mjs vitest.config.ts --max-warnings=0"
   },
   "dependencies": {
     "@clerk/backend": "^3.4.9",

@@ -69,7 +69,7 @@ export function logSupabaseError(
  *
  * Returns Response with paginated payload, or an error response on failure.
  */
-export async function runCollectionQuery<T = unknown>(
+export async function runCollectionQuery(
   req: AuthenticatedRequest,
   res: Response,
   table: string,

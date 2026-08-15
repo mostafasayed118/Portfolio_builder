@@ -3,7 +3,6 @@ import { render, screen, renderHook, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeSyncProvider, useThemeSync } from "@/lib/theme-sync-context";
 import { LanguageProvider } from "@/lib/language";
-import type { Theme } from "@/lib/theme-types";
 
 const { mockSetTheme } = vi.hoisted(() => ({
   mockSetTheme: vi.fn(),

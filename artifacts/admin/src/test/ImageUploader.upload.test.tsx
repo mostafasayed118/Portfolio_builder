@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderAdmin } from "./helpers";
-import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { fireEvent, waitFor } from "@testing-library/react";
 import ImageUploader from "@/components/ImageUploader";
 
 const { mockGetCsrfToken, mockGetClerkToken, mockToast } = vi.hoisted(() => ({

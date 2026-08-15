@@ -47,13 +47,18 @@ export default function ProjectsManager() {
     setSaving(true);
     try {
       const { id: editId, ...rest } = editing;
-      const baseSlug = rest.title!.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const baseSlug = (rest.title ?? "").toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
       const slug = projects?.some(p => p.id !== editId && p.slug === baseSlug)
         ? `${baseSlug}-${Date.now().toString(36)}` : baseSlug;
       const payload = { ...rest, slug, live_url: rest.live_url || null, metrics: rest.metrics ?? [] };
-      const res = isNew
-        ? await api.projects.create(payload)
-        : await api.projects.update(editId!, payload);
+      let res;
+      if (isNew) {
+        res = await api.projects.create(payload);
+      } else if (editId) {
+        res = await api.projects.update(editId, payload);
+      } else {
+        throw new Error("Cannot update a project without an id");
+      }
       if (!res.success) throw new Error(res.message);
       toast({ title: isNew ? "Project created" : "Project updated" });
       queryClient.invalidateQueries({ queryKey: ["projects"] });
@@ -113,7 +118,7 @@ export default function ProjectsManager() {
                   editLabel="Edit project"
                   deleteLabel="Delete project"
                   onEdit={() => {
-                    const { slug: _s, image_url: _i, tags: _t, created_at: _c, updated_at: _u, ...rest } = p;
+                    const { slug, image_url, tags, created_at, updated_at, ...rest } = p;
                     openEdit({ ...rest, category: p.category ?? "", featured: p.featured ?? false, is_published: p.is_published ?? false, github_url: p.github_url ?? "", live_url: p.live_url ?? undefined, metrics: p.metrics ?? [], sort_order: p.sort_order ?? 0 });
                   }}
                   onDelete={() => setDeleteId(p.id)}

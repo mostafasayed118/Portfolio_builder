@@ -24,7 +24,8 @@ export default function CvManager() {
     queryFn: async () => {
       const result = await api.cv.getSettings();
       if (!result.success) throw new Error(result.message);
-      return result.data!;
+      if (!result.data) throw new Error("CV settings response is missing data");
+      return result.data;
     },
     retry: 1,
   });

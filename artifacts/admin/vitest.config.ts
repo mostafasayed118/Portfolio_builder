@@ -4,7 +4,6 @@ import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const reactEntry = path.resolve(__dirname, "node_modules/react");
-const reactDomEntry = path.resolve(__dirname, "node_modules/react-dom");
 
 function reactAlias(nm: string) {
   return {

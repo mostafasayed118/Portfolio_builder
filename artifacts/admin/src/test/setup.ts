@@ -8,7 +8,7 @@ vi.mock("@supabase/supabase-js", () => ({
 }));
 
 vi.mock("@workspace/auth", () => ({
-  AuthContextProvider: ({ value, children }: { value: unknown; children: React.ReactNode }) =>
+  AuthContextProvider: ({ children }: { value: unknown; children: React.ReactNode }) =>
     children,
   useAuthUser: vi.fn(() => ({
     user: { id: "test-id", email: "admin@test.com", role: "admin" as const },

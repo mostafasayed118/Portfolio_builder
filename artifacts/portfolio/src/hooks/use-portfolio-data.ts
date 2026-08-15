@@ -109,7 +109,7 @@ export function useCertifications() {
 export function useProjectBySlug(slug: string | undefined) {
   return useQuery({
     queryKey: ["project", slug],
-    queryFn: () => fetchWithSupabase((s) => fetchProjectBySlug(s, slug!)),
+    queryFn: () => fetchWithSupabase((s) => fetchProjectBySlug(s, slug ?? "")),
     ...POLL_OPTIONS,
     retry: 2,
     enabled: isSupabaseConfigured && !!slug,
@@ -150,7 +150,7 @@ export function useProjectImages(entityId: string | undefined) {
     queryKey: ["project-images", entityId],
     queryFn: () =>
       fetchWithSupabase(async (s) => {
-        const rows = await listEntityImages(s, "projects", entityId!);
+        const rows = await listEntityImages(s, "projects", entityId ?? "");
         return rows.map((row) => {
           const { data } = s.storage.from("project_images").getPublicUrl(row.storage_path);
           return { id: row.id, url: data.publicUrl };
@@ -175,7 +175,7 @@ export function usePosts() {
 export function usePostBySlug(slug: string | undefined) {
   return useQuery({
     queryKey: ["post", slug],
-    queryFn: () => fetchWithSupabase((s) => getPublishedPostBySlug(s, slug!)),
+    queryFn: () => fetchWithSupabase((s) => getPublishedPostBySlug(s, slug ?? "")),
     ...POLL_OPTIONS,
     retry: 2,
     enabled: isSupabaseConfigured && !!slug,

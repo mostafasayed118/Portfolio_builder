@@ -46,17 +46,17 @@ export default function ExperienceManager() {
   const openEdit = (e: ExpRow) => { setIsNew(false); setEditing({ ...e, sort_order: e.sort_order ?? 999 }); setTechInput(""); };
 
   const updateDesc = (i: number, val: string) =>
-    setEditing(x => ({ ...x!, description: x!.description.map((d, idx) => idx === i ? val : d) }));
-  const addDesc = () => setEditing(x => ({ ...x!, description: [...x!.description, ""] }));
-  const removeDesc = (i: number) => setEditing(x => ({ ...x!, description: x!.description.filter((_, idx) => idx !== i) }));
+    setEditing(x => x ? ({ ...x, description: x.description.map((d, idx) => idx === i ? val : d) }) : x);
+  const addDesc = () => setEditing(x => x ? ({ ...x, description: [...x.description, ""] }) : x);
+  const removeDesc = (i: number) => setEditing(x => x ? ({ ...x, description: x.description.filter((_, idx) => idx !== i) }) : x);
 
   const addTech = () => {
     const v = techInput.trim();
     if (!v || !editing) return;
-    setEditing(x => ({ ...x!, technologies: [...x!.technologies, v] }));
+    setEditing(x => x ? ({ ...x, technologies: [...x.technologies, v] }) : x);
     setTechInput("");
   };
-  const removeTech = (t: string) => setEditing(x => ({ ...x!, technologies: x!.technologies.filter(v => v !== t) }));
+  const removeTech = (t: string) => setEditing(x => x ? ({ ...x, technologies: x.technologies.filter(v => v !== t) }) : x);
 
   const handleSave = async () => {
     if (!editing) return;
@@ -68,7 +68,8 @@ export default function ExperienceManager() {
       const { id: editId, ...data } = editing;
       let res;
       if (isNew) res = await api.experience.create(data);
-      else res = await api.experience.update(editId!, data);
+      else if (editId) res = await api.experience.update(editId, data);
+      else throw new Error("Cannot update an experience without an id");
       if (!res.success) throw new Error(res.message);
       toast({ title: isNew ? "Created" : "Updated" });
       queryClient.invalidateQueries({ queryKey: ["experience"] });
@@ -117,7 +118,7 @@ export default function ExperienceManager() {
                 </div>
                 <div className="text-xs text-muted-foreground mt-0.5">{item.period} · {item.location}</div>
               </div>
-              <RowActions editLabel="Edit experience" deleteLabel="Delete experience" onEdit={() => { const { current: _, order_num: __, created_at: ___, updated_at: ____, ...rest } = item; openEdit({ ...rest, sort_order: item.sort_order ?? 0, is_published: item.is_published ?? false }); }} onDelete={() => setDeleteTarget(item.id)} />
+              <RowActions editLabel="Edit experience" deleteLabel="Delete experience"                  onEdit={() => { const { current, order_num, created_at, updated_at, ...rest } = item; openEdit({ ...rest, sort_order: item.sort_order ?? 0, is_published: item.is_published ?? false }); }} onDelete={() => setDeleteTarget(item.id)} />
             </CardContent>
           </Card>
         ))}
@@ -136,12 +137,12 @@ export default function ExperienceManager() {
               <div className="grid grid-cols-2 gap-3">
                 {([["title", "Title"], ["company", "Company"], ["location", "Location"], ["period", "Period"]] as [keyof typeof editing, string][]).map(([k, label]) => (
                   <div key={k} className="space-y-1"><Label htmlFor={k} className="text-xs">{label}</Label>
-                    <Input id={k} value={editing[k] as string} onChange={e => setEditing(x => ({ ...x!, [k]: e.target.value }))} className="h-8 text-sm" /></div>
+                    <Input id={k} value={editing[k] as string} onChange={e => setEditing(x => x ? ({ ...x, [k]: e.target.value }) : x)} className="h-8 text-sm" /></div>
                 ))}
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Type</Label>
-                <Select value={editing.type} onValueChange={v => setEditing(x => ({ ...x!, type: v as "internship" | "certification" | "volunteer" }))}>
+                <Select value={editing.type} onValueChange={v => setEditing(x => x ? ({ ...x, type: v as "internship" | "certification" | "volunteer" }) : x)}>
                   <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="internship">Internship</SelectItem>
@@ -171,10 +172,10 @@ export default function ExperienceManager() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1"><Label className="text-xs">Sort Order</Label>
-                  <Input type="number" value={editing.sort_order} onChange={e => setEditing(x => ({ ...x!, sort_order: Number(e.target.value) }))} className="h-8 text-sm" /></div>
+                  <Input type="number" value={editing.sort_order} onChange={e => setEditing(x => x ? ({ ...x, sort_order: Number(e.target.value) }) : x)} className="h-8 text-sm" /></div>
               </div>
               <div className="flex items-center justify-between"><Label className="text-sm">Published</Label>
-                <Switch checked={editing.is_published} onCheckedChange={v => setEditing(x => ({ ...x!, is_published: v }))} /></div>
+                <Switch checked={editing.is_published} onCheckedChange={v => setEditing(x => x ? ({ ...x, is_published: v }) : x)} /></div>
             </div>
           )}
           <FormDialogFooter onCancel={() => setEditing(null)} onSave={handleSave} saving={saving} />
@@ -189,8 +190,9 @@ export default function ExperienceManager() {
           confirmLabel: "Delete",
           variant: "danger",
           onConfirm: async () => {
+            if (!deleteTarget) return;
             try {
-              const res = await api.experience.delete(deleteTarget!);
+              const res = await api.experience.delete(deleteTarget);
               if (!res.success) throw new Error(res.message);
               toast({ title: "Experience deleted" });
               queryClient.invalidateQueries({ queryKey: ["experience"] });

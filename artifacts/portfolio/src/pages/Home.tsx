@@ -60,7 +60,7 @@ export default function Home() {
       return () => clearTimeout(timer);
     }
     return undefined;
-  }, []);
+  }, [t.common.welcomeTitle, t.common.welcomeDescription, toast]);
 
   return (
     <>

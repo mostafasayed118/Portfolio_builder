@@ -85,7 +85,8 @@ export default function AnalyticsPage() {
     queryFn: async () => {
       const res = await api.analytics.stats(Number(days));
       if (!res.success) throw new Error(res.message);
-      return res.data!;
+      if (!res.data) throw new Error("Analytics response is missing data");
+      return res.data;
     },
   });
 

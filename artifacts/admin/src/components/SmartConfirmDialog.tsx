@@ -1,4 +1,4 @@
-import { useEffect, useRef, useId, useState } from "react";
+import { useCallback, useEffect, useRef, useId, useState } from "react";
 import { AlertTriangle, Trash2, CheckCircle, HelpCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -31,7 +31,10 @@ export function SmartConfirmDialog({ state, onCancel }: SmartConfirmDialogProps)
   const cancelRef = useRef<HTMLButtonElement>(null);
   const [confirming, setConfirming] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
-  const handleCancel = state.onCancel ?? onCancel ?? (() => {});
+  const handleCancel = useCallback(() => {
+    const fn = state.onCancel ?? onCancel;
+    if (fn) fn();
+  }, [state.onCancel, onCancel]);
 
   // Reset confirming state when dialog closes
   useEffect(() => {

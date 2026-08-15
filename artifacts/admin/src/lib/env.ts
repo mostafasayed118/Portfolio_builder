@@ -19,15 +19,17 @@ let _env: AdminEnv | null = null;
 export function getAdminEnv(): AdminEnv {
   if (_env) return _env;
   const result = adminEnvSchema.safeParse(import.meta.env);
+  let parsed: AdminEnv;
   if (!result.success) {
     if (import.meta.env.DEV) {
       logWarn("[admin] Env validation warnings:", JSON.stringify(result.error.flatten().fieldErrors));
     }
-    _env = {} as AdminEnv;
+    parsed = {} as AdminEnv;
   } else {
-    _env = result.data;
+    parsed = result.data;
   }
-  return _env!;
+  _env = parsed;
+  return parsed;
 }
 
 export const adminEnv = getAdminEnv();

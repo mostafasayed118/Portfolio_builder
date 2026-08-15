@@ -173,7 +173,7 @@ function SEOContent({
         script.remove();
       }
     });
-  }, [fullTitle, metaDescription, image, url, type, publishedTime, tags, lang, location, ownerId]);
+  }, [fullTitle, metaDescription, image, url, type, publishedTime, tags, lang, location, ownerId, siteName, schemas]);
 
   return null;
 }

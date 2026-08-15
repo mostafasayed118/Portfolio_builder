@@ -106,7 +106,7 @@ export default function ProjectDetail({ slug }: ProjectDetailProps) {
         title: project.title,
       }).catch((err) => logWarn("trackEvent failed", err));
     }
-  }, [project?.slug]);
+  }, [project]);
 
   if (isLoading) {
     return <ProjectDetailSkeleton />;

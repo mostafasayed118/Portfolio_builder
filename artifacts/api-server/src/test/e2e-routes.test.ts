@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
-import express from "express";
 
 // ─── Mock the supabase client to return controllable data ───────────────────
 const mockSelect = vi.fn();

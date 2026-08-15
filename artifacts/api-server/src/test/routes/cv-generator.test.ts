@@ -85,16 +85,6 @@ const certificationsData = [
   { title: "AWS Solutions Architect", issuer: "Amazon", date: "2023" },
 ];
 
-function setupSupabaseMockWithData() {
-  mockSupabaseClient.maybeSingle
-    .mockResolvedValueOnce({ data: heroData, error: null })    // hero
-    .mockResolvedValueOnce({ data: aboutData, error: null });  // about
-  mockSupabaseClient.order
-    .mockResolvedValueOnce({ data: experienceData, error: null, status: "fulfilled" })  // experience
-    .mockResolvedValueOnce({ data: skillsData, error: null, status: "fulfilled" })      // skills
-    .mockResolvedValueOnce({ data: certificationsData, error: null, status: "fulfilled" }); // certifications
-}
-
 describe("CV Generator", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -145,7 +135,7 @@ describe("CV Generator", () => {
   });
 
   it("handles missing hero data gracefully with defaults", async () => {
-    mockSupabaseClient.from.mockImplementation((table: string) => {
+    mockSupabaseClient.from.mockImplementation(() => {
       const chain = {
         select: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
