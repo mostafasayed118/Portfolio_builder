@@ -31,6 +31,7 @@ export function SeedDialog() {
       queryClient.invalidateQueries({ queryKey: ["certifications"] });
       queryClient.invalidateQueries({ queryKey: ["hero"] });
       queryClient.invalidateQueries({ queryKey: ["about"] });
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
     } else {
       setResult({
         success: false,
