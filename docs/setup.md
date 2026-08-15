@@ -122,10 +122,13 @@ The server extracts user email from the JWT payload. Clerk's default session JWT
 4. In the **Claims** section, add:
    - **Key:** `email`
    - **Value:** `{{user.primary_email_address}}`
-5. **Save**
-6. Set `VITE_CLERK_JWT_TEMPLATE=admin` in the admin app's `.env.local`
+5. Set **lifetime to 3600 seconds (1 hour)** and **allowed clock skew to 60 seconds**
+6. **Save**
+7. Set `VITE_CLERK_JWT_TEMPLATE=admin` in the admin app's `.env.local`
 
 Without this template, ALL admin API requests return 401 because the server cannot match the JWT's email against the admin allowlist.
+
+> A short lifetime (the 60s default) plus tight clock skew makes otherwise-valid admin JWTs get rejected as expired whenever the client/server/Clerk clocks drift slightly — surfacing as "Access Denied". The 3600s lifetime + 60s skew matches the session token and gives a healthy tolerance.
 
 ## 5. Run the Apps
 
