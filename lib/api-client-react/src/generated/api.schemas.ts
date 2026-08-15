@@ -1093,7 +1093,21 @@ export type DeletePost200 = SuccessEnvelope & ({
 
 export type ListMessagesParams = {
 userId?: string;
+/**
+ * Server-side status filter. `unread`/`read` page over exactly those rows; `archived` pages over the soft-deleted set (normally hidden). Omit or pass `all` for every visible message.
+ */
+status?: ListMessagesStatus;
 };
+
+export type ListMessagesStatus = typeof ListMessagesStatus[keyof typeof ListMessagesStatus];
+
+
+export const ListMessagesStatus = {
+  unread: 'unread',
+  read: 'read',
+  archived: 'archived',
+  all: 'all',
+} as const;
 
 export type ListMessages200 = SuccessEnvelope & {
   data?: PaginatedMessages;
@@ -1130,6 +1144,22 @@ export type ReplyMessage200 = SuccessEnvelope & {
 export type BulkDeleteMessages200 = SuccessEnvelope & ({
   data?: { [key: string]: unknown } | null;
 }) | ApiError;
+
+export type BulkArchiveMessages200 = SuccessEnvelope & ({
+  data?: { [key: string]: unknown } | null;
+}) | ApiError;
+
+export type ArchiveTestSubmissions200 = SuccessEnvelope & {
+  data?: {
+  archived: number;
+};
+} | ApiError;
+
+export type MarkAllMessagesRead200 = SuccessEnvelope & {
+  data?: {
+  marked: number;
+};
+} | ApiError;
 
 export type DeleteMessage200 = SuccessEnvelope & ({
   data?: { [key: string]: unknown } | null;

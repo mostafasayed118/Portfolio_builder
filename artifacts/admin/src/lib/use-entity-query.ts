@@ -32,10 +32,12 @@ export function useEntityQuery<T>(
   entity: "projects" | "skills" | "experience" | "certifications" | "messages" | "posts",
   fetcher: (userId: string | null) => Promise<ApiResult<Paginated<T>>>,
   options?: Omit<UseQueryOptions<T, Error, T, readonly unknown[]>, "queryKey" | "queryFn">,
+  /** Extra query-key parts so filtered variants cache separately and refetch on change. */
+  keyParts: readonly unknown[] = [],
 ) {
   const { viewingUserId } = useViewingUser();
   return useQuery<T, Error, T, readonly unknown[]>({
-    queryKey: [entity, viewingUserId] as readonly unknown[],
+    queryKey: [entity, viewingUserId, ...keyParts] as readonly unknown[],
     queryFn: async () => {
       const res = await fetcher(viewingUserId);
       if (!res.success) throw new Error(res.message);

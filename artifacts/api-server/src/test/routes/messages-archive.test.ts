@@ -33,11 +33,13 @@ const mockSupabase = {
   update: vi.fn(),
   select: vi.fn(),
   eq: vi.fn().mockReturnThis(),
+  in: vi.fn().mockResolvedValue({ error: null }),
 } as unknown as {
   from: ReturnType<typeof vi.fn>;
   update: ReturnType<typeof vi.fn>;
   select: ReturnType<typeof vi.fn>;
   eq: ReturnType<typeof vi.fn>;
+  in: ReturnType<typeof vi.fn>;
 };
 
 vi.mocked(getSupabaseClient).mockReturnValue(mockSupabase as never);
@@ -46,9 +48,12 @@ const UUID = "11111111-1111-1111-1111-111111111111";
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // Default: a successful update — the row matched and was returned.
+  // Default: a successful update — the row matched and was returned. The
+  // chain serves both terminal patterns: `.eq().select()` for the per-row
+  // archive/unarchive routes and `.in()` for the bulk-archive route.
   const updateChain = {
     eq: vi.fn().mockReturnThis(),
+    in: vi.fn().mockResolvedValue({ error: null }),
     select: vi.fn().mockResolvedValue({ data: [{ id: UUID }], count: null, error: null }),
   };
   mockSupabase.update.mockReturnValue(updateChain);
@@ -97,6 +102,65 @@ describe("POST /api/v1/admin/messages/:id/archive", () => {
       .set("x-admin-key", mockAdminKey);
 
     expect(res.status).toBe(400);
+  });
+});
+
+describe("POST /api/v1/admin/messages/bulk-archive", () => {
+  it("returns 401 without auth", async () => {
+    const res = await request(app)
+      .post("/api/v1/admin/messages/bulk-archive")
+      .send({ ids: [UUID] });
+    expect(res.status).toBe(401);
+  });
+
+  it("sets deleted_at on every id in the batch", async () => {
+    const res = await request(app)
+      .post("/api/v1/admin/messages/bulk-archive")
+      .set("x-admin-key", mockAdminKey)
+      .send({ ids: [UUID, "22222222-2222-2222-2222-222222222222"] });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty("success", true);
+    const patch = mockSupabase.update.mock.calls[0][0] as Record<string, unknown>;
+    expect(patch.deleted_at).toEqual(expect.any(String));
+    // `.in()` runs on the chain returned by `update`; it must carry all
+    // batch ids — no partial archiving.
+    const chain = mockSupabase.update.mock.results[0].value as { in: ReturnType<typeof vi.fn> };
+    expect(chain.in).toHaveBeenCalledWith("id", [
+      UUID,
+      "22222222-2222-2222-2222-222222222222",
+    ]);
+  });
+
+  it("rejects an empty ids array", async () => {
+    const res = await request(app)
+      .post("/api/v1/admin/messages/bulk-archive")
+      .set("x-admin-key", mockAdminKey)
+      .send({ ids: [] });
+
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects non-uuid ids", async () => {
+    const res = await request(app)
+      .post("/api/v1/admin/messages/bulk-archive")
+      .set("x-admin-key", mockAdminKey)
+      .send({ ids: ["nope"] });
+
+    expect(res.status).toBe(400);
+  });
+
+  it("surfaces a Supabase error as a 500", async () => {
+    mockSupabase.update.mockReturnValue({
+      in: vi.fn().mockResolvedValue({ error: { message: "boom" } }),
+    });
+    const res = await request(app)
+      .post("/api/v1/admin/messages/bulk-archive")
+      .set("x-admin-key", mockAdminKey)
+      .send({ ids: [UUID] });
+
+    expect(res.status).toBe(500);
+    expect(res.body).toHaveProperty("success", false);
   });
 });
 

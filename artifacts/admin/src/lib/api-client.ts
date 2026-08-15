@@ -38,11 +38,14 @@ import {
   unreadMessageCount,
   markMessageRead,
   markMessageUnread,
+  markAllMessagesRead,
   archiveMessage,
   unarchiveMessage,
   deleteMessage,
   replyMessage,
   bulkDeleteMessages,
+  bulkArchiveMessages,
+  archiveTestSubmissions,
   getHero,
   updateHero,
   getAbout,
@@ -134,14 +137,26 @@ export const api = {
     delete: (id: string) => deletePost(id),
   },
   messages: {
-    list: (userId?: string) => listMessages(userIdParam(userId)),
+    /**
+     * `status` mirrors the list endpoint's server-side filter — omit or pass
+     * `"all"` for the default view; `"unread"`/`"read"`/`"archived"` page
+     * over exactly those rows instead of a client-side slice of page one.
+     */
+    list: (userId?: string, status?: "unread" | "read" | "archived" | "all") =>
+      listMessages({
+        ...userIdParam(userId),
+        ...(status && status !== "all" ? { status } : {}),
+      }),
     unreadCount: (userId?: string) => unreadMessageCount(userIdParam(userId)),
     markRead: (id: string) => markMessageRead(id),
     markUnread: (id: string) => markMessageUnread(id),
+    markAllRead: () => markAllMessagesRead(),
     archive: (id: string) => archiveMessage(id),
     unarchive: (id: string) => unarchiveMessage(id),
     delete: (id: string) => deleteMessage(id),
     bulkDelete: (ids: string[]) => bulkDeleteMessages({ ids }),
+    bulkArchive: (ids: string[]) => bulkArchiveMessages({ ids }),
+    archiveTestSubmissions: () => archiveTestSubmissions(),
     reply: (id: string, reply: string) => replyMessage(id, { reply }),
   },
   contact: {

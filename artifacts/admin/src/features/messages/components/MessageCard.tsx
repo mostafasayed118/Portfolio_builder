@@ -7,19 +7,26 @@ export interface Message {
   email: string;
   message: string;
   status?: "unread" | "read" | "archived";
+  /** Present on rows returned by the `?status=archived` server filter. */
+  deleted_at?: string | null;
   created_at: string;
 }
 
-export function isUnread(msg: Message): boolean {
-  return msg.status === "unread" || msg.status === undefined;
+export function isArchived(msg: Message): boolean {
+  // Archive is a soft-delete (`deleted_at` set); the status column only says
+  // 'archived' on older/seed rows. Treat either signal as archived so the
+  // archived server view renders with the Unarchive action.
+  return msg.status === "archived" || (msg.deleted_at ?? null) != null;
 }
 
-export function isArchived(msg: Message): boolean {
-  return msg.status === "archived";
+export function isUnread(msg: Message): boolean {
+  return !isArchived(msg) && (msg.status === "unread" || msg.status === undefined);
 }
 
 interface MessageCardProps {
   message: Message;
+  selected?: boolean;
+  onToggleSelect?: (msg: Message) => void;
   onReply: (msg: Message) => void;
   onMarkRead: (msg: Message) => void;
   onArchive: (msg: Message) => void;
@@ -29,6 +36,8 @@ interface MessageCardProps {
 
 export function MessageCard({
   message: msg,
+  selected = false,
+  onToggleSelect,
   onReply,
   onMarkRead,
   onArchive,
@@ -47,6 +56,15 @@ export function MessageCard({
     >
       <CardContent className="pt-4 pb-4">
         <div className="flex items-start gap-3">
+          {onToggleSelect && (
+            <input
+              type="checkbox"
+              className="mt-1.5 h-4 w-4 shrink-0 cursor-pointer accent-primary"
+              checked={selected}
+              aria-label={`Select message from ${msg.name}`}
+              onChange={() => onToggleSelect(msg)}
+            />
+          )}
           <div className="mt-0.5 shrink-0">
             {isUnread(msg) ? (
               <Mail size={16} className="text-primary" />
