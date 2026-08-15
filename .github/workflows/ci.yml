@@ -158,15 +158,15 @@ jobs:
           '
 
   vercel-drift:
-    name: Vercel production env drift check
+    name: Clerk secret parity (GitHub vs Vercel)
     runs-on: ubuntu-latest
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_API_PROJECT: portfolio-builder-api
       VERCEL_API_URL: https://portfolio-builder-api-six.vercel.app
       VERCEL_TEAM_ID: team_v74IkyOkmcdGNQ5f346Z777D
-      # The repo-side secret; the check mints a probe session with it and
-      # requires the deployed API (which uses Vercel's own copy) to accept it.
+      # The GitHub-side secret; the check compares it against the Vercel
+      # Production value and fails the build on any mismatch.
       CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
       # Email the probe session is minted for; must be allowlisted on the
       # deployed API. Falls back to ADMIN_EMAILS' first entry / a known admin.
@@ -176,11 +176,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Check CLERK_SECRET_KEY drift vs Vercel Production env
-        # scripts/check-vercel-drift.mjs — Vercel stores this key as a
-        # write-only `sensitive` var (value never returned by the API), so the
-        # check verifies presence, then mints a session with the repo secret
-        # and round-trips it through the deployed API. Fails on any drift.
+      - name: Fail if GitHub CLERK_SECRET_KEY differs from Vercel Production
+        # scripts/check-vercel-drift.mjs — the Vercel var is now `encrypted`
+        # (readable), so the check fetches its plaintext, validates it against
+        # Clerk, and byte-compares with the GitHub secret. If the var is ever
+        # switched back to `sensitive` (write-only, value never returned), it
+        # falls back to minting a session with the GitHub secret and
+        # round-tripping it through the deployed API. Fails on any drift.
         run: node scripts/check-vercel-drift.mjs
 
   db-migrations:
