@@ -1,0 +1,16 @@
+{
+  "pairs": [
+    ["artifacts/admin/middleware.ts", "artifacts/portfolio/middleware.ts"],
+    ["artifacts/admin/src/lib/csp.ts", "artifacts/portfolio/src/lib/csp.ts"],
+    ["artifacts/admin/middleware.ts", "artifacts/admin/src/lib/csp.ts"],
+    ["artifacts/portfolio/middleware.ts", "artifacts/portfolio/src/lib/csp.ts"],
+    ["artifacts/admin/src/lib/logger.ts", "artifacts/portfolio/src/lib/logger.ts"]
+  ],
+  "notes": {
+    "artifacts/admin/middleware.ts|artifacts/portfolio/middleware.ts": "Vercel edge middleware: each app's middleware.ts is compiled standalone by its own esbuild pass, so the middleware and its csp.ts twin must stay self-contained per app (deliberately inlined during the CSP work). The CSP directives are app-specific (Clerk origins vs Turnstile/OpenStreetMap).",
+    "artifacts/admin/src/lib/csp.ts|artifacts/portfolio/src/lib/csp.ts": "Same-app middleware <-> csp.ts twins: each app's edge bundle inlines its own CSP builder; the directive sets differ per app (Clerk vs Turnstile/OpenStreetMap origins).",
+    "artifacts/admin/middleware.ts|artifacts/admin/src/lib/csp.ts": "Same-app middleware <-> csp.ts twin for the admin SPA — Vercel compiles middleware.ts standalone, so the CSP builder it imports must be self-contained in that app.",
+    "artifacts/portfolio/middleware.ts|artifacts/portfolio/src/lib/csp.ts": "Same-app middleware <-> csp.ts twin for the portfolio SPA — Vercel compiles middleware.ts standalone, so the CSP builder it imports must be self-contained in that app.",
+    "artifacts/admin/src/lib/logger.ts|artifacts/portfolio/src/lib/logger.ts": "Per-app logger entry points: each app must wire Vite's import.meta.env.DEV itself, which the framework-agnostic @workspace/logging lib deliberately cannot do."
+  }
+}

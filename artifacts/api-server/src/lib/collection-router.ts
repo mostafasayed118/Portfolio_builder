@@ -3,9 +3,16 @@ import { doubleCsrfProtection } from "../middleware/csrf";
 import type { AuthenticatedRequest } from "../middleware/adminAuth";
 import { validateQueryUserId, validateParamId } from "../middleware/validateUuid";
 import type { Response } from "express";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseClient } from "./supabase-client";
-import { created, badRequest, serverError } from "./api-response";
+import { created, badRequest, serverError, conflict } from "./api-response";
 import { runCollectionQuery, updateByIdAndUser, softDeleteByIdAndUser } from "./route-helpers";
+
+/** Structured conflict signal returned by the `findDuplicate` hook. */
+export interface DuplicateMatch {
+  id: string;
+  name: string;
+}
 
 /**
  * Structural shape of a Zod schema (safeParse + partial) sufficient for the
@@ -24,6 +31,17 @@ export interface CollectionRouterOptions {
   orderAsc?: boolean;
   /** Extra fields merged into the insert payload (after user_id). */
   insertDefaults?: (data: Record<string, unknown>) => Record<string, unknown>;
+  /**
+   * Optional duplicate detector. Runs after validation, before insert. When
+   * it returns a match, the router responds 409 Conflict carrying the
+   * existing row's id, so clients can offer an overwrite instead of stacking
+   * a duplicate (e.g. two templates with the same name).
+   */
+  findDuplicate?: (
+    supabase: SupabaseClient,
+    data: Record<string, unknown>,
+    userId: string | undefined,
+  ) => Promise<DuplicateMatch | null>;
 }
 
 /**
@@ -51,13 +69,31 @@ export function createCollectionRouter(opts: CollectionRouterOptions): IRouter {
       return badRequest(res, result.error!.flatten().fieldErrors);
     }
     const data = result.data as Record<string, unknown>;
+    if (opts.findDuplicate) {
+      const existing = await opts.findDuplicate(supabase, data, req.user?.id);
+      if (existing) {
+        return conflict(res, "An item with this name already exists", {
+          code: "DUPLICATE_NAME",
+          existingId: existing.id,
+        });
+      }
+    }
     const insertData = {
       ...data,
       user_id: req.user?.id,
       ...(insertDefaults ? insertDefaults(data) : {}),
     };
     const { error } = await supabase.from(table).insert(insertData as never);
-    if (error) return serverError(res, error.message);
+    if (error) {
+      // Race backstop: a concurrent insert beat us to the same name. Report
+      // it as the same 409 conflict the pre-insert check would have caught.
+      if (error.code === "23505" && opts.findDuplicate) {
+        return conflict(res, "An item with this name already exists", {
+          code: "DUPLICATE_NAME",
+        });
+      }
+      return serverError(res, error.message);
+    }
     return created(res);
   });
 

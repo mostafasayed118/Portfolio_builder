@@ -20,13 +20,17 @@
  * output, and the shadcn/ui primitives (which intentionally share Radix
  * boilerplate) are excluded.
  *
- * Allowlist: the SPA middleware + CSP builder pairs (admin <-> portfolio, and
- * the same-app middleware <-> csp.ts twins). Vercel compiles each app's
- * middleware.ts standalone with its own esbuild pass, so the middleware and
- * its csp.ts helper must stay self-contained per app (the earlier CSP work
- * deliberately inlined them). The CSP directives are also app-specific (Clerk
- * origins vs Turnstile/OpenStreetMap). Plus the per-app logger entry points,
- * which must wire Vite's import.meta.env.DEV themselves.
+ * Allowlist: intentional duplicates are recorded in the tracked baseline file
+ * scripts/duplication-allowlist.json (pairs + a note per pair explaining why
+ * the duplication is intentional), not as code constants. The file is loaded
+ * and validated at startup — a missing, malformed, or stale entry fails the
+ * check rather than silently weakening it. Currently allows: the SPA
+ * middleware + CSP builder pairs (admin <-> portfolio, and the same-app
+ * middleware <-> csp.ts twins — Vercel compiles each app's middleware.ts
+ * standalone with its own esbuild pass, so they must stay self-contained per
+ * app, and the CSP directives are app-specific: Clerk vs Turnstile/OpenStreetMap
+ * origins), plus the per-app logger entry points, which must wire Vite's
+ * import.meta.env.DEV themselves.
  *
  * Usage:
  *   pnpm --filter @workspace/scripts check-duplication
@@ -62,9 +66,10 @@ const SKIP_DIRS = new Set([
   ".turbo",
   ".tmp-img",
   "skills", // unrelated embedded training assets, not part of the product
-  "test", // test scaffolding — run with --include-tests to scan it
-  "__tests__",
 ]);
+
+// Test directories: skipped by default, scanned with --include-tests.
+const TEST_DIRS = new Set(["test", "__tests__"]);
 
 // Walk each artifact/lib root (which also covers the top-level
 // middleware.ts Vercel edge functions); collectFiles keeps only
@@ -81,21 +86,15 @@ const SCOPE_ROOTS = [
   resolve(ROOT, "lib", "auth"),
 ];
 
-// Intentional duplicates that must stay separate:
-//   - Vercel edge middleware + its csp.ts twin: Vercel compiles each app's
-//     middleware.ts standalone, so the middleware and its CSP builder must
-//     stay self-contained per app (the earlier CSP work deliberately inlined
-//     them). CSP directives are app-specific (Clerk vs Turnstile origins).
-//   - The per-app logger entry points: each app must wire
-//     `import.meta.env.DEV` itself (Vite-specific), which the framework-
-//     agnostic @workspace/logging lib deliberately cannot do.
-const ALLOWED_PAIRS: [string, string][] = [
-  ["artifacts/admin/middleware.ts", "artifacts/portfolio/middleware.ts"],
-  ["artifacts/admin/src/lib/csp.ts", "artifacts/portfolio/src/lib/csp.ts"],
-  ["artifacts/admin/middleware.ts", "artifacts/admin/src/lib/csp.ts"],
-  ["artifacts/portfolio/middleware.ts", "artifacts/portfolio/src/lib/csp.ts"],
-  ["artifacts/admin/src/lib/logger.ts", "artifacts/portfolio/src/lib/logger.ts"],
-];
+// Intentional duplicates live in the tracked baseline file
+// scripts/duplication-allowlist.json (pairs + per-pair notes), not as a code
+// constant — so pre-existing intentional duplicates are reviewable and can be
+// pruned as the codebase deduplicates. Loaded + validated at startup.
+const ALLOWLIST_FILE = resolve(ROOT, "scripts", "duplication-allowlist.json");
+
+let ALLOWED_PAIRS: [string, string][] = [];
+const ALLOWLIST_NOTES: Record<string, string> = {};
+const USED_ALLOWLIST_KEYS = new Set<string>();
 
 const WINDOW = 8; // significant lines per duplicate-block window
 const MIN_RUN = 10; // min duplicate-block run length to report
@@ -130,12 +129,13 @@ function isHidden(name: string): boolean {
   return name.startsWith(".");
 }
 
-function walkTs(dir: string, out: string[]): string[] {
+function walkTs(dir: string, out: string[], includeTests: boolean): string[] {
   for (const entry of readdirSync(dir)) {
     const full = join(dir, entry);
     if (isHidden(entry) || SKIP_DIRS.has(entry)) continue;
+    if (TEST_DIRS.has(entry) && !includeTests) continue;
     if (statSync(full).isDirectory()) {
-      walkTs(full, out);
+      walkTs(full, out, includeTests);
     } else if (/\.(ts|tsx)$/.test(entry)) {
       out.push(full);
     }
@@ -148,7 +148,7 @@ function collectFiles(includeTests: boolean): string[] {
   const out: string[] = [];
   for (const root of SCOPE_ROOTS) {
     if (!existsSync(root) || !statSync(root).isDirectory()) continue;
-    for (const f of walkTs(root, [])) {
+    for (const f of walkTs(root, [], includeTests)) {
       const rel = relative(ROOT, f).split(sep).join("/");
       // Keep only app source: files under a src dir, plus edge middleware.
       if (!rel.includes("/src/") && !rel.endsWith("/middleware.ts")) continue;
@@ -195,9 +195,108 @@ function rel(file: string): string {
 function isAllowedPair(a: string, b: string): boolean {
   const ra = rel(a);
   const rb = rel(b);
-  return ALLOWED_PAIRS.some(
+  const hit = ALLOWED_PAIRS.some(
     ([x, y]) => (ra === x && rb === y) || (ra === y && rb === x),
   );
+  if (hit) USED_ALLOWLIST_KEYS.add(pairKey(ra, rb));
+  return hit;
+}
+
+/** Canonical allowlist key: sorted paths joined by "|". */
+function pairKey(a: string, b: string): string {
+  return [a, b].sort().join("|");
+}
+
+/**
+ * Load + validate the baseline allowlist file. Any structural problem is a
+ * hard failure — the guard must never silently run without its allowlist.
+ */
+function loadAllowlist(): void {
+  if (!existsSync(ALLOWLIST_FILE)) {
+    logError(
+      `Duplication allowlist file missing: ${rel(ALLOWLIST_FILE)} — refusing to run without it. ` +
+      "Recreate it (see the file header) or the check would fail-open.",
+      undefined,
+      LOG_CTX,
+    );
+    process.exit(1);
+  }
+
+  let raw: unknown;
+  try {
+    raw = JSON.parse(readFileSync(ALLOWLIST_FILE, "utf-8"));
+  } catch (err) {
+    logError(
+      `Duplication allowlist is not valid JSON (${(err as Error).message}): ${rel(ALLOWLIST_FILE)}`,
+      undefined,
+      LOG_CTX,
+    );
+    process.exit(1);
+  }
+
+  const obj = raw as { pairs?: unknown; notes?: unknown };
+  if (
+    !Array.isArray(obj.pairs) ||
+    !obj.pairs.every(
+      (p) =>
+        Array.isArray(p) &&
+        p.length === 2 &&
+        p.every((x) => typeof x === "string"),
+    )
+  ) {
+    logError(
+      `Duplication allowlist must be { "pairs": [["a", "b"], ...] }: ${rel(ALLOWLIST_FILE)}`,
+      undefined,
+      LOG_CTX,
+    );
+    process.exit(1);
+  }
+
+  const norm = (p: string): string => p.replace(/\\/g, "/").replace(/^\.\//, "");
+  const seen = new Set<string>();
+  const pairs: [string, string][] = [];
+  for (const [a, b] of obj.pairs as [string, string][]) {
+    const na = norm(a);
+    const nb = norm(b);
+    if (na === nb) {
+      logError(`Allowlist pair ${na} <=> ${nb} lists the same file twice.`, undefined, LOG_CTX);
+      process.exit(1);
+    }
+    const key = pairKey(na, nb);
+    if (seen.has(key)) {
+      logError(`Allowlist pair ${na} <=> ${nb} is listed more than once.`, undefined, LOG_CTX);
+      process.exit(1);
+    }
+    seen.add(key);
+    pairs.push([na, nb]);
+  }
+  ALLOWED_PAIRS = pairs;
+
+  // Notes map: validate keys reference a real pair; warn (don't fail) on
+  // orphans and on pairs missing a note.
+  const notes = (obj.notes ?? {}) as Record<string, string>;
+  for (const [key, text] of Object.entries(notes)) {
+    if (typeof text !== "string") {
+      logError(`Allowlist note for "${key}" must be a string.`, undefined, LOG_CTX);
+      process.exit(1);
+    }
+    if (!seen.has(key)) {
+      logInfo(`⚠️  Allowlist note references unknown pair "${key}" — remove the orphan note.`, LOG_CTX);
+    }
+  }
+  for (const key of seen) {
+    if (notes[key]) ALLOWLIST_NOTES[key] = notes[key];
+    else logInfo(`⚠️  Allowlist pair "${key}" has no note explaining why it is intentional.`, LOG_CTX);
+  }
+
+  // Hygiene: entries pointing at files that no longer exist are stale.
+  for (const [a, b] of ALLOWED_PAIRS) {
+    for (const p of [a, b]) {
+      if (!existsSync(resolve(ROOT, p))) {
+        logInfo(`⚠️  Allowlisted file no longer exists — remove or update the entry: ${p}`, LOG_CTX);
+      }
+    }
+  }
 }
 
 // ─── Detector 1: same-purpose files ──────────────────────────────────────────
@@ -330,9 +429,22 @@ function main(): void {
     process.exit(0);
   }
 
+  loadAllowlist();
   const sigs = files.map(sigLines);
   detectSamePurposeFiles(files, sigs);
   detectDuplicateBlocks(files, sigs);
+
+  // Hygiene: allowlisted pairs that never suppressed a finding no longer
+  // need the exception — surface them so the baseline stays honest.
+  for (const [a, b] of ALLOWED_PAIRS) {
+    const key = pairKey(a, b);
+    if (!USED_ALLOWLIST_KEYS.has(key)) {
+      logInfo(
+        `✅ Allowlist entry ${a} <=> ${b} no longer reports duplication — safe to remove from ${rel(ALLOWLIST_FILE)}.`,
+        LOG_CTX,
+      );
+    }
+  }
 
   if (findings.length === 0) {
     logInfo("✅ No same-purpose components or duplicate code blocks found.", LOG_CTX);
@@ -370,7 +482,8 @@ function main(): void {
   }
   logError(
     "Deduplicate: extract the shared piece into a lib (e.g. lib/ui) and import it from both places. " +
-    "If a pair is intentional and cannot be shared, it must be added to ALLOWED_PAIRS with a comment explaining why.",
+    "If a pair is intentional and cannot be shared, record it in scripts/duplication-allowlist.json " +
+    "with a note explaining why.",
     undefined,
     LOG_CTX,
   );

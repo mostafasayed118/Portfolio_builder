@@ -42,7 +42,7 @@ export function abortAllRequests(): void {
 
 type ApiResult<T> =
   | { success: true; data?: T; count?: number }
-  | { success: false; message: string };
+  | { success: false; message: string; code?: string; existingId?: string };
 
 const STATE_CHANGING = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 const REQUEST_TIMEOUT_MS = 15_000;
@@ -138,6 +138,11 @@ async function doFetch<T>(
 
     if (!res.ok) {
       let message = `Request failed (${res.status})`;
+      // Structured conflict metadata (e.g. code "DUPLICATE_NAME" with the
+      // existing row id) so callers can offer an overwrite instead of
+      // treating every 409 as a generic failure.
+      let conflictCode: string | undefined;
+      let conflictExistingId: string | undefined;
       try {
         const errData = await res.json();
         if (errData.message) message = errData.message;
@@ -147,6 +152,8 @@ async function doFetch<T>(
             .join("; ");
           message = fieldErrors || message;
         }
+        if (typeof errData.code === "string") conflictCode = errData.code;
+        if (typeof errData.existingId === "string") conflictExistingId = errData.existingId;
       } catch { /* response wasn't JSON */ }
 
       // ── 401 auto-refresh (max 1 retry) ────────────────────────────────
@@ -179,7 +186,7 @@ async function doFetch<T>(
           fireAuthMissingFromApiClient();
         });
       }
-      return { success: false, message };
+      return { success: false, message, code: conflictCode, existingId: conflictExistingId };
     }
     return await res.json();
   } catch (err) {

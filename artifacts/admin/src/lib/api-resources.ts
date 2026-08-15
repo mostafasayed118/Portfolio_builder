@@ -13,7 +13,7 @@ import type {
   HeroContent, AboutContent, Skill, Project, Experience,
   Certification, Message, ContactInfo, ThemeSettings,
   TypographySettings, SeoSettings, SectionSetting, SiteSettings,
-  User, BlogPost,
+  User, BlogPost, ThemePresetRow,
 } from "@workspace/supabase/types";
 import { request, type CvSettings } from "./request-core";
 
@@ -85,6 +85,14 @@ export const api = {
   themeSettings: {
     get: () => request<ThemeSettings>("GET", "/theme-settings"),
     update: (data: Partial<ThemeSettings>) => request<ThemeSettings>("PUT", "/theme-settings", data),
+  },
+  themePresets: {
+    list: (userId?: string) => request<ThemePresetRow[]>("GET", `/theme-presets${userIdParam(userId)}`),
+    create: (data: { name: string; description?: string; palette: Record<string, string> }) =>
+      request("POST", "/theme-presets", data),
+    update: (id: string, data: { name?: string; description?: string; palette?: Record<string, string> }) =>
+      request("PUT", `/theme-presets/${id}`, data),
+    delete: (id: string) => request("DELETE", `/theme-presets/${id}`),
   },
   typographySettings: {
     get: () => request<TypographySettings>("GET", "/typography-settings"),
