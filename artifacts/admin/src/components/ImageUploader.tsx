@@ -7,10 +7,17 @@ import { getCsrfToken } from "@/lib/api-client";
 import { getClerkToken } from "@/lib/auth-token";
 import { getApiUrl } from "@/lib/env";
 
-interface UploadedImage {
+export interface UploadedImage {
   id: string;
   url: string;
   variants: { type: string; url: string }[];
+}
+
+interface UploadResponse {
+  success?: boolean;
+  data?: UploadedImage;
+  message?: string;
+  error?: string;
 }
 
 interface ImageUploaderProps {
@@ -94,15 +101,19 @@ export default function ImageUploader({
 
       const result = await new Promise<UploadedImage>((resolve, reject) => {
         request.onload = () => {
-          if (request.status >= 200 && request.status < 300) {
-            resolve(JSON.parse(request.responseText));
-          } else {
-            try {
-              const err = JSON.parse(request.responseText);
-              reject(new Error(err.error || "Upload failed"));
-            } catch {
-              reject(new Error(`Upload failed (${request.status})`));
+          try {
+            const response = JSON.parse(request.responseText) as UploadResponse | UploadedImage;
+            if (request.status >= 200 && request.status < 300) {
+              const image: UploadedImage | undefined =
+                "data" in response ? response.data : "url" in response ? response : undefined;
+              if (!image?.url) throw new Error("Upload response did not include an image URL");
+              resolve(image);
+            } else {
+              const message = "message" in response ? response.message : "error" in response ? response.error : undefined;
+              reject(new Error(message || `Upload failed (${request.status})`));
             }
+          } catch (err) {
+            reject(err instanceof Error ? err : new Error(`Upload failed (${request.status})`));
           }
         };
         request.onerror = () => reject(new Error("Network error"));

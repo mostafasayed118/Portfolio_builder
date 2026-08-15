@@ -8,6 +8,7 @@ import { Button, Input, Textarea } from "@workspace/ui";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useBeforeUnload } from "@/hooks/use-before-unload";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
+import ImageUploader, { type UploadedImage } from "@/components/ImageUploader";
 import { HeroLivePreview } from "@/features/hero-content/components/HeroLivePreview";
 import { EditorErrorState, EditorLoadingState } from "@/components/EditorStates";
 import { EditorHeader, EditorLayout } from "@/components/EditorScaffold";
@@ -119,6 +120,12 @@ export default function HeroEditor() {
     setValue("typewriter_lines", [...current, ""], { shouldDirty: true });
   };
 
+  const handleAvatarUpload = (images: UploadedImage[]) => {
+    const image = images.at(-1);
+    const optimizedUrl = image?.variants.find((variant) => variant.type === "medium")?.url ?? image?.url ?? "";
+    setValue("avatar_url", optimizedUrl, { shouldDirty: true });
+  };
+
   const removeTypewriterLine = (index: number) => {
     const current = [...(getValues("typewriter_lines") || [])];
     if (current.length > 1) {
@@ -197,6 +204,14 @@ export default function HeroEditor() {
                     className="h-8 w-8 shrink-0 rounded object-cover border"
                   />
                 )}
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">Or upload an image (JPG, PNG, or WEBP; max 10MB).</p>
+                <ImageUploader
+                  entityType="hero"
+                  maxFiles={1}
+                  onUploadComplete={handleAvatarUpload}
+                />
               </div>
               <EditorField label="CV Download URL">
                 <Input {...register("cv_url")} placeholder="https://..." />
