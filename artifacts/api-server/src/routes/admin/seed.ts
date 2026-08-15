@@ -5,7 +5,7 @@ import { requireSuperadmin } from "../../middleware/requireSuperadmin";
 import type { Response } from "express";
 import { getSupabaseClient } from "../../lib/supabase-client";
 import { badRequest, serverError } from "../../lib/api-response";
-import { seedHerContent, seedAboutContent, seedSkills, seedProjects, seedExperience, seedCertifications, softDeleteAll } from "../../lib/seed-data";
+import { seedHerContent, seedAboutContent, seedSkills, seedProjects, seedExperience, seedCertifications, seedPosts, softDeleteAll } from "../../lib/seed-data";
 
 const router: IRouter = Router();
 
@@ -48,6 +48,10 @@ router.post("/", requireSuperadmin, doubleCsrfProtection, async (req: Authentica
     const certResult = await seedCertifications(supabase, userId, force);
     summary.certifications = certResult.count;
     errors.push(...certResult.errors);
+
+    const postResult = await seedPosts(supabase, userId);
+    summary.posts = postResult.count;
+    errors.push(...postResult.errors);
 
     return res.json({ success: true, summary, errors });
   } catch (e) {
