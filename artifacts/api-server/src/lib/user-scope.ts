@@ -3,7 +3,8 @@ import type { AuthenticatedRequest } from "../middleware/adminAuth";
 /**
  * Compute the target user ID for a scoped collection query.
  *
- *  - Superadmins may pass `?userId=…` to query on behalf of another user.
+ *  - Superadmins may pass `?userId=…` to query on behalf of a specific user;
+ *    without it they resolve to `null`, meaning “all users” (no user filter).
  *  - Non-superadmins always see their own rows.
  *  - Returns `null` when a non-superadmin has no `req.user.id` — callers
  *    should short-circuit to an empty result.
@@ -15,6 +16,6 @@ export function resolveTargetUserId(
   const isSuperadmin = req.user?.role === "superadmin";
   const requesterId = req.user?.id ?? null;
 
-  if (isSuperadmin && queryUserId) return queryUserId;
+  if (isSuperadmin) return queryUserId ?? null;
   return requesterId;
 }
