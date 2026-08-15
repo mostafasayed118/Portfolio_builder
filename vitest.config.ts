@@ -106,6 +106,16 @@ export default defineConfig({
           testTimeout: 15_000,
         },
       },
+      {
+        name: "scripts",
+        test: {
+          root: path.resolve(dirname, "scripts"),
+          environment: "node",
+          include: ["**/*.test.mjs"],
+          globals: true,
+          testTimeout: 15_000,
+        },
+      },
     ],
   },
 });
