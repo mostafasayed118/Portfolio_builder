@@ -1,51 +1,7 @@
 import "@testing-library/jest-dom/vitest";
+import { installBrowserMocks, makeSupabaseCreateClientMock } from "@workspace/test-utils";
 
-Object.defineProperty(window, "matchMedia", {
-  writable: true,
-  configurable: true,
-  value: vi.fn().mockImplementation((query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  })),
-});
-
-Object.defineProperty(window, "ResizeObserver", {
-  writable: true,
-  configurable: true,
-  value: vi.fn().mockImplementation(() => ({
-    observe: vi.fn(),
-    unobserve: vi.fn(),
-    disconnect: vi.fn(),
-  })),
-});
-
-class MockIntersectionObserver {
-  readonly root: Element | null = null;
-  readonly rootMargin: string = "0px";
-  readonly thresholds: ReadonlyArray<number> = [0];
-  observe = vi.fn();
-  unobserve = vi.fn();
-  disconnect = vi.fn();
-  takeRecords = vi.fn(() => []);
-}
-
-Object.defineProperty(window, "IntersectionObserver", {
-  writable: true,
-  configurable: true,
-  value: MockIntersectionObserver,
-});
-
-Object.defineProperty(globalThis, "IntersectionObserver", {
-  writable: true,
-  configurable: true,
-  value: MockIntersectionObserver,
-});
+installBrowserMocks();
 
 const mockHeroContent = {
   id: "test-hero-id",
@@ -78,38 +34,8 @@ vi.mock("@workspace/supabase/client", () => ({
 }));
 
 vi.mock("@supabase/supabase-js", () => ({
-  createClient: vi.fn(() => ({
-    from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        order: vi.fn(() => ({
-          limit: vi.fn(() => ({
-            maybeSingle: vi.fn().mockResolvedValue({ data: mockHeroContent, error: null }),
-            single: vi.fn(),
-          })),
-          maybeSingle: vi.fn(),
-        })),
-        eq: vi.fn(() => ({
-          order: vi.fn(() => ({
-            limit: vi.fn(() => ({ maybeSingle: vi.fn() })),
-          })),
-          gte: vi.fn(() => ({
-            order: vi.fn(() => ({ limit: vi.fn(() => ({})) })),
-          })),
-          single: vi.fn(),
-        })),
-        limit: vi.fn(() => ({ maybeSingle: vi.fn().mockResolvedValue({ data: mockHeroContent, error: null }) })),
-        single: vi.fn(),
-      })),
-      insert: vi.fn(() => ({ select: vi.fn(() => ({ single: vi.fn() })) })),
-      update: vi.fn(() => ({ eq: vi.fn() })),
-      delete: vi.fn(() => ({ eq: vi.fn() })),
-    })),
-    storage: {
-      from: vi.fn(() => ({
-        upload: vi.fn(),
-        remove: vi.fn(),
-        createSignedUrl: vi.fn(),
-      })),
-    },
-  })),
+  createClient: makeSupabaseCreateClientMock({
+    maybeSingleData: mockHeroContent,
+    includeGte: true,
+  }),
 }));
