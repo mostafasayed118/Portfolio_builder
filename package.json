@@ -10,7 +10,7 @@
     "dev:admin": "pnpm --filter @workspace/admin run dev",
     "dev:api": "pnpm --filter @workspace/api-server run dev",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
-    "typecheck:libs": "tsc --build --force && tsc -p lib/db --noEmit && tsc -p lib/logging --noEmit && tsc -p lib/supabase --noEmit && tsc -p lib/auth --noEmit && tsc -p lib/ui --noEmit",
+    "typecheck:libs": "tsc --build --force && tsc -p lib/db --noEmit && tsc -p lib/logging --noEmit && tsc -p lib/supabase --noEmit && tsc -p lib/auth --noEmit && tsc -p lib/ui --noEmit && tsc -p lib/test-utils --noEmit",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
     "test": "vitest run",
     "test:e2e": "playwright test",

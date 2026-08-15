@@ -1,0 +1,12 @@
+{
+  "name": "@workspace/test-utils",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./browser-mocks": "./src/browser-mocks.ts",
+    "./supabase-mock": "./src/supabase-mock.ts",
+    "./csp": "./src/csp.ts"
+  }
+}

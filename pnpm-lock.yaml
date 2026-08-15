@@ -334,6 +334,9 @@ importers:
       '@vitejs/plugin-react':
         specifier: 'catalog:'
         version: 5.1.4(vite@7.3.2(@types/node@25.3.5)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0)(yaml@2.9.0))
+      '@workspace/test-utils':
+        specifier: workspace:*
+        version: link:../../lib/test-utils
       class-variance-authority:
         specifier: 'catalog:'
         version: 0.7.1
@@ -603,6 +606,9 @@ importers:
       '@vitejs/plugin-react':
         specifier: 'catalog:'
         version: 5.1.4(vite@7.3.2(@types/node@25.3.5)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0)(yaml@2.9.0))
+      '@workspace/test-utils':
+        specifier: workspace:*
+        version: link:../../lib/test-utils
       class-variance-authority:
         specifier: 'catalog:'
         version: 0.7.1
@@ -696,6 +702,8 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 25.3.5
+
+  lib/test-utils: {}
 
   lib/ui:
     dependencies:
