@@ -26,8 +26,8 @@ const IS_PRODUCTION_DEPLOY =
   process.env.VERCEL_ENV === "production" || process.env.NODE_ENV === "production";
 
 if (IS_PRODUCTION_DEPLOY) {
-  const requiredUrls = ["VITE_SITE_URL", "VITE_ADMIN_URL"];
-  const missing = requiredUrls.filter((key) => !process.env[key]);
+  const requiredVars = ["VITE_SITE_URL", "VITE_ADMIN_URL", "CLERK_SECRET_KEY"];
+  const missing = requiredVars.filter((key) => !process.env[key]);
   if (missing.length > 0) {
     console.error(
       `[build] Production build blocked: missing required environment variable(s): ${missing.join(", ")}`,
@@ -40,6 +40,50 @@ if (IS_PRODUCTION_DEPLOY) {
     }
     process.exit(1);
   }
+
+  // Live-validate the Clerk secret key against Clerk's Backend API before
+  // shipping. A stale or rotated key (exactly the failure that broke admin
+  // auth in production before) would otherwise deploy fine and only fail at
+  // runtime with "The provided Clerk Secret Key is invalid". Failing the
+  // build here makes that impossible: no deploy ships with a dead key.
+  await validateClerkSecretKey();
+}
+
+/**
+ * Checks the production CLERK_SECRET_KEY against Clerk's Backend API.
+ *
+ * `GET /v1/instance` is the lightest authenticated endpoint: it returns 200
+ * for any valid secret key and 401 for a missing, stale, or forged one.
+ * Fail-closed — a production build must never ship a key we cannot verify,
+ * and Vercel build runners have reliable network access to api.clerk.com.
+ */
+async function validateClerkSecretKey() {
+  const key = process.env.CLERK_SECRET_KEY;
+  let res;
+  try {
+    res = await fetch("https://api.clerk.com/v1/instance", {
+      headers: { Authorization: `Bearer ${key}` },
+      signal: AbortSignal.timeout(10_000),
+    });
+  } catch (err) {
+    console.error(
+      `[build] Production build blocked: could not reach Clerk to validate CLERK_SECRET_KEY (${err?.message ?? err}).`,
+    );
+    console.error(
+      "[build] This is likely a transient build-network issue — retry the deploy. If it persists, verify the key's instance is reachable.",
+    );
+    process.exit(1);
+  }
+  if (!res.ok) {
+    console.error(
+      `[build] Production build blocked: CLERK_SECRET_KEY in the Vercel environment is invalid (Clerk responded ${res.status}).`,
+    );
+    console.error(
+      "[build] The deployed API would reject every admin JWT at runtime. Rotate the key in the Vercel project settings (Production environment) and redeploy.",
+    );
+    process.exit(1);
+  }
+  console.log("[build] CLERK_SECRET_KEY validated against Clerk OK");
 }
 
 async function buildAll() {

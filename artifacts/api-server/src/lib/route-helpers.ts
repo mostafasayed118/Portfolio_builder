@@ -44,7 +44,11 @@ export async function updateByIdAndUser(
   if (!isSuperadmin) {
     query = query.eq("user_id", req.user?.id ?? "");
   }
-  const { error, count } = await query.select("id");
+  // Supabase leaves `count` null on `.update().select()`, so the number of
+  // matched rows must be read from the returned `data` array — checking
+  // `count` made every successful PATCH report a false 404 (the write
+  // applied, but the client was told the row didn't exist).
+  const { error, data: updated } = await query.select("id");
   if (error) {
     logSupabaseError(req, {
       route: `${req.method} /${table}/${id}`,
@@ -57,7 +61,7 @@ export async function updateByIdAndUser(
     serverError(res, error.message);
     return;
   }
-  if (!count || count === 0) {
+  if (!updated || updated.length === 0) {
     const name = entityName ?? table.replace(/s$/, "");
     notFound(res, `${name.charAt(0).toUpperCase() + name.slice(1)} not found`);
     return;

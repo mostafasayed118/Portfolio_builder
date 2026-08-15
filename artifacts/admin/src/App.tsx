@@ -71,7 +71,16 @@ function App() {
           <ViewingUserProvider>
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
               <Switch>
+                {/* Clerk's path-routed sign-in navigates through sub-paths
+                    (/sign-in/factor-one, /sign-in/sso-callback, …) during
+                    multi-step sign-in. The wildcard keeps those routes
+                    rendering SignInPage instead of falling through to
+                    ProtectedRoute, which would redirect back to /sign-in
+                    and wipe the in-flight sign-in state. */}
                 <Route path="/sign-in">
+                  <SignInPage />
+                </Route>
+                <Route path="/sign-in/*">
                   <SignInPage />
                 </Route>
 

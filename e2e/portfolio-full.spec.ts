@@ -466,6 +466,11 @@ test.describe("Portfolio — Full Manual Test Suite", () => {
   // ═══════════════════════════════════════════════════════════════
   test.describe("Mobile Responsive", () => {
     test("mobile hamburger menu works", async ({ page }) => {
+      // The homepage fires a one-time "welcome" toast ~1.5s after first
+      // visit; its full-width viewport sits at the top (z-100) and can
+      // intercept clicks on the mobile hamburger. Mark the session visited
+      // up-front so the toast never appears during this test.
+      await page.addInitScript(() => sessionStorage.setItem("visited", "true"));
       await page.setViewportSize({ width: 375, height: 812 });
       await page.goto("/");
       const hamburger = page.getByTestId("btn-mobile-menu");

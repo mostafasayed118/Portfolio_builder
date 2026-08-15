@@ -72,6 +72,43 @@ jobs:
         # lines) anywhere in app source. New duplication fails the build.
         run: pnpm --filter @workspace/scripts check-duplication
 
+  clerk-key:
+    name: Clerk secret key validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate CLERK_SECRET_KEY against Clerk
+        env:
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+        # The same fail-closed check the API build runs at deploy time
+        # (artifacts/api-server/build.mjs). Catching a stale or rotated key
+        # here fails CI before it can ever reach a Vercel deploy.
+        run: |
+          node -e '
+            (async () => {
+              const key = process.env.CLERK_SECRET_KEY;
+              if (!key) {
+                console.error("CLERK_SECRET_KEY is not set as a GitHub Actions secret");
+                process.exit(1);
+              }
+              const res = await fetch("https://api.clerk.com/v1/instance", {
+                headers: { Authorization: "Bearer " + key },
+                signal: AbortSignal.timeout(10_000),
+              });
+              if (!res.ok) {
+                console.error("CLERK_SECRET_KEY is invalid — Clerk responded " + res.status);
+                process.exit(1);
+              }
+              console.log("CLERK_SECRET_KEY validated against Clerk OK");
+            })().catch((err) => {
+              console.error(err.message || err);
+              process.exit(1);
+            });
+          '
+
   db-migrations:
     name: Supabase migrations (fresh DB)
     runs-on: ubuntu-latest
@@ -223,7 +260,10 @@ jobs:
     name: Playwright E2E
     runs-on: ubuntu-latest
     needs: component-tests
-    timeout-minutes: 20
+    # The suite is ~150 tests + startup; 20m was repeatedly blown by the
+    # admin failures' retries. With those gated (see e2e/lib/session-mode.ts)
+    # the run fits in ~10m; 30m is headroom, not slack to hide breakage.
+    timeout-minutes: 30
     env:
       PORT: 3001
       LOG_LEVEL: info
@@ -235,8 +275,20 @@ jobs:
       # Secrets scoped to E2E job only
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+      # The admin auth smoke test signs in as this account (also the first
+      # entry of ADMIN_EMAILS, so the local api-server's adminAuth accepts it).
+      ADMIN_EMAILS: e2e-admin-tester@example.com
       CLERK_TEST_EMAIL: ${{ secrets.CLERK_TEST_EMAIL }}
       CLERK_TEST_PASSWORD: ${{ secrets.CLERK_TEST_PASSWORD }}
+      # API-contract specs require the real admin key (they fall back to a
+      # dev placeholder that 401s against the server's allowlisted key).
+      E2E_ADMIN_KEY: ${{ secrets.ADMIN_API_KEY }}
+      # The portfolio SPA reads Supabase directly (anon client). Without
+      # these the app runs offline in CI and data-dependent tests (e.g.
+      # skill tags) never render.
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
