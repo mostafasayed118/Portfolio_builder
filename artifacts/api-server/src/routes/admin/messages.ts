@@ -23,12 +23,34 @@ const replySchema = z.object({
   reply: z.string().trim().min(1, "Reply is required").max(5000, "Reply is too long"),
 });
 
+/** Valid values for the list endpoint's `?status=` filter. Omitted = default view. */
+const messageStatusSchema = z.enum(["unread", "read", "archived", "all"]).optional();
+
+/**
+ * List messages, optionally filtered server-side by status.
+ *
+ * `?status=unread` / `?status=read` page over exactly those rows — the client
+ * must not filter a single fetched page client-side, because once more than
+ * the page size of messages exists the unread set silently truncates.
+ * `?status=archived` pages over the soft-deleted set (normally hidden by the
+ * soft-delete filter). `all` or omitting the param keeps the default view.
+ */
 router.get("/", validateQueryUserId, async (req: AuthenticatedRequest, res: Response) => {
+  const parsed = messageStatusSchema.safeParse(req.query.status);
+  if (!parsed.success) {
+    return badRequest(res, {
+      status: ["status must be one of: unread, read, archived, all"],
+    });
+  }
+  const status = parsed.data;
+
   return runCollectionQuery(req, res, "messages", {
-    softDelete: true,
+    softDelete: status === "archived" ? "only" : true,
     orderBy: "created_at",
     orderAsc: false,
     includeOrphans: true,
+    filters:
+      status === "unread" || status === "read" ? { eq: { status } } : undefined,
   });
 });
 
@@ -81,6 +103,76 @@ router.post("/:id/archive", doubleCsrfProtection, validateParamId, async (req: A
  */
 router.post("/:id/unarchive", doubleCsrfProtection, validateParamId, async (req: AuthenticatedRequest, res: Response) => {
   return updateByIdAndUser(req, res, "messages", req.params.id as string, { deleted_at: null }, "Message");
+});
+
+/**
+ * Mark every unread message as read in one server-side statement. The list
+ * endpoint paginates (50/page), so a client-side loop over the fetched page
+ * could never reach all unread rows once more than 50 exist. Same predicate
+ * as the unread-count endpoint (status='unread' AND not soft-deleted), with
+ * the same user scoping: superadmins mark everything, regular admins only
+ * their own rows (or rows with no owner). Returns how many were marked.
+ */
+router.post("/mark-all-read", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
+  const supabase = getSupabaseClient();
+  const userId = req.user?.id;
+  const isSuperadmin = req.user?.role === "superadmin";
+
+  // User scope matches the unread-count endpoint: superadmins see everything,
+  // regular admins only their own rows (or rows with no owner).
+  const scope = <T extends { or: (f: string) => T }>(q: T): T =>
+    !isSuperadmin && userId ? q.or(`user_id.eq.${userId},user_id.is.null`) : q;
+
+  const { count, error: countError } = await scope(
+    supabase
+      .from("messages")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "unread")
+      .is("deleted_at", null),
+  );
+  if (countError) return serverError(res, countError.message);
+
+  const { error } = await scope(
+    supabase
+      .from("messages")
+      .update({ status: "read" })
+      .eq("status", "unread")
+      .is("deleted_at", null),
+  );
+  if (error) return serverError(res, error.message);
+  return ok(res, { marked: count ?? 0 });
+});
+
+/**
+ * One-click cleanup: archive every automated E2E test submission
+ * (email matching `e2e-%`) that is still visible. Server-side on purpose —
+ * the list endpoint paginates, so the client could never see all rows.
+ * Superadmin only: it is a global maintenance action, not a per-user one.
+ * Idempotent: re-running only touches rows still visible (deleted_at null).
+ */
+router.post("/archive-test-submissions", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
+  if (req.user?.role !== "superadmin") {
+    return res.status(403).json({ success: false, message: "Superadmin required" });
+  }
+  const supabase = getSupabaseClient();
+  // Count the visible E2E rows first (typed head-count, same as unread-count)
+  // so the response can report how many were archived. The update then
+  // targets the identical predicate. Any row inserted between the two
+  // statements is out of scope for this run — fine for a cleanup tool.
+  const { count, error: countError } = await supabase
+    .from("messages")
+    .select("id", { count: "exact", head: true })
+    .ilike("email", "e2e-%")
+    .is("deleted_at", null);
+  if (countError) return serverError(res, countError.message);
+
+  const { error } = await supabase
+    .from("messages")
+    .update({ deleted_at: new Date().toISOString() })
+    .ilike("email", "e2e-%")
+    .is("deleted_at", null);
+  if (error) return serverError(res, error.message);
+  return ok(res, { archived: count ?? 0 });
 });
 
 router.delete("/:id", doubleCsrfProtection, validateParamId, async (req: AuthenticatedRequest, res: Response) => {
@@ -142,6 +234,28 @@ router.post(
 );
 
 router.post("/bulk-delete", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
+  const supabase = getSupabaseClient();
+  const result = bulkDeleteSchema.safeParse(req.body);
+  if (!result.success) {
+    return badRequest(res, result.error.flatten().fieldErrors);
+  }
+  const { ids } = result.data;
+  const isSuperadmin = req.user?.role === "superadmin";
+  let query = supabase.from("messages").update({ deleted_at: new Date().toISOString() }).in("id", ids);
+  if (!isSuperadmin) {
+    query = query.eq("user_id", req.user?.id ?? "");
+  }
+  const { error } = await query;
+  if (error) return serverError(res, error.message);
+  return ok(res, undefined);
+});
+
+/**
+ * Bulk archive — same soft-delete semantics as bulk-delete, named to match
+ * the archive/unarchive terminology so inbox cleanup (e.g. E2E test rows)
+ * can be done from the UI without direct database access.
+ */
+router.post("/bulk-archive", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
   const supabase = getSupabaseClient();
   const result = bulkDeleteSchema.safeParse(req.body);
   if (!result.success) {

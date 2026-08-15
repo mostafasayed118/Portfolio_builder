@@ -75,12 +75,22 @@ export async function runCollectionQuery<T = unknown>(
   table: string,
   options: {
     select?: string;
-    softDelete?: boolean;
+    /**
+     * `true` → only rows where deleted_at IS NULL (not soft-deleted).
+     * `"only"` → only rows where deleted_at IS NOT NULL (soft-deleted only),
+     * for views that page through the trash/archived set.
+     */
+    softDelete?: boolean | "only";
     orderBy?: string;
     orderAsc?: boolean;
     userColumn?: string; // default: "user_id"
     targetUserId?: string | null;
     includeOrphans?: boolean; // also return rows with user_id IS NULL
+    /** Extra equality filters applied after soft-delete and user scope, before ordering. */
+    filters?: {
+      /** Applied as `.eq(column, value)` for each entry. */
+      eq?: Record<string, string | number | boolean>;
+    };
   } = {},
 ): Promise<Response> {
   const supabase = getSupabaseClient();
@@ -102,8 +112,16 @@ export async function runCollectionQuery<T = unknown>(
     .from(table)
     .select(options.select ?? "*", { count: "exact" });
 
-  if (options.softDelete) {
+  if (options.softDelete === "only") {
+    query = query.not("deleted_at", "is", null);
+  } else if (options.softDelete) {
     query = query.is("deleted_at", null);
+  }
+
+  if (options.filters?.eq) {
+    for (const [column, value] of Object.entries(options.filters.eq)) {
+      query = query.eq(column, value);
+    }
   }
 
   if (targetUserId) {

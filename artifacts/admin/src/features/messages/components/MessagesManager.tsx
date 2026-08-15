@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { Button, Card, CardContent, Input, Textarea } from "@workspace/ui";
+import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
 import { SmartEmptyState } from "@/components/SmartEmptyState";
 import { AdminErrorState } from "@/components/AdminErrorState";
 import { AdminLoadingState } from "@/components/AdminLoadingState";
@@ -24,10 +25,15 @@ function formatDate(ts: string): string {
   });
 }
 
+type MessageFilter = "all" | "unread" | "read" | "archived";
+
 export default function MessagesManager() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { data: messages, isLoading, isError, error, refetch } = useEntityQuery<Msg[]>(
+  // The All view: always fetched, drives the header/chip counts and the
+  // default tab. Kept separate from the filtered fetch so switching chips
+  // never recomputes counts from a filtered page.
+  const { data: messages, isLoading: allLoading, isError, error, refetch } = useEntityQuery<Msg[]>(
     "messages",
     (uid) => api.messages.list(uid ?? undefined),
   );
@@ -36,32 +42,47 @@ export default function MessagesManager() {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState<MessageFilter>("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showCleanupDialog, setShowCleanupDialog] = useState(false);
 
-  const msgs = messages as Msg[] | undefined;
+  // The active chip drives a server-side status filter on the collection
+  // endpoint: Unread/Read page over exactly those rows (not a client-side
+  // slice of the first 50 fetched) and Archived pages over the soft-deleted
+  // set the All view hides. `enabled` keeps the filtered fetch off on All.
+  const statusParam = filter === "all" ? undefined : filter;
+  const { data: filteredMessages, isLoading: filteredLoading } = useEntityQuery<Msg[]>(
+    "messages",
+    (uid) => api.messages.list(uid ?? undefined, statusParam),
+    { enabled: filter !== "all" },
+    [statusParam ?? "all"],
+  );
+
+  const allMsgs = messages as Msg[] | undefined;
+  const msgs = (filter === "all" ? messages : filteredMessages) as Msg[] | undefined;
+  const isLoading = filter === "all" ? allLoading : filteredLoading;
+
   // The unread chip and Unread-tab count must match the sidebar badge and the
   // API's unread-count endpoint (status='unread' only). Computing them from
   // the fetched list is wrong: the collection endpoint paginates at 50 rows,
   // so once more than 50 messages exist the local count silently truncates
   // and disagrees with the sidebar. Use the API-backed count instead.
   const { data: unread } = useUnreadCountQuery();
-  const readCount = useMemo(() => msgs?.filter((m) => !isUnread(m) && !isArchived(m)).length ?? 0, [msgs]);
-  const archivedCount = useMemo(() => msgs?.filter(isArchived).length ?? 0, [msgs]);
+  // Read/archived counts come from the All fetch (always available), never
+  // from the filtered page — on the Unread chip the fetched rows are all
+  // unread, so counting them would under-report the others.
+  const readCount = useMemo(() => allMsgs?.filter((m) => !isUnread(m) && !isArchived(m)).length ?? 0, [allMsgs]);
+  const archivedCount = useMemo(() => allMsgs?.filter(isArchived).length ?? 0, [allMsgs]);
 
-  const filtered = useMemo(() => {
-    if (!msgs) return [];
-    if (filter === "all") return msgs;
-    if (filter === "unread") return msgs.filter(isUnread);
-    if (filter === "read") return msgs.filter((m) => !isUnread(m) && !isArchived(m));
-    if (filter === "archived") return msgs.filter(isArchived);
-    return msgs;
-  }, [msgs, filter]);
-
+  // Server-side filtering makes a client-side `filtered` memo redundant —
+  // `msgs` already is the filtered set, so pagination pages over exactly
+  // the rows the active chip asked for.
   const paginatedMessages = useMemo(() => {
-    return filtered.slice((page - 1) * pageSize, page * pageSize);
-  }, [filtered, page, pageSize]);
+    const list = msgs ?? [];
+    return list.slice((page - 1) * pageSize, page * pageSize);
+  }, [msgs, page, pageSize]);
 
   const openReply = (msg: Msg) => {
     setReplyTo(msg);
@@ -128,8 +149,66 @@ export default function MessagesManager() {
   };
 
   const handleFilterChange = (f: string) => {
-    setFilter(f);
+    // MessageFilterBar hands back one of the four chip keys.
+    setFilter(f as MessageFilter);
     setPage(1);
+    setSelectedIds(new Set());
+  };
+
+  const toggleSelect = (msg: Msg) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (msg.id) {
+        if (next.has(msg.id)) next.delete(msg.id);
+        else next.add(msg.id);
+      }
+      return next;
+    });
+  };
+
+  const handleCleanupTestSubmissions = async () => {
+    try {
+      const res = await api.messages.archiveTestSubmissions();
+      if (!res.success) throw new Error(res.message);
+      const archived = (res as { data?: { archived?: number } }).data?.archived ?? 0;
+      await queryClient.invalidateQueries({ queryKey: ["messages"] });
+      await queryClient.invalidateQueries({ queryKey: ["unreadCount"] });
+      setShowCleanupDialog(false);
+      setSelectedIds(new Set());
+      toast({
+        title:
+          archived > 0
+            ? `Archived ${archived} test submission${archived === 1 ? "" : "s"}`
+            : "No test submissions to archive",
+      });
+    } catch (err) {
+      toast({
+        title: "Failed to archive test submissions",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleBulkArchive = async () => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    try {
+      const res = await api.messages.bulkArchive(ids);
+      if (!res.success) throw new Error(res.message);
+      await queryClient.invalidateQueries({ queryKey: ["messages"] });
+      await queryClient.invalidateQueries({ queryKey: ["unreadCount"] });
+      setSelectedIds(new Set());
+      toast({
+        title: `Archived ${ids.length} message${ids.length === 1 ? "" : "s"}`,
+      });
+    } catch (err) {
+      toast({
+        title: "Failed to archive messages",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleArchive = async (msg: Msg) => {
@@ -167,19 +246,26 @@ export default function MessagesManager() {
   };
 
   const handleMarkAllRead = async () => {
-    const allMsgs = msgs || [];
     try {
-      const results = await Promise.all(allMsgs.filter(m => isUnread(m)).map(m => api.messages.markRead(m.id)));
-      const failed = results.filter(r => r.success === false);
+      // Server-side: marking every unread row in one statement. A client-side
+      // loop over the fetched list would only reach the first page (50 rows).
+      const res = await api.messages.markAllRead();
+      if (!res.success) throw new Error(res.message);
+      const marked = (res as { data?: { marked?: number } }).data?.marked ?? 0;
       await queryClient.invalidateQueries({ queryKey: ["messages"] });
       await queryClient.invalidateQueries({ queryKey: ["unreadCount"] });
-      if (failed.length > 0) {
-        toast({ title: "Some messages could not be marked read", variant: "destructive" });
-        return;
-      }
-      toast({ title: "All marked as read" });
-    } catch {
-      toast({ title: "Some messages could not be marked read", variant: "destructive" });
+      toast({
+        title:
+          marked > 0
+            ? `Marked ${marked} message${marked === 1 ? "" : "s"} as read`
+            : "No unread messages",
+      });
+    } catch (err) {
+      toast({
+        title: "Failed to mark all as read",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
     }
   };
 
@@ -199,7 +285,7 @@ export default function MessagesManager() {
             {(unread ?? 0) > 0 && <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">{unread} unread</span>}
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {msgs?.length ?? 0} total messages from the contact form.
+            {allMsgs?.length ?? 0} total messages from the contact form.
           </p>
         </div>
         {(unread ?? 0) > 0 && (
@@ -207,7 +293,34 @@ export default function MessagesManager() {
             Mark All Read
           </Button>
         )}
+        <Button
+          size="sm"
+          variant="outline"
+          className="min-h-[44px] text-destructive hover:text-destructive hover:bg-destructive/10"
+          onClick={() => setShowCleanupDialog(true)}
+        >
+          Archive test submissions
+        </Button>
       </div>
+
+      {selectedIds.size > 0 && (
+        <div className="flex flex-wrap items-center gap-3 rounded-md border bg-muted/40 px-3 py-2">
+          <span className="text-sm font-medium">
+            {selectedIds.size} selected
+          </span>
+          <Button size="sm" onClick={handleBulkArchive} className="min-h-[44px]">
+            Archive selected
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setSelectedIds(new Set())}
+            className="min-h-[44px]"
+          >
+            Clear
+          </Button>
+        </div>
+      )}
 
       <MessageFilterBar
         filter={filter}
@@ -218,10 +331,10 @@ export default function MessagesManager() {
         archivedCount={archivedCount}
       />
 
-      {filtered.length === 0 && (
+      {msgs && msgs.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            {msgs?.length === 0 ? (
+            {allMsgs?.length === 0 ? (
               <SmartEmptyState type="messages" />
             ) : (
               <>
@@ -238,6 +351,8 @@ export default function MessagesManager() {
           <MessageCard
             key={msg.id ?? i}
             message={msg}
+            selected={msg.id ? selectedIds.has(msg.id) : false}
+            onToggleSelect={toggleSelect}
             onReply={openReply}
             onMarkRead={handleMarkRead}
             onArchive={handleArchive}
@@ -247,9 +362,9 @@ export default function MessagesManager() {
         ))}
       </div>
 
-      {filtered.length > pageSize && (
+      {msgs && msgs.length > pageSize && (
         <MessagePagination
-          filteredCount={filtered.length}
+          filteredCount={msgs.length}
           page={page}
           pageSize={pageSize}
           onPageChange={setPage}
@@ -307,6 +422,21 @@ export default function MessagesManager() {
         </DialogContent>
       </Dialog>
     </div>
+
+    <SmartConfirmDialog
+      state={{
+        isOpen: showCleanupDialog,
+        title: "Archive all test submissions?",
+        message:
+          "This archives every visible message from automated E2E tests " +
+          "(emails starting with e2e-). Real inquiries are untouched, and " +
+          "you can restore anything from the Archived tab.",
+        confirmLabel: "Archive test submissions",
+        variant: "warning",
+        onConfirm: handleCleanupTestSubmissions,
+      }}
+      onCancel={() => setShowCleanupDialog(false)}
+    />
     </>
   );
 }

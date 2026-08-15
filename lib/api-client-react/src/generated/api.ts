@@ -28,6 +28,8 @@ import type {
   AnalyzeContent200,
   ApiError,
   ArchiveMessage200,
+  ArchiveTestSubmissions200,
+  BulkArchiveMessages200,
   BulkDeleteInput,
   BulkDeleteMessages200,
   CertificationInput,
@@ -87,6 +89,7 @@ import type {
   ListThemePresets200,
   ListThemePresetsParams,
   ListUsers200,
+  MarkAllMessagesRead200,
   MarkMessageRead200,
   MarkMessageUnread200,
   MessageReplyInput,
@@ -3596,6 +3599,221 @@ export const useBulkDeleteMessages = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getBulkDeleteMessagesMutationOptions(options));
+    }
+
+export const getBulkArchiveMessagesUrl = () => {
+
+
+
+
+  return `/api/v1/admin/messages/bulk-archive`
+}
+
+/**
+ * @summary Bulk-archive messages (soft-delete, hides from inbox)
+ */
+export const bulkArchiveMessages = async (bulkDeleteInput: BulkDeleteInput, options?: Parameters<typeof customFetch>[1]): Promise<BulkArchiveMessages200> => {
+
+  return customFetch<BulkArchiveMessages200>(getBulkArchiveMessagesUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(bulkDeleteInput)
+  }
+);}
+
+
+
+
+
+export const getBulkArchiveMessagesMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkArchiveMessages>>, TError,{data: BodyType<BulkDeleteInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof bulkArchiveMessages>>, TError,{data: BodyType<BulkDeleteInput>}, TContext> => {
+
+const mutationKey = ['bulkArchiveMessages'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bulkArchiveMessages>>, {data: BodyType<BulkDeleteInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  bulkArchiveMessages(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BulkArchiveMessagesMutationResult = NonNullable<Awaited<ReturnType<typeof bulkArchiveMessages>>>
+    export type BulkArchiveMessagesMutationBody = BodyType<BulkDeleteInput>
+    export type BulkArchiveMessagesMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Bulk-archive messages (soft-delete, hides from inbox)
+ */
+export const useBulkArchiveMessages = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkArchiveMessages>>, TError,{data: BodyType<BulkDeleteInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof bulkArchiveMessages>>,
+        TError,
+        {data: BodyType<BulkDeleteInput>},
+        TContext
+      > => {
+      return useMutation(getBulkArchiveMessagesMutationOptions(options));
+    }
+
+export const getArchiveTestSubmissionsUrl = () => {
+
+
+
+
+  return `/api/v1/admin/messages/archive-test-submissions`
+}
+
+/**
+ * One-click cleanup for test data: archives all still-visible messages whose email matches `e2e-%` (the prefix Playwright contact specs use), returning how many were archived. Superadmin only; idempotent.
+ * @summary Archive every automated E2E test submission (superadmin)
+ */
+export const archiveTestSubmissions = async ( options?: Parameters<typeof customFetch>[1]): Promise<ArchiveTestSubmissions200> => {
+
+  return customFetch<ArchiveTestSubmissions200>(getArchiveTestSubmissionsUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getArchiveTestSubmissionsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof archiveTestSubmissions>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof archiveTestSubmissions>>, TError,void, TContext> => {
+
+const mutationKey = ['archiveTestSubmissions'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof archiveTestSubmissions>>, void> = () => {
+
+
+          return  archiveTestSubmissions(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ArchiveTestSubmissionsMutationResult = NonNullable<Awaited<ReturnType<typeof archiveTestSubmissions>>>
+
+    export type ArchiveTestSubmissionsMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Archive every automated E2E test submission (superadmin)
+ */
+export const useArchiveTestSubmissions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof archiveTestSubmissions>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof archiveTestSubmissions>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getArchiveTestSubmissionsMutationOptions(options));
+    }
+
+export const getMarkAllMessagesReadUrl = () => {
+
+
+
+
+  return `/api/v1/admin/messages/mark-all-read`
+}
+
+/**
+ * Marks all unread, non-deleted messages as read in one statement (user-scoped for non-superadmins), so the action is not truncated to the paginated list page. Returns how many were marked.
+ * @summary Mark every unread message as read (server-side)
+ */
+export const markAllMessagesRead = async ( options?: Parameters<typeof customFetch>[1]): Promise<MarkAllMessagesRead200> => {
+
+  return customFetch<MarkAllMessagesRead200>(getMarkAllMessagesReadUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getMarkAllMessagesReadMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markAllMessagesRead>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof markAllMessagesRead>>, TError,void, TContext> => {
+
+const mutationKey = ['markAllMessagesRead'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof markAllMessagesRead>>, void> = () => {
+
+
+          return  markAllMessagesRead(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MarkAllMessagesReadMutationResult = NonNullable<Awaited<ReturnType<typeof markAllMessagesRead>>>
+
+    export type MarkAllMessagesReadMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Mark every unread message as read (server-side)
+ */
+export const useMarkAllMessagesRead = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markAllMessagesRead>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof markAllMessagesRead>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getMarkAllMessagesReadMutationOptions(options));
     }
 
 export const getDeleteMessageUrl = (id: string,) => {
