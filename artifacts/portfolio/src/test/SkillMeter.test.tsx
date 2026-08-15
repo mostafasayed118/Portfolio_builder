@@ -11,4 +11,10 @@ describe("SkillMeter", () => {
     render(<SkillMeter label="Python" value={85} />);
     expect(screen.getByText("85%")).toBeInTheDocument();
   });
+
+  it("renders the meter at the supplied percentage", () => {
+    render(<SkillMeter label="Python" value={85} />);
+    const meter = screen.getByTestId("skill-python").querySelector("div.h-full");
+    expect(meter).toHaveStyle({ width: "85%" });
+  });
 });
