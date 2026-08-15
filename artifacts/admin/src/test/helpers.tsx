@@ -103,7 +103,7 @@ export function renderWithProviders(ui: ReactElement) {
  */
 export async function stubUseToast(
   importOriginal: () => Promise<any>,
-  mockToast: ReturnType<typeof vi.fn>,
+  mockToast: ReturnType<typeof vi.fn> = vi.fn(),
 ) {
   const actual = await importOriginal();
   return { ...actual, useToast: () => ({ toast: mockToast }) };

@@ -1,6 +1,6 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { renderWithProviders, stubUseToast } from "./helpers";
 import { SkillsManager } from "@/features/skills";
 
 const { mockListSkills, mockCreateSkill, mockUpdateSkill, mockDeleteSkill } =
@@ -27,18 +27,7 @@ vi.mock("@/lib/api-client", () => ({
   },
 }));
 
-vi.mock("@workspace/ui", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@workspace/ui")>();
-  return {
-    ...actual,
-    useToast: () => ({ toast: vi.fn() }),
-  };
-});
-
-function renderWithProviders(ui: React.ReactElement) {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
-}
+vi.mock("@workspace/ui", (importOriginal) => stubUseToast(importOriginal));
 
 const mockSkills = [
   {
