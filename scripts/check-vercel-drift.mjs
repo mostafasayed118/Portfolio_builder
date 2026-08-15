@@ -29,14 +29,20 @@
  *                              (defaults to the first ADMIN_EMAILS entry)
  */
 
+import { pathToFileURL } from "node:url";
+
 const VERCEL_API = "https://api.vercel.com";
 const CLERK_API = "https://api.clerk.com/v1";
 
 const env = process.env;
 
+/**
+ * Fail-closed: throws the bare message so the caller can decide how to exit.
+ * The CLI entry point prefixes, logs, and exits 1; tests import the functions
+ * and assert the throw without killing the runner.
+ */
 function fail(message) {
-  console.error(`[vercel-drift] FAIL: ${message}`);
-  process.exit(1);
+  throw new Error(message);
 }
 
 function log(message) {
@@ -203,4 +209,14 @@ async function main() {
   log("deployed API accepted the GitHub-secret token — Vercel's CLERK_SECRET_KEY is in sync");
 }
 
-main().catch((err) => fail(err?.message ?? String(err)));
+// Run only when executed directly (not when imported by tests):
+//   node scripts/check-vercel-drift.mjs
+const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isMain) {
+  main().catch((err) => {
+    console.error(`[vercel-drift] FAIL: ${err?.message ?? String(err)}`);
+    process.exit(1);
+  });
+}
+
+export { findOrCreateUser, resolveProbeEmail, clerkFetch, fail, log, main };
