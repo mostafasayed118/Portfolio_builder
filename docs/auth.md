@@ -46,7 +46,10 @@ Clerk's default session JWT does NOT include the `email` claim. The server's `ad
 1. Open Clerk Dashboard → JWT Templates
 2. Create a new template named `admin` (or match `VITE_CLERK_JWT_TEMPLATE`)
 3. Add claim: `email` = `{{user.primary_email_address}}`
-4. Save
+4. Set **lifetime to 3600 seconds (1 hour)** and **allowed clock skew to 60 seconds**
+5. Save
+
+A short lifetime (the 60s default) combined with tight clock skew causes otherwise-valid admin JWTs to be rejected as expired whenever the client/server/Clerk clocks drift slightly — surfacing as "Access Denied". The 3600s lifetime matches the session token and gives a 60s skew tolerance.
 
 The frontend now uses `getToken({ template: 'admin' })` to request a token with the email claim. If the template is missing, `getToken` returns null and the auth-token layer retries once, then falls back to the default session token (which will still 401 on the server). The template name is configurable via `VITE_CLERK_JWT_TEMPLATE` (default: `admin`).
 
