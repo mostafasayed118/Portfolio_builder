@@ -4,12 +4,11 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AboutEditor } from "@/features/about-content";
 
-const { mockAboutGet, mockAboutUpdate, mockToastSuccess, mockToastError } = vi.hoisted(
+const { mockAboutGet, mockAboutUpdate, mockToastSuccess } = vi.hoisted(
   () => ({
     mockAboutGet: vi.fn(),
     mockAboutUpdate: vi.fn(),
     mockToastSuccess: vi.fn(),
-    mockToastError: vi.fn(),
   }),
 );
 

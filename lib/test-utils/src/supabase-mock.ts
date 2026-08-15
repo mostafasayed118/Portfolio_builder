@@ -35,7 +35,7 @@ export function makeSupabaseCreateClientMock(
       : vi.fn().mockResolvedValue({ data: maybeSingleData, error: null });
 
   const eq = vi.fn(() => {
-    const result: Record<string, any> = {
+    const result: Record<string, unknown> = {
       order: vi.fn(() => ({
         limit: vi.fn(() => ({ maybeSingle: vi.fn() })),
       })),

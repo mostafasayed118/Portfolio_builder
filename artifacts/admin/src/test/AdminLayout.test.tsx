@@ -6,7 +6,7 @@ vi.mock("@/components/Sidebar", () => ({
 }));
 
 vi.mock("@/components/Header", () => ({
-  default: ({ onMenuClick }: { onMenuClick: () => void }) => <div data-testid="header" />,
+  default: () => <div data-testid="header" />,
 }));
 
 describe("AdminLayout", () => {

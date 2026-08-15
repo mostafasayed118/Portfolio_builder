@@ -18,6 +18,9 @@ export type CsrfTokenGetter = () => Promise<string>;
 export type AuthMissingHandler = () => void;
 
 /** orval's error/body helper types (kept for generated-code compatibility). */
+// The generated client instantiates `ErrorType<...>` even though the
+// envelope shape does not depend on T.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export type ErrorType<T = unknown> = { success: false; message: string };
 export type BodyType<T> = T;
 

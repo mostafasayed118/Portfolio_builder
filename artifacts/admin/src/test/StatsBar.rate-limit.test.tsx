@@ -1,7 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import StatsBar from "@/components/StatsBar";
 
 const { mockUnreadCount, mockSkillsList, mockProjectsList } = vi.hoisted(() => ({
   mockUnreadCount: vi.fn(),

@@ -24,7 +24,9 @@ if (import.meta.env.VITE_SENTRY_DSN) {
 const fontsLink = document.getElementById("fonts-stylesheet") as HTMLLinkElement | null;
 if (fontsLink) fontsLink.media = "all";
 
-createRoot(document.getElementById("root")!).render(
+const rootEl = document.getElementById("root");
+if (!rootEl) throw new Error("Root element #root not found");
+createRoot(rootEl).render(
   <RootErrorBoundary>
     <App />
   </RootErrorBoundary>

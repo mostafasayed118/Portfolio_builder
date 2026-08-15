@@ -18,15 +18,17 @@ let _env: PortfolioEnv | null = null;
 export function getPortfolioEnv(): PortfolioEnv {
   if (_env) return _env;
   const result = portfolioEnvSchema.safeParse(import.meta.env);
+  let parsed: PortfolioEnv;
   if (!result.success) {
     if (import.meta.env.DEV) {
       logWarn("[portfolio] Env validation warnings:", JSON.stringify(result.error.flatten().fieldErrors));
     }
-    _env = {} as PortfolioEnv;
+    parsed = {} as PortfolioEnv;
   } else {
-    _env = result.data;
+    parsed = result.data;
   }
-  return _env!;
+  _env = parsed;
+  return parsed;
 }
 
 export const portfolioEnv = getPortfolioEnv();

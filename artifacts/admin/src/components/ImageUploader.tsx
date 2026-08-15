@@ -61,6 +61,9 @@ export default function ImageUploader({
 
   useEffect(() => {
     return () => {
+      // Refs are reassigned per upload, so cleanup must abort the *latest*
+      // requests rather than a snapshot captured at effect setup.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       xhrsRef.current.forEach(xhr => xhr.abort());
       xhrRef.current?.abort();
     };

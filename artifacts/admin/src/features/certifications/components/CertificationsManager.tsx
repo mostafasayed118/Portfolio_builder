@@ -77,7 +77,8 @@ export default function CertificationsManager() {
       if (isNew) {
         res = await api.certifications.create(rowData);
       } else {
-        res = await api.certifications.update(editing.id!, rowData);
+        if (!editing.id) throw new Error("Cannot update a certification without an id");
+        res = await api.certifications.update(editing.id, rowData);
       }
       if (!res.success) throw new Error(res.message);
       toast({ title: isNew ? "Created" : "Updated" });
@@ -146,29 +147,29 @@ export default function CertificationsManager() {
           {editing && (
             <div className="space-y-4 py-2">
               <div className="space-y-1.5"><Label className="text-xs">Title</Label>
-                <Input value={editing.title} onChange={e => setEditing(x => ({ ...x!, title: e.target.value }))} className="h-9" /></div>
+                <Input value={editing.title} onChange={e => setEditing(x => x ? ({ ...x, title: e.target.value }) : x)} className="h-9" /></div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1"><Label className="text-xs">Issuer</Label>
-                  <Input value={editing.issuer} onChange={e => setEditing(x => ({ ...x!, issuer: e.target.value }))} className="h-8 text-sm" /></div>
+                  <Input value={editing.issuer} onChange={e => setEditing(x => x ? ({ ...x, issuer: e.target.value }) : x)} className="h-8 text-sm" /></div>
                 <div className="space-y-1"><Label className="text-xs">Issuer Logo (emoji)</Label>
-                  <Input value={editing.issuer_logo ?? ""} onChange={e => setEditing(x => ({ ...x!, issuer_logo: e.target.value }))} className="h-8 text-sm" /></div>
+                  <Input value={editing.issuer_logo ?? ""} onChange={e => setEditing(x => x ? ({ ...x, issuer_logo: e.target.value }) : x)} className="h-8 text-sm" /></div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1"><Label className="text-xs">Date (display)</Label>
-                  <Input value={editing.date} onChange={e => setEditing(x => ({ ...x!, date: e.target.value }))} placeholder="Mar 2024" className="h-8 text-sm" /></div>
+                  <Input value={editing.date} onChange={e => setEditing(x => x ? ({ ...x, date: e.target.value }) : x)} placeholder="Mar 2024" className="h-8 text-sm" /></div>
                 <div className="space-y-1"><Label className="text-xs">Date Sort (YYYY-MM)</Label>
-                  <Input value={editing.date_sort ?? ""} onChange={e => setEditing(x => ({ ...x!, date_sort: e.target.value }))} placeholder="2024-03" className="h-8 text-sm" /></div>
+                  <Input value={editing.date_sort ?? ""} onChange={e => setEditing(x => x ? ({ ...x, date_sort: e.target.value }) : x)} placeholder="2024-03" className="h-8 text-sm" /></div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1"><Label className="text-xs">Category</Label>
-                  <Input value={editing.category ?? ""} onChange={e => setEditing(x => ({ ...x!, category: e.target.value }))} className="h-8 text-sm" /></div>
+                  <Input value={editing.category ?? ""} onChange={e => setEditing(x => x ? ({ ...x, category: e.target.value }) : x)} className="h-8 text-sm" /></div>
                 <div className="space-y-1"><Label className="text-xs">Sort Order</Label>
-                  <Input type="number" value={editing.sort_order ?? 0} onChange={e => setEditing(x => ({ ...x!, sort_order: Number(e.target.value) }))} className="h-8 text-sm" /></div>
+                  <Input type="number" value={editing.sort_order ?? 0} onChange={e => setEditing(x => x ? ({ ...x, sort_order: Number(e.target.value) }) : x)} className="h-8 text-sm" /></div>
               </div>
               <div className="space-y-1"><Label className="text-xs">Credential URL</Label>
-                <Input value={editing.credential_url ?? ""} onChange={e => setEditing(x => ({ ...x!, credential_url: e.target.value }))} className="h-8 text-sm" /></div>
+                <Input value={editing.credential_url ?? ""} onChange={e => setEditing(x => x ? ({ ...x, credential_url: e.target.value }) : x)} className="h-8 text-sm" /></div>
               <div className="flex items-center justify-between"><Label className="text-sm">Published</Label>
-                <Switch checked={editing.is_published ?? false} onCheckedChange={v => setEditing(x => ({ ...x!, is_published: v }))} /></div>
+                <Switch checked={editing.is_published ?? false} onCheckedChange={v => setEditing(x => x ? ({ ...x, is_published: v }) : x)} /></div>
             </div>
           )}
           <FormDialogFooter onCancel={() => setEditing(null)} onSave={handleSave} saving={saving} />
@@ -183,8 +184,9 @@ export default function CertificationsManager() {
           confirmLabel: "Delete",
           variant: "danger",
           onConfirm: async () => {
+            if (!deleteTarget) return;
             try {
-              const res = await api.certifications.delete(deleteTarget!);
+              const res = await api.certifications.delete(deleteTarget);
               if (!res.success) throw new Error(res.message);
               toast({ title: "Certification deleted" });
               queryClient.invalidateQueries({ queryKey: ["certifications"] });

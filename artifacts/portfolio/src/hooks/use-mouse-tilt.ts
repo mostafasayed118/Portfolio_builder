@@ -1,4 +1,4 @@
-import { useMotionValue, useSpring, useTransform } from "framer-motion";
+import { useMotionValue, useSpring, useTransform, type MotionValue } from "framer-motion";
 import { useRef, useState, useEffect, useCallback } from "react";
 
 type MouseHandlers = {
@@ -9,7 +9,7 @@ type MouseHandlers = {
 
 export function useMouseTilt(intensity = 15): {
   ref: React.RefObject<HTMLDivElement | null>;
-  style: React.CSSProperties | { rotateX: any; rotateY: any; scale: any; transformStyle: "preserve-3d"; perspective: number };
+  style: React.CSSProperties | { rotateX: MotionValue<number>; rotateY: MotionValue<number>; scale: MotionValue<number>; transformStyle: "preserve-3d"; perspective: number };
 } & MouseHandlers {
   const ref = useRef<HTMLDivElement>(null);
   const [reduced, setReduced] = useState(false);

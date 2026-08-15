@@ -1,11 +1,12 @@
 import { Download } from "lucide-react";
 import type { HeroCTAAction } from "@/features/hero/types";
+import type { TranslationKeys } from "@/i18n/en";
 
 interface HeroCTAButtonsProps {
   cvHref: string;
   onCvDownload: () => void;
   scrollTo: HeroCTAAction;
-  t: Record<string, any>;
+  t: TranslationKeys;
 }
 
 export function HeroCTAButtons({ cvHref, onCvDownload, scrollTo, t }: HeroCTAButtonsProps) {

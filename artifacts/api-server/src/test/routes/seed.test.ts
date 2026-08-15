@@ -112,7 +112,7 @@ describe("Seed API", () => {
     });
 
     it("force mode clears existing user data before insert", async () => {
-      const res = await request(app)
+      await request(app)
         .post("/api/v1/admin/seed?force=true&confirm=true")
         .set("x-admin-key", mockAdminKey)
         .send({});

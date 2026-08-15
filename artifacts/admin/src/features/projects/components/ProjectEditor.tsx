@@ -54,12 +54,12 @@ export function ProjectEditor({ editing, isNew, saving, onEdit, onSaved }: Proje
   const addTag = (field: "tech_stack" | "metrics", val: string, setter: (v: string) => void) => {
     const v = val.trim();
     if (!v || !editing) return;
-    onEdit(e => ({ ...e!, [field]: [...(e![field] as string[]), v] }));
+    onEdit(e => e ? ({ ...e, [field]: [...(e[field] as string[]), v] }) : e);
     setter("");
   };
 
   const removeTag = (field: "tech_stack" | "metrics", val: string) =>
-    onEdit(e => ({ ...e!, [field]: (e![field] as string[]).filter(x => x !== val) }));
+    onEdit(e => e ? ({ ...e, [field]: (e[field] as string[]).filter(x => x !== val) }) : e);
 
   /** Permanently delete an attached gallery image (storage file + metadata). */
   const deleteProjectImage = async (imageId: string) => {
@@ -103,9 +103,9 @@ export function ProjectEditor({ editing, isNew, saving, onEdit, onSaved }: Proje
         {editing && (
           <div className="space-y-4 py-2">
             <div className="space-y-1.5"><Label className="text-xs">Title</Label>
-              <Input value={editing.title} onChange={e => onEdit(x => ({ ...x!, title: e.target.value }))} className="h-9" /></div>
+              <Input value={editing.title} onChange={e => onEdit(x => x ? ({ ...x, title: e.target.value }) : x)} className="h-9" /></div>
             <div className="space-y-1.5"><Label className="text-xs">Description</Label>
-              <Textarea value={editing.description} onChange={e => onEdit(x => ({ ...x!, description: e.target.value }))} rows={3} /></div>
+              <Textarea value={editing.description} onChange={e => onEdit(x => x ? ({ ...x, description: e.target.value }) : x)} rows={3} /></div>
             <div className="space-y-2">
               <Label className="text-xs flex items-center gap-1.5"><ImageIcon size={12} /> Project Images</Label>
               <ImageUploader
@@ -119,14 +119,14 @@ export function ProjectEditor({ editing, isNew, saving, onEdit, onSaved }: Proje
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5"><Label className="text-xs">Category</Label>
-                <Input value={editing.category} onChange={e => onEdit(x => ({ ...x!, category: e.target.value }))} className="h-8" /></div>
+                <Input value={editing.category} onChange={e => onEdit(x => x ? ({ ...x, category: e.target.value }) : x)} className="h-8" /></div>
               <div className="space-y-1.5"><Label className="text-xs">Sort Order</Label>
-                <Input type="number" value={editing.sort_order} onChange={e => onEdit(x => ({ ...x!, sort_order: Number(e.target.value) }))} className="h-8" /></div>
+                <Input type="number" value={editing.sort_order} onChange={e => onEdit(x => x ? ({ ...x, sort_order: Number(e.target.value) }) : x)} className="h-8" /></div>
             </div>
             <div className="space-y-1.5"><Label className="text-xs">GitHub URL</Label>
-              <Input value={editing.github_url} onChange={e => onEdit(x => ({ ...x!, github_url: e.target.value }))} className="h-8 text-sm" /></div>
+              <Input value={editing.github_url} onChange={e => onEdit(x => x ? ({ ...x, github_url: e.target.value }) : x)} className="h-8 text-sm" /></div>
             <div className="space-y-1.5"><Label className="text-xs">Live URL (optional)</Label>
-              <Input value={editing.live_url} onChange={e => onEdit(x => ({ ...x!, live_url: e.target.value }))} className="h-8 text-sm" /></div>
+              <Input value={editing.live_url} onChange={e => onEdit(x => x ? ({ ...x, live_url: e.target.value }) : x)} className="h-8 text-sm" /></div>
             <div className="space-y-2"><Label className="text-xs">Tech Stack</Label>
               <div className="flex flex-wrap gap-1">
                 {editing.tech_stack?.map(t => <Badge key={t} variant="secondary" className="flex items-center gap-1 pr-1">{t}<button type="button" onClick={() => removeTag("tech_stack", t)} className="relative flex items-center justify-center h-5 w-5 after:absolute after:inset-[-8px] after:content-['']" aria-label={`Remove technology ${t}`}><X className="h-3 w-3" /></button></Badge>)}
@@ -145,8 +145,8 @@ export function ProjectEditor({ editing, isNew, saving, onEdit, onSaved }: Proje
                 <Button size="sm" variant="outline" onClick={() => addTag("metrics", metricInput, setMetricInput)} className="min-h-[44px]" aria-label="Add metric"><Plus className="h-4 w-4" /></Button>
               </div>
             </div>
-            <div className="flex items-center justify-between"><Label className="text-sm">Featured</Label><Switch checked={editing.featured} onCheckedChange={v => onEdit(x => ({ ...x!, featured: v }))} /></div>
-            <div className="flex items-center justify-between"><Label className="text-sm">Published</Label><Switch checked={editing.is_published} onCheckedChange={v => onEdit(x => ({ ...x!, is_published: v }))} /></div>
+            <div className="flex items-center justify-between"><Label className="text-sm">Featured</Label><Switch checked={editing.featured} onCheckedChange={v => onEdit(x => x ? ({ ...x, featured: v }) : x)} /></div>
+            <div className="flex items-center justify-between"><Label className="text-sm">Published</Label><Switch checked={editing.is_published} onCheckedChange={v => onEdit(x => x ? ({ ...x, is_published: v }) : x)} /></div>
           </div>
         )}
         <DialogFooter>

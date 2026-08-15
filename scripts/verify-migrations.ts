@@ -11,7 +11,7 @@
  */
 
 import { readdirSync, readFileSync } from "node:fs";
-import { resolve, join, basename } from "node:path";
+import { resolve, join } from "node:path";
 import { logInfo, logWarn, logError } from "@workspace/logging";
 
 const LOG_CTX = "verify-migrations";

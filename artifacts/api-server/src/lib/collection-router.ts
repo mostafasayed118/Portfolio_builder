@@ -66,7 +66,7 @@ export function createCollectionRouter(opts: CollectionRouterOptions): IRouter {
     const supabase = getSupabaseClient();
     const result = schema.safeParse(req.body);
     if (!result.success) {
-      return badRequest(res, result.error!.flatten().fieldErrors);
+      return badRequest(res, result.error?.flatten().fieldErrors ?? {});
     }
     const data = result.data as Record<string, unknown>;
     if (opts.findDuplicate) {
@@ -100,7 +100,7 @@ export function createCollectionRouter(opts: CollectionRouterOptions): IRouter {
   router.put("/:id", doubleCsrfProtection, validateParamId, async (req: AuthenticatedRequest, res: Response) => {
     const result = schema.partial().safeParse(req.body);
     if (!result.success) {
-      return badRequest(res, result.error!.flatten().fieldErrors);
+      return badRequest(res, result.error?.flatten().fieldErrors ?? {});
     }
     return updateByIdAndUser(
       req,

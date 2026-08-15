@@ -52,9 +52,16 @@ export default function SkillsManager() {
     try {
       let res;
       if (isNew) {
-        res = await api.skills.create({ name: editing.name!, category: editing.category!, proficiency: editing.proficiency!, is_visible: editing.is_visible!, sort_order: editing.sort_order! });
+        res = await api.skills.create({
+          name,
+          category: editing.category ?? "",
+          proficiency: editing.proficiency ?? 75,
+          is_visible: editing.is_visible ?? true,
+          sort_order: editing.sort_order ?? 999,
+        });
       } else {
-        res = await api.skills.update(editing.id!, editing);
+        if (!editing.id) throw new Error("Cannot update a skill without an id");
+        res = await api.skills.update(editing.id, editing);
       }
       if (!res.success) throw new Error(res.message);
       toast({ title: isNew ? "Skill created" : "Skill updated" });
@@ -153,11 +160,11 @@ export default function SkillsManager() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs">Name</Label>
-                  <Input value={editing.name ?? ""} onChange={e => setEditing(x => ({ ...x!, name: e.target.value }))} className="h-9" />
+                  <Input value={editing.name ?? ""} onChange={e => setEditing(x => x ? ({ ...x, name: e.target.value }) : x)} className="h-9" />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">Category</Label>
-                  <Input value={editing.category ?? ""} onChange={e => setEditing(x => ({ ...x!, category: e.target.value }))} className="h-9" />
+                  <Input value={editing.category ?? ""} onChange={e => setEditing(x => x ? ({ ...x, category: e.target.value }) : x)} className="h-9" />
                 </div>
               </div>
               <div className="space-y-2">
@@ -165,15 +172,15 @@ export default function SkillsManager() {
                   <Label className="text-xs">Proficiency</Label>
                   <span className="text-xs text-muted-foreground font-mono">{editing.proficiency}%</span>
                 </div>
-                <Slider value={[editing.proficiency ?? 75]} min={0} max={100} step={5} onValueChange={([v]) => setEditing(x => ({ ...x!, proficiency: v }))} />
+                <Slider value={[editing.proficiency ?? 75]} min={0} max={100} step={5} onValueChange={([v]) => setEditing(x => x ? ({ ...x, proficiency: v }) : x)} />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Sort Order</Label>
-                <Input type="number" value={editing.sort_order ?? 999} onChange={e => setEditing(x => ({ ...x!, sort_order: Number(e.target.value) }))} className="h-8 text-sm" />
+                <Input type="number" value={editing.sort_order ?? 999} onChange={e => setEditing(x => x ? ({ ...x, sort_order: Number(e.target.value) }) : x)} className="h-8 text-sm" />
               </div>
               <div className="flex items-center justify-between">
                 <Label className="text-sm">Visible</Label>
-                <Switch checked={editing.is_visible ?? true} onCheckedChange={v => setEditing(x => ({ ...x!, is_visible: v }))} />
+                <Switch checked={editing.is_visible ?? true} onCheckedChange={v => setEditing(x => x ? ({ ...x, is_visible: v }) : x)} />
               </div>
             </div>
           )}
@@ -189,7 +196,8 @@ export default function SkillsManager() {
           confirmLabel: "Delete",
           variant: "danger",
           onConfirm: async () => {
-            await handleDelete(deleteTarget!);
+            if (!deleteTarget) return;
+            await handleDelete(deleteTarget);
             setDeleteTarget(null);
           },
         }}

@@ -21,8 +21,6 @@ import { SkillsManager } from "@/features/skills";
 // the rest of the real client code must work or the test fails.
 // ============================================================================
 
-type ApiResponse = { success: true; data: unknown[]; count?: number } | { success: false; message: string };
-
 function buildFetchMock(handler: (url: string, init?: RequestInit) => Promise<Response> | Response) {
   return vi.fn().mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === "string" ? input : input.toString();

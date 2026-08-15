@@ -36,7 +36,8 @@ export function describeSharedCspBehavior(helpers: CspHelpers): void {
       const csp = buildCsp("n1");
       const scriptSrc = csp
         .split("; ")
-        .find((d) => d.startsWith("script-src"))!;
+        .find((d) => d.startsWith("script-src"));
+      expect(scriptSrc).toBeDefined();
       expect(scriptSrc).not.toContain("'unsafe-inline'");
       expect(scriptSrc).not.toContain("'unsafe-eval'");
     });

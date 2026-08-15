@@ -42,7 +42,8 @@ export default function AuditLogPage() {
         offset: 0,
       });
       if (!res.success) throw new Error(res.message);
-      return res.data!;
+      if (!res.data) throw new Error("Audit response is missing data");
+      return res.data;
     },
   });
 

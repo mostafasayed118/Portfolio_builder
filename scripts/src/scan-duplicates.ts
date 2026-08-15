@@ -280,7 +280,8 @@ function printHuman(
 
   for (const rep of reports) {
     if (!rep.needsCleanup) continue;
-    const info = infos.get(rep.table)!;
+    const info = infos.get(rep.table);
+    if (!info) continue;
     logInfo(`❌ ${rep.table} (${rep.rowCount} rows) — ${rep.extraRows} extra row(s) to remove`, LOG_CTX);
     for (const group of rep.duplicateGroups.slice(0, MAX_GROUPS_REPORTED)) {
       if (rep.isSingleton) {
