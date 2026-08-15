@@ -311,16 +311,10 @@ jobs:
             echo '```' >> $GITHUB_STEP_SUMMARY
           done
       - name: Bundle size regression check
-        run: |
-          MAX_JS_KB=300
-          for app in portfolio admin; do
-            for f in "artifacts/$app/dist/public/assets/"*.js; do
-              size=$(stat --printf="%s" "$f" 2>/dev/null)
-              if [ "$size" -gt $((MAX_JS_KB * 1024)) ]; then
-                echo "WARNING: $app/$(basename $f) is $(($size / 1024))KB (limit: ${MAX_JS_KB}KB)"
-              fi
-            done
-          done
+        # Budgets (per-chunk, per-app total, and combined total) are enforced
+        # by scripts/src/check-bundle-size.ts, so the same check runs locally:
+        #   pnpm --filter @workspace/scripts check-bundle-size
+        run: pnpm --filter @workspace/scripts check-bundle-size
       - name: Upload bundle analysis HTML
         if: always()
         uses: actions/upload-artifact@v4

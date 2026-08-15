@@ -111,7 +111,7 @@ export default defineConfig({
         test: {
           root: path.resolve(dirname, "scripts"),
           environment: "node",
-          include: ["**/*.test.mjs"],
+          include: ["**/*.test.mjs", "src/**/*.test.ts"],
           globals: true,
           testTimeout: 15_000,
         },
