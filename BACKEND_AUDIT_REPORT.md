@@ -179,14 +179,12 @@ Multiple route files call `adminAuth` on individual routes even though it's alre
 
 ### 2.2 Missing Items
 
-| Issue                                          | Tables                                                 | Priority    |
-| ---------------------------------------------- | ------------------------------------------------------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| No FK from collections to `users`              | skills, projects, experience, certifications, messages | 🟠 HIGH     |
-| Missing index on `user_id`                     | skills, projects, experience, certifications, messages | 🟠 HIGH     |
-| ~~`messages` missing `updated_at`~~            | messages                                               | ✅ Fixed    | Added in `024_fix_critical_issues.sql` with `trg_messages_updated_at` trigger                                                               |
-| Singleton tables lack UNIQUE constraint        | hero_content, about_content, settings tables           | 🟡 MEDIUM   |
-| Soft-delete columns unused by DELETE routes    | skills, projects, experience, certifications, messages | 🟠 HIGH     |
-| ~~5 placeholder migrations should be removed~~ | 010, 016, 017, 018, 019                                | ✅ Resolved | Re-audit: all five contain real SQL (sort order, language settings, image RLS, duplicate-trigger fix, analytics cleanup) — not placeholders |
+| Issue | Tables | Priority |
+| ---------------------------------------------- | ------------------------------------------------------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------- || ~~No FK from collections to `users`~~ | skills, projects, experience, certifications, messages | ✅ Fixed | Migration `029_users_table.sql` adds `REFERENCES users(id) ON DELETE CASCADE` |
+| ~~Missing index on `user_id`~~ | skills, projects, experience, certifications, messages | ✅ Fixed | Migration `029_users_table.sql` adds `idx_*_user` indexes |
+| ~~`messages` missing `updated_at`~~ | messages | ✅ Fixed | Added in `024_fix_critical_issues.sql` with `trg_messages_updated_at` trigger |
+| Singleton tables lack UNIQUE constraint | hero_content, about_content, settings tables | 🟡 MEDIUM || ~~Soft-delete columns unused by DELETE routes~~ | skills, projects, experience, certifications, messages | ✅ Resolved | DELETE routes set `deleted_at` (soft delete); queries filter `deleted_at IS NULL` |
+| ~~5 placeholder migrations should be removed~~ | 010, 016, 017, 018, 019 | ✅ Resolved | Re-audit: all five contain real SQL (sort order, language settings, image RLS, duplicate-trigger fix, analytics cleanup) — not placeholders |
 
 ---
 
