@@ -90,7 +90,13 @@ describe("ImageUploader — file validation + upload contract", () => {
   });
 
   it("uploads a valid image and fires the success toast with the file name", async () => {
-    installFakeXhr({ status: 200, responseText: JSON.stringify({ id: "img-99", url: "https://x/ok.png", variants: [] }) });
+    installFakeXhr({
+      status: 200,
+      responseText: JSON.stringify({
+        success: true,
+        data: { id: "img-99", url: "https://x/ok.png", variants: [] },
+      }),
+    });
 
     const onComplete = vi.fn();
     renderAdmin(<ImageUploader entityType="project" onUploadComplete={onComplete} />);
@@ -103,7 +109,9 @@ describe("ImageUploader — file validation + upload contract", () => {
         expect.objectContaining({ title: "Image uploaded" }),
       );
     });
-    expect(onComplete).toHaveBeenCalled();
+    expect(onComplete).toHaveBeenCalledWith([
+      expect.objectContaining({ id: "img-99", url: "https://x/ok.png" }),
+    ]);
   });
 
   it("upload error triggers a destructive toast", async () => {

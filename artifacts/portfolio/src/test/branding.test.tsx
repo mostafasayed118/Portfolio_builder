@@ -12,6 +12,7 @@ import { useHeroContent } from "@/hooks/use-portfolio-data";
 const mockHeroData = {
   site_name: "Custom Portfolio",
   logo_url: "https://example.com/logo.png",
+  avatar_url: "https://example.com/avatar.png",
   favicon_url: "https://example.com/favicon.ico",
   tagline: "Custom Tagline",
   roles: ["Developer", "Designer"],
@@ -42,6 +43,7 @@ describe("BrandingProvider", () => {
     const { result } = renderHook(() => useBranding(), { wrapper });
     expect(result.current.siteName).toBe("Custom Portfolio");
     expect(result.current.logoUrl).toBe("https://example.com/logo.png");
+    expect(result.current.avatarUrl).toBe("https://example.com/avatar.png");
     expect(result.current.faviconUrl).toBe("https://example.com/favicon.ico");
     expect(result.current.tagline).toBe("Custom Tagline");
   });
@@ -52,6 +54,7 @@ describe("BrandingProvider", () => {
     const { result } = renderHook(() => useBranding(), { wrapper });
     expect(result.current.siteName).toBe(HERO.name);
     expect(result.current.logoUrl).toBeNull();
+    expect(result.current.avatarUrl).toBeNull();
     expect(result.current.faviconUrl).toBeNull();
     expect(result.current.tagline).toBe(HERO.roles[0]);
   });
