@@ -41,7 +41,7 @@ const ProjectCard = memo(function ProjectCard({ project }: { project: Project })
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.04] to-accent/[0.04] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-        <div className="p-5 relative">
+        <div className={`p-5 relative ${project.imageId ? "" : "pt-14"}`}>
           <div className="flex items-start justify-between mb-3">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1.5 flex-wrap">
