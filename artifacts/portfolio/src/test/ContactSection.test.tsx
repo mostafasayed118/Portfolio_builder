@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { LanguageProvider } from "@/lib/language";
 
@@ -84,6 +84,15 @@ describe("ContactSection", () => {
   it("renders send button", () => {
     renderWithProviders(<ContactSection />);
     expect(screen.getByText("Send Message")).toBeInTheDocument();
+  });
+
+  it("renders the WhatsApp click-to-chat button with a wa.me link", () => {
+    renderWithProviders(<ContactSection />);
+    const wa = screen.getByTestId("link-contact-whatsapp");
+    expect(wa).toBeInTheDocument();
+    expect(wa).toHaveAttribute("href", expect.stringMatching(/^https:\/\/wa\.me\/201154580512\?text=/));
+    expect(wa).toHaveAttribute("target", "_blank");
+    expect(screen.getByText("Chat on WhatsApp")).toBeInTheDocument();
   });
 
   it("renders the contact form", () => {
