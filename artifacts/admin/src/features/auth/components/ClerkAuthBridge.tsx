@@ -160,8 +160,17 @@ export default function ClerkAuthBridge({ children }: { children: ReactNode }) {
       return { user: null, loading: true, signOut: async () => {}, isAdmin: false, isSuperadmin: false };
     }
 
-    if (!isSignedIn || !clerkUser) {
+    if (!isSignedIn) {
       return { user: null, loading: false, signOut: async () => {}, isAdmin: false, isSuperadmin: false };
+    }
+
+    // Clerk can report `isSignedIn=true` for a short interval before
+    // `useUser()` exposes the hydrated user object after the sign-in
+    // redirect. Keep the auth context loading during that interval so
+    // SignInPage does not render a fresh sign-in form and ProtectedRoute
+    // does not treat the session as expired.
+    if (!clerkUser) {
+      return { user: null, loading: true, signOut: async () => {}, isAdmin: false, isSuperadmin: false };
     }
 
     const email = clerkUser.primaryEmailAddress?.emailAddress ?? "";
