@@ -106,4 +106,43 @@ describe("ThemeManager", () => {
       );
     });
   });
+
+  it("renders the Templates section with all preset cards", async () => {
+    renderWithProviders(<ThemeManager />);
+
+    await screen.findByText("Theme Manager");
+    expect(screen.getByText("Templates")).toBeInTheDocument();
+    expect(screen.getByText("Modern Indigo")).toBeInTheDocument();
+    expect(screen.getByText("Ocean Blue")).toBeInTheDocument();
+    expect(screen.getByText("Minimal Mono")).toBeInTheDocument();
+    expect(screen.getByText("Sunset Warm")).toBeInTheDocument();
+  });
+
+  it("reports custom colors when the fetched palette matches no preset", async () => {
+    // mockThemeData uses radius 0.5rem, which differs from every preset.
+    renderWithProviders(<ThemeManager />);
+
+    await screen.findByText("Theme Manager");
+    expect(screen.getByText(/currently using/i)).toBeInTheDocument();
+    expect(screen.getByText("custom colors")).toBeInTheDocument();
+  });
+
+  it("applying a preset pre-fills the color fields (still fully editable)", async () => {
+    renderWithProviders(<ThemeManager />);
+
+    await screen.findByDisplayValue("204 92% 42%");
+
+    await userEvent.click(screen.getByRole("button", { name: "Apply Ocean Blue template" }));
+
+    // Ocean Blue light primary → the form now shows the preset value.
+    expect(await screen.findByDisplayValue("217 91% 55%")).toBeInTheDocument();
+    // Active state switches to the template.
+    expect(screen.getByText(/currently using/i).textContent).toContain("Ocean Blue");
+
+    // Manual control is untouched: the primary color picker/input still accepts edits.
+    const primaryInput = screen.getByDisplayValue("217 91% 55%");
+    await userEvent.clear(primaryInput);
+    await userEvent.type(primaryInput, "0 0% 0%");
+    expect(screen.getByDisplayValue("0 0% 0%")).toBeInTheDocument();
+  });
 });
