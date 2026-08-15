@@ -1,0 +1,15 @@
+[submodule "skills/awesome-design-md"]
+	path = skills/awesome-design-md
+	url = https://github.com/VoltAgent/awesome-design-md.git
+
+[submodule "skills/ecc"]
+	path = skills/ecc
+	url = https://github.com/affaan-m/ecc.git
+
+[submodule "skills/graphify"]
+	path = skills/graphify
+	url = https://github.com/Graphify-Labs/graphify.git
+
+[submodule "skills/ui-ux-pro-max"]
+	path = skills/ui-ux-pro-max
+	url = https://github.com/nextlevelbuilder/ui-ux-pro-max-skill.git
