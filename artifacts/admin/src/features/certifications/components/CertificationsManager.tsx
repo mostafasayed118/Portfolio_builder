@@ -3,13 +3,16 @@ import type { Certification } from "@workspace/supabase/types";
 import { api } from "@/lib/api-client";
 import { useState } from "react";
 import { useToast } from "@workspace/ui";
-import { Plus, Pencil, Trash2, Download } from "lucide-react";
+import { Plus, Download } from "lucide-react";
 import { logError } from "@/lib/logger";
-import { Button, Card, CardContent, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, Switch } from "@workspace/ui";
+import { Button, Card, CardContent, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Input, Label, Switch } from "@workspace/ui";
 import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
 import { SmartEmptyState } from "@/components/SmartEmptyState";
 import { AdminErrorState } from "@/components/AdminErrorState";
 import { AdminLoadingState } from "@/components/AdminLoadingState";
+import { PageHeader } from "@/components/PageHeader";
+import { RowActions } from "@/components/RowActions";
+import { FormDialogFooter } from "@/components/FormDialogFooter";
 import { useEntityQuery } from "@/lib/use-entity-query";
 import { exportToCsv } from "@/lib/export-csv";
 
@@ -94,18 +97,21 @@ export default function CertificationsManager() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex-1 min-w-[120px]"><h1 className="text-2xl font-bold">Certifications</h1><p className="text-sm text-muted-foreground mt-0.5">{items?.length ?? 0} certifications</p></div>
-        <Button size="sm" variant="outline" onClick={() => items && exportToCsv(items.map(c => ({ title: c.title, issuer: c.issuer, date: c.date, category: c.category ?? "", credential_url: c.credential_url ?? "", is_published: c.is_published ?? true })), [
-          { key: "title", label: "Title" },
-          { key: "issuer", label: "Issuer" },
-          { key: "date", label: "Date" },
-          { key: "category", label: "Category" },
-          { key: "credential_url", label: "Credential URL" },
-          { key: "is_published", label: "Published" },
-        ], `certifications-${Date.now()}.csv`)}><Download className="h-4 w-4 mr-1.5" />Export</Button>
-        <Button size="sm" onClick={openNew} className="min-h-[44px]"><Plus className="h-4 w-4 mr-1.5" />Add Cert</Button>
-      </div>
+      <PageHeader
+        title="Certifications"
+        description={`${items?.length ?? 0} certifications`}
+        actions={<>
+          <Button size="sm" variant="outline" onClick={() => items && exportToCsv(items.map(c => ({ title: c.title, issuer: c.issuer, date: c.date, category: c.category ?? "", credential_url: c.credential_url ?? "", is_published: c.is_published ?? true })), [
+            { key: "title", label: "Title" },
+            { key: "issuer", label: "Issuer" },
+            { key: "date", label: "Date" },
+            { key: "category", label: "Category" },
+            { key: "credential_url", label: "Credential URL" },
+            { key: "is_published", label: "Published" },
+          ], `certifications-${Date.now()}.csv`)}><Download className="h-4 w-4 mr-1.5" />Export</Button>
+          <Button size="sm" onClick={openNew} className="min-h-[44px]"><Plus className="h-4 w-4 mr-1.5" />Add Cert</Button>
+        </>}
+      />
 
       {(!items || items.length === 0) ? (
         <SmartEmptyState type="certifications" onAction={openNew} />
@@ -121,10 +127,7 @@ export default function CertificationsManager() {
                     <div className="font-medium text-sm">{cert.title}</div>
                     <div className="text-xs text-muted-foreground">{cert.issuer} · {cert.date}</div>
                   </div>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]" aria-label="Edit certification" onClick={() => openEdit(cert)}><Pencil className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] text-destructive hover:text-destructive hover:bg-destructive/10" aria-label="Delete certification" onClick={() => setDeleteTarget(cert.id)}><Trash2 className="h-4 w-4" /></Button>
-                  </div>
+                  <RowActions editLabel="Edit certification" deleteLabel="Delete certification" onEdit={() => openEdit(cert)} onDelete={() => setDeleteTarget(cert.id)} />
                 </CardContent>
               </Card>
             ))}
@@ -168,10 +171,7 @@ export default function CertificationsManager() {
                 <Switch checked={editing.is_published ?? false} onCheckedChange={v => setEditing(x => ({ ...x!, is_published: v }))} /></div>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditing(null)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
-          </DialogFooter>
+          <FormDialogFooter onCancel={() => setEditing(null)} onSave={handleSave} saving={saving} />
         </DialogContent>
       </Dialog>
 

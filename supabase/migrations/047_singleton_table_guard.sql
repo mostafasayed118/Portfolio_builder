@@ -17,17 +17,24 @@
 
 CREATE UNIQUE INDEX IF NOT EXISTS theme_settings_singleton_idx
   ON theme_settings ((true));
+
 CREATE UNIQUE INDEX IF NOT EXISTS typography_settings_singleton_idx
   ON typography_settings ((true));
+
 CREATE UNIQUE INDEX IF NOT EXISTS seo_settings_singleton_idx
   ON seo_settings ((true));
+
 CREATE UNIQUE INDEX IF NOT EXISTS contact_info_singleton_idx
   ON contact_info ((true));
+
 CREATE UNIQUE INDEX IF NOT EXISTS hero_content_singleton_idx
   ON hero_content ((true));
+
 CREATE UNIQUE INDEX IF NOT EXISTS about_content_singleton_idx
   ON about_content ((true));
+
 CREATE UNIQUE INDEX IF NOT EXISTS site_settings_singleton_idx
   ON site_settings ((true));
+
 CREATE UNIQUE INDEX IF NOT EXISTS cv_settings_singleton_idx
   ON cv_settings ((true));

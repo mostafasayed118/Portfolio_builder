@@ -3,13 +3,16 @@ import type { Experience } from "@workspace/supabase/types";
 import { api } from "@/lib/api-client";
 import { useState } from "react";
 import { useToast } from "@workspace/ui";
-import { Plus, Pencil, Trash2, X, Download } from "lucide-react";
+import { Plus, X, Download } from "lucide-react";
 import { logError } from "@/lib/logger";
-import { Badge, Button, Card, CardContent, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch } from "@workspace/ui";
+import { Badge, Button, Card, CardContent, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch } from "@workspace/ui";
 import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
 import { SmartEmptyState } from "@/components/SmartEmptyState";
 import { AdminErrorState } from "@/components/AdminErrorState";
 import { AdminLoadingState } from "@/components/AdminLoadingState";
+import { PageHeader } from "@/components/PageHeader";
+import { RowActions } from "@/components/RowActions";
+import { FormDialogFooter } from "@/components/FormDialogFooter";
 import { useEntityQuery } from "@/lib/use-entity-query";
 import { exportToCsv } from "@/lib/export-csv";
 
@@ -82,19 +85,22 @@ export default function ExperienceManager() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex-1 min-w-[120px]"><h1 className="text-2xl font-bold">Experience</h1><p className="text-sm text-muted-foreground mt-0.5">{items?.length ?? 0} entries</p></div>
-        <Button size="sm" variant="outline" onClick={() => items && exportToCsv(items.map(e => ({ title: e.title, company: e.company, location: e.location ?? "", period: e.period ?? "", type: e.type, technologies: (e.technologies ?? []).join("; "), is_published: e.is_published ?? true })), [
-          { key: "title", label: "Title" },
-          { key: "company", label: "Company" },
-          { key: "location", label: "Location" },
-          { key: "period", label: "Period" },
-          { key: "type", label: "Type" },
-          { key: "technologies", label: "Technologies" },
-          { key: "is_published", label: "Published" },
-        ], `experience-${Date.now()}.csv`)}><Download className="h-4 w-4 mr-1.5" />Export</Button>
-        <Button size="sm" onClick={openNew} className="min-h-[44px]"><Plus className="h-4 w-4 mr-1.5" />Add Entry</Button>
-      </div>
+      <PageHeader
+        title="Experience"
+        description={`${items?.length ?? 0} entries`}
+        actions={<>
+          <Button size="sm" variant="outline" onClick={() => items && exportToCsv(items.map(e => ({ title: e.title, company: e.company, location: e.location ?? "", period: e.period ?? "", type: e.type, technologies: (e.technologies ?? []).join("; "), is_published: e.is_published ?? true })), [
+            { key: "title", label: "Title" },
+            { key: "company", label: "Company" },
+            { key: "location", label: "Location" },
+            { key: "period", label: "Period" },
+            { key: "type", label: "Type" },
+            { key: "technologies", label: "Technologies" },
+            { key: "is_published", label: "Published" },
+          ], `experience-${Date.now()}.csv`)}><Download className="h-4 w-4 mr-1.5" />Export</Button>
+          <Button size="sm" onClick={openNew} className="min-h-[44px]"><Plus className="h-4 w-4 mr-1.5" />Add Entry</Button>
+        </>}
+      />
 
       <div className="space-y-3">
         {(!items || items.length === 0) ? (
@@ -111,10 +117,7 @@ export default function ExperienceManager() {
                 </div>
                 <div className="text-xs text-muted-foreground mt-0.5">{item.period} · {item.location}</div>
               </div>
-              <div className="flex gap-1">
-                <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]" aria-label="Edit experience" onClick={() => { const { current: _, order_num: __, created_at: ___, updated_at: ____, ...rest } = item; openEdit({ ...rest, sort_order: item.sort_order ?? 0, is_published: item.is_published ?? false }); }}><Pencil className="h-4 w-4" /></Button>
-                <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] text-destructive hover:text-destructive hover:bg-destructive/10" aria-label="Delete experience" onClick={() => setDeleteTarget(item.id)}><Trash2 className="h-4 w-4" /></Button>
-              </div>
+              <RowActions editLabel="Edit experience" deleteLabel="Delete experience" onEdit={() => { const { current: _, order_num: __, created_at: ___, updated_at: ____, ...rest } = item; openEdit({ ...rest, sort_order: item.sort_order ?? 0, is_published: item.is_published ?? false }); }} onDelete={() => setDeleteTarget(item.id)} />
             </CardContent>
           </Card>
         ))}
@@ -174,10 +177,7 @@ export default function ExperienceManager() {
                 <Switch checked={editing.is_published} onCheckedChange={v => setEditing(x => ({ ...x!, is_published: v }))} /></div>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditing(null)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
-          </DialogFooter>
+          <FormDialogFooter onCancel={() => setEditing(null)} onSave={handleSave} saving={saving} />
         </DialogContent>
       </Dialog>
 
