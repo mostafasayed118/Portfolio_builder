@@ -10,6 +10,7 @@ const {
   mockArchiveMessage,
   mockUnarchiveMessage,
   mockBulkArchiveMessage,
+  mockBulkUnarchiveMessage,
   mockArchiveTestSubmissions,
   mockUnreadCount,
 } = vi.hoisted(() => ({
@@ -19,6 +20,7 @@ const {
   mockArchiveMessage: vi.fn(),
   mockUnarchiveMessage: vi.fn(),
   mockBulkArchiveMessage: vi.fn(),
+  mockBulkUnarchiveMessage: vi.fn(),
   mockArchiveTestSubmissions: vi.fn(),
   mockUnreadCount: vi.fn(),
 }));
@@ -38,6 +40,7 @@ vi.mock("@/lib/api-client", () => ({
       archive: mockArchiveMessage,
       unarchive: mockUnarchiveMessage,
       bulkArchive: mockBulkArchiveMessage,
+      bulkUnarchive: mockBulkUnarchiveMessage,
       archiveTestSubmissions: mockArchiveTestSubmissions,
     },
   },
@@ -98,6 +101,7 @@ describe("MessagesViewer", () => {
     mockArchiveMessage.mockResolvedValue({ success: true });
     mockUnarchiveMessage.mockResolvedValue({ success: true });
     mockBulkArchiveMessage.mockResolvedValue({ success: true });
+    mockBulkUnarchiveMessage.mockResolvedValue({ success: true });
     mockArchiveTestSubmissions.mockResolvedValue({ success: true, data: { archived: 3 } });
     // The unread chip/tab count is API-backed (matches the sidebar badge).
     mockUnreadCount.mockResolvedValue({ success: true, data: 1 });
@@ -210,6 +214,83 @@ describe("MessagesViewer", () => {
     // Selection clears after archiving.
     await waitFor(() => {
       expect(screen.queryByText("2 selected")).not.toBeInTheDocument();
+    });
+  });
+
+  it("selects every message on the current page via the toolbar checkbox", async () => {
+    renderAdmin(<MessagesManager />);
+
+    await screen.findByText("Alice");
+
+    // The toolbar is visible with zero selected so the select-all control
+    // is always reachable.
+    expect(screen.getByText("0 selected")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select all on page" }));
+
+    for (const name of ["Alice", "Bob", "Charlie"]) {
+      expect(
+        screen.getByRole("checkbox", { name: `Select message from ${name}` }),
+      ).toBeChecked();
+    }
+    expect(screen.getByText("3 selected")).toBeInTheDocument();
+  });
+
+  it("select-all on page toggles off when everything is already selected", async () => {
+    renderAdmin(<MessagesManager />);
+
+    await screen.findByText("Alice");
+
+    const selectAll = screen.getByRole("checkbox", { name: "Select all on page" });
+    await userEvent.click(selectAll);
+    expect(screen.getByText("3 selected")).toBeInTheDocument();
+
+    await userEvent.click(selectAll);
+    expect(screen.getByText("0 selected")).toBeInTheDocument();
+    expect(
+      screen.getByRole("checkbox", { name: "Select message from Alice" }),
+    ).not.toBeChecked();
+  });
+
+  it("archives all selected from the select-all toolbar action", async () => {
+    renderAdmin(<MessagesManager />);
+
+    await screen.findByText("Alice");
+
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select all on page" }));
+    await userEvent.click(screen.getByRole("button", { name: "Archive selected" }));
+
+    await waitFor(() => {
+      expect(mockBulkArchiveMessage).toHaveBeenCalledWith(["1", "2", "3"]);
+    });
+    // Selection clears after archiving.
+    await waitFor(() => {
+      expect(screen.queryByText("3 selected")).not.toBeInTheDocument();
+    });
+  });
+
+  it("restores selected archived rows from the Archived tab in one click", async () => {
+    renderAdmin(<MessagesManager />);
+
+    await screen.findByText("Alice");
+
+    // Switch to the Archived tab (server-filtered to archived rows only).
+    await userEvent.click(screen.getByText(/Archived \(1\)/));
+    await screen.findByText("Charlie");
+
+    // The toolbar's bulk action flips to "Restore selected" in this view.
+    expect(
+      screen.getByRole("button", { name: "Restore selected" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Archive selected" }),
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select all on page" }));
+    await userEvent.click(screen.getByRole("button", { name: "Restore selected" }));
+
+    await waitFor(() => {
+      expect(mockBulkUnarchiveMessage).toHaveBeenCalledWith(["3"]);
     });
   });
 

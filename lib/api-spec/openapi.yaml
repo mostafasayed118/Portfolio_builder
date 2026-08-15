@@ -1232,6 +1232,31 @@ paths:
                           data: { type: object, nullable: true }
                   - $ref: "#/components/schemas/ApiError"
 
+  /v1/admin/messages/bulk-unarchive:
+    post:
+      operationId: bulkUnarchiveMessages
+      tags: [admin.messages]
+      summary: Bulk-unarchive messages (restore to inbox)
+      security: [{ adminAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BulkDeleteInput" }
+      responses:
+        "200":
+          description: Restored
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
+
   /v1/admin/messages/archive-test-submissions:
     post:
       operationId: archiveTestSubmissions
