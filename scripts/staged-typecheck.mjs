@@ -1,4 +1,3 @@
-/* global process */
 // lint-staged appends the staged file list to the configured command.
 // `pnpm run typecheck` cannot receive file args (tsc -p rejects mixing
 // a project with source files), so this wrapper ignores argv and runs
