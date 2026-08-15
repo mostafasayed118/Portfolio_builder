@@ -52,6 +52,10 @@ async function verifyClerkJWT(token: string): Promise<{ email: string; clerkId: 
   try {
     const payload = await verifyToken(token, {
       secretKey: env.CLERK_SECRET_KEY,
+      // Tolerate clock skew between this server, Clerk, and the client when
+      // validating exp/nbf/iat. A small skew used to reject otherwise-valid
+      // admin tokens and surface as "Access Denied".
+      clockSkewInMs: 60_000,
       ...(env.CLERK_ISSUER ? { issuer: env.CLERK_ISSUER } : {}),
     });
     const clerkId = payload.sub;
