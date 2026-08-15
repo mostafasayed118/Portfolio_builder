@@ -7,14 +7,13 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { Button, Card, CardContent, Input, Textarea } from "@workspace/ui";
-import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
 import { SmartEmptyState } from "@/components/SmartEmptyState";
 import { AdminErrorState } from "@/components/AdminErrorState";
 import { AdminLoadingState } from "@/components/AdminLoadingState";
 import { MessageCard, type Message as Msg, isUnread, isArchived } from "@/features/messages/components/MessageCard";
 import { MessageFilterBar } from "@/features/messages/components/MessageFilterBar";
 import { MessagePagination } from "@/features/messages/components/MessagePagination";
-import { useEntityQuery } from "@/lib/use-entity-query";
+import { useEntityQuery, useUnreadCountQuery } from "@/lib/use-entity-query";
 
 function formatDate(ts: string): string {
   return new Date(ts).toLocaleDateString("en-US", {
@@ -40,10 +39,14 @@ export default function MessagesManager() {
   const [filter, setFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [deleteTarget, setDeleteTarget] = useState<Msg | null>(null);
 
   const msgs = messages as Msg[] | undefined;
-  const unread = useMemo(() => msgs?.filter(isUnread).length ?? 0, [msgs]);
+  // The unread chip and Unread-tab count must match the sidebar badge and the
+  // API's unread-count endpoint (status='unread' only). Computing them from
+  // the fetched list is wrong: the collection endpoint paginates at 50 rows,
+  // so once more than 50 messages exist the local count silently truncates
+  // and disagrees with the sidebar. Use the API-backed count instead.
+  const { data: unread } = useUnreadCountQuery();
   const readCount = useMemo(() => msgs?.filter((m) => !isUnread(m) && !isArchived(m)).length ?? 0, [msgs]);
   const archivedCount = useMemo(() => msgs?.filter(isArchived).length ?? 0, [msgs]);
 
@@ -129,6 +132,40 @@ export default function MessagesManager() {
     setPage(1);
   };
 
+  const handleArchive = async (msg: Msg) => {
+    try {
+      if (!msg.id) return;
+      const res = await api.messages.archive(msg.id);
+      if (!res.success) throw new Error(res.message);
+      await queryClient.invalidateQueries({ queryKey: ["messages"] });
+      await queryClient.invalidateQueries({ queryKey: ["unreadCount"] });
+      toast({ title: "Message archived", description: `"${msg.name}" moved to the Archived tab` });
+    } catch (err) {
+      toast({
+        title: "Failed to archive message",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUnarchive = async (msg: Msg) => {
+    try {
+      if (!msg.id) return;
+      const res = await api.messages.unarchive(msg.id);
+      if (!res.success) throw new Error(res.message);
+      await queryClient.invalidateQueries({ queryKey: ["messages"] });
+      await queryClient.invalidateQueries({ queryKey: ["unreadCount"] });
+      toast({ title: "Message restored", description: `"${msg.name}" is back in the inbox` });
+    } catch (err) {
+      toast({
+        title: "Failed to unarchive message",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleMarkAllRead = async () => {
     const allMsgs = msgs || [];
     try {
@@ -159,13 +196,13 @@ export default function MessagesManager() {
         <div className="flex-1 min-w-[120px]">
           <h1 className="text-2xl font-bold flex items-center gap-3">
             Messages
-            {unread > 0 && <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">{unread} unread</span>}
+            {(unread ?? 0) > 0 && <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">{unread} unread</span>}
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {msgs?.length ?? 0} total messages from the contact form.
           </p>
         </div>
-        {unread > 0 && (
+        {(unread ?? 0) > 0 && (
           <Button size="sm" variant="outline" onClick={handleMarkAllRead} className="min-h-[44px]">
             Mark All Read
           </Button>
@@ -176,7 +213,7 @@ export default function MessagesManager() {
         filter={filter}
         setFilter={handleFilterChange}
         totalCount={msgs?.length ?? 0}
-        unreadCount={unread}
+        unreadCount={unread ?? 0}
         readCount={readCount}
         archivedCount={archivedCount}
       />
@@ -203,7 +240,8 @@ export default function MessagesManager() {
             message={msg}
             onReply={openReply}
             onMarkRead={handleMarkRead}
-            onDelete={(msg) => setDeleteTarget(msg)}
+            onArchive={handleArchive}
+            onUnarchive={handleUnarchive}
             formatDate={formatDate}
           />
         ))}
@@ -269,27 +307,6 @@ export default function MessagesManager() {
         </DialogContent>
       </Dialog>
     </div>
-
-    <SmartConfirmDialog
-      state={{
-        isOpen: !!deleteTarget,
-        title: "Delete Message",
-        message: `Are you sure you want to delete the message from "${deleteTarget?.name}"? This action cannot be undone.`,
-        confirmLabel: "Delete",
-        variant: "danger",
-        onConfirm: async () => {
-          if (deleteTarget?.id) {
-            const res = await api.messages.delete(deleteTarget.id);
-            if (!res.success) throw new Error(res.message);
-            await queryClient.invalidateQueries({ queryKey: ["messages"] });
-            await queryClient.invalidateQueries({ queryKey: ["unreadCount"] });
-            toast({ title: "Message deleted" });
-          }
-          setDeleteTarget(null);
-        },
-      }}
-      onCancel={() => setDeleteTarget(null)}
-    />
     </>
   );
 }

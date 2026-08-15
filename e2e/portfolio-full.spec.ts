@@ -420,7 +420,9 @@ test.describe("Portfolio — Full Manual Test Suite", () => {
       await page.waitForTimeout(500);
       const btn = page.locator('button[aria-label*="top" i], button:has-text("↑"), [data-testid="back-to-top"]');
       await btn.first().click();
-      await page.waitForTimeout(1000);
+      // Don't race the smooth-scroll animation with a fixed timeout — wait for
+      // the scroll to actually settle near the top (deterministic on any CI).
+      await page.waitForFunction(() => window.scrollY < 100, undefined, { timeout: 5000 });
       const scrollY = await page.evaluate(() => window.scrollY);
       expect(scrollY).toBeLessThan(100);
     });

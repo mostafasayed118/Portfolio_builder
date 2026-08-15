@@ -27,6 +27,7 @@ import type {
   AiSuggestTagsInput,
   AnalyzeContent200,
   ApiError,
+  ArchiveMessage200,
   BulkDeleteInput,
   BulkDeleteMessages200,
   CertificationInput,
@@ -110,6 +111,7 @@ import type {
   ThemePresetInput,
   ThemePresetUpdateInput,
   TypographyInput,
+  UnarchiveMessage200,
   UnreadMessageCount200,
   UnreadMessageCountParams,
   UpdateAbout200,
@@ -3309,6 +3311,148 @@ export const useMarkMessageUnread = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getMarkMessageUnreadMutationOptions(options));
+    }
+
+export const getArchiveMessageUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/admin/messages/${id}/archive`
+}
+
+/**
+ * @summary Archive a message (soft-delete, hides from inbox)
+ */
+export const archiveMessage = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<ArchiveMessage200> => {
+
+  return customFetch<ArchiveMessage200>(getArchiveMessageUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getArchiveMessageMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof archiveMessage>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof archiveMessage>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['archiveMessage'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof archiveMessage>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  archiveMessage(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ArchiveMessageMutationResult = NonNullable<Awaited<ReturnType<typeof archiveMessage>>>
+
+    export type ArchiveMessageMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Archive a message (soft-delete, hides from inbox)
+ */
+export const useArchiveMessage = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof archiveMessage>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof archiveMessage>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getArchiveMessageMutationOptions(options));
+    }
+
+export const getUnarchiveMessageUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/admin/messages/${id}/unarchive`
+}
+
+/**
+ * @summary Unarchive a message (restore to inbox)
+ */
+export const unarchiveMessage = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<UnarchiveMessage200> => {
+
+  return customFetch<UnarchiveMessage200>(getUnarchiveMessageUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getUnarchiveMessageMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unarchiveMessage>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof unarchiveMessage>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['unarchiveMessage'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unarchiveMessage>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  unarchiveMessage(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnarchiveMessageMutationResult = NonNullable<Awaited<ReturnType<typeof unarchiveMessage>>>
+
+    export type UnarchiveMessageMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Unarchive a message (restore to inbox)
+ */
+export const useUnarchiveMessage = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unarchiveMessage>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof unarchiveMessage>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getUnarchiveMessageMutationOptions(options));
     }
 
 export const getReplyMessageUrl = (id: string,) => {

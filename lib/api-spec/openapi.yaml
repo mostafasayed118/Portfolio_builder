@@ -1093,6 +1093,56 @@ paths:
                           data: { type: object, nullable: true }
                   - $ref: "#/components/schemas/ApiError"
 
+  /v1/admin/messages/{id}/archive:
+    post:
+      operationId: archiveMessage
+      tags: [admin.messages]
+      summary: Archive a message (soft-delete, hides from inbox)
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Archived
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
+
+  /v1/admin/messages/{id}/unarchive:
+    post:
+      operationId: unarchiveMessage
+      tags: [admin.messages]
+      summary: Unarchive a message (restore to inbox)
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Unarchived
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
+
   /v1/admin/messages/{id}/reply:
     post:
       operationId: replyMessage
