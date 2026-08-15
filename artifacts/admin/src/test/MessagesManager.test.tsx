@@ -1,16 +1,20 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { renderAdmin } from "./helpers";
 import { MessagesManager } from "@/features/messages";
 
 const {
   mockListMessages,
   mockMarkMessageRead,
-  mockDeleteMessage,
+  mockArchiveMessage,
+  mockUnarchiveMessage,
+  mockUnreadCount,
 } = vi.hoisted(() => ({
   mockListMessages: vi.fn(),
   mockMarkMessageRead: vi.fn(),
-  mockDeleteMessage: vi.fn(),
+  mockArchiveMessage: vi.fn(),
+  mockUnarchiveMessage: vi.fn(),
+  mockUnreadCount: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase", () => ({
@@ -22,9 +26,10 @@ vi.mock("@/lib/api-client", () => ({
   api: {
     messages: {
       list: mockListMessages,
-      unreadCount: vi.fn(),
+      unreadCount: mockUnreadCount,
       markRead: mockMarkMessageRead,
-      delete: mockDeleteMessage,
+      archive: mockArchiveMessage,
+      unarchive: mockUnarchiveMessage,
     },
   },
 }));
@@ -36,11 +41,6 @@ vi.mock("@workspace/ui", async (importOriginal) => {
     useToast: () => ({ toast: vi.fn() }),
   };
 });
-
-function renderWithProviders(ui: React.ReactElement) {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
-}
 
 const mockMessages = [
   {
@@ -74,11 +74,14 @@ describe("MessagesViewer", () => {
     vi.clearAllMocks();
     mockListMessages.mockResolvedValue({ success: true, data: mockMessages });
     mockMarkMessageRead.mockResolvedValue({ success: true });
-    mockDeleteMessage.mockResolvedValue({ success: true });
+    mockArchiveMessage.mockResolvedValue({ success: true });
+    mockUnarchiveMessage.mockResolvedValue({ success: true });
+    // The unread chip/tab count is API-backed (matches the sidebar badge).
+    mockUnreadCount.mockResolvedValue({ success: true, data: 1 });
   });
 
   it("renders messages table", async () => {
-    renderWithProviders(<MessagesManager />);
+    renderAdmin(<MessagesManager />);
 
     expect(await screen.findByText("Messages")).toBeInTheDocument();
     expect(screen.getByText("Alice")).toBeInTheDocument();
@@ -88,7 +91,7 @@ describe("MessagesViewer", () => {
   });
 
   it("filters by All/Unread/Read tabs", async () => {
-    renderWithProviders(<MessagesManager />);
+    renderAdmin(<MessagesManager />);
 
     await screen.findByText("Alice");
 
@@ -108,7 +111,7 @@ describe("MessagesViewer", () => {
   });
 
   it("marks message as read on click", async () => {
-    renderWithProviders(<MessagesManager />);
+    renderAdmin(<MessagesManager />);
 
     await screen.findByText("Alice");
 
@@ -120,26 +123,40 @@ describe("MessagesViewer", () => {
     });
   });
 
-  it("deletes message with confirmation dialog", async () => {
-    renderWithProviders(<MessagesManager />);
+  it("archives a message on the archive button click", async () => {
+    renderAdmin(<MessagesManager />);
 
     await screen.findByText("Alice");
 
-    const deleteBtn = screen.getByRole("button", { name: /delete message from alice/i });
-    await userEvent.click(deleteBtn);
-
-    const dialog = await screen.findByRole("alertdialog");
-    await userEvent.click(within(dialog).getByText("Delete"));
+    const archiveBtn = screen.getByRole("button", { name: /archive message from alice/i });
+    await userEvent.click(archiveBtn);
 
     await waitFor(() => {
-      expect(mockDeleteMessage).toHaveBeenCalledWith("1");
+      expect(mockArchiveMessage).toHaveBeenCalledWith("1");
+    });
+  });
+
+  it("unarchives an archived message", async () => {
+    renderAdmin(<MessagesManager />);
+
+    await screen.findByText("Charlie");
+
+    // The archived message shows the unarchive action, not archive.
+    expect(
+      screen.queryByRole("button", { name: "Archive message from Charlie" }),
+    ).not.toBeInTheDocument();
+    const unarchiveBtn = screen.getByRole("button", { name: "Unarchive message from Charlie" });
+    await userEvent.click(unarchiveBtn);
+
+    await waitFor(() => {
+      expect(mockUnarchiveMessage).toHaveBeenCalledWith("3");
     });
   });
 
   it("shows empty state when no messages", async () => {
     mockListMessages.mockResolvedValue({ success: true, data: [] });
 
-    renderWithProviders(<MessagesManager />);
+    renderAdmin(<MessagesManager />);
 
     expect(
       await screen.findByText("No messages yet"),

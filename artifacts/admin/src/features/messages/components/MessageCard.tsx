@@ -1,4 +1,4 @@
-import { Mail, MailOpen, Reply, CheckCheck, Trash2 } from "lucide-react";
+import { Mail, MailOpen, Reply, CheckCheck, Archive, ArchiveRestore } from "lucide-react";
 import { Badge, Card, CardContent, Button } from "@workspace/ui";
 
 export interface Message {
@@ -22,7 +22,8 @@ interface MessageCardProps {
   message: Message;
   onReply: (msg: Message) => void;
   onMarkRead: (msg: Message) => void;
-  onDelete: (msg: Message) => void;
+  onArchive: (msg: Message) => void;
+  onUnarchive: (msg: Message) => void;
   formatDate: (ts: string) => string;
 }
 
@@ -30,7 +31,8 @@ export function MessageCard({
   message: msg,
   onReply,
   onMarkRead,
-  onDelete,
+  onArchive,
+  onUnarchive,
   formatDate,
 }: MessageCardProps) {
   return (
@@ -100,15 +102,27 @@ export function MessageCard({
                 <CheckCheck className="h-4 w-4" />
               </Button>
             )}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="min-h-[44px] min-w-[44px] text-destructive hover:text-destructive hover:bg-destructive/10"
-              aria-label={`Delete message from ${msg.name}`}
-              onClick={() => onDelete(msg)}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            {isArchived(msg) ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="min-h-[44px] min-w-[44px]"
+                aria-label={`Unarchive message from ${msg.name}`}
+                onClick={() => onUnarchive(msg)}
+              >
+                <ArchiveRestore className="h-4 w-4" />
+              </Button>
+            ) : (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="min-h-[44px] min-w-[44px]"
+                aria-label={`Archive message from ${msg.name}`}
+                onClick={() => onArchive(msg)}
+              >
+                <Archive className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         </div>
       </CardContent>

@@ -61,6 +61,28 @@ router.patch("/:id/unread", doubleCsrfProtection, validateParamId, async (req: A
   return updateByIdAndUser(req, res, "messages", req.params.id as string, { status: "unread" }, "Message");
 });
 
+/**
+ * Archive a message — sets `deleted_at` (the soft-delete that hides it from
+ * the inbox and the unread count). Reversible via the unarchive endpoint.
+ */
+router.post("/:id/archive", doubleCsrfProtection, validateParamId, async (req: AuthenticatedRequest, res: Response) => {
+  return updateByIdAndUser(
+    req,
+    res,
+    "messages",
+    req.params.id as string,
+    { deleted_at: new Date().toISOString() },
+    "Message",
+  );
+});
+
+/**
+ * Unarchive a message — clears `deleted_at` so it reappears in the inbox.
+ */
+router.post("/:id/unarchive", doubleCsrfProtection, validateParamId, async (req: AuthenticatedRequest, res: Response) => {
+  return updateByIdAndUser(req, res, "messages", req.params.id as string, { deleted_at: null }, "Message");
+});
+
 router.delete("/:id", doubleCsrfProtection, validateParamId, async (req: AuthenticatedRequest, res: Response) => {
   return softDeleteByIdAndUser(req, res, "messages", req.params.id as string, "Message");
 });

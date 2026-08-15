@@ -1115,6 +1115,14 @@ export type MarkMessageUnread200 = SuccessEnvelope & ({
   data?: { [key: string]: unknown } | null;
 }) | ApiError;
 
+export type ArchiveMessage200 = SuccessEnvelope & ({
+  data?: { [key: string]: unknown } | null;
+}) | ApiError;
+
+export type UnarchiveMessage200 = SuccessEnvelope & ({
+  data?: { [key: string]: unknown } | null;
+}) | ApiError;
+
 export type ReplyMessage200 = SuccessEnvelope & {
   data?: MessageReplyResult;
 } | ApiError;

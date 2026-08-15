@@ -1,9 +1,8 @@
 import { Link, useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { ChevronRight, X, LogOut } from "lucide-react";
 import { isSupabaseConfigured } from "@/lib/supabase";
-import { api } from "@/lib/api-client";
+import { useUnreadCountQuery } from "@/lib/use-entity-query";
 import { usePrefetch } from "@/hooks/usePrefetchRoutes";
 import { useAuthUser } from "@workspace/auth";
 import { NAV_ITEMS, NAV_GROUPS } from "@/lib/nav-config";
@@ -14,15 +13,11 @@ interface Props {
 }
 
 function UnreadBadge() {
-  const { data: count, isError } = useQuery({
-    queryKey: ["unreadCount"],
-    queryFn: async () => {
-      const res = await api.messages.unreadCount();
-      if (!res.success) throw new Error(res.message);
-      return res.data;
-    },
-    retry: 1,
-  });
+  // Single canonical source for the unread badge: the same API-backed query
+  // StatsBar uses (GET /api/v1/admin/messages/unread-count), which counts
+  // only status='unread' rows. Keyed by viewingUserId so the badge follows
+  // superadmin user-switching instead of showing a stale global count.
+  const { data: count, isError } = useUnreadCountQuery();
   const n = isError ? 0 : (count ?? 0);
   if (!n) return null;
   return (
