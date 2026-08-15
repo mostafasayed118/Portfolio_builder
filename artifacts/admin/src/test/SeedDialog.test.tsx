@@ -65,10 +65,8 @@ describe("SeedDialog", () => {
   it("shows success summary on successful import", async () => {
     mockSeedRun.mockResolvedValue({
       success: true,
-      data: {
-        summary: { projects: 8, skills: 35, experience: 3 },
-        errors: [],
-      },
+      summary: { projects: 8, skills: 35, experience: 3 },
+      errors: [],
     });
 
     render(<SeedDialog />);
@@ -101,7 +99,8 @@ describe("SeedDialog", () => {
   it("invalidates queries after successful import", async () => {
     mockSeedRun.mockResolvedValue({
       success: true,
-      data: { summary: { projects: 1 }, errors: [] },
+      summary: { projects: 1 },
+      errors: [],
     });
 
     render(<SeedDialog />);

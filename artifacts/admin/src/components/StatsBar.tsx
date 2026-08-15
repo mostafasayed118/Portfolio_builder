@@ -9,8 +9,8 @@ import { AdminErrorState } from "./AdminErrorState";
 export function StatsBar() {
   const queries = {
     unread: useUnreadCountQuery(),
-    skills: useEntityQuery<unknown[]>("skills", (uid) => api.skills.list(uid ?? undefined) as unknown as Promise<{ success: true; data?: unknown[] } | { success: false; message: string }>, { enabled: isSupabaseConfigured }),
-    projects: useEntityQuery<unknown[]>("projects", (uid) => api.projects.list(uid ?? undefined) as unknown as Promise<{ success: true; data?: unknown[] } | { success: false; message: string }>, { enabled: isSupabaseConfigured }),
+    skills: useEntityQuery<unknown[]>("skills", (uid) => api.skills.list(uid ?? undefined), { enabled: isSupabaseConfigured }),
+    projects: useEntityQuery<unknown[]>("projects", (uid) => api.projects.list(uid ?? undefined), { enabled: isSupabaseConfigured }),
   };
 
   const { unread, skills, projects } = queries;

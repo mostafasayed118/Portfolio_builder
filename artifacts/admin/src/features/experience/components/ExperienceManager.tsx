@@ -34,7 +34,7 @@ export default function ExperienceManager() {
   const queryClient = useQueryClient();
   const { data: items, isLoading, isError, error, refetch } = useEntityQuery<Experience[]>(
     "experience",
-    (uid) => api.experience.list(uid ?? undefined) as unknown as Promise<{ success: true; data?: Experience[] } | { success: false; message: string }>,
+    (uid) => api.experience.list(uid ?? undefined),
   );
   const [editing, setEditing] = useState<EditForm | null>(null);
   const [isNew, setIsNew] = useState(false);
