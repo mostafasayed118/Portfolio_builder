@@ -68,6 +68,16 @@ export default defineConfig({
           if (id.includes("lucide-react")) return "vendor-icons";
           if (id.includes("@tanstack/react-query")) return "vendor-query";
           if (id.includes("wouter")) return "vendor-router";
+          if (id.includes("@radix-ui")) return "vendor-radix";
+          if (id.includes("@floating-ui")) return "vendor-radix";
+          if (id.includes("zod")) return "vendor-zod";
+          if (id.includes("tailwind-merge")) return "vendor-utils";
+          if (id.includes("react-resizable-panels")) return "vendor-resizable";
+          if (id.includes("embla-carousel")) return "vendor-carousel";
+          if (id.includes("sonner")) return "vendor-toast";
+          if (id.includes("vaul")) return "vendor-utils";
+          if (id.includes("cmdk")) return "vendor-utils";
+          if (id.includes("input-otp")) return "vendor-utils";
         },
       },
     },
