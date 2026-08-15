@@ -234,6 +234,12 @@ importers:
       '@workspace/ui':
         specifier: workspace:*
         version: link:../../lib/ui
+      react-markdown:
+        specifier: ^10.1.0
+        version: 10.1.0(@types/react@19.2.14)(react@19.1.0)
+      remark-gfm:
+        specifier: ^4.0.1
+        version: 4.0.1
     devDependencies:
       '@radix-ui/react-accordion':
         specifier: ^1.2.4
