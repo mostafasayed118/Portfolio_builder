@@ -20,6 +20,7 @@ import usersRouter from "./users";
 import auditRouter from "./audit";
 import previewRouter from "./preview";
 import cvRouter from "./cv";
+import analyticsRouter from "./analytics";
 
 const router: IRouter = Router();
 
@@ -46,5 +47,6 @@ router.use("/ai-assistant", aiAssistantRouter);
 router.use("/users", usersRouter);
 router.use("/audit", auditRouter);
 router.use("/preview", previewRouter);
+router.use("/analytics", analyticsRouter);
 
 export default router;

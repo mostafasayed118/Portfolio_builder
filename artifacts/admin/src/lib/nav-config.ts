@@ -2,7 +2,7 @@ import type { ElementType } from "react";
 import {
   LayoutDashboard, Palette, Type, User, Briefcase, Code2,
   FolderKanban, Award, MessageSquare, Search, Layers,
-  Settings, Zap, FileText, ExternalLink, Plus, Clock, NotebookPen
+  Settings, Zap, FileText, ExternalLink, Plus, Clock, NotebookPen, BarChart3
 } from "lucide-react";
 
 export interface NavItem {
@@ -15,6 +15,7 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   { path: "/overview", label: "Overview", icon: LayoutDashboard, group: "Dashboard", keywords: ["dashboard", "home", "overview", "stats"] },
+  { path: "/analytics", label: "Analytics", icon: BarChart3, group: "Dashboard", keywords: ["analytics", "stats", "views", "traffic", "insights", "charts"] },
   { path: "/hero", label: "Hero", icon: Zap, group: "Content", keywords: ["hero", "banner", "header", "image"] },
   { path: "/about", label: "About", icon: User, group: "Content", keywords: ["about", "bio", "education", "languages"] },
   { path: "/projects", label: "Projects", icon: FolderKanban, group: "Content", keywords: ["projects", "portfolio", "work", "showcase"] },

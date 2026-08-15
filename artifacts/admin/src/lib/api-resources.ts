@@ -128,6 +128,17 @@ export const api = {
       return request<{ data: unknown[]; pagination: { total: number; limit: number; offset: number; hasMore: boolean } }>("GET", `/audit${qs ? `?${qs}` : ""}`);
     },
   },
+  analytics: {
+    stats: (days?: number) => request<{
+      days: number;
+      pageViews: Array<{ date: string; count: number }>;
+      topProjects: Array<{ slug: string; title: string; views: number }>;
+      cvDownloads: number;
+      contactClicks: number;
+      totalViews: number;
+      messages: Array<{ date: string; total: number; unread: number }>;
+    }>("GET", `/analytics${days ? `?days=${days}` : ""}`),
+  },
   ai: {
     generateDescription: (techStack: string[], title?: string) =>
       request<{ description: string }>("POST", "/ai-assistant/generate-description", { techStack, title }),

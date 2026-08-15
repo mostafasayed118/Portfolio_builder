@@ -26,6 +26,7 @@ const SectionOrderManager = lazy(() => import("@/features/settings").then(m => (
 const SiteSettingsManager = lazy(() => import("@/features/settings").then(m => ({ default: m.SiteSettingsManager })));
 const CvManager = lazy(() => import("@/features/cv").then(m => ({ default: m.CvManager })));
 const AuditLog = lazy(() => import("@/features/audit").then(m => ({ default: m.default })));
+const Analytics = lazy(() => import("@/features/analytics").then(m => ({ default: m.default })));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
 function PageFallback() {
@@ -95,6 +96,7 @@ function App() {
                         <Route path="/sections"><Suspense fallback={<PageFallback />}><SectionOrderManager /></Suspense></Route>
                         <Route path="/theme"><Suspense fallback={<PageFallback />}><ThemeManager /></Suspense></Route>
                         <Route path="/settings"><Suspense fallback={<PageFallback />}><SiteSettingsManager /></Suspense></Route>
+                        <Route path="/analytics"><Suspense fallback={<PageFallback />}><Analytics /></Suspense></Route>
                         <Route path="/audit"><Suspense fallback={<PageFallback />}><AuditLog /></Suspense></Route>
                         <Route component={NotFound} />
                       </Switch>

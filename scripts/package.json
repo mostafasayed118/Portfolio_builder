@@ -7,7 +7,8 @@
     "hello": "tsx ./src/hello.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "verify-migrations": "tsx ./verify-migrations.ts",
-    "generate-sitemap": "tsx ./generate-sitemap.ts"
+    "generate-sitemap": "tsx ./generate-sitemap.ts",
+    "scan-duplicates": "tsx ./src/scan-duplicates.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2"

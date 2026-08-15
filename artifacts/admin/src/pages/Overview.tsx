@@ -2,7 +2,7 @@ import { Link } from "wouter";
 import {
   Palette, Type, User, Code2, FolderKanban, Briefcase,
   Award, Mail, MessageSquare, Search, Layers, Settings,
-  ArrowRight, Zap
+  ArrowRight, Zap, BarChart3
 } from "lucide-react";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { Badge, Card, CardContent } from "@workspace/ui";
@@ -10,6 +10,7 @@ import { StatsBar } from "@/components/StatsBar";
 import { SeedDialog } from "@/components/SeedDialog";
 
 const MODULES = [
+  { path: "/analytics", label: "Analytics", icon: BarChart3, desc: "Views, top projects, messages", group: "Dashboard" },
   { path: "/theme", label: "Theme Manager", icon: Palette, desc: "Colors, palette, dark/light mode", group: "Appearance" },
   { path: "/typography", label: "Typography", icon: Type, desc: "Fonts, sizes, line height", group: "Appearance" },
   { path: "/sections", label: "Section Order", icon: Layers, desc: "Show/hide & reorder sections", group: "Appearance" },
@@ -25,7 +26,7 @@ const MODULES = [
   { path: "/settings", label: "Site Settings", icon: Settings, desc: "Name, tagline, footer", group: "Site" },
 ];
 
-const GROUPS = ["Appearance", "Content", "Inbox", "Site"];
+const GROUPS = ["Dashboard", "Appearance", "Content", "Inbox", "Site"];
 
 export default function Overview() {
   return (
