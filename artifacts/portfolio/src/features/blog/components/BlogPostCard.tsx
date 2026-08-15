@@ -1,7 +1,7 @@
 import { Link } from "wouter";
-import { ArrowRight, Calendar } from "lucide-react";
+import { ArrowRight, Calendar, Clock } from "lucide-react";
 import type { BlogPost } from "../types";
-import { formatPostDate } from "../types";
+import { formatPostDate, getReadingTime } from "../types";
 
 export default function BlogPostCard({ post }: { post: BlogPost }) {
   return (
@@ -19,9 +19,15 @@ export default function BlogPostCard({ post }: { post: BlogPost }) {
           />
         </div>
       )}
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <Calendar className="h-3.5 w-3.5" />
-        <time dateTime={post.published_at ?? undefined}>{formatPostDate(post.published_at)}</time>
+      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5">
+          <Calendar className="h-3.5 w-3.5" />
+          <time dateTime={post.published_at ?? undefined}>{formatPostDate(post.published_at)}</time>
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <Clock className="h-3.5 w-3.5" />
+          {getReadingTime(post.content)} min read
+        </span>
       </div>
       <h3 className="font-display font-semibold text-lg text-foreground leading-snug group-hover:text-primary transition-colors">
         {post.title}

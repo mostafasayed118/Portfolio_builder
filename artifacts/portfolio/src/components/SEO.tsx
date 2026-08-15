@@ -120,7 +120,7 @@ function SEOContent({
     }
     canonicalLink.href = url;
 
-    const defaultSchemas = schemas ?? [
+    const baseSchemas = [
       {
         "@context": "https://schema.org",
         "@type": "Person",
@@ -151,8 +151,9 @@ function SEOContent({
         },
       },
     ];
+    const allSchemas = schemas ? [...baseSchemas, ...schemas] : baseSchemas;
 
-    defaultSchemas.forEach((schema, i) => {
+    allSchemas.forEach((schema, i) => {
       const id = `schema-org-jsonld-${i}`;
       let script = doc.getElementById(id) as HTMLScriptElement | null;
       if (!script) {
@@ -168,7 +169,7 @@ function SEOContent({
     const ownedScripts = doc.head.querySelectorAll(`script[data-seo-owner="${ownerId}"]`);
     ownedScripts.forEach((script) => {
       const match = script.id.match(/^schema-org-jsonld-(\d+)$/);
-      if (!match || Number(match[1]) >= defaultSchemas.length) {
+      if (!match || Number(match[1]) >= allSchemas.length) {
         script.remove();
       }
     });

@@ -21,6 +21,7 @@ interface AnalyticsStats {
   days: number;
   pageViews: Array<{ date: string; count: number }>;
   topProjects: Array<{ slug: string; title: string; views: number }>;
+  topPosts: Array<{ slug: string; title: string; views: number }>;
   cvDownloads: number;
   contactClicks: number;
   totalViews: number;
@@ -125,6 +126,7 @@ export default function AnalyticsPage() {
   }
 
   const stats = data as AnalyticsStats;
+  const topPosts = stats.topPosts ?? [];
   const messageSeries = stats.messages.map((m) => ({
     date: formatDate(m.date),
     Total: m.total,
@@ -226,6 +228,22 @@ export default function AnalyticsPage() {
                   <Cell key={i} fill={PROJECT_COLORS[i % PROJECT_COLORS.length]} />
                 ))}
               </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </StatCard>
+
+      <StatCard title="Top blog posts by views">
+        {topPosts.length === 0 ? (
+          <EmptyChart message="No blog post views recorded in this range yet." />
+        ) : (
+          <ResponsiveContainer width="100%" height={Math.max(160, topPosts.length * 34)}>
+            <BarChart data={topPosts} layout="vertical" margin={{ left: 8 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+              <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+              <YAxis type="category" dataKey="title" width={180} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+              <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 10, fontSize: 12 }} />
+              <Bar dataKey="views" fill="var(--primary)" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
         )}

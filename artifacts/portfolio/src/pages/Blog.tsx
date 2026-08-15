@@ -1,20 +1,51 @@
-import { Fragment } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLanguage } from "@/lib/language";
 import { useLocation } from "wouter";
-import { ArrowLeft, FileX } from "lucide-react";
+import { ArrowLeft, FileX, Search } from "lucide-react";
 import SEO from "@/components/SEO";
 import { usePosts } from "@/hooks/use-portfolio-data";
 import { BlogPostCard } from "@/features/blog";
 
+const POSTS_PER_PAGE = 6;
+
 export default function Blog() {
   const { isArabic } = useLanguage();
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const { data: posts, isLoading } = usePosts();
+  const [query, setQuery] = useState("");
+  const [activeTag, setActiveTag] = useState(() => {
+    const tag = new URLSearchParams(window.location.search).get("tag");
+    return tag || "All";
+  });
+  const [visibleCount, setVisibleCount] = useState(POSTS_PER_PAGE);
 
   const heading = isArabic ? "المدونة" : "Blog";
   const subtitle = isArabic
     ? "أفكار ومقالات حول هندسة البيانات وتطوير البرمجيات."
     : "Ideas and articles on data engineering and software development.";
+
+  const tags = useMemo(() => {
+    const unique = new Set((posts ?? []).flatMap((post) => post.tags ?? []));
+    return ["All", ...Array.from(unique).sort((a, b) => a.localeCompare(b))];
+  }, [posts]);
+
+  const filteredPosts = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    return (posts ?? []).filter((post) => {
+      const matchesTag = activeTag === "All" || post.tags?.includes(activeTag);
+      const searchable = `${post.title} ${post.excerpt ?? ""} ${(post.tags ?? []).join(" ")}`.toLowerCase();
+      return matchesTag && (!normalizedQuery || searchable.includes(normalizedQuery));
+    });
+  }, [activeTag, posts, query]);
+
+  useEffect(() => {
+    setVisibleCount(POSTS_PER_PAGE);
+  }, [activeTag, query]);
+
+  useEffect(() => {
+    const tag = new URLSearchParams(location.split("?")[1] ?? "").get("tag");
+    if (tag) setActiveTag(tag);
+  }, [location]);
 
   return (
     <>
@@ -39,10 +70,43 @@ export default function Blog() {
             Home
           </button>
 
-          <header className="space-y-3 mb-10">
+          <header className="space-y-3 mb-8">
             <h1 className="text-4xl md:text-5xl font-display font-bold text-foreground">{heading}</h1>
             <p className="text-lg text-muted-foreground max-w-2xl">{subtitle}</p>
           </header>
+
+          {!isLoading && posts && posts.length > 0 && (
+            <div className="space-y-4 mb-8" aria-label="Blog filters">
+              <label className="relative block max-w-md">
+                <span className="sr-only">Search blog posts</span>
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                <input
+                  type="search"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search articles…"
+                  className="w-full rounded-lg border border-border bg-background py-2.5 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {tags.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => setActiveTag(tag)}
+                    aria-pressed={activeTag === tag}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                      activeTag === tag
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-primary"
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {isLoading ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -66,14 +130,31 @@ export default function Blog() {
                 {isArabic ? "تحقق لاحقاً للحصول على مقالات جديدة." : "Check back soon for new articles."}
               </p>
             </div>
+          ) : filteredPosts.length === 0 ? (
+            <div className="text-center py-24 space-y-4">
+              <Search className="h-12 w-12 text-muted-foreground mx-auto" />
+              <h2 className="text-2xl font-semibold text-foreground">No matching articles</h2>
+              <p className="text-muted-foreground">Try another search term or clear the active filter.</p>
+            </div>
           ) : (
-            <Fragment>
+            <>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {posts.map((post, index) => (
+                {filteredPosts.slice(0, visibleCount).map((post, index) => (
                   <BlogPostCard key={post.id ?? index} post={post} />
                 ))}
               </div>
-            </Fragment>
+              {visibleCount < filteredPosts.length && (
+                <div className="flex justify-center mt-10">
+                  <button
+                    type="button"
+                    onClick={() => setVisibleCount((count) => count + POSTS_PER_PAGE)}
+                    className="rounded-lg border border-border bg-background px-5 py-2.5 text-sm font-medium text-foreground hover:border-primary hover:text-primary transition-colors"
+                  >
+                    Load more articles
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </main>
