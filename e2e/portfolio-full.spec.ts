@@ -142,7 +142,7 @@ test.describe("Portfolio — Full Manual Test Suite", () => {
       await expect(allFilter).toBeVisible();
     });
 
-    test("skill tags display with icons", async ({ page }) => {
+    test("skill tags render with level indicators", async ({ page }) => {
       await page.goto("/");
       await page.evaluate(() => document.querySelector("#skills")?.scrollIntoView());
       // Auto-retry: tags only render after the Supabase data finishes loading.
@@ -150,9 +150,13 @@ test.describe("Portfolio — Full Manual Test Suite", () => {
       await expect(skillTags.first()).toBeVisible({ timeout: 10_000 });
       const count = await skillTags.count();
       expect(count).toBeGreaterThan(0);
-      // First skill should have an icon
-      const firstIcon = skillTags.first().locator("span[aria-hidden='true']");
-      await expect(firstIcon).toBeVisible();
+      // Every tag renders an aria-hidden level indicator (a colored dot);
+      // skills that carry an icon render an additional icon span. Assert the
+      // indicator on the first tag — stable regardless of which skills have
+      // icons in the live data (currently none do).
+      await expect(
+        skillTags.first().locator("span[aria-hidden='true']").first(),
+      ).toBeVisible();
     });
 
     test("clicking category filter filters skills", async ({ page }) => {
