@@ -9,6 +9,7 @@
 ## STEP 1 — Scan Summary
 
 ### Reference Project (D:\porfilo)
+
 - **Framework:** Next.js 16.1.6 (App Router, Turbopack)
 - **Backend:** Convex (serverless BaaS)
 - **Auth:** Clerk (@clerk/nextjs)
@@ -22,6 +23,7 @@
 - **i18n:** EN/AR with RTL (LanguageProvider, Cairo font)
 
 ### Current Project (Portfolio-Fixer)
+
 - **Framework:** Vite 7 + React 19 (SPA, CSR)
 - **Backend:** Express 5 API server + Supabase (PostgreSQL)
 - **Auth:** Clerk (@clerk/clerk-react + @clerk/backend)
@@ -37,88 +39,88 @@
 
 ## STEP 2 — Side-by-Side Comparison Table
 
-| Feature / Capability | Reference (D:\porfilo) | Current (Portfolio-Fixer) | Status |
-|---|---|---|---|
-| **Framework** | Next.js 16 (SSR/SSG) | Vite + React 19 (CSR SPA) | ✅ Different by design |
-| **Backend** | Convex (serverless) | Express 5 + Supabase | ✅ Different by design |
-| **Auth** | Clerk (@clerk/nextjs) | Clerk (@clerk/clerk-react) | ✅ Match |
-| **Hero Section** | Animated hero with 3D tilt, orbs, stats | Animated hero with 3D tilt, orbs, typewriter, stats | ⚡ Current is Better |
-| **About Section** | Experience timeline + skill badges | Bio, education, language bars, skill meters, stats grid | ⚡ Current is Better |
-| **Skills Display** | Inline skill badges (frontend/backend) | Filterable skill tags with proficiency tooltips + categories | ⚡ Current is Better |
-| **Projects Grid** | 3-column grid with hover overlays | Masonry grid with category filtering | ⚡ Current is Better |
-| **Project Detail Page** | Full page with image, tags, links, JSON-LD | Full page with image, tags, links, related projects | ✅ Match |
-| **Experience Timeline** | Vertical timeline in About section | Dedicated vertical timeline section | ✅ Match |
-| **Certifications** | ❌ Not present | Filterable certifications grouped by month | 🔵 Current Only |
-| **Contact Form** | Name/Email/Message, Convex mutation | Name/Email/Message, Zod validation, CSRF, char counters | ⚡ Current is Better |
-| **Contact Info Cards** | Email, phone, location, social links | Email, phone, location, social links, OpenStreetMap | ⚡ Current is Better |
-| **CV/Resume Download** | Dynamic PDF via mupdf + QR code | Dynamic PDF via jsPDF + QR code | ✅ Match |
-| **Navbar** | Fixed, glassmorphism, active section tracking | Fixed, glassmorphism, active section tracking, scroll progress | ⚡ Current is Better |
-| **Footer** | Brand + links + copyright | Brand + social links + "Made with Heart" | ✅ Match |
-| **Dark/Light Theme** | Toggle, localStorage, system preference | Toggle, localStorage, system preference, Supabase sync | ⚡ Current is Better |
-| **Language Toggle** | EN/AR switch, RTL support | EN/AR switch, RTL support, configurable mode (en/ar/both) | ⚡ Current is Better |
-| **SEO (Meta Tags)** | Next.js metadata API (server-rendered) | Dynamic meta tags via React component (CSR) | 🟡 Partial |
-| **SEO (JSON-LD)** | Organization + WebSite + Person + SoftwareApplication | Person + WebSite schemas | 🟡 Partial |
-| **SEO (Sitemap)** | Auto-generated sitemap.ts | ❌ Not present | 🔴 Missing |
-| **OG/Twitter Cards** | Full OG + Twitter Card meta | Full OG + Twitter Card meta | ✅ Match |
-| **Dynamic Favicon** | ✅ From Convex settings | ✅ From Supabase branding | ✅ Match |
-| **Dynamic Branding** | Site name, tagline, logo from Convex | Site name, logo, favicon from Supabase | ✅ Match |
-| **Scroll Animations** | AnimatedSection, StaggerContainer | useReveal hook, IntersectionObserver | ✅ Match |
-| **Glassmorphism** | .glass CSS class | .glass + .glass-strong CSS classes | ⚡ Current is Better |
-| **Back to Top** | ✅ FloatingBackToTop | ✅ BackToTop | ✅ Match |
-| **Mobile Menu** | Sheet (Radix) with nav links | Sheet (Radix) with nav links + focus trap | ⚡ Current is Better |
-| **Skeleton Loading** | ✅ Skeleton components per section | ✅ Skeleton components per section | ✅ Match |
-| **Responsive Design** | ✅ Full responsive | ✅ Full responsive | ✅ Match |
-| **Reduced Motion** | ✅ CSS media query | ✅ CSS media query + JS detection | ⚡ Current is Better |
-| **Print Stylesheet** | ❌ Not present | ✅ Print stylesheet (hides nav/footer) | 🔵 Current Only |
-| **RTL Support** | ✅ Full RTL with Cairo font | ✅ Full RTL with Cairo font, flip-rtl class | ✅ Match |
-| **Command Palette (Cmd+K)** | ✅ cmdk search across all content | ❌ Not present (admin has SmartSearch) | 🔴 Missing |
-| **Admin Dashboard** | 6 pages (overview, hero, projects, skills, experience, messages, settings) | 15 pages (overview, hero, about, projects, skills, experience, certifications, messages, CV, SEO, typography, sections, theme, settings) | ⚡ Current is Better |
-| **Admin - Hero Editor** | Edit headline, bio, badge, image, stats, buttons | Edit name, roles, heading, description, social links, availability | ✅ Match |
-| **Admin - About Editor** | ❌ Not present (embedded in hero/about) | ✅ Dedicated about editor (bio, education, languages) | 🔵 Current Only |
-| **Admin - Projects CRUD** | ✅ Full CRUD with bilingual fields | ✅ Full CRUD with tech stack, categories, metrics, featured | ⚡ Current is Better |
-| **Admin - Skills CRUD** | ✅ CRUD with category, level | ✅ CRUD with proficiency, category, visibility toggle | ⚡ Current is Better |
-| **Admin - Experience CRUD** | ✅ CRUD with bilingual fields | ✅ CRUD with sort ordering | ✅ Match |
-| **Admin - Certifications** | ❌ Not present | ✅ Full CRUD with issuer, category, credential URLs | 🔵 Current Only |
-| **Admin - Messages** | ✅ View messages list | ✅ View/archive/delete, unread badge, mark read | ⚡ Current is Better |
-| **Admin - CV Manager** | ❌ (generate from settings page) | ✅ Dedicated CV upload/management page | 🔵 Current Only |
-| **Admin - SEO Manager** | ❌ Not present | ✅ Meta description, OG image, Twitter handle editor | 🔵 Current Only |
-| **Admin - Typography** | ❌ Not present | ✅ Font selection, sizes, line height editor | 🔵 Current Only |
-| **Admin - Section Order** | ❌ Not present | ✅ Drag-to-reorder, show/hide sections | 🔵 Current Only |
-| **Admin - Theme Editor** | ❌ Not present | ✅ Full HSL color palette editor with live preview | 🔵 Current Only |
-| **Admin - Site Settings** | ✅ Branding + contact email + phones + social links | ✅ Site name, tagline, footer text, copyright | ✅ Match |
-| **Admin - AI Assistant** | ❌ Not present | ✅ Generate descriptions, suggest categories, analyze content | 🔵 Current Only |
-| **Admin - User Switcher** | ❌ Not present | ✅ Superadmin multi-user context switching | 🔵 Current Only |
-| **Admin - Seed/Import** | ❌ Not present | ✅ One-click import of static data to DB | 🔵 Current Only |
-| **Admin - Keyboard Shortcuts** | Cmd+K (search) | Ctrl+S (save), Escape (close), Ctrl+/ (search) | ✅ Match |
-| **API Server** | ❌ None (Convex handles backend) | ✅ Express 5 with 16+ route modules | 🔵 Current Only |
-| **Rate Limiting** | ❌ Convex handles | ✅ express-rate-limit (general/admin/API key) | 🔵 Current Only |
-| **CSRF Protection** | ❌ Not needed (Convex) | ✅ Double-submit cookie pattern | 🔵 Current Only |
-| **Security Headers** | ❌ Next.js defaults | ✅ Helmet (CSP, HSTS, XSS, frame denial) | 🔵 Current Only |
-| **Real-time Sync** | ✅ Convex real-time subscriptions | ✅ Supabase real-time + 15s polling fallback | ✅ Match |
-| **Data Fallback** | ✅ Static data when Convex unavailable | ✅ Static data when Supabase unavailable | ✅ Match |
-| **Testing** | ❌ No tests visible | ✅ Vitest (5 projects) + Playwright (5 E2E specs) | 🔵 Current Only |
-| **Monorepo** | ❌ Single app | ✅ pnpm workspace (4 apps + 7 shared libs) | 🔵 Current Only |
-| **PWA / Manifest** | ✅ manifest.json, apple-touch-icon | ❌ Not present | 🔴 Missing |
-| **RSS Feed** | Referenced in layout (rss.xml link) | ❌ Not present | 🔴 Missing |
-| **Google Site Verification** | ✅ env var support | ❌ Not present | 🔴 Missing |
-| **Facebook App ID** | ✅ env var support | ❌ Not present | 🔴 Missing |
-| **Clarity Analytics** | ✅ Microsoft Clarity integration | ❌ Not present | 🔴 Missing |
-| **Image Optimization** | Next/Image (automatic) | Manual (OptimizedImage component) | 🟡 Partial |
-| **Code Splitting** | Next.js automatic + dynamic imports | Manual lazy loading + Suspense | 🟡 Partial |
-| **Static Generation** | ✅ generateStaticParams for project pages | ❌ N/A (SPA) | 🔴 Missing |
-| **Font Preloading** | ✅ Google Fonts with preload + preconnect | ✅ Google Fonts via CDN | 🟡 Partial |
-| **DNS Prefetch** | ✅ github, facebook, twitter, clerk | ❌ Not present | 🔴 Missing |
-| **3D Depth Utilities** | ✅ perspective, preserve-3d, translate-z | ✅ Same utilities | ✅ Match |
-| **Custom Scrollbar** | ✅ Styled scrollbar (light + dark) | ✅ Styled scrollbar | ✅ Match |
-| **Skill Icon Mapping** | ✅ Color-coded icons per technology | ❌ Not present | 🔴 Missing |
-| **Platform Badges** | ✅ Mobile/Web badges on project cards | ✅ Platform field exists | 🟡 Partial |
-| **Play Store Links** | ✅ Dedicated Play Store button + icon | ✅ Play Store URL field in projects | ✅ Match |
-| **Stagger Animations** | ✅ StaggerContainer + StaggerItem | ✅ Container variants in components | ✅ Match |
-| **Mouse Tilt 3D** | ✅ useMotionValue + useSpring + useTransform | ✅ useMouseTilt hook | ✅ Match |
-| **Content Snapshots** | ❌ Not present | ✅ content_snapshots table for versioning | 🔵 Current Only |
-| **Analytics Tracking** | ❌ Not present | ✅ analytics_events table (page views, CV downloads, etc.) | 🔵 Current Only |
-| **Supply Chain Security** | ❌ Not configured | ✅ pnpm minimumReleaseAge | 🔵 Current Only |
-| **Error Boundaries** | ❌ Not present | ✅ RootErrorBoundary + admin ErrorBoundary | 🔵 Current Only |
+| Feature / Capability           | Reference (D:\porfilo)                                                     | Current (Portfolio-Fixer)                                                                                                                | Status                 |
+| ------------------------------ | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| **Framework**                  | Next.js 16 (SSR/SSG)                                                       | Vite + React 19 (CSR SPA)                                                                                                                | ✅ Different by design |
+| **Backend**                    | Convex (serverless)                                                        | Express 5 + Supabase                                                                                                                     | ✅ Different by design |
+| **Auth**                       | Clerk (@clerk/nextjs)                                                      | Clerk (@clerk/clerk-react)                                                                                                               | ✅ Match               |
+| **Hero Section**               | Animated hero with 3D tilt, orbs, stats                                    | Animated hero with 3D tilt, orbs, typewriter, stats                                                                                      | ⚡ Current is Better   |
+| **About Section**              | Experience timeline + skill badges                                         | Bio, education, language bars, skill meters, stats grid                                                                                  | ⚡ Current is Better   |
+| **Skills Display**             | Inline skill badges (frontend/backend)                                     | Filterable skill tags with proficiency tooltips + categories                                                                             | ⚡ Current is Better   |
+| **Projects Grid**              | 3-column grid with hover overlays                                          | Masonry grid with category filtering                                                                                                     | ⚡ Current is Better   |
+| **Project Detail Page**        | Full page with image, tags, links, JSON-LD                                 | Full page with image, tags, links, related projects                                                                                      | ✅ Match               |
+| **Experience Timeline**        | Vertical timeline in About section                                         | Dedicated vertical timeline section                                                                                                      | ✅ Match               |
+| **Certifications**             | ❌ Not present                                                             | Filterable certifications grouped by month                                                                                               | 🔵 Current Only        |
+| **Contact Form**               | Name/Email/Message, Convex mutation                                        | Name/Email/Message, Zod validation, CSRF, char counters                                                                                  | ⚡ Current is Better   |
+| **Contact Info Cards**         | Email, phone, location, social links                                       | Email, phone, location, social links, OpenStreetMap                                                                                      | ⚡ Current is Better   |
+| **CV/Resume Download**         | Dynamic PDF via mupdf + QR code                                            | Dynamic PDF via jsPDF + QR code                                                                                                          | ✅ Match               |
+| **Navbar**                     | Fixed, glassmorphism, active section tracking                              | Fixed, glassmorphism, active section tracking, scroll progress                                                                           | ⚡ Current is Better   |
+| **Footer**                     | Brand + links + copyright                                                  | Brand + social links + "Made with Heart"                                                                                                 | ✅ Match               |
+| **Dark/Light Theme**           | Toggle, localStorage, system preference                                    | Toggle, localStorage, system preference, Supabase sync                                                                                   | ⚡ Current is Better   |
+| **Language Toggle**            | EN/AR switch, RTL support                                                  | EN/AR switch, RTL support, configurable mode (en/ar/both)                                                                                | ⚡ Current is Better   |
+| **SEO (Meta Tags)**            | Next.js metadata API (server-rendered)                                     | Dynamic meta tags via React component (CSR)                                                                                              | 🟡 Partial             |
+| **SEO (JSON-LD)**              | Organization + WebSite + Person + SoftwareApplication                      | Person + WebSite schemas                                                                                                                 | 🟡 Partial             |
+| **SEO (Sitemap)**              | Auto-generated sitemap.ts                                                  | ✅ Auto-generated via `generate-sitemap` script → `public/sitemap.xml`                                                                   | ✅ Match               |
+| **OG/Twitter Cards**           | Full OG + Twitter Card meta                                                | Full OG + Twitter Card meta                                                                                                              | ✅ Match               |
+| **Dynamic Favicon**            | ✅ From Convex settings                                                    | ✅ From Supabase branding                                                                                                                | ✅ Match               |
+| **Dynamic Branding**           | Site name, tagline, logo from Convex                                       | Site name, logo, favicon from Supabase                                                                                                   | ✅ Match               |
+| **Scroll Animations**          | AnimatedSection, StaggerContainer                                          | useReveal hook, IntersectionObserver                                                                                                     | ✅ Match               |
+| **Glassmorphism**              | .glass CSS class                                                           | .glass + .glass-strong CSS classes                                                                                                       | ⚡ Current is Better   |
+| **Back to Top**                | ✅ FloatingBackToTop                                                       | ✅ BackToTop                                                                                                                             | ✅ Match               |
+| **Mobile Menu**                | Sheet (Radix) with nav links                                               | Sheet (Radix) with nav links + focus trap                                                                                                | ⚡ Current is Better   |
+| **Skeleton Loading**           | ✅ Skeleton components per section                                         | ✅ Skeleton components per section                                                                                                       | ✅ Match               |
+| **Responsive Design**          | ✅ Full responsive                                                         | ✅ Full responsive                                                                                                                       | ✅ Match               |
+| **Reduced Motion**             | ✅ CSS media query                                                         | ✅ CSS media query + JS detection                                                                                                        | ⚡ Current is Better   |
+| **Print Stylesheet**           | ❌ Not present                                                             | ✅ Print stylesheet (hides nav/footer)                                                                                                   | 🔵 Current Only        |
+| **RTL Support**                | ✅ Full RTL with Cairo font                                                | ✅ Full RTL with Cairo font, flip-rtl class                                                                                              | ✅ Match               |
+| **Command Palette (Cmd+K)**    | ✅ cmdk search across all content                                          | ✅ cmdk CommandPalette (Ctrl+K / Ctrl+/)                                                                                                 | ✅ Match               |
+| **Admin Dashboard**            | 6 pages (overview, hero, projects, skills, experience, messages, settings) | 15 pages (overview, hero, about, projects, skills, experience, certifications, messages, CV, SEO, typography, sections, theme, settings) | ⚡ Current is Better   |
+| **Admin - Hero Editor**        | Edit headline, bio, badge, image, stats, buttons                           | Edit name, roles, heading, description, social links, availability                                                                       | ✅ Match               |
+| **Admin - About Editor**       | ❌ Not present (embedded in hero/about)                                    | ✅ Dedicated about editor (bio, education, languages)                                                                                    | 🔵 Current Only        |
+| **Admin - Projects CRUD**      | ✅ Full CRUD with bilingual fields                                         | ✅ Full CRUD with tech stack, categories, metrics, featured                                                                              | ⚡ Current is Better   |
+| **Admin - Skills CRUD**        | ✅ CRUD with category, level                                               | ✅ CRUD with proficiency, category, visibility toggle                                                                                    | ⚡ Current is Better   |
+| **Admin - Experience CRUD**    | ✅ CRUD with bilingual fields                                              | ✅ CRUD with sort ordering                                                                                                               | ✅ Match               |
+| **Admin - Certifications**     | ❌ Not present                                                             | ✅ Full CRUD with issuer, category, credential URLs                                                                                      | 🔵 Current Only        |
+| **Admin - Messages**           | ✅ View messages list                                                      | ✅ View/archive/delete, unread badge, mark read                                                                                          | ⚡ Current is Better   |
+| **Admin - CV Manager**         | ❌ (generate from settings page)                                           | ✅ Dedicated CV upload/management page                                                                                                   | 🔵 Current Only        |
+| **Admin - SEO Manager**        | ❌ Not present                                                             | ✅ Meta description, OG image, Twitter handle editor                                                                                     | 🔵 Current Only        |
+| **Admin - Typography**         | ❌ Not present                                                             | ✅ Font selection, sizes, line height editor                                                                                             | 🔵 Current Only        |
+| **Admin - Section Order**      | ❌ Not present                                                             | ✅ Drag-to-reorder, show/hide sections                                                                                                   | 🔵 Current Only        |
+| **Admin - Theme Editor**       | ❌ Not present                                                             | ✅ Full HSL color palette editor with live preview                                                                                       | 🔵 Current Only        |
+| **Admin - Site Settings**      | ✅ Branding + contact email + phones + social links                        | ✅ Site name, tagline, footer text, copyright                                                                                            | ✅ Match               |
+| **Admin - AI Assistant**       | ❌ Not present                                                             | ✅ Generate descriptions, suggest categories, analyze content                                                                            | 🔵 Current Only        |
+| **Admin - User Switcher**      | ❌ Not present                                                             | ✅ Superadmin multi-user context switching                                                                                               | 🔵 Current Only        |
+| **Admin - Seed/Import**        | ❌ Not present                                                             | ✅ One-click import of static data to DB                                                                                                 | 🔵 Current Only        |
+| **Admin - Keyboard Shortcuts** | Cmd+K (search)                                                             | Ctrl+S (save), Escape (close), Ctrl+/ (search)                                                                                           | ✅ Match               |
+| **API Server**                 | ❌ None (Convex handles backend)                                           | ✅ Express 5 with 16+ route modules                                                                                                      | 🔵 Current Only        |
+| **Rate Limiting**              | ❌ Convex handles                                                          | ✅ express-rate-limit (general/admin/API key)                                                                                            | 🔵 Current Only        |
+| **CSRF Protection**            | ❌ Not needed (Convex)                                                     | ✅ Double-submit cookie pattern                                                                                                          | 🔵 Current Only        |
+| **Security Headers**           | ❌ Next.js defaults                                                        | ✅ Helmet (CSP, HSTS, XSS, frame denial)                                                                                                 | 🔵 Current Only        |
+| **Real-time Sync**             | ✅ Convex real-time subscriptions                                          | ✅ Supabase real-time + 15s polling fallback                                                                                             | ✅ Match               |
+| **Data Fallback**              | ✅ Static data when Convex unavailable                                     | ✅ Static data when Supabase unavailable                                                                                                 | ✅ Match               |
+| **Testing**                    | ❌ No tests visible                                                        | ✅ Vitest (5 projects) + Playwright (5 E2E specs)                                                                                        | 🔵 Current Only        |
+| **Monorepo**                   | ❌ Single app                                                              | ✅ pnpm workspace (4 apps + 7 shared libs)                                                                                               | 🔵 Current Only        |
+| **PWA / Manifest**             | ✅ manifest.json, apple-touch-icon                                         | ❌ Not present                                                                                                                           | 🔴 Missing             |
+| **RSS Feed**                   | Referenced in layout (rss.xml link)                                        | ❌ Not present                                                                                                                           | 🔴 Missing             |
+| **Google Site Verification**   | ✅ env var support                                                         | ❌ Not present                                                                                                                           | 🔴 Missing             |
+| **Facebook App ID**            | ✅ env var support                                                         | ❌ Not present                                                                                                                           | 🔴 Missing             |
+| **Clarity Analytics**          | ✅ Microsoft Clarity integration                                           | ❌ Not present                                                                                                                           | 🔴 Missing             |
+| **Image Optimization**         | Next/Image (automatic)                                                     | Manual (OptimizedImage component)                                                                                                        | 🟡 Partial             |
+| **Code Splitting**             | Next.js automatic + dynamic imports                                        | Manual lazy loading + Suspense                                                                                                           | 🟡 Partial             |
+| **Static Generation**          | ✅ generateStaticParams for project pages                                  | ❌ N/A (SPA)                                                                                                                             | 🔴 Missing             |
+| **Font Preloading**            | ✅ Google Fonts with preload + preconnect                                  | ✅ Google Fonts via CDN                                                                                                                  | 🟡 Partial             |
+| **DNS Prefetch**               | ✅ github, facebook, twitter, clerk                                        | ❌ Not present                                                                                                                           | 🔴 Missing             |
+| **3D Depth Utilities**         | ✅ perspective, preserve-3d, translate-z                                   | ✅ Same utilities                                                                                                                        | ✅ Match               |
+| **Custom Scrollbar**           | ✅ Styled scrollbar (light + dark)                                         | ✅ Styled scrollbar                                                                                                                      | ✅ Match               |
+| **Skill Icon Mapping**         | ✅ Color-coded icons per technology                                        | ❌ Not present                                                                                                                           | 🔴 Missing             |
+| **Platform Badges**            | ✅ Mobile/Web badges on project cards                                      | ✅ Platform field exists                                                                                                                 | 🟡 Partial             |
+| **Play Store Links**           | ✅ Dedicated Play Store button + icon                                      | ✅ Play Store URL field in projects                                                                                                      | ✅ Match               |
+| **Stagger Animations**         | ✅ StaggerContainer + StaggerItem                                          | ✅ Container variants in components                                                                                                      | ✅ Match               |
+| **Mouse Tilt 3D**              | ✅ useMotionValue + useSpring + useTransform                               | ✅ useMouseTilt hook                                                                                                                     | ✅ Match               |
+| **Content Snapshots**          | ❌ Not present                                                             | ✅ content_snapshots table for versioning                                                                                                | 🔵 Current Only        |
+| **Analytics Tracking**         | ❌ Not present                                                             | ✅ analytics_events table (page views, CV downloads, etc.)                                                                               | 🔵 Current Only        |
+| **Supply Chain Security**      | ❌ Not configured                                                          | ✅ pnpm minimumReleaseAge                                                                                                                | 🔵 Current Only        |
+| **Error Boundaries**           | ❌ Not present                                                             | ✅ RootErrorBoundary + admin ErrorBoundary                                                                                               | 🔵 Current Only        |
 
 ---
 
@@ -127,22 +129,16 @@
 ### 🔴 Missing Features (in reference but NOT in current)
 
 ```
-Feature: Command Palette (Cmd+K) Search
+Feature: Command Palette (Cmd+K) Search ✅ DONE
 Where in reference: app/dashboard/layout.tsx (CommandDialog with cmdk)
-Complexity to add: Medium
-Estimated effort: 4-6 hours
-Should we add it?: Yes — huge UX improvement for admin panel.
-  Add cmdk dependency, create CommandDialog component, wire up search
-  across all admin entities (projects, skills, experience, messages).
+Status: Implemented — artifacts/admin/src/components/CommandPalette.tsx (cmdk),
+  wired via Ctrl+K / Ctrl+/ shortcuts in AdminLayout (useGlobalShortcuts).
 ```
 
 ```
-Feature: PWA Manifest + Web App Meta
+Feature: PWA Manifest + Web App Meta ✅ DONE
 Where in reference: app/layout.tsx (manifest.json, appleWebApp, apple-touch-icon)
-Complexity to add: Low
-Estimated effort: 1-2 hours
-Should we add it?: Maybe — depends on whether mobile install is desired.
-  Create manifest.json in portfolio public/, add apple-web-app meta tags.
+Status: Implemented — public/manifest.json + apple-web-app meta tags in index.html.
 ```
 
 ```
@@ -154,39 +150,30 @@ Should we add it?: No — portfolio sites rarely need RSS. Low ROI.
 ```
 
 ```
-Feature: Google Site Verification + Facebook App ID
+Feature: Google Site Verification + Facebook App ID ⚠️ PARTIAL
 Where in reference: app/layout.tsx (env vars)
-Complexity to add: Low
-Estimated effort: 30 min
-Should we add it?: Maybe — only if deploying to production with SEO goals.
-  Add env vars + meta tags in portfolio index.html.
+Status: Placeholder meta tag present in index.html (commented, env-driven);
+  Facebook App ID not added.
 ```
 
 ```
-Feature: Microsoft Clarity Analytics
+Feature: Microsoft Clarity Analytics ⚠️ PARTIAL
 Where in reference: app/layout.tsx (lazyOnload script)
-Complexity to add: Low
-Estimated effort: 30 min
-Should we add it.: Maybe — free heatmaps, useful for UX optimization.
-  Add script tag in portfolio index.html with env var for Clarity ID.
+Status: Commented template + nonce/CSP note present in index.html; not enabled.
 ```
 
 ```
-Feature: Sitemap Generation
+Feature: Sitemap Generation ✅ DONE
 Where in reference: app/sitemap.ts (auto-generated from project data)
-Complexity to add: Low
-Estimated effort: 1-2 hours
-Should we add it?: Yes — important for SEO.
-  Create a sitemap.xml endpoint on the API server or static sitemap file.
+Status: Implemented — scripts/src/generate-sitemap.ts writes public/sitemap.xml,
+  run automatically as part of the portfolio build.
 ```
 
 ```
-Feature: DNS Prefetch for External Resources
+Feature: DNS Prefetch for External Resources ✅ DONE
 Where in reference: app/layout.tsx (dns-prefetch links)
-Complexity to add: Low
-Estimated effort: 15 min
-Should we add it?: Yes — easy performance win.
-  Add dns-prefetch link tags in portfolio index.html.
+Status: Implemented — preconnect/dns-prefetch hints in index.html
+  (duplicate + dead hints removed 2026-08).
 ```
 
 ```
@@ -302,32 +289,33 @@ Complexity: Low
 
 ### Color Palettes
 
-| Token | Reference (Light) | Current (Light) | Reference (Dark) | Current (Dark) |
-|---|---|---|---|---|
-| Primary | `206 27% 38%` (steel blue) | `204 92% 42%` (vibrant blue) | `197 60% 70%` (sky blue) | `204 92% 62%` |
-| Accent | `197 28% 40%` (muted teal) | `189 90% 38%` (teal) | `206 55% 60%` (blue) | `189 95% 53%` |
-| Background | `0 0% 100%` (white) | `220 30% 97%` (off-white) | `211 40% 6%` (deep navy) | `222 48% 6%` (deep navy) |
-| Foreground | `211 37% 21%` (dark slate) | `222 40% 10%` (near-black) | `38 40% 98%` (warm white) | `210 30% 96%` (cool white) |
-| Secondary | `38 35% 86%` (warm beige) | Standard muted | `211 30% 16%` | Standard muted |
-| Border Radius | `0.75rem` | `0.9rem` | Same | Same |
+| Token         | Reference (Light)          | Current (Light)              | Reference (Dark)          | Current (Dark)             |
+| ------------- | -------------------------- | ---------------------------- | ------------------------- | -------------------------- |
+| Primary       | `206 27% 38%` (steel blue) | `204 92% 42%` (vibrant blue) | `197 60% 70%` (sky blue)  | `204 92% 62%`              |
+| Accent        | `197 28% 40%` (muted teal) | `189 90% 38%` (teal)         | `206 55% 60%` (blue)      | `189 95% 53%`              |
+| Background    | `0 0% 100%` (white)        | `220 30% 97%` (off-white)    | `211 40% 6%` (deep navy)  | `222 48% 6%` (deep navy)   |
+| Foreground    | `211 37% 21%` (dark slate) | `222 40% 10%` (near-black)   | `38 40% 98%` (warm white) | `210 30% 96%` (cool white) |
+| Secondary     | `38 35% 86%` (warm beige)  | Standard muted               | `211 30% 16%`             | Standard muted             |
+| Border Radius | `0.75rem`                  | `0.9rem`                     | Same                      | Same                       |
 
 **Key Difference:** Reference uses a warmer, more muted corporate palette (steel blue + beige). Current uses a more vibrant, modern palette (bright blue + teal). Both are professional but have different vibes — reference feels more formal/corporate, current feels more energetic/modern.
 
 ### Typography
 
-| Aspect | Reference | Current |
-|---|---|---|
-| Body Font | Inter | Spline Sans |
-| Display Font | Inter (same) | Unbounded |
-| Arabic Font | Cairo | Cairo |
-| Admin Font | Inter | Inter |
-| Mono Font | — | JetBrains Mono |
+| Aspect       | Reference    | Current        |
+| ------------ | ------------ | -------------- |
+| Body Font    | Inter        | Spline Sans    |
+| Display Font | Inter (same) | Unbounded      |
+| Arabic Font  | Cairo        | Cairo          |
+| Admin Font   | Inter        | Inter          |
+| Mono Font    | —            | JetBrains Mono |
 
 **Key Difference:** Reference uses Inter for everything (clean, professional). Current uses Spline Sans + Unbounded (more distinctive, modern). Current has a stronger typographic hierarchy with a dedicated display font.
 
 ### Animations
 
 Both use Framer Motion 12.x extensively:
+
 - **Reference:** AnimatedSection, StaggerContainer, StaggerItem, mouse tilt, floating elements, scroll indicator
 - **Current:** Same effects + typewriter, rotating ring, scroll progress bar, more elaborate hero animations
 
@@ -336,6 +324,7 @@ Both use Framer Motion 12.x extensively:
 ### Glassmorphism
 
 Both implement glass effects:
+
 - **Reference:** `.glass` (bg-background/40 + backdrop-blur-md)
 - **Current:** `.glass` + `.glass-strong` (stronger blur + more opacity)
 
@@ -347,19 +336,19 @@ Both are highly polished. The reference feels slightly more **minimal and corpor
 
 ## STEP 5 — Performance & SEO Comparison
 
-| Metric | Reference | Current | Notes |
-|---|---|---|---|
-| **Framework SSR/SSG** | Next.js (SSR + SSG) | Vite SPA (CSR) | Reference wins on initial load + SEO |
-| **SEO approach** | Server-rendered metadata API | React component (CSR meta tags) | Reference is inherently better for SEO |
-| **Image optimization** | Next/Image (auto WebP, responsive) | Manual img tags + OptimizedImage | Reference is automatic |
-| **Code splitting** | Next.js automatic + dynamic() | Manual lazy loading | Reference is more aggressive |
-| **Font loading** | Preconnect + preload + swap | CDN only | Reference is faster |
-| **Static pages** | generateStaticParams for projects | N/A (SPA) | Reference pre-renders project pages |
-| **Sitemap** | Auto-generated sitemap.ts | ❌ Missing | Reference wins |
-| **Bundle splitting** | Next.js automatic | 7 manual vendor chunks | Both good |
-| **First Load JS** | ~150-200KB (Next.js overhead) | ~200-300KB (Vite SPA) | Similar |
-| **Real-time** | Convex (native) | Supabase + polling | Both work well |
-| **Lighthouse Est.** | 85-95 (SSR advantage) | 70-85 (CSR penalty) | Reference wins on SEO/accessibility |
+| Metric                 | Reference                          | Current                                  | Notes                                  |
+| ---------------------- | ---------------------------------- | ---------------------------------------- | -------------------------------------- |
+| **Framework SSR/SSG**  | Next.js (SSR + SSG)                | Vite SPA (CSR)                           | Reference wins on initial load + SEO   |
+| **SEO approach**       | Server-rendered metadata API       | React component (CSR meta tags)          | Reference is inherently better for SEO |
+| **Image optimization** | Next/Image (auto WebP, responsive) | Manual img tags + OptimizedImage         | Reference is automatic                 |
+| **Code splitting**     | Next.js automatic + dynamic()      | Manual lazy loading                      | Reference is more aggressive           |
+| **Font loading**       | Preconnect + preload + swap        | CDN only                                 | Reference is faster                    |
+| **Static pages**       | generateStaticParams for projects  | N/A (SPA)                                | Reference pre-renders project pages    |
+| **Sitemap**            | Auto-generated sitemap.ts          | ✅ generate-sitemap script → sitemap.xml | Now matches                            |
+| **Bundle splitting**   | Next.js automatic                  | 7 manual vendor chunks                   | Both good                              |
+| **First Load JS**      | ~150-200KB (Next.js overhead)      | ~200-300KB (Vite SPA)                    | Similar                                |
+| **Real-time**          | Convex (native)                    | Supabase + polling                       | Both work well                         |
+| **Lighthouse Est.**    | 85-95 (SSR advantage)              | 70-85 (CSR penalty)                      | Reference wins on SEO/accessibility    |
 
 ---
 
@@ -368,17 +357,16 @@ Both are highly polished. The reference feels slightly more **minimal and corpor
 ### 🔴 Must Do (high impact, missing completely)
 
 ```
-1. Sitemap Generation
+1. Sitemap Generation ✅ DONE
    Why: Critical for SEO and search engine indexing
-   Files: Create API endpoint or static generation at /sitemap.xml
-   Complexity: Low (1-2 hours)
+   Status: Implemented — scripts/src/generate-sitemap.ts → public/sitemap.xml
 ```
 
 ```
-2. DNS Prefetch + Font Preconnect
+2. DNS Prefetch + Font Preconnect ✅ DONE
    Why: Easy performance win, improves LCP
-   Files: artifacts/portfolio/index.html
-   Complexity: Low (15 min)
+   Status: Implemented — preconnect + dns-prefetch hints in index.html
+     (duplicate/dead hints removed 2026-08)
 ```
 
 ```
@@ -391,11 +379,10 @@ Both are highly polished. The reference feels slightly more **minimal and corpor
 ### 🟡 Should Do (medium impact, worth adding)
 
 ```
-4. Command Palette Search (Cmd+K) in Admin
+4. Command Palette Search (Cmd+K) in Admin ✅ DONE
    Why: Reference has it, huge UX improvement for navigating admin
-   Files: artifacts/admin/src/components/CommandPalette.tsx (new)
-          artifacts/admin/src/components/AdminLayout.tsx (integrate)
-   Complexity: Medium (4-6 hours)
+   Status: Implemented — CommandPalette.tsx integrated in AdminLayout,
+     Ctrl+K / Ctrl+/ shortcuts via useGlobalShortcuts.
 ```
 
 ```
@@ -464,15 +451,15 @@ Both are highly polished. The reference feels slightly more **minimal and corpor
 
 ### 1. Overall Feature Parity: ~85%
 
-The current project (Portfolio-Fixer) **exceeds the reference in features and capabilities**. It has 20+ features the reference doesn't have (certifications, AI assistant, theme editor, section ordering, SEO manager, analytics, testing, security headers, etc.). The reference has only ~5 features the current is missing (command palette, sitemap, PWA manifest, DNS prefetch, skill icons) — all of which are low-to-medium effort to add.
+The current project (Portfolio-Fixer) **exceeds the reference in features and capabilities**. It has 20+ features the reference doesn't have (certifications, AI assistant, theme editor, section ordering, SEO manager, analytics, testing, security headers, etc.). The reference had only ~5 features the current was missing (command palette, sitemap, PWA manifest, DNS prefetch, skill icons). Four of the five are now implemented (cmdk command palette, generate-sitemap script, PWA manifest, DNS prefetch); only per-skill technology icons remain — a deliberate design choice (current uses proficiency-sized tags with level dots instead of brand icons).
 
 The one area where the reference genuinely wins is **SEO architecture** — Next.js provides server-rendered metadata and static generation out of the box, which is inherently better for search engine indexing than a CSR Vite SPA.
 
 ### 2. Top 3 Improvements That Would Make the Biggest Impact
 
-1. **Sitemap + DNS Prefetch** (1-2 hours total) — Easy SEO and performance wins
-2. **Command Palette Search in Admin** (4-6 hours) — Major UX improvement for the CMS
-3. **Skill Technology Icons** (2-3 hours) — Closes the main visual gap in the portfolio
+1. **Sitemap + DNS Prefetch** ✅ Done — generate-sitemap script + index.html resource hints
+2. **Command Palette Search in Admin** ✅ Done — cmdk-based CommandPalette (Ctrl+K / Ctrl+/)
+3. **Skill Technology Icons** (2-3 hours) — the one remaining visual-parity item
 
 ### 3. What Current Does BETTER
 
@@ -488,6 +475,7 @@ The one area where the reference genuinely wins is **SEO architecture** — Next
 ### 4. Production Readiness
 
 **Current is MORE production-ready than the reference.** It has:
+
 - Comprehensive security (CSRF, rate limiting, Helmet, CSP)
 - Error boundaries for graceful failure
 - Testing infrastructure (655+ tests passing)
@@ -495,8 +483,9 @@ The one area where the reference genuinely wins is **SEO architecture** — Next
 - Supply chain protection
 
 **What's missing before launch:**
-1. Sitemap generation (SEO)
-2. DNS prefetch / font preconnect (performance)
-3. Optional: PWA manifest, Google verification, Clarity analytics
+
+1. ~~Sitemap generation (SEO)~~ ✅ Done
+2. ~~DNS prefetch / font preconnect (performance)~~ ✅ Done
+3. Optional: PWA manifest ✅ present; Google verification / Clarity analytics remain commented placeholders in index.html
 
 The current project is ready for production deployment. The gaps identified are nice-to-haves, not blockers.

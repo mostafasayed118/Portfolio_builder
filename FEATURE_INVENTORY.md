@@ -355,20 +355,20 @@ Router uses `wouter` with `BASE_URL` base to support subdirectory deployment.
 
 ## 7. SEO & Discoverability (`index.html`)
 
-| Meta Tag Group               | Status         | Notes                                                                    |
-| ---------------------------- | -------------- | ------------------------------------------------------------------------ |
-| `<title>` with keywords      | ✅ Implemented | "Mustafa Sayed — Data Engineer \| Python · Azure · ETL"                  |
-| `<meta name="description">`  | ✅ Implemented | 160-char recruiter-friendly description                                  |
-| `<meta name="keywords">`     | ✅ Implemented | 12 keywords                                                              |
-| `<meta name="author">`       | ✅ Implemented |                                                                          |
-| `<meta name="robots">`       | ✅ Implemented | `index, follow`                                                          |
-| `<link rel="canonical">`     | ✅ Implemented | Points to `mustafasayed.replit.app` — **update after deploy**            |
-| Open Graph tags (`og:*`)     | ✅ Implemented | type, url, title, description, image, dimensions, alt, site_name, locale |
-| Twitter / X Card tags        | ✅ Implemented | `summary_large_image`, creator                                           |
-| `<meta name="theme-color">`  | ✅ Implemented | `#0284c7` (primary blue)                                                 |
-| `<meta name="color-scheme">` | ✅ Implemented | `light dark`                                                             |
-| JSON-LD `Person` schema      | ✅ Implemented | name, jobTitle, url, email, phone, address, sameAs, knowsAbout, alumniOf |
-| OG image absolute URL        | ⚠️ Placeholder | Uses `mustafasayed.replit.app` — must be updated post-deploy             |
+| Meta Tag Group               | Status         | Notes                                                                          |
+| ---------------------------- | -------------- | ------------------------------------------------------------------------------ |
+| `<title>` with keywords      | ✅ Implemented | "Mustafa Sayed — Data Engineer \| Python · Azure · ETL"                        |
+| `<meta name="description">`  | ✅ Implemented | 160-char recruiter-friendly description                                        |
+| `<meta name="keywords">`     | ✅ Implemented | 12 keywords                                                                    |
+| `<meta name="author">`       | ✅ Implemented |                                                                                |
+| `<meta name="robots">`       | ✅ Implemented | `index, follow`                                                                |
+| `<link rel="canonical">`     | ✅ Implemented | Points to `mustafa-sayed-portfolio.vercel.app` via `VITE_SITE_URL` env         |
+| Open Graph tags (`og:*`)     | ✅ Implemented | type, url, title, description, image, dimensions, alt, site_name, locale       |
+| Twitter / X Card tags        | ✅ Implemented | `summary_large_image`, creator                                                 |
+| `<meta name="theme-color">`  | ✅ Implemented | `#0284c7` (primary blue)                                                       |
+| `<meta name="color-scheme">` | ✅ Implemented | `light dark`                                                                   |
+| JSON-LD `Person` schema      | ✅ Implemented | name, jobTitle, url, email, phone, address, sameAs, knowsAbout, alumniOf       |
+| OG image absolute URL        | ✅ Implemented | `${SITE_URL}/opengraph.jpg` — defaults to `mustafa-sayed-portfolio.vercel.app` |
 
 ---
 
