@@ -33,6 +33,9 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { logInfo, logError } from "@workspace/logging";
+
+const LOG_CTX = "scan-duplicates";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -273,37 +276,37 @@ function printHuman(
   infos: Map<string, TableInfo>,
 ): void {
   const dirty = reports.filter((r) => r.needsCleanup);
-  console.log(`=== Supabase duplicate scan: ${reports.length} tables ===\n`);
+  logInfo(`=== Supabase duplicate scan: ${reports.length} tables ===`, LOG_CTX);
 
   for (const rep of reports) {
     if (!rep.needsCleanup) continue;
     const info = infos.get(rep.table)!;
-    console.log(`❌ ${rep.table} (${rep.rowCount} rows) — ${rep.extraRows} extra row(s) to remove`);
+    logInfo(`❌ ${rep.table} (${rep.rowCount} rows) — ${rep.extraRows} extra row(s) to remove`, LOG_CTX);
     for (const group of rep.duplicateGroups.slice(0, MAX_GROUPS_REPORTED)) {
       if (rep.isSingleton) {
-        console.log(`   singleton table — ${group.count} rows exist; app uses only one`);
-        console.log(`   KEEP: ${rep.keepIds[0]} (most recently updated)`);
-        console.log(`   DELETE: ${group.ids.filter((id) => id !== rep.keepIds[0]).join(", ")}`);
-        console.log(`   content: ${describeContent(group.sample, info)}`);
+        logInfo(`   singleton table — ${group.count} rows exist; app uses only one`, LOG_CTX);
+        logInfo(`   KEEP: ${rep.keepIds[0]} (most recently updated)`, LOG_CTX);
+        logInfo(`   DELETE: ${group.ids.filter((id) => id !== rep.keepIds[0]).join(", ")}`, LOG_CTX);
+        logInfo(`   content: ${describeContent(group.sample, info)}`, LOG_CTX);
       } else {
         const shown = group.ids.slice(0, MAX_IDS_SHOWN);
         const extra = group.ids.length - shown.length;
-        console.log(`   duplicate group (${group.count} identical rows)`);
-        console.log(`   ids: ${shown.join(", ")}${extra > 0 ? `, … +${extra} more` : ""}`);
-        console.log(`   content: ${describeContent(group.sample, info)}`);
+        logInfo(`   duplicate group (${group.count} identical rows)`, LOG_CTX);
+        logInfo(`   ids: ${shown.join(", ")}${extra > 0 ? `, … +${extra} more` : ""}`, LOG_CTX);
+        logInfo(`   content: ${describeContent(group.sample, info)}`, LOG_CTX);
       }
     }
     const hidden = rep.duplicateGroups.length - MAX_GROUPS_REPORTED;
-    if (hidden > 0) console.log(`   … and ${hidden} more group(s)`);
-    console.log("");
+    if (hidden > 0) logInfo(`   … and ${hidden} more group(s)`, LOG_CTX);
+    logInfo("", LOG_CTX);
   }
 
   if (dirty.length === 0) {
-    console.log("✅ No duplicate rows found in any table.");
+    logInfo("✅ No duplicate rows found in any table.", LOG_CTX);
   } else {
-    console.log(`⚠️  ${dirty.length} table(s) need cleanup:`);
+    logInfo(`⚠️  ${dirty.length} table(s) need cleanup:`, LOG_CTX);
     for (const rep of dirty) {
-      console.log(`   - ${rep.table} (${rep.extraRows} extra rows)`);
+      logInfo(`   - ${rep.table} (${rep.extraRows} extra rows)`, LOG_CTX);
     }
   }
 }
@@ -326,8 +329,8 @@ function parseFlags(argv: string[]): {
       json = true;
     } else if (arg === "--allow-duplicates") {
       allowDuplicates = true;
-    } else if (arg === "--help" || arg === "-h") {
-      console.log(`Usage: tsx scripts/src/scan-duplicates.ts [--table <name>] [--json] [--allow-duplicates]`);
+    } else    if (arg === "--help" || arg === "-h") {
+      logInfo("Usage: tsx scripts/src/scan-duplicates.ts [--table <name>] [--json] [--allow-duplicates]", LOG_CTX);
       process.exit(0);
     }
   }
@@ -341,7 +344,7 @@ async function main(): Promise<void> {
   const key = env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!url || !key) {
-    console.error("ERROR: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required (set them in .env or the environment).");
+    logError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required (set them in .env or the environment).", undefined, LOG_CTX);
     process.exit(1);
   }
 
@@ -356,7 +359,7 @@ async function main(): Promise<void> {
   }
 
   if (infos.size === 0) {
-    console.error(`ERROR: no tables found${table ? ` matching "${table}"` : ""}.`);
+    logError(`no tables found${table ? ` matching "${table}"` : ""}.`, undefined, LOG_CTX);
     process.exit(1);
   }
 
@@ -365,9 +368,10 @@ async function main(): Promise<void> {
     try {
       const rows = await fetchAllRows<Record<string, unknown>>(supabase, info.name);
       reports.push(scanTable(info, rows));
-      console.error(`[scan] ${info.name}: ${rows.length} rows scanned`);
+      // Progress goes to stderr so --json stdout stays machine-clean.
+      process.stderr.write(`[scan] ${info.name}: ${rows.length} rows scanned\n`);
     } catch (err) {
-      console.error(`[scan] ${info.name}: FAILED — ${err instanceof Error ? err.message : String(err)}`);
+      process.stderr.write(`[scan] ${info.name}: FAILED — ${err instanceof Error ? err.message : String(err)}\n`);
     }
   }
 
@@ -385,7 +389,9 @@ async function main(): Promise<void> {
         sample: g.sample,
       })),
     }));
-    console.log(JSON.stringify({ scannedTables: reports.length, tables: payload }, null, 2));
+    // Machine-readable stdout — must stay pure JSON (the wrapper would
+    // prefix it in dev mode, so write the stream directly).
+    process.stdout.write(JSON.stringify({ scannedTables: reports.length, tables: payload }, null, 2) + "\n");
   } else {
     printHuman(reports, infos);
   }
