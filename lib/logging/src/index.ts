@@ -1,3 +1,6 @@
+/* eslint-disable no-console -- this module IS the sanctioned console boundary;
+   every other module should route logging through these functions instead. */
+
 type LogLevel = "debug" | "info" | "warn" | "error";
 
 interface LogEntry {

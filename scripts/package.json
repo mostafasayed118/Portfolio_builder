@@ -8,10 +8,13 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "verify-migrations": "tsx ./verify-migrations.ts",
     "generate-sitemap": "tsx ./generate-sitemap.ts",
-    "scan-duplicates": "tsx ./src/scan-duplicates.ts"
+    "scan-duplicates": "tsx ./src/scan-duplicates.ts",
+    "check-bom": "tsx ./src/check-bom.ts",
+    "check-ts-twin": "tsx ./src/check-ts-twin.ts"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2"
+    "@supabase/supabase-js": "^2",
+    "@workspace/logging": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "catalog:",
