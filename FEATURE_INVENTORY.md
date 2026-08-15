@@ -1,11 +1,11 @@
 # Feature Inventory — Mustafa Sayed Portfolio
 
-> **Project type:** Static single-page portfolio website (with optional API-backed dynamic data)
+> **Project type:** Portfolio single-page app (static fallback + Supabase-hydrated content)
 > **Stack:** React 19 · Vite · TailwindCSS v4 · wouter · lucide-react
 > **Artifact path:** `artifacts/portfolio/`
 > **Preview path:** `/` (root)
-> **Data layer:** Static TypeScript constants in `src/data/portfolio.ts`; optionally hydrated by Supabase via `src/hooks/use-portfolio-data.ts` and a real-time sync hook
-> **Last audited:** 2026-06-01
+> **Data layer:** Static TypeScript constants in `src/data/portfolio.ts`; hydrated by Supabase via `src/hooks/use-portfolio-data.ts` and a real-time sync hook; contact form posts to the api-server
+> **Last audited:** 2026-06-01 (partially refreshed 2026-08-15)
 >
 > **Related docs:** [API Server README](../artifacts/api-server/README.md) — covers the backend that serves the contact form and CV download endpoints.
 
@@ -13,24 +13,24 @@
 
 ## Executive Summary
 
-A fully client-rendered, zero-backend portfolio website for Mustafa Sayed Saeed Ibrahim (Data Engineer, Cairo, Egypt). The site covers seven content sections — Hero, About, Skills, Projects, Experience, Certifications, Contact — plus a persistent Navbar and Footer. All data is static TypeScript constants; there is no API server, no database, and no authentication layer. The site is production-ready for deployment to a `.replit.app` domain.
+A client-rendered portfolio for Mustafa Sayed Saeed Ibrahim (Data Engineer, Cairo, Egypt) covering seven sections — Hero, About, Skills, Projects, Experience, Certifications, Contact — plus a Navbar and Footer. Content falls back to static TypeScript constants and is hydrated from Supabase (via `use-portfolio-data.ts` + a real-time sync hook). The contact form posts to the separate api-server (`POST /api/v1/contact`), which is Clerk-gated for admin and backed by Supabase.
 
 ---
 
 ## 1. Architecture & Infrastructure
 
-| Aspect | Detail |
-|---|---|
-| Runtime | Browser-only (CSR) |
-| Build tool | Vite 7 with `vite.config.ts` |
-| CSS engine | TailwindCSS v4 with `tw-animate-css` |
-| Routing | `wouter` with `BASE_URL`-aware router |
-| Theme | React Context + `localStorage` persistence |
-| Fonts | Google Fonts CDN — Spline Sans (body) + Unbounded (display) |
-| Icons | `lucide-react` |
-| Static assets | `artifacts/portfolio/public/` |
-| Toast system | Shadcn/UI `Toaster` (wired but not actively triggered) |
-| Backend | None — the separate `api-server` artifact is not consumed |
+| Aspect        | Detail                                                                       |
+| ------------- | ---------------------------------------------------------------------------- |
+| Runtime       | Browser-only (CSR)                                                           |
+| Build tool    | Vite 7 with `vite.config.ts`                                                 |
+| CSS engine    | TailwindCSS v4 with `tw-animate-css`                                         |
+| Routing       | `wouter` with `BASE_URL`-aware router                                        |
+| Theme         | React Context + `localStorage` persistence                                   |
+| Fonts         | Google Fonts CDN — Spline Sans (body) + Unbounded (display)                  |
+| Icons         | `lucide-react`                                                               |
+| Static assets | `artifacts/portfolio/public/`                                                |
+| Toast system  | Shadcn/UI `Toaster` (mounted in `App.tsx`; fires on sync/contact errors)     |
+| Backend       | Separate `api-server` (contact form, CV download) + Supabase content storage |
 
 ---
 
@@ -44,17 +44,18 @@ A fully client-rendered, zero-backend portfolio website for Mustafa Sayed Saeed 
 
 #### Navbar (`src/components/Navbar.tsx`)
 
-| Feature | Status | Notes |
-|---|---|---|
-| Fixed top navigation bar | ✅ Implemented | `position: fixed`, `z-50` |
-| Glassmorphism scroll effect | ✅ Implemented | Switches to `glass-strong` class when `scrollY > 20` |
-| Logo click → smooth scroll to `#hero` | ✅ Implemented | |
-| Six nav links with smooth scroll | ✅ Implemented | About · Skills · Projects · Experience · Certs · Contact |
-| Dark/light mode toggle button | ✅ Implemented | Moon/Sun icon swap |
-| Hamburger mobile menu | ✅ Implemented | Opens a dropdown drawer; closes on link click |
-| Mobile theme toggle in hamburger bar | ✅ Implemented | Separate from desktop toggle |
+| Feature                               | Status         | Notes                                                    |
+| ------------------------------------- | -------------- | -------------------------------------------------------- |
+| Fixed top navigation bar              | ✅ Implemented | `position: fixed`, `z-50`                                |
+| Glassmorphism scroll effect           | ✅ Implemented | Switches to `glass-strong` class when `scrollY > 20`     |
+| Logo click → smooth scroll to `#hero` | ✅ Implemented |                                                          |
+| Six nav links with smooth scroll      | ✅ Implemented | About · Skills · Projects · Experience · Certs · Contact |
+| Dark/light mode toggle button         | ✅ Implemented | Moon/Sun icon swap                                       |
+| Hamburger mobile menu                 | ✅ Implemented | Opens a dropdown drawer; closes on link click            |
+| Mobile theme toggle in hamburger bar  | ✅ Implemented | Separate from desktop toggle                             |
 
 **Navigation links wired:**
+
 ```
 #about → #skills → #projects → #experience → #certifications → #contact
 ```
@@ -63,27 +64,27 @@ A fully client-rendered, zero-backend portfolio website for Mustafa Sayed Saeed 
 
 #### Footer (`src/components/Footer.tsx`)
 
-| Feature | Status | Notes |
-|---|---|---|
-| Branding line (MS monogram + role + location) | ✅ Implemented | |
-| GitHub icon link | ✅ Implemented | `target="_blank"` |
-| LinkedIn icon link | ✅ Implemented | `target="_blank"` |
-| Email icon link | ✅ Implemented | `mailto:` |
-| Copyright / built-with line | ✅ Implemented | "Built with ❤️ in Cairo, Egypt · 2025" |
+| Feature                                       | Status         | Notes                                  |
+| --------------------------------------------- | -------------- | -------------------------------------- |
+| Branding line (MS monogram + role + location) | ✅ Implemented |                                        |
+| GitHub icon link                              | ✅ Implemented | `target="_blank"`                      |
+| LinkedIn icon link                            | ✅ Implemented | `target="_blank"`                      |
+| Email icon link                               | ✅ Implemented | `mailto:`                              |
+| Copyright / built-with line                   | ✅ Implemented | "Built with ❤️ in Cairo, Egypt · 2025" |
 
 ---
 
 ### 2.2 Theme System (`src/lib/theme.tsx`)
 
-| Feature | Status | Notes |
-|---|---|---|
-| `ThemeProvider` React context | ✅ Implemented | Wraps entire app |
-| `useTheme()` hook | ✅ Implemented | Exposes `{ theme, toggle }` |
-| `localStorage` persistence | ✅ Implemented | Key: `"theme"` |
-| `document.documentElement` class toggle | ✅ Implemented | Adds/removes `.dark` |
-| Light mode CSS token set | ✅ Implemented | Full HSL palette in `:root` |
-| Dark mode CSS token set | ✅ Implemented | Full HSL palette in `.dark` |
-| Default mode | Light | Falls back to `"light"` if no stored preference |
+| Feature                                 | Status         | Notes                                           |
+| --------------------------------------- | -------------- | ----------------------------------------------- |
+| `ThemeProvider` React context           | ✅ Implemented | Wraps entire app                                |
+| `useTheme()` hook                       | ✅ Implemented | Exposes `{ theme, toggle }`                     |
+| `localStorage` persistence              | ✅ Implemented | Key: `"theme"`                                  |
+| `document.documentElement` class toggle | ✅ Implemented | Adds/removes `.dark`                            |
+| Light mode CSS token set                | ✅ Implemented | Full HSL palette in `:root`                     |
+| Dark mode CSS token set                 | ✅ Implemented | Full HSL palette in `.dark`                     |
+| Default mode                            | Light          | Falls back to `"light"` if no stored preference |
 
 **Design tokens defined (both modes):**
 `--background`, `--foreground`, `--muted`, `--muted-foreground`, `--card`, `--border`, `--primary`, `--primary-foreground`, `--accent`, `--accent-foreground`, `--destructive`, `--ring`, `--radius`, `--shadow-soft`, `--shadow-card`, `--shadow-float`, `--chart-1..5`, sidebar tokens.
@@ -94,21 +95,21 @@ A fully client-rendered, zero-backend portfolio website for Mustafa Sayed Saeed 
 
 **Status: Implemented**
 
-| Feature | Status | Notes |
-|---|---|---|
-| "Available for Work" badge with pulse dot | ✅ Implemented | Green animated dot |
-| Full name headline | ✅ Implemented | "Hi, I'm Mustafa Sayed" — name in primary colour |
-| Typewriter role animation | ✅ Implemented | Cycles 6 roles via `useTypewriter` hook |
-| Location chip (Cairo, Egypt) | ✅ Implemented | MapPin icon |
-| Bio paragraph | ✅ Implemented | From `HERO.description` |
-| "Get In Touch" CTA → scroll to `#contact` | ✅ Implemented | Solid primary button |
-| "View Projects" CTA → scroll to `#projects` | ✅ Implemented | Outlined button |
-| "Download CV" button | ✅ Implemented | Downloads `Mustafa_Sayed_Resume.pdf` from `/public` |
-| GitHub / LinkedIn / Email social icon links | ✅ Implemented | Three glass-style icon buttons |
-| Floating ambient background blobs | ✅ Implemented | CSS `animate-float` on 2 gradient blobs |
-| "MS / Data Engineer" avatar card | ✅ Implemented | Glassmorphism card with emoji decorators |
-| "Scroll Down" indicator | ✅ Implemented | Bouncing ArrowDown, smooth-scrolls to `#about` |
-| Fade-up entrance animation | ✅ Implemented | `animate-fade-up` with staggered delay on avatar |
+| Feature                                     | Status         | Notes                                               |
+| ------------------------------------------- | -------------- | --------------------------------------------------- |
+| "Available for Work" badge with pulse dot   | ✅ Implemented | Green animated dot                                  |
+| Full name headline                          | ✅ Implemented | "Hi, I'm Mustafa Sayed" — name in primary colour    |
+| Typewriter role animation                   | ✅ Implemented | Cycles 6 roles via `useTypewriter` hook             |
+| Location chip (Cairo, Egypt)                | ✅ Implemented | MapPin icon                                         |
+| Bio paragraph                               | ✅ Implemented | From `HERO.description`                             |
+| "Get In Touch" CTA → scroll to `#contact`   | ✅ Implemented | Solid primary button                                |
+| "View Projects" CTA → scroll to `#projects` | ✅ Implemented | Outlined button                                     |
+| "Download CV" button                        | ✅ Implemented | Downloads `Mustafa_Sayed_Resume.pdf` from `/public` |
+| GitHub / LinkedIn / Email social icon links | ✅ Implemented | Three glass-style icon buttons                      |
+| Floating ambient background blobs           | ✅ Implemented | CSS `animate-float` on 2 gradient blobs             |
+| "MS / Data Engineer" avatar card            | ✅ Implemented | Glassmorphism card with emoji decorators            |
+| "Scroll Down" indicator                     | ✅ Implemented | Bouncing ArrowDown, smooth-scrolls to `#about`      |
+| Fade-up entrance animation                  | ✅ Implemented | `animate-fade-up` with staggered delay on avatar    |
 
 **Data source:** `HERO` constant in `data/portfolio.ts`
 
@@ -118,18 +119,19 @@ A fully client-rendered, zero-backend portfolio website for Mustafa Sayed Saeed 
 
 **Status: Implemented**
 
-| Feature | Status | Notes |
-|---|---|---|
-| Section reveal animation on scroll | ✅ Implemented | `useReveal()` IntersectionObserver hook |
-| Bio paragraphs (×2) | ✅ Implemented | |
-| Education card (degree, school, grade, years) | ✅ Implemented | GraduationCap icon |
-| Language proficiency bars (Arabic + English) | ✅ Implemented | Inline progress bars |
-| Location chip | ✅ Implemented | |
-| Years-of-experience chip | ✅ Implemented | |
-| Animated skill bar meters (×6) | ✅ Implemented | `SkillMeter` component, IntersectionObserver-triggered |
-| Stats grid (Projects · Experience · Skills · Certs) | ✅ Implemented | 2×2 glass cards |
+| Feature                                             | Status         | Notes                                                  |
+| --------------------------------------------------- | -------------- | ------------------------------------------------------ |
+| Section reveal animation on scroll                  | ✅ Implemented | `useReveal()` IntersectionObserver hook                |
+| Bio paragraphs (×2)                                 | ✅ Implemented |                                                        |
+| Education card (degree, school, grade, years)       | ✅ Implemented | GraduationCap icon                                     |
+| Language proficiency bars (Arabic + English)        | ✅ Implemented | Inline progress bars                                   |
+| Location chip                                       | ✅ Implemented |                                                        |
+| Years-of-experience chip                            | ✅ Implemented |                                                        |
+| Animated skill bar meters (×6)                      | ✅ Implemented | `SkillMeter` component, IntersectionObserver-triggered |
+| Stats grid (Projects · Experience · Skills · Certs) | ✅ Implemented | 2×2 glass cards                                        |
 
 **Sub-component:** `SkillMeter` (`src/components/SkillMeter.tsx`)
+
 - Per-bar IntersectionObserver — fills width only when in viewport
 - CSS transition `width 1.2s cubic-bezier(0.4, 0, 0.2, 1)`
 
@@ -141,17 +143,17 @@ A fully client-rendered, zero-backend portfolio website for Mustafa Sayed Saeed 
 
 **Status: Implemented**
 
-| Feature | Status | Notes |
-|---|---|---|
-| Section reveal animation | ✅ Implemented | |
-| Category filter tabs (All + 5 categories) | ✅ Implemented | Languages · Frameworks · Cloud · Analytics · Tools |
-| Interactive skill tag cloud | ✅ Implemented | 35 skills total |
-| Tag sizing by proficiency | ✅ Implemented | `text-sm` ≥90%, `text-xs` otherwise |
-| Proficiency level dot on each tag | ✅ Implemented | Blue=Expert, Cyan=Advanced, Amber=Intermediate |
-| Hover tooltip with mini progress bar | ✅ Implemented | Shows skill name, level badge, %, progress bar |
-| Tag scale + shadow on hover | ✅ Implemented | `hover:scale-105` |
-| Proficiency level summary row | ✅ Implemented | 4-cell grid: Expert · Advanced · Intermediate · Familiar counts |
-| Active category count in filter buttons | ✅ Implemented | e.g. "Languages (8)" |
+| Feature                                   | Status         | Notes                                                           |
+| ----------------------------------------- | -------------- | --------------------------------------------------------------- |
+| Section reveal animation                  | ✅ Implemented |                                                                 |
+| Category filter tabs (All + 5 categories) | ✅ Implemented | Languages · Frameworks · Cloud · Analytics · Tools              |
+| Interactive skill tag cloud               | ✅ Implemented | 35 skills total                                                 |
+| Tag sizing by proficiency                 | ✅ Implemented | `text-sm` ≥90%, `text-xs` otherwise                             |
+| Proficiency level dot on each tag         | ✅ Implemented | Blue=Expert, Cyan=Advanced, Amber=Intermediate                  |
+| Hover tooltip with mini progress bar      | ✅ Implemented | Shows skill name, level badge, %, progress bar                  |
+| Tag scale + shadow on hover               | ✅ Implemented | `hover:scale-105`                                               |
+| Proficiency level summary row             | ✅ Implemented | 4-cell grid: Expert · Advanced · Intermediate · Familiar counts |
+| Active category count in filter buttons   | ✅ Implemented | e.g. "Languages (8)"                                            |
 
 **Proficiency levels:**
 | Level | Threshold | Colour |
@@ -169,19 +171,19 @@ A fully client-rendered, zero-backend portfolio website for Mustafa Sayed Saeed 
 
 **Status: Implemented**
 
-| Feature | Status | Notes |
-|---|---|---|
-| Section reveal animation | ✅ Implemented | |
+| Feature                                   | Status         | Notes                                        |
+| ----------------------------------------- | -------------- | -------------------------------------------- |
+| Section reveal animation                  | ✅ Implemented |                                              |
 | Category filter tabs (All + 4 categories) | ✅ Implemented | Cloud/ETL · Web Scraping · Web Apps · Mobile |
-| Masonry CSS grid layout | ✅ Implemented | 1 col mobile → 2 col tablet → 3 col desktop |
-| Project cards with hover border + shadow | ✅ Implemented | |
-| "Featured" badge | ✅ Implemented | On 3 of 8 projects |
-| Category badge on each card | ✅ Implemented | |
-| Project title, description | ✅ Implemented | |
-| Tech stack badge list | ✅ Implemented | |
-| Performance metrics badges | ✅ Implemented | Cyan accent colour |
-| GitHub icon link per card | ✅ Implemented | `target="_blank"` |
-| Title colour change on hover | ✅ Implemented | Transitions to `--primary` |
+| Masonry CSS grid layout                   | ✅ Implemented | 1 col mobile → 2 col tablet → 3 col desktop  |
+| Project cards with hover border + shadow  | ✅ Implemented |                                              |
+| "Featured" badge                          | ✅ Implemented | On 3 of 8 projects                           |
+| Category badge on each card               | ✅ Implemented |                                              |
+| Project title, description                | ✅ Implemented |                                              |
+| Tech stack badge list                     | ✅ Implemented |                                              |
+| Performance metrics badges                | ✅ Implemented | Cyan accent colour                           |
+| GitHub icon link per card                 | ✅ Implemented | `target="_blank"`                            |
+| Title colour change on hover              | ✅ Implemented | Transitions to `--primary`                   |
 
 **Projects in data (8 total):**
 | # | Title | Category | Featured |
@@ -203,17 +205,17 @@ A fully client-rendered, zero-backend portfolio website for Mustafa Sayed Saeed 
 
 **Status: Implemented**
 
-| Feature | Status | Notes |
-|---|---|---|
-| Section reveal animation | ✅ Implemented | |
-| Vertical timeline layout | ✅ Implemented | Left-aligned line with gradient fade |
-| Per-item reveal with staggered delay | ✅ Implemented | `transitionDelay: index * 100ms` |
-| Icon per experience type | ✅ Implemented | Briefcase=Internship, Award=Certification, Heart=Volunteer |
-| Colour-coded type badge | ✅ Implemented | Blue / Cyan / Violet per type |
-| Company, location, period display | ✅ Implemented | |
-| Bullet-point description list | ✅ Implemented | |
-| Technology tag list | ✅ Implemented | |
-| Hover border highlight | ✅ Implemented | `hover:border-primary/20` |
+| Feature                              | Status         | Notes                                                      |
+| ------------------------------------ | -------------- | ---------------------------------------------------------- |
+| Section reveal animation             | ✅ Implemented |                                                            |
+| Vertical timeline layout             | ✅ Implemented | Left-aligned line with gradient fade                       |
+| Per-item reveal with staggered delay | ✅ Implemented | `transitionDelay: index * 100ms`                           |
+| Icon per experience type             | ✅ Implemented | Briefcase=Internship, Award=Certification, Heart=Volunteer |
+| Colour-coded type badge              | ✅ Implemented | Blue / Cyan / Violet per type                              |
+| Company, location, period display    | ✅ Implemented |                                                            |
+| Bullet-point description list        | ✅ Implemented |                                                            |
+| Technology tag list                  | ✅ Implemented |                                                            |
+| Hover border highlight               | ✅ Implemented | `hover:border-primary/20`                                  |
 
 **Experience entries (3 total):**
 | # | Title | Company | Type |
@@ -230,22 +232,22 @@ A fully client-rendered, zero-backend portfolio website for Mustafa Sayed Saeed 
 
 **Status: Implemented**
 
-| Feature | Status | Notes |
-|---|---|---|
-| Section reveal animation | ✅ Implemented | |
+| Feature                                   | Status         | Notes                                                            |
+| ----------------------------------------- | -------------- | ---------------------------------------------------------------- |
+| Section reveal animation                  | ✅ Implemented |                                                                  |
 | Category filter tabs (All + 5 categories) | ✅ Implemented | Python · Data Engineering · AI & Data Science · Cloud · Database |
-| Per-filter item counts in buttons | ✅ Implemented | |
-| Month-grouped timeline | ✅ Implemented | Sorted newest → oldest; grouped by `dateSort` (YYYY-MM) |
-| Two-column desktop grid | ✅ Implemented | `md:grid-cols-2` |
-| Per-card scroll-reveal with stagger | ✅ Implemented | |
-| Timeline dot per card | ✅ Implemented | Circular issuer-logo dot on left spine |
-| Gradient timeline spine | ✅ Implemented | Fades from `primary/40` to transparent |
-| Issuer badge (colour-coded per org) | ✅ Implemented | DataCamp=green, IBM=blue, Microsoft=sky, HackerRank=emerald |
-| Category badge per card | ✅ Implemented | Colour-coded |
-| Issue date display | ✅ Implemented | |
-| "View →" external credential link | ✅ Implemented | Opens issuer site in new tab |
-| Month section header with cert count | ✅ Implemented | Divider + count pill |
-| Issuer summary row (4 orgs) | ✅ Implemented | Logo + count per org |
+| Per-filter item counts in buttons         | ✅ Implemented |                                                                  |
+| Month-grouped timeline                    | ✅ Implemented | Sorted newest → oldest; grouped by `dateSort` (YYYY-MM)          |
+| Two-column desktop grid                   | ✅ Implemented | `md:grid-cols-2`                                                 |
+| Per-card scroll-reveal with stagger       | ✅ Implemented |                                                                  |
+| Timeline dot per card                     | ✅ Implemented | Circular issuer-logo dot on left spine                           |
+| Gradient timeline spine                   | ✅ Implemented | Fades from `primary/40` to transparent                           |
+| Issuer badge (colour-coded per org)       | ✅ Implemented | DataCamp=green, IBM=blue, Microsoft=sky, HackerRank=emerald      |
+| Category badge per card                   | ✅ Implemented | Colour-coded                                                     |
+| Issue date display                        | ✅ Implemented |                                                                  |
+| "View →" external credential link         | ✅ Implemented | Opens issuer site in new tab                                     |
+| Month section header with cert count      | ✅ Implemented | Divider + count pill                                             |
+| Issuer summary row (4 orgs)               | ✅ Implemented | Logo + count per org                                             |
 
 **Certifications (11 total):**
 | # | Title | Issuer | Date | Category |
@@ -268,34 +270,33 @@ A fully client-rendered, zero-backend portfolio website for Mustafa Sayed Saeed 
 
 ### 2.9 Contact Section (`src/components/ContactSection.tsx`)
 
-**Status: Implemented (UI-only form — no backend submission)**
+**Status: Implemented (form posts to the api-server)**
 
-| Feature | Status | Notes |
-|---|---|---|
-| Section reveal animation | ✅ Implemented | |
-| Contact details sidebar (5 items) | ✅ Implemented | Email · Phone · Location · GitHub · LinkedIn |
-| Clickable email link (`mailto:`) | ✅ Implemented | |
-| Clickable phone link (`tel:`) | ✅ Implemented | |
-| Clickable GitHub / LinkedIn links | ✅ Implemented | `target="_blank"` |
-| OpenStreetMap Cairo embed (iframe) | ✅ Implemented | `loading="lazy"`, scrollable map |
-| Contact form (Name · Email · Message) | ✅ Implemented | |
-| Client-side form validation | ✅ Implemented | Name ≥2 chars, valid email regex, message ≥10 chars |
-| Inline field error messages | ✅ Implemented | Red text below field |
-| Success state (CheckCircle + "Message Sent!") | ✅ Implemented | Replaces form on submit |
-| "Send Another" button resets state | ✅ Implemented | |
-| Form submission backend | ⚠️ Not implemented | Form is UI-only; no email service or API hooked up |
+| Feature                                       | Status         | Notes                                                                                                 |
+| --------------------------------------------- | -------------- | ----------------------------------------------------------------------------------------------------- |
+| Section reveal animation                      | ✅ Implemented |                                                                                                       |
+| Contact details sidebar (5 items)             | ✅ Implemented | Email · Phone · Location · GitHub · LinkedIn                                                          |
+| Clickable email link (`mailto:`)              | ✅ Implemented |                                                                                                       |
+| Clickable phone link (`tel:`)                 | ✅ Implemented |                                                                                                       |
+| Clickable GitHub / LinkedIn links             | ✅ Implemented | `target="_blank"`                                                                                     |
+| OpenStreetMap Cairo embed (iframe)            | ✅ Implemented | `loading="lazy"`, scrollable map                                                                      |
+| Contact form (Name · Email · Message)         | ✅ Implemented |                                                                                                       |
+| Client-side form validation                   | ✅ Implemented | Name ≥2 chars, valid email regex, message ≥10 chars                                                   |
+| Inline field error messages                   | ✅ Implemented | Red text below field                                                                                  |
+| Success state (CheckCircle + "Message Sent!") | ✅ Implemented | Replaces form on submit                                                                               |
+| "Send Another" button resets state            | ✅ Implemented |                                                                                                       |
+| Form submission backend                       | ✅ Implemented | POSTs to `/api/v1/contact` on the api-server (honeypot + time-trap + rate limit + email notification) |
 
 ---
 
 ## 3. Custom Hooks
 
-| Hook | File | Purpose | Status |
-|---|---|---|---|
+| Hook            | File                      | Purpose                                                                            | Status         |
+| --------------- | ------------------------- | ---------------------------------------------------------------------------------- | -------------- |
 | `useTypewriter` | `hooks/use-typewriter.ts` | Cycles through strings with type/pause/delete phases using `requestAnimationFrame` | ✅ Implemented |
-| `useReveal` | `hooks/use-reveal.ts` | IntersectionObserver-based scroll reveal; fires once then disconnects | ✅ Implemented |
-| `useTheme` | `lib/theme.tsx` | Reads + toggles theme from context | ✅ Implemented |
-| `useMobile` | `hooks/use-mobile.tsx` | Detects `max-width: 768px` via `matchMedia` | ✅ Implemented (unused in current components) |
-| `useToast` | `hooks/use-toast.ts` | Shadcn toast queue manager | ✅ Implemented (wired to `<Toaster>`, not triggered) |
+| `useReveal`     | `hooks/use-reveal.ts`     | IntersectionObserver-based scroll reveal; fires once then disconnects              | ✅ Implemented |
+| `useTheme`      | `lib/theme.tsx`           | Reads + toggles theme from context                                                 | ✅ Implemented |
+| `useToast`      | `@workspace/ui`           | Shadcn toast queue manager (fires on sync/contact errors)                          | ✅ Implemented |
 
 ---
 
@@ -303,39 +304,39 @@ A fully client-rendered, zero-backend portfolio website for Mustafa Sayed Saeed 
 
 ### Glassmorphism Utilities (`src/index.css`)
 
-| Class | Effect | Used in |
-|---|---|---|
-| `.glass` | `backdrop-filter: blur(12px)` + 70 % card background | Cards, skill tags, avatar, contact sidebar |
-| `.glass-strong` | `backdrop-filter: blur(20px)` + 90 % card background | Navbar on scroll, mobile menu |
+| Class           | Effect                                               | Used in                                    |
+| --------------- | ---------------------------------------------------- | ------------------------------------------ |
+| `.glass`        | `backdrop-filter: blur(12px)` + 70 % card background | Cards, skill tags, avatar, contact sidebar |
+| `.glass-strong` | `backdrop-filter: blur(20px)` + 90 % card background | Navbar on scroll, mobile menu              |
 
 ### Animation Classes
 
-| Class / Keyframe | Effect | Used in |
-|---|---|---|
-| `.animate-fade-up` | Slide up + fade in, 0.7 s | Hero content blocks |
-| `.animate-fade-in` | Fade in, 0.5 s | General transitions |
-| `.animate-float` | Vertical bob 6 s loop | Hero background blobs |
-| `.typewriter-cursor::after` | Blinking `|` at 1 s | Typewriter component |
+| Class / Keyframe                | Effect                               | Used in                    |
+| ------------------------------- | ------------------------------------ | -------------------------- | -------------------- |
+| `.animate-fade-up`              | Slide up + fade in, 0.7 s            | Hero content blocks        |
+| `.animate-fade-in`              | Fade in, 0.5 s                       | General transitions        |
+| `.animate-float`                | Vertical bob 6 s loop                | Hero background blobs      |
+| `.typewriter-cursor::after`     | Blinking `                           | ` at 1 s                   | Typewriter component |
 | `.section-reveal` + `.revealed` | Opacity 0→1 + translateY 24→0, 0.6 s | All section content blocks |
-| `.skill-bar-fill` | Width transition 1.2 s cubic-bezier | Skill meters |
-| `.masonry-grid` | CSS columns layout | Projects section |
+| `.skill-bar-fill`               | Width transition 1.2 s cubic-bezier  | Skill meters               |
+| `.masonry-grid`                 | CSS columns layout                   | Projects section           |
 
 ### Responsive Breakpoints
 
-| Breakpoint | Columns |
-|---|---|
-| Default (mobile) | 1-column masonry; stacked hero |
-| `sm` (640 px) | 2-column masonry |
-| `md` (768 px) | 2-column section grids; horizontal hero |
-| `lg` (1024 px) | 3-column masonry |
+| Breakpoint       | Columns                                 |
+| ---------------- | --------------------------------------- |
+| Default (mobile) | 1-column masonry; stacked hero          |
+| `sm` (640 px)    | 2-column masonry                        |
+| `md` (768 px)    | 2-column section grids; horizontal hero |
+| `lg` (1024 px)   | 3-column masonry                        |
 
 ---
 
 ## 5. Routing
 
-| Route | Component | Status |
-|---|---|---|
-| `/` | `pages/Home.tsx` | ✅ Implemented |
+| Route           | Component             | Status         |
+| --------------- | --------------------- | -------------- |
+| `/`             | `pages/Home.tsx`      | ✅ Implemented |
 | `*` (catch-all) | `pages/not-found.tsx` | ✅ Implemented |
 
 Router uses `wouter` with `BASE_URL` base to support subdirectory deployment.
@@ -344,46 +345,46 @@ Router uses `wouter` with `BASE_URL` base to support subdirectory deployment.
 
 ## 6. Static Assets (`artifacts/portfolio/public/`)
 
-| File | Purpose | Status |
-|---|---|---|
-| `favicon.svg` | Browser tab icon | ✅ Present |
-| `opengraph.jpg` | Social share preview image | ✅ Present |
+| File                       | Purpose                           | Status     |
+| -------------------------- | --------------------------------- | ---------- |
+| `favicon.svg`              | Browser tab icon                  | ✅ Present |
+| `opengraph.jpg`            | Social share preview image        | ✅ Present |
 | `Mustafa_Sayed_Resume.pdf` | Downloadable CV (via Hero button) | ✅ Present |
 
 ---
 
 ## 7. SEO & Discoverability (`index.html`)
 
-| Meta Tag Group | Status | Notes |
-|---|---|---|
-| `<title>` with keywords | ✅ Implemented | "Mustafa Sayed — Data Engineer \| Python · Azure · ETL" |
-| `<meta name="description">` | ✅ Implemented | 160-char recruiter-friendly description |
-| `<meta name="keywords">` | ✅ Implemented | 12 keywords |
-| `<meta name="author">` | ✅ Implemented | |
-| `<meta name="robots">` | ✅ Implemented | `index, follow` |
-| `<link rel="canonical">` | ✅ Implemented | Points to `mustafasayed.replit.app` — **update after deploy** |
-| Open Graph tags (`og:*`) | ✅ Implemented | type, url, title, description, image, dimensions, alt, site_name, locale |
-| Twitter / X Card tags | ✅ Implemented | `summary_large_image`, creator |
-| `<meta name="theme-color">` | ✅ Implemented | `#0284c7` (primary blue) |
-| `<meta name="color-scheme">` | ✅ Implemented | `light dark` |
-| JSON-LD `Person` schema | ✅ Implemented | name, jobTitle, url, email, phone, address, sameAs, knowsAbout, alumniOf |
-| OG image absolute URL | ⚠️ Placeholder | Uses `mustafasayed.replit.app` — must be updated post-deploy |
+| Meta Tag Group               | Status         | Notes                                                                    |
+| ---------------------------- | -------------- | ------------------------------------------------------------------------ |
+| `<title>` with keywords      | ✅ Implemented | "Mustafa Sayed — Data Engineer \| Python · Azure · ETL"                  |
+| `<meta name="description">`  | ✅ Implemented | 160-char recruiter-friendly description                                  |
+| `<meta name="keywords">`     | ✅ Implemented | 12 keywords                                                              |
+| `<meta name="author">`       | ✅ Implemented |                                                                          |
+| `<meta name="robots">`       | ✅ Implemented | `index, follow`                                                          |
+| `<link rel="canonical">`     | ✅ Implemented | Points to `mustafasayed.replit.app` — **update after deploy**            |
+| Open Graph tags (`og:*`)     | ✅ Implemented | type, url, title, description, image, dimensions, alt, site_name, locale |
+| Twitter / X Card tags        | ✅ Implemented | `summary_large_image`, creator                                           |
+| `<meta name="theme-color">`  | ✅ Implemented | `#0284c7` (primary blue)                                                 |
+| `<meta name="color-scheme">` | ✅ Implemented | `light dark`                                                             |
+| JSON-LD `Person` schema      | ✅ Implemented | name, jobTitle, url, email, phone, address, sameAs, knowsAbout, alumniOf |
+| OG image absolute URL        | ⚠️ Placeholder | Uses `mustafasayed.replit.app` — must be updated post-deploy             |
 
 ---
 
 ## 8. Data Model (`src/data/portfolio.ts`)
 
-| Export | Type | Records |
-|---|---|---|
-| `HERO` | Object | 1 — name, roles (6), description, social links |
-| `ABOUT` | Object | 1 — bio (×2), education, languages (×2), location, years |
-| `SKILLS` | Array | 6 — label + value (%) for About section meters |
-| `SKILL_CATEGORIES` | `SkillCategory[]` | 5 categories × 35 skills total |
-| `PROJECTS` | Array | 8 — id, title, description, techStack, category, featured, githubUrl, metrics |
-| `EXPERIENCE` | Array | 3 — id, title, company, location, period, description[], technologies[], type |
-| `CERTIFICATIONS` | `Certificate[]` | 11 — id, title, issuer, issuerLogo, date, dateSort, category, credentialUrl |
-| `CONTACT` | Object | 1 — email, phone, location, github, linkedin |
-| `STATS` | Array | 4 — Projects 8+, Experience 1yr, Skills 35+, Certifications 11 |
+| Export             | Type              | Records                                                                       |
+| ------------------ | ----------------- | ----------------------------------------------------------------------------- |
+| `HERO`             | Object            | 1 — name, roles (6), description, social links                                |
+| `ABOUT`            | Object            | 1 — bio (×2), education, languages (×2), location, years                      |
+| `SKILLS`           | Array             | 6 — label + value (%) for About section meters                                |
+| `SKILL_CATEGORIES` | `SkillCategory[]` | 5 categories × 35 skills total                                                |
+| `PROJECTS`         | Array             | 8 — id, title, description, techStack, category, featured, githubUrl, metrics |
+| `EXPERIENCE`       | Array             | 3 — id, title, company, location, period, description[], technologies[], type |
+| `CERTIFICATIONS`   | `Certificate[]`   | 11 — id, title, issuer, issuerLogo, date, dateSort, category, credentialUrl   |
+| `CONTACT`          | Object            | 1 — email, phone, location, github, linkedin                                  |
+| `STATS`            | Array             | 4 — Projects 8+, Experience 1yr, Skills 35+, Certifications 11                |
 
 **TypeScript types exported:** `SkillLevel`, `Skill`, `SkillCategory`, `Certificate`
 
@@ -412,80 +413,77 @@ Visitor lands on page
 
 ## 10. Incomplete / Partial Features
 
-| Feature | Status | Gap |
-|---|---|---|
-| Contact form submission | ✅ Wired | POST `/api/v1/contact` — see `artifacts/api-server/README.md`. Public endpoint with origin check, honeypot, 2s time-trap, 5/hr rate limit, input normalization, structured abuse logging |
-| Credential links | ⚠️ Placeholder | `credentialUrl` values point to issuer homepages, not actual credential verification URLs |
-| GitHub profile URL | ⚠️ Placeholder | `https://github.com/mustafa-sayed` — confirm this is the correct handle |
-| LinkedIn profile URL | ⚠️ Placeholder | `https://www.linkedin.com/in/mustafa-sayed` — confirm handle |
-| OG image URL | ⚠️ Placeholder | Hardcoded to `mustafasayed.replit.app` — update after first deployment |
-| Canonical URL | ⚠️ Placeholder | Same domain placeholder — update post-deploy |
-| `useMobile` hook | ⚠️ Implemented but unused | Available in `hooks/use-mobile.tsx`, not consumed by any component |
-| `useToast` / `<Toaster>` | ⚠️ Wired but inactive | Toaster is mounted in `App.tsx`; no feature currently fires a toast |
-| 60+ Shadcn/UI components | ⚠️ Available but unused | Full Shadcn library present in `components/ui/`; only `toaster/toast` are mounted |
+| Feature                 | Status         | Gap                                                                                                                                                                                      |
+| ----------------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Contact form submission | ✅ Wired       | POST `/api/v1/contact` — see `artifacts/api-server/README.md`. Public endpoint with origin check, honeypot, 2s time-trap, 5/hr rate limit, input normalization, structured abuse logging |
+| Credential links        | ⚠️ Placeholder | `credentialUrl` values point to issuer homepages, not actual credential verification URLs                                                                                                |
+| GitHub profile URL      | ⚠️ Placeholder | `https://github.com/mustafa-sayed` — confirm this is the correct handle                                                                                                                  |
+| LinkedIn profile URL    | ⚠️ Placeholder | `https://www.linkedin.com/in/mustafa-sayed` — confirm handle                                                                                                                             |
+| OG image URL            | ⚠️ Placeholder | Hardcoded to `mustafasayed.replit.app` — update after first deployment                                                                                                                   |
+| Canonical URL           | ⚠️ Placeholder | Same domain placeholder — update post-deploy                                                                                                                                             |
 
 ---
 
 ## 11. Security & Privacy
 
-| Concern | Status | Notes |
-|---|---|---|
-| No backend = no auth surface | ✅ N/A | Purely static site (the optional API is serverless, separated, and gated by Clerk + CSRF) |
-| No user data stored | ✅ N/A | Only `"theme"` key in `localStorage` |
-| Contact form data | ✅ Sanitised + logged | Form is wired to `POST /api/v1/contact`; input is trimmed, email lowercased, control chars stripped; IP/UA/origin are logged but message content is not (PII) |
-| External links | ✅ `rel="noopener noreferrer"` | Applied on all `target="_blank"` anchors |
-| CV file served from same origin | ✅ Safe | PDF served from Vite's public directory |
+| Concern                         | Status                         | Notes                                                                                                                                                         |
+| ------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| No backend = no auth surface    | ✅ N/A                         | Purely static site (the optional API is serverless, separated, and gated by Clerk + CSRF)                                                                     |
+| No user data stored             | ✅ N/A                         | Only `"theme"` key in `localStorage`                                                                                                                          |
+| Contact form data               | ✅ Sanitised + logged          | Form is wired to `POST /api/v1/contact`; input is trimmed, email lowercased, control chars stripped; IP/UA/origin are logged but message content is not (PII) |
+| External links                  | ✅ `rel="noopener noreferrer"` | Applied on all `target="_blank"` anchors                                                                                                                      |
+| CV file served from same origin | ✅ Safe                        | PDF served from Vite's public directory                                                                                                                       |
 
 ---
 
 ## 12. Feature Master List
 
-| Feature | Module | Status | Notes |
-|---|---|---|---|
-| Glassmorphism design system | Global | ✅ Implemented | `.glass` / `.glass-strong` utilities |
-| Dark / light mode toggle | Global | ✅ Implemented | localStorage-persisted |
-| Smooth scroll navigation | Global | ✅ Implemented | All nav links + CTA buttons |
-| Mobile hamburger menu | Navbar | ✅ Implemented | |
-| Typewriter role animation | Hero | ✅ Implemented | 6 roles, rAF-based |
-| Ambient floating blobs | Hero | ✅ Implemented | CSS animation |
-| Download CV button | Hero | ✅ Implemented | PDF served from public/ |
-| Social links (GitHub, LinkedIn, Email) | Hero + Footer | ✅ Implemented | |
-| Scroll-reveal animations | All sections | ✅ Implemented | IntersectionObserver |
-| Bio + Education card | About | ✅ Implemented | |
-| Language proficiency bars | About | ✅ Implemented | |
-| Animated skill meter bars | About | ✅ Implemented | Viewport-triggered fill |
-| Stats counters grid | About | ✅ Implemented | |
-| 35-skill interactive tag cloud | Skills | ✅ Implemented | |
-| Category filter tabs | Skills | ✅ Implemented | 5 categories |
-| Hover proficiency tooltip | Skills | ✅ Implemented | Mini bar + % |
-| Proficiency level summary | Skills | ✅ Implemented | Expert/Advanced/Intermediate/Familiar counts |
-| 8-project masonry grid | Projects | ✅ Implemented | |
-| Project category filter | Projects | ✅ Implemented | 4 categories |
-| "Featured" badge | Projects | ✅ Implemented | 3 projects |
-| Tech stack + metrics badges | Projects | ✅ Implemented | |
-| Vertical experience timeline | Experience | ✅ Implemented | 3 entries |
-| Type-coded timeline icons | Experience | ✅ Implemented | Internship / Cert / Volunteer |
-| Staggered timeline reveal | Experience | ✅ Implemented | |
-| 11-certificate timeline | Certifications | ✅ Implemented | |
-| Month-grouped cert sections | Certifications | ✅ Implemented | |
-| Cert category filter tabs | Certifications | ✅ Implemented | 5 categories |
-| Issuer colour coding | Certifications | ✅ Implemented | DataCamp / IBM / Microsoft / HackerRank |
-| Credential "View →" links | Certifications | ⚠️ Placeholder URLs | Need real credential links |
-| Issuer summary row | Certifications | ✅ Implemented | |
-| Contact details sidebar | Contact | ✅ Implemented | 5 items |
-| Cairo OpenStreetMap embed | Contact | ✅ Implemented | Lazy-loaded iframe |
-| Contact form with validation | Contact | ✅ Implemented | Client-side only |
-| Form success state | Contact | ✅ Implemented | |
-| Form email submission | Contact | ⚠️ Not implemented | UI-only |
-| Primary SEO meta tags | SEO | ✅ Implemented | title, description, keywords, canonical |
-| Open Graph tags | SEO | ✅ Implemented | Full og:* set |
-| Twitter Card tags | SEO | ✅ Implemented | summary_large_image |
-| JSON-LD Person schema | SEO | ✅ Implemented | |
-| 404 Not Found page | Routing | ✅ Implemented | |
-| `useTypewriter` hook | Hooks | ✅ Implemented | |
-| `useReveal` hook | Hooks | ✅ Implemented | |
-| `useMobile` hook | Hooks | ✅ Implemented but unused | |
-| `useToast` hook | Hooks | ✅ Implemented but inactive | |
+| Feature                                | Module         | Status                      | Notes                                        |
+| -------------------------------------- | -------------- | --------------------------- | -------------------------------------------- |
+| Glassmorphism design system            | Global         | ✅ Implemented              | `.glass` / `.glass-strong` utilities         |
+| Dark / light mode toggle               | Global         | ✅ Implemented              | localStorage-persisted                       |
+| Smooth scroll navigation               | Global         | ✅ Implemented              | All nav links + CTA buttons                  |
+| Mobile hamburger menu                  | Navbar         | ✅ Implemented              |                                              |
+| Typewriter role animation              | Hero           | ✅ Implemented              | 6 roles, rAF-based                           |
+| Ambient floating blobs                 | Hero           | ✅ Implemented              | CSS animation                                |
+| Download CV button                     | Hero           | ✅ Implemented              | PDF served from public/                      |
+| Social links (GitHub, LinkedIn, Email) | Hero + Footer  | ✅ Implemented              |                                              |
+| Scroll-reveal animations               | All sections   | ✅ Implemented              | IntersectionObserver                         |
+| Bio + Education card                   | About          | ✅ Implemented              |                                              |
+| Language proficiency bars              | About          | ✅ Implemented              |                                              |
+| Animated skill meter bars              | About          | ✅ Implemented              | Viewport-triggered fill                      |
+| Stats counters grid                    | About          | ✅ Implemented              |                                              |
+| 35-skill interactive tag cloud         | Skills         | ✅ Implemented              |                                              |
+| Category filter tabs                   | Skills         | ✅ Implemented              | 5 categories                                 |
+| Hover proficiency tooltip              | Skills         | ✅ Implemented              | Mini bar + %                                 |
+| Proficiency level summary              | Skills         | ✅ Implemented              | Expert/Advanced/Intermediate/Familiar counts |
+| 8-project masonry grid                 | Projects       | ✅ Implemented              |                                              |
+| Project category filter                | Projects       | ✅ Implemented              | 4 categories                                 |
+| "Featured" badge                       | Projects       | ✅ Implemented              | 3 projects                                   |
+| Tech stack + metrics badges            | Projects       | ✅ Implemented              |                                              |
+| Vertical experience timeline           | Experience     | ✅ Implemented              | 3 entries                                    |
+| Type-coded timeline icons              | Experience     | ✅ Implemented              | Internship / Cert / Volunteer                |
+| Staggered timeline reveal              | Experience     | ✅ Implemented              |                                              |
+| 11-certificate timeline                | Certifications | ✅ Implemented              |                                              |
+| Month-grouped cert sections            | Certifications | ✅ Implemented              |                                              |
+| Cert category filter tabs              | Certifications | ✅ Implemented              | 5 categories                                 |
+| Issuer colour coding                   | Certifications | ✅ Implemented              | DataCamp / IBM / Microsoft / HackerRank      |
+| Credential "View →" links              | Certifications | ⚠️ Placeholder URLs         | Need real credential links                   |
+| Issuer summary row                     | Certifications | ✅ Implemented              |                                              |
+| Contact details sidebar                | Contact        | ✅ Implemented              | 5 items                                      |
+| Cairo OpenStreetMap embed              | Contact        | ✅ Implemented              | Lazy-loaded iframe                           |
+| Contact form with validation           | Contact        | ✅ Implemented              | Client-side only                             |
+| Form success state                     | Contact        | ✅ Implemented              |                                              |
+| Form email submission                  | Contact        | ⚠️ Not implemented          | UI-only                                      |
+| Primary SEO meta tags                  | SEO            | ✅ Implemented              | title, description, keywords, canonical      |
+| Open Graph tags                        | SEO            | ✅ Implemented              | Full og:\* set                               |
+| Twitter Card tags                      | SEO            | ✅ Implemented              | summary_large_image                          |
+| JSON-LD Person schema                  | SEO            | ✅ Implemented              |                                              |
+| 404 Not Found page                     | Routing        | ✅ Implemented              |                                              |
+| `useTypewriter` hook                   | Hooks          | ✅ Implemented              |                                              |
+| `useReveal` hook                       | Hooks          | ✅ Implemented              |                                              |
+| `useMobile` hook                       | Hooks          | ✅ Implemented but unused   |                                              |
+| `useToast` hook                        | Hooks          | ✅ Implemented but inactive |                                              |
 
 ---
 
@@ -506,12 +504,10 @@ The portfolio is **fully presentable to recruiters** right now:
 
 ## 14. "What's Missing to Feel Complete?"
 
-| Gap | Priority | Effort |
-|---|---|---|
-| Contact form wired to a real email service (EmailJS / Resend) | High | Low |
-| Real credential verification URLs in Certifications | High | Low (data update only) |
-| Confirmed GitHub + LinkedIn profile handles | High | Low (data update only) |
-| OG image URL + canonical updated to real deployed domain | High | Low (post-deploy edit) |
-| Actual profile photo in place of "MS" monogram | Medium | Low |
-| Framer Motion entrance animations (currently CSS-only) | Low | Medium |
-| Blog / writing section | Low | High |
+| Gap                                                      | Priority | Effort                 |
+| -------------------------------------------------------- | -------- | ---------------------- |
+| Real credential verification URLs in Certifications      | High     | Low (data update only) |
+| Confirmed GitHub + LinkedIn profile handles              | High     | Low (data update only) |
+| OG image URL + canonical updated to real deployed domain | High     | Low (post-deploy edit) |
+| Actual profile photo in place of "MS" monogram           | Medium   | Low                    |
+| Framer Motion entrance animations (currently CSS-only)   | Low      | Medium                 |
