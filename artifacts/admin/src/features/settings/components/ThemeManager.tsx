@@ -9,6 +9,7 @@ import { AdminErrorState } from "@/components/AdminErrorState";
 import { AdminLoadingState } from "@/components/AdminLoadingState";
 import { ColorField } from "@/features/settings/components/ThemeColorFields";
 import { PreviewPalette, type ThemePreviewData } from "@/features/settings/components/ThemePreview";
+import { PresetPicker, findActivePreset, THEME_PRESETS, type ThemePreset } from "@/features/settings/components/ThemePresets";
 
 type ThemeData = ThemePreviewData;
 
@@ -73,6 +74,14 @@ export default function ThemeManager() {
 
   const set = (key: keyof ThemeData, val: string) => setTheme(t => ({ ...t, [key]: val }));
 
+  const activePreset = findActivePreset(theme);
+
+  /** Pre-fill the form with a template's palette; the current mode is kept. */
+  const applyPreset = (preset: ThemePreset) => {
+    setTheme(t => ({ ...preset.theme, mode: t.mode }));
+    toast({ title: `${preset.name} applied`, description: "Fine-tune any color below, then click Save Changes." });
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -102,12 +111,26 @@ export default function ThemeManager() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <div><h1 className="text-2xl font-bold">Theme Manager</h1><p className="text-sm text-muted-foreground mt-0.5">Edit color tokens — changes apply to the live portfolio instantly.</p></div>
+        <div><h1 className="text-2xl font-bold">Theme Manager</h1><p className="text-sm text-muted-foreground mt-0.5">Start from a template or edit color tokens — changes apply to the live portfolio instantly.</p></div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => { setTheme(DEFAULTS); toast({ title: "Reset to defaults", description: "Click Save to apply." }); }} className="min-h-[44px]"><RefreshCw size={14} className="mr-1.5" /> Reset</Button>
+          <Button variant="outline" size="sm" onClick={() => { setTheme(t => ({ ...THEME_PRESETS[0].theme, mode: t.mode })); toast({ title: "Reset to Modern Indigo", description: "Click Save to apply." }); }} className="min-h-[44px]"><RefreshCw size={14} className="mr-1.5" /> Reset</Button>
           <Button size="sm" onClick={handleSave} disabled={saving} className="min-h-[44px]"><Save size={14} className="mr-1.5" />{saving ? "Saving…" : "Save Changes"}</Button>
         </div>
       </div>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm">Templates</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Pick a modern template to pre-fill the palette, then fine-tune any color below.
+            Currently using <span className="font-medium text-foreground">{activePreset ? activePreset.name : "custom colors"}</span>.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <PresetPicker activePresetId={activePreset?.id ?? null} onApply={applyPreset} />
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-6">
           <Card><CardHeader className="pb-3"><CardTitle className="text-sm flex items-center gap-2"><Sun size={15} /> Light Mode Colors</CardTitle></CardHeader>
