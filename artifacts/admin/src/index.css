@@ -2,6 +2,8 @@
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
 
+@source "../../../lib/ui/src/components/primitives/select.tsx";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
