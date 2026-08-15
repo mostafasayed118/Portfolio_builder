@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   pull_request:
-    branches: [main]
+    branches: [main, master]
 
 # Cancel in-progress runs of the same branch on new pushes.
 concurrency:
@@ -51,6 +51,11 @@ jobs:
         # tracked .ts/.tsx twin — plain JavaScript must not slip into the
         # TypeScript codebase.
         run: pnpm --filter @workspace/scripts check-ts-twin
+      - name: Check for duplicate components and code blocks
+        # Fails if two shared components serve the same purpose (near-identical
+        # files) or duplicate code blocks reappear (copy-pasted runs of >= 10
+        # lines) anywhere in app source. New duplication fails the build.
+        run: pnpm --filter @workspace/scripts check-duplication
 
   db-migrations:
     name: Supabase migrations (fresh DB)
