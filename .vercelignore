@@ -1,0 +1,20 @@
+# Keep CLI deploys (vercel --prod) fast and under the upload limit:
+# only source + configs are needed — the project rootDirectory picks the app.
+.git
+.vercel
+node_modules
+dist
+coverage
+.turbo
+.next
+out
+skills
+testsprite_tests
+graphify-out
+.tmp-img
+artifacts/*/node_modules
+artifacts/*/dist
+artifacts/*/coverage
+lib/*/node_modules
+lib/*/dist
+lib/*/coverage
