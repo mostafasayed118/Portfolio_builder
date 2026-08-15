@@ -79,7 +79,7 @@ export function SeedDialog() {
                 </div>
                 {result.success &&
                   Object.entries(result.summary).length > 0 && (
-                    <div className="grid grid-cols-2 gap-2 text-xs min-w-0">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs min-w-0">
                       {Object.entries(result.summary).map(([key, val]) => (
                         <div key={key} className="flex justify-between">
                           <span className="text-muted-foreground capitalize">

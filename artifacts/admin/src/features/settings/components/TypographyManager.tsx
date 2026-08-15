@@ -83,7 +83,7 @@ export default function TypographyManager() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-5">
           <Card><CardHeader className="pb-3"><CardTitle className="text-sm">Font Pairs</CardTitle><CardDescription className="text-xs">Click a preset to apply it instantly</CardDescription></CardHeader>
-            <CardContent className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Font pair presets">
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-2" role="radiogroup" aria-label="Font pair presets">
               {PRESET_PAIRS.map((p) => (
                 <button key={p.display} type="button" role="radio" aria-checked={typo.display_font === p.display} aria-label={`Select ${p.display} + ${p.body} font preset`} onClick={() => applyPreset(p)}
                   className={`text-left p-3 rounded-lg border-2 transition-all min-h-[44px] hover:border-primary/50 hover:bg-accent/50 ${typo.display_font === p.display ? "border-primary bg-primary/5" : "border-border"}`}>
@@ -108,7 +108,7 @@ export default function TypographyManager() {
               <div><div className="flex justify-between mb-2"><Label className="text-xs">Heading Scale</Label><span className="text-xs text-muted-foreground font-mono">{typo.heading_scale}</span></div>
                 <Slider value={[parseFloat(typo.heading_scale) * 100]} min={110} max={160} step={5} onValueChange={([v]) => set("heading_scale", (v / 100).toFixed(2))} /></div>
               <div><Label className="text-xs">Letter Spacing</Label><Input value={typo.letter_spacing} onChange={e => set("letter_spacing", e.target.value)} className="h-8 mt-1.5 text-sm font-mono" placeholder="0em" /></div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div><Label className="text-xs">Body Weight</Label><Input value={typo.font_weight_body} onChange={e => set("font_weight_body", e.target.value)} className="h-8 mt-1.5 text-sm font-mono" placeholder="400" /></div>
                 <div><Label className="text-xs">Heading Weight</Label><Input value={typo.font_weight_heading} onChange={e => set("font_weight_heading", e.target.value)} className="h-8 mt-1.5 text-sm font-mono" placeholder="700" /></div>
               </div>

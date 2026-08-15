@@ -134,7 +134,7 @@ export default function ExperienceManager() {
           </DialogHeader>
           {editing && (
             <div className="space-y-4 py-2">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {([["title", "Title"], ["company", "Company"], ["location", "Location"], ["period", "Period"]] as [keyof typeof editing, string][]).map(([k, label]) => (
                   <div key={k} className="space-y-1"><Label htmlFor={k} className="text-xs">{label}</Label>
                     <Input id={k} value={editing[k] as string} onChange={e => setEditing(x => x ? ({ ...x, [k]: e.target.value }) : x)} className="h-8 text-sm" /></div>
@@ -170,7 +170,7 @@ export default function ExperienceManager() {
                   <Button size="sm" variant="outline" onClick={addTech} className="min-h-[44px]" aria-label="Add technology"><Plus className="h-4 w-4" /></Button>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1"><Label className="text-xs">Sort Order</Label>
                   <Input type="number" value={editing.sort_order} onChange={e => setEditing(x => x ? ({ ...x, sort_order: Number(e.target.value) }) : x)} className="h-8 text-sm" /></div>
               </div>
