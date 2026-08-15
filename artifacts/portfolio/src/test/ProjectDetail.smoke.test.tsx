@@ -54,6 +54,7 @@ vi.mock("@workspace/db/analytics", () => ({
 
 vi.mock("@/hooks/use-portfolio-data", () => ({
   useProjectBySlug: vi.fn(),
+  useProjectImages: vi.fn(() => ({ data: undefined, isLoading: false, isError: false, error: null })),
 }));
 
 vi.mock("@/lib/supabase-provider", () => ({

@@ -4,8 +4,8 @@ import { Link, useLocation } from "wouter";
 import { ArrowLeft, ExternalLink, Github, Calendar, Sparkles, FileX } from "lucide-react";
 import { PROJECTS } from "@/data/portfolio";
 import SEO, { generateProjectSchema } from "@/components/SEO";
-import { ProjectCard, mapDbProjectDetail } from "@/features/projects";
-import { useProjectBySlug } from "@/hooks/use-portfolio-data";
+import { ProjectCard, ProjectGallery, mapDbProjectDetail } from "@/features/projects";
+import { useProjectBySlug, useProjectImages } from "@/hooks/use-portfolio-data";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
 import { trackEvent } from "@workspace/db/analytics";
 import { logWarn } from "@/lib/logger";
@@ -71,6 +71,7 @@ export default function ProjectDetail({ slug }: ProjectDetailProps) {
   const [, navigate] = useLocation();
   const { t } = useLanguage();
   const { data: dbProject, isLoading } = useProjectBySlug(slug);
+  const { data: projectImages } = useProjectImages(dbProject?.id);
   const backTimer = useRef<number | null>(null);
 
   const backToProjects = () => {
@@ -182,6 +183,12 @@ export default function ProjectDetail({ slug }: ProjectDetailProps) {
                   {project.completedAt}
                 </span>
               </div>
+
+              <ProjectGallery
+                images={projectImages ?? []}
+                title={project.title}
+                fallbackUrl={dbProject?.image_url}
+              />
 
               <h1 className="text-4xl md:text-5xl font-display font-bold text-foreground">
                 {project.title}

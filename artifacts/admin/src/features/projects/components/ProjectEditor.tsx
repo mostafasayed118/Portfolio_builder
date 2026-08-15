@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, Image as ImageIcon, Plus } from "lucide-react";
 import { Badge, Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, Switch, Textarea } from "@workspace/ui";
 import ImageUploader from "@/components/ImageUploader";
+import { getSupabase } from "@/lib/supabase";
+import { listEntityImages } from "@workspace/db/images";
 import type { Project } from "@/features/projects/types";
 
 type ProjectForm = Partial<Project> & { id?: string };
@@ -18,6 +20,33 @@ export function ProjectEditor({ editing, isNew, saving, onEdit, onSaved }: Proje
   const [techInput, setTechInput] = useState("");
   const [metricInput, setMetricInput] = useState("");
   const [projectImages, setProjectImages] = useState<{ id: string; url: string }[]>([]);
+
+  // Load the project's attached gallery images (image_metadata) when editing.
+  useEffect(() => {
+    let cancelled = false;
+    const id = editing?.id;
+    if (!id) {
+      setProjectImages([]);
+      return;
+    }
+    const sb = getSupabase();
+    if (!sb) {
+      setProjectImages([]);
+      return;
+    }
+    listEntityImages(sb, "projects", id)
+      .then((rows) => {
+        if (cancelled) return;
+        setProjectImages(rows.map((row) => ({
+          id: row.id,
+          url: sb.storage.from("project_images").getPublicUrl(row.storage_path).data.publicUrl,
+        })));
+      })
+      .catch(() => {
+        if (!cancelled) setProjectImages([]);
+      });
+    return () => { cancelled = true; };
+  }, [editing?.id]);
 
   const addTag = (field: "tech_stack" | "metrics", val: string, setter: (v: string) => void) => {
     const v = val.trim();
@@ -46,7 +75,7 @@ export function ProjectEditor({ editing, isNew, saving, onEdit, onSaved }: Proje
               <Textarea value={editing.description} onChange={e => onEdit(x => ({ ...x!, description: e.target.value }))} rows={3} /></div>
             <div className="space-y-2">
               <Label className="text-xs flex items-center gap-1.5"><ImageIcon size={12} /> Project Images</Label>
-              <ImageUploader entityType="project" entityId={editing.id} maxFiles={5} existingImages={projectImages} onUploadComplete={(imgs) => setProjectImages(imgs)} />
+              <ImageUploader entityType="projects" entityId={editing.id} maxFiles={5} existingImages={projectImages} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5"><Label className="text-xs">Category</Label>

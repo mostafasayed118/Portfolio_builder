@@ -225,6 +225,9 @@ importers:
       '@workspace/auth':
         specifier: workspace:*
         version: link:../../lib/auth
+      '@workspace/db':
+        specifier: workspace:*
+        version: link:../../lib/db
       '@workspace/logging':
         specifier: workspace:*
         version: link:../../lib/logging

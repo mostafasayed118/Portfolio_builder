@@ -21,7 +21,7 @@ interface UploadResponse {
 }
 
 interface ImageUploaderProps {
-  entityType: "project" | "hero" | "about" | "certification" | "avatar" | "content";
+  entityType: "project" | "projects" | "hero" | "about" | "certification" | "certifications" | "avatar" | "content";
   entityId?: string;
   maxFiles?: number;
   maxFileSizeMB?: number;

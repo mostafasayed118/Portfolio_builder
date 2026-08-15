@@ -66,6 +66,7 @@
   "dependencies": {
     "@clerk/clerk-react": "^5.61.3",
     "@workspace/auth": "workspace:*",
+    "@workspace/db": "workspace:*",
     "@workspace/logging": "workspace:*",
     "@workspace/supabase": "workspace:*",
     "@workspace/ui": "workspace:*",
