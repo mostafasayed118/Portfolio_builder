@@ -1,34 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import request from "supertest";
+import { mockAdminKey } from "../helpers";
 import app from "../../app";
-
-const mockAdminKey = "test-admin-key";
-
-vi.mock("@supabase/supabase-js", () => ({
-  createClient: vi.fn(() => ({
-    from: vi.fn().mockReturnThis(),
-    select: vi.fn().mockReturnThis(),
-    insert: vi.fn().mockReturnThis(),
-    update: vi.fn().mockReturnThis(),
-    delete: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    limit: vi.fn().mockReturnThis(),
-    maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-    single: vi.fn().mockResolvedValue({ data: null, error: null }),
-    order: vi.fn().mockReturnThis(),
-  })),
-}));
-
-vi.mock("../../middleware/adminAuth", () => ({
-  adminAuth: vi.fn((req, res, next) => {
-    const adminKey = req.headers["x-admin-key"];
-    if (adminKey === mockAdminKey) {
-      (req as Record<string, unknown>).adminEmail = "admin@test.com";
-      return next();
-    }
-    return res.status(401).json({ success: false, message: "Unauthorized" });
-  }),
-}));
 
 describe("AI Assistant API", () => {
   describe("POST /api/v1/admin/ai-assistant/generate-description", () => {
