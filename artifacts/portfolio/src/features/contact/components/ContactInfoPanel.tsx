@@ -1,4 +1,4 @@
-import { Mail, Phone, MapPin, Github, Linkedin } from "lucide-react";
+import { Mail, Phone, MapPin, Github, Linkedin, MessageCircle } from "lucide-react";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
 import { trackEvent } from "@workspace/db/analytics";
 import { logWarn } from "@/lib/logger";
@@ -10,6 +10,7 @@ interface Contact {
   location: string;
   github: string;
   linkedin: string;
+  whatsapp: string;
 }
 
 const ICONS: Record<string, typeof Mail> = {
@@ -33,6 +34,12 @@ function buildItems(c: Contact, labels: { email: string; phone: string; location
 export default function ContactInfoPanel({ contact }: { contact: Contact }) {
   const { t } = useLanguage();
   const items = buildItems(contact, t.contact.labels);
+
+  // WhatsApp click-to-chat: https://wa.me/<digits>?text=<prefilled message>
+  const waDigits = (contact.whatsapp ?? "").replace(/\D/g, "");
+  const waHref = waDigits
+    ? `https://wa.me/${waDigits}?text=${encodeURIComponent(t.contact.whatsappPrefill)}`
+    : null;
 
   return (
     <div className="space-y-6">
@@ -66,6 +73,25 @@ export default function ContactInfoPanel({ contact }: { contact: Contact }) {
             </div>
           </div>
         ))}
+
+        {waHref && (
+          <a
+            href={waHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 rounded-lg bg-[#25D366] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#1fb958]"
+            data-testid="link-contact-whatsapp"
+            onClick={() => {
+              if (isSupabaseConfigured) {
+                const sb = getSupabase();
+                if (sb) trackEvent(sb, "contact_click", "/", { type: "whatsapp" }).catch((err) => logWarn("trackEvent failed", err));
+              }
+            }}
+          >
+            <MessageCircle className="h-4 w-4" />
+            {t.contact.chatOnWhatsApp}
+          </a>
+        )}
       </div>
 
       <div className="glass rounded-xl overflow-hidden border aspect-video min-h-36 max-h-64">

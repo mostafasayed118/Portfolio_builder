@@ -82,12 +82,15 @@ export interface TranslationKeys {
     successTitle: string;
     successMessage: string;
     errorMessage: string;
+    chatOnWhatsApp: string;
+    whatsappPrefill: string;
     labels: {
       email: string;
       phone: string;
       location: string;
       github: string;
       linkedin: string;
+      whatsapp: string;
     };
   };
   common: {
@@ -195,12 +198,15 @@ export const en: TranslationKeys = {
     successTitle: "Message sent!",
     successMessage: "Thank you for reaching out. I'll get back to you soon.",
     errorMessage: "Failed to send message. Please try again.",
+    chatOnWhatsApp: "Chat on WhatsApp",
+    whatsappPrefill: "Hi Mustafa! I found your portfolio and I'd like to get in touch.",
     labels: {
       email: "Email",
       phone: "Phone",
       location: "Location",
       github: "GitHub",
       linkedin: "LinkedIn",
+      whatsapp: "WhatsApp",
     },
   },
   common: {

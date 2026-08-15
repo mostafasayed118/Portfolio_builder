@@ -4,6 +4,7 @@ export interface ContactInfo {
   location: string;
   github: string;
   linkedin: string;
+  whatsapp: string;
 }
 
 export interface ContactFormLabels {
