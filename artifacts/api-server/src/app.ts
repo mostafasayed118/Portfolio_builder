@@ -39,10 +39,13 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      // The SPA bundles are built by Vite as external static assets, so
-      // script-src only needs 'self'. If the API server ever serves an
-      // HTML page with inline scripts, migrate to nonce-based CSP.
-      scriptSrc: ["'self'"],
+      // The API server is JSON-only (plus a PDF download for /cv): no route
+      // returns HTML or renders a <script>. script-src is therefore the
+      // strictest possible value — 'none'. A nonce-based policy would be
+      // dead config here (nonces only whitelist inline scripts, and there
+      // are none). Keep 'none' unless a future endpoint starts serving HTML
+      // with inline scripts.
+      scriptSrc: ["'none'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "blob:", "https://*.supabase.co"],
