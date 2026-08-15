@@ -1,31 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
+import { mockAdminKey, mockSupabaseClient, resetSupabaseClient } from "../helpers";
 import app from "../../app";
 
-const { mockSupabaseClient, mockGenerateCvPdf, mockAdminKey } = vi.hoisted(() => {
-  const mockAdminKey = "test-admin-key";
-  const mockStorage = {
-    from: vi.fn(),
-    download: vi.fn(),
-  };
-  const mockSupabaseClient = {
-    from: vi.fn(),
-    select: vi.fn(),
-    insert: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-    eq: vi.fn(),
-    limit: vi.fn(),
-    maybeSingle: vi.fn(),
-    single: vi.fn(),
-    order: vi.fn(),
-    storage: mockStorage,
-  };
-  // storage.from() returns storage so storage.from("cv").download() works
-  mockStorage.from.mockReturnValue(mockStorage);
-  const mockGenerateCvPdf = vi.fn();
-  return { mockSupabaseClient, mockGenerateCvPdf, mockAdminKey };
-});
+const { mockGenerateCvPdf } = vi.hoisted(() => ({
+  mockGenerateCvPdf: vi.fn(),
+}));
 
 vi.mock("../../lib/supabase-client", () => ({
   getSupabaseClient: vi.fn(() => mockSupabaseClient),
@@ -35,35 +15,8 @@ vi.mock("../../utils/cv-generator", () => ({
   generateCvPdf: mockGenerateCvPdf,
 }));
 
-vi.mock("@supabase/supabase-js", () => ({
-  createClient: vi.fn(() => mockSupabaseClient),
-}));
-
-vi.mock("../../middleware/adminAuth", () => ({
-  adminAuth: vi.fn((req: any, res: any, next: () => void) => {
-    const adminKey = req.headers?.["x-admin-key"];
-    if (adminKey === mockAdminKey) {
-      req.adminEmail = "admin@test.com";
-      return next();
-    }
-    return res.status(401).json({ success: false, message: "Unauthorized" });
-  }),
-}));
-
-function resetMockChain() {
-  mockSupabaseClient.from.mockReturnValue(mockSupabaseClient);
-  mockSupabaseClient.select.mockReturnValue(mockSupabaseClient);
-  mockSupabaseClient.insert.mockReturnValue(mockSupabaseClient);
-  mockSupabaseClient.update.mockReturnValue(mockSupabaseClient);
-  mockSupabaseClient.delete.mockReturnValue(mockSupabaseClient);
-  mockSupabaseClient.eq.mockReturnValue(mockSupabaseClient);
-  mockSupabaseClient.limit.mockReturnValue(mockSupabaseClient);
-  mockSupabaseClient.order.mockReturnValue(mockSupabaseClient);
-  // Reset terminal methods completely (clears mockResolvedValueOnce queue)
-  mockSupabaseClient.single.mockReset();
-  mockSupabaseClient.single.mockResolvedValue({ data: null, error: null });
-  mockSupabaseClient.maybeSingle.mockReset();
-  mockSupabaseClient.maybeSingle.mockResolvedValue({ data: null, error: null });
+beforeEach(() => {
+  resetSupabaseClient(mockSupabaseClient);
   mockSupabaseClient.storage.download.mockReset();
   mockSupabaseClient.storage.download.mockResolvedValue({
     data: { arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)) },
@@ -71,10 +24,6 @@ function resetMockChain() {
   });
   mockGenerateCvPdf.mockReset();
   mockGenerateCvPdf.mockResolvedValue(Buffer.from("%PDF-1.4 fake pdf content"));
-}
-
-beforeEach(() => {
-  resetMockChain();
 });
 
 describe("CV API", () => {
