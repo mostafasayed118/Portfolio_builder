@@ -1,21 +1,19 @@
 import { GraduationCap, Languages, MapPin, Briefcase } from "lucide-react";
 import SkillMeter from "@/components/SkillMeter";
 import { SKILLS, STATS } from "@/data/portfolio";
-import { useReveal } from "@/hooks/use-reveal";
 import { useAbout } from "@/features/about/hooks/useAbout";
 import { AboutSkeleton } from "@/features/about/components/AboutSkeleton";
 import SectionHeader from "@/components/SectionHeader";
 import { useLanguage } from "@/lib/language";
 
 export default function AboutSection() {
-  const { ref, revealed } = useReveal();
   const { about, isLoading } = useAbout();
   const { t } = useLanguage();
 
   if (isLoading) return <AboutSkeleton />;
 
   return (
-    <section id="about" ref={ref} className="relative py-24 px-6 bg-muted/20 overflow-hidden">
+    <section id="about" className="relative py-24 px-6 bg-muted/20 overflow-hidden">
       <div aria-hidden="true" className="absolute inset-0 pointer-events-none">
         <div className="absolute top-1/4 left-1/3 w-96 h-96 bg-primary/4 rounded-full blur-[120px]" />
         <div className="absolute bottom-1/3 right-1/4 w-80 h-80 bg-accent/4 rounded-full blur-[100px]" />
@@ -26,7 +24,7 @@ export default function AboutSection() {
           title={t.about.title}
           description={about.bio1}
         />
-        <div className={`grid md:grid-cols-2 gap-8 md:gap-10 section-reveal ${revealed ? "revealed" : ""}`}>
+        <div className="grid md:grid-cols-2 gap-8 md:gap-10">
           <div className="space-y-6">
             <p className="text-muted-foreground leading-relaxed text-sm max-w-prose">{about.bio2}</p>
             <div className="glass rounded-xl p-5 space-y-2 relative overflow-hidden">
@@ -58,8 +56,10 @@ export default function AboutSection() {
                       <span className="text-muted-foreground">{lang.level}</span>
                     </div>
                     <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                      <div className={`h-full rounded-full bg-gradient-to-r from-primary to-accent stat-bar${revealed ? " revealed" : ""}`}
-                        style={revealed ? { transform: `scaleX(${lang.pct / 100})` } : undefined} />
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-primary to-accent origin-left transition-transform duration-1000 ease-out"
+                        style={{ transform: `scaleX(${lang.pct / 100})` }}
+                      />
                     </div>
                   </div>
                 ))}
