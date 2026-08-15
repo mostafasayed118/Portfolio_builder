@@ -4,7 +4,6 @@ import TimelineItem from "./TimelineItem";
 import SectionHeader from "./SectionHeader";
 import EmptyState from "./EmptyState";
 import { EXPERIENCE } from "@/data/portfolio";
-import { useReveal } from "@/hooks/use-reveal";
 import { useExperience } from "@/hooks/use-portfolio-data";
 
 function ExperienceSkeleton() {
@@ -43,7 +42,6 @@ function ExperienceSkeleton() {
 }
 
 export default function ExperienceSection() {
-  const { ref, revealed } = useReveal();
   const { t } = useLanguage();
   const { data: expData, isLoading } = useExperience();
 
@@ -71,7 +69,6 @@ export default function ExperienceSection() {
   return (
     <section
       id="experience"
-      ref={ref}
       className="py-24 px-6 bg-muted/20"
     >
       <div className="max-w-5xl mx-auto">
@@ -95,7 +92,7 @@ export default function ExperienceSection() {
           />
         ) : (
           <div
-            className={`relative ml-2 section-reveal ${revealed ? "revealed" : ""}`}
+            className="relative ml-2"
           >
             {items.map((item, i) => (
               <TimelineItem
