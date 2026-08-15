@@ -154,7 +154,7 @@ export default function SeoManager() {
             <Textarea value={form.og_description} onChange={e => set("og_description", e.target.value)} rows={2} /></div>
           <div className="space-y-1.5"><Label className="text-xs">OG Image URL (optional)</Label>
             <Input value={form.og_image} onChange={e => set("og_image", e.target.value)} className="h-9" placeholder="https://…/og-image.png (1200×630)" /></div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1"><Label className="text-xs">Twitter Card</Label>
               <Input value={form.twitterCard} onChange={e => set("twitterCard", e.target.value)} className="h-9" /></div>
             <div className="space-y-1"><Label className="text-xs">Twitter Creator</Label>

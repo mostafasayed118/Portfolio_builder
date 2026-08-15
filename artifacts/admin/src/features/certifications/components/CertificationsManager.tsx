@@ -148,19 +148,19 @@ export default function CertificationsManager() {
             <div className="space-y-4 py-2">
               <div className="space-y-1.5"><Label className="text-xs">Title</Label>
                 <Input value={editing.title} onChange={e => setEditing(x => x ? ({ ...x, title: e.target.value }) : x)} className="h-9" /></div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1"><Label className="text-xs">Issuer</Label>
                   <Input value={editing.issuer} onChange={e => setEditing(x => x ? ({ ...x, issuer: e.target.value }) : x)} className="h-8 text-sm" /></div>
                 <div className="space-y-1"><Label className="text-xs">Issuer Logo (emoji)</Label>
                   <Input value={editing.issuer_logo ?? ""} onChange={e => setEditing(x => x ? ({ ...x, issuer_logo: e.target.value }) : x)} className="h-8 text-sm" /></div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1"><Label className="text-xs">Date (display)</Label>
                   <Input value={editing.date} onChange={e => setEditing(x => x ? ({ ...x, date: e.target.value }) : x)} placeholder="Mar 2024" className="h-8 text-sm" /></div>
                 <div className="space-y-1"><Label className="text-xs">Date Sort (YYYY-MM)</Label>
                   <Input value={editing.date_sort ?? ""} onChange={e => setEditing(x => x ? ({ ...x, date_sort: e.target.value }) : x)} placeholder="2024-03" className="h-8 text-sm" /></div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1"><Label className="text-xs">Category</Label>
                   <Input value={editing.category ?? ""} onChange={e => setEditing(x => x ? ({ ...x, category: e.target.value }) : x)} className="h-8 text-sm" /></div>
                 <div className="space-y-1"><Label className="text-xs">Sort Order</Label>
