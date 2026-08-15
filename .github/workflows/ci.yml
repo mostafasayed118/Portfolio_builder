@@ -32,6 +32,21 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm run typecheck
 
+  codegen-check:
+    name: OpenAPI client drift check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @workspace/api-spec run codegen:check
+
   lint:
     name: ESLint
     runs-on: ubuntu-latest
