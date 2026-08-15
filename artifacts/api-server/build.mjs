@@ -10,6 +10,38 @@ globalThis.require = createRequire(import.meta.url);
 
 const artifactDir = path.dirname(fileURLToPath(import.meta.url));
 
+// ─── Deployment-time env guard ────────────────────────────────────────────────
+//
+// Fail the production build when the SPA origins the API must trust are
+// missing. The API uses VITE_SITE_URL (portfolio) and VITE_ADMIN_URL (admin)
+// for its CORS allowlist, contact-notification links, and the CV QR code; a
+// production deploy without them silently degrades those features and opens
+// CORS gaps. Vercel sets VERCEL_ENV=production only for production deploys;
+// NODE_ENV=production is treated as equivalent for non-Vercel hosts.
+//
+// Local/dev builds are intentionally not enforced: the server falls back to
+// localhost origins in development, so a partial local .env must not block
+// `pnpm dev` or `pnpm build` on a laptop.
+const IS_PRODUCTION_DEPLOY =
+  process.env.VERCEL_ENV === "production" || process.env.NODE_ENV === "production";
+
+if (IS_PRODUCTION_DEPLOY) {
+  const requiredUrls = ["VITE_SITE_URL", "VITE_ADMIN_URL"];
+  const missing = requiredUrls.filter((key) => !process.env[key]);
+  if (missing.length > 0) {
+    console.error(
+      `[build] Production build blocked: missing required environment variable(s): ${missing.join(", ")}`,
+    );
+    console.error(
+      "[build] Set these in the Vercel project settings (Production environment) and redeploy:",
+    );
+    for (const key of missing) {
+      console.error(`  - ${key}`);
+    }
+    process.exit(1);
+  }
+}
+
 async function buildAll() {
   const distDir = path.resolve(artifactDir, "dist");
   await rm(distDir, { recursive: true, force: true });
