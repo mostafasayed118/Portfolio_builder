@@ -4,9 +4,11 @@ import { api } from "@/lib/api-client";
 import { logError } from "@/lib/logger";
 import { AdminErrorState } from "@/components/AdminErrorState";
 import { AdminLoadingState } from "@/components/AdminLoadingState";
-import { Plus, Pencil, Trash2, Star, Search, SearchX, Download } from "lucide-react";
+import { Plus, Star, Search, SearchX, Download } from "lucide-react";
 import { Badge, Button, Card, CardContent, Input, useToast } from "@workspace/ui";
 import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
+import { PageHeader } from "@/components/PageHeader";
+import { RowActions } from "@/components/RowActions";
 import { useProjectsList } from "@/features/projects/hooks/useProjects";
 import { ProjectEditor } from "@/features/projects/components/ProjectEditor";
 import { type Project, BLANK_PROJECT } from "@/features/projects/types";
@@ -68,12 +70,10 @@ export default function ProjectsManager() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex-1 min-w-[120px]">
-          <h1 className="text-2xl font-bold">Projects Manager</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{filteredProjects.length} projects</p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
+      <PageHeader
+        title="Projects Manager"
+        description={`${filteredProjects.length} projects`}
+        actions={<>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Search projects..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 w-full sm:w-64 h-9" />
@@ -88,8 +88,8 @@ export default function ProjectsManager() {
             { key: "slug", label: "Slug" },
           ], `projects-${Date.now()}.csv`)}><Download className="h-4 w-4 mr-1.5" />Export</Button>
           <Button size="sm" onClick={openNew} className="min-h-[44px]"><Plus className="h-4 w-4 mr-1.5" />Add Project</Button>
-        </div>
-      </div>
+        </>}
+      />
 
       <div className="grid grid-cols-1 gap-4">
         {filteredProjects.map(p => (
@@ -108,12 +108,16 @@ export default function ProjectsManager() {
                   {p.tech_stack.length > 5 && <Badge variant="secondary" className="text-xs px-1.5 py-0">+{p.tech_stack.length - 5}</Badge>}
                 </div>
               </div>
-              <div className="flex gap-1 shrink-0">
-                <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]" aria-label="Edit project" onClick={() => {
-                  const { slug: _s, image_url: _i, tags: _t, created_at: _c, updated_at: _u, ...rest } = p;
-                  openEdit({ ...rest, category: p.category ?? "", featured: p.featured ?? false, is_published: p.is_published ?? false, github_url: p.github_url ?? "", live_url: p.live_url ?? undefined, metrics: p.metrics ?? [], sort_order: p.sort_order ?? 0 });
-                }}><Pencil className="h-4 w-4" /></Button>
-                <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] text-destructive hover:text-destructive hover:bg-destructive/10" aria-label="Delete project" onClick={() => setDeleteId(p.id)}><Trash2 className="h-4 w-4" /></Button>
+              <div className="shrink-0">
+                <RowActions
+                  editLabel="Edit project"
+                  deleteLabel="Delete project"
+                  onEdit={() => {
+                    const { slug: _s, image_url: _i, tags: _t, created_at: _c, updated_at: _u, ...rest } = p;
+                    openEdit({ ...rest, category: p.category ?? "", featured: p.featured ?? false, is_published: p.is_published ?? false, github_url: p.github_url ?? "", live_url: p.live_url ?? undefined, metrics: p.metrics ?? [], sort_order: p.sort_order ?? 0 });
+                  }}
+                  onDelete={() => setDeleteId(p.id)}
+                />
               </div>
             </CardContent>
           </Card>
