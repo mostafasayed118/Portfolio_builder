@@ -40,6 +40,11 @@ export default function ClerkAuthBridge({ children }: { children: ReactNode }) {
   // where a pre-loaded API call could falsely fire the handler).
   const clerkSignOutRef = useRef(clerkSignOut);
   const navigateRef = useRef(navigate);
+  // Do not sign out during the first /users/me bootstrap request. A missing
+  // API URL, CORS rejection, or briefly unavailable API must not turn a
+  // successful Clerk login into a sign-in loop. Once the backend has verified
+  // this session, later auth failures can safely trigger a fresh login.
+  const verifiedAdminRef = useRef(false);
   useEffect(() => {
     clerkSignOutRef.current = clerkSignOut;
     navigateRef.current = navigate;
@@ -109,6 +114,10 @@ export default function ClerkAuthBridge({ children }: { children: ReactNode }) {
   useEffect(() => {
     diag("registering auth-missing handler (once, app-lifetime)");
     setAuthMissingHandler(() => {
+      if (!verifiedAdminRef.current) {
+        diag("auth-missing handler: ignoring failure during initial admin verification");
+        return;
+      }
       diag("auth-missing handler FIRED — signing out + navigating to /sign-in");
       if (typeof window === "undefined") return;
       const path = window.location.pathname;
@@ -127,6 +136,7 @@ export default function ClerkAuthBridge({ children }: { children: ReactNode }) {
   // "admin" (missing superadmin) silently on a single failed request.
   useEffect(() => {
     if (!isSignedIn || !clerkUser) {
+      verifiedAdminRef.current = false;
       setDbUser(null);
       setAdminStatus("checking");
       return;
@@ -138,6 +148,7 @@ export default function ClerkAuthBridge({ children }: { children: ReactNode }) {
         if (cancelled) return;
         if (res.success && res.data) {
           diag("/users/me returned", { email: res.data.email, role: res.data.role });
+          verifiedAdminRef.current = true;
           setDbUser(res.data);
           setAdminStatus("admin");
         } else {
