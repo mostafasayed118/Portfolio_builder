@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "codegen": "orval --config ./orval.config.ts",
-    "codegen:check": "node ./scripts/check-codegen.mjs"
+    "codegen:check": "node ./scripts/check-codegen.mjs",
+    "lint": "eslint orval.config.ts scripts --max-warnings=0"
   },
   "devDependencies": {
     "orval": "^8.5.2"
