@@ -7,25 +7,19 @@
  *
  * Two execution paths are supported, in this order:
  *
- *   (A) REAL Clerk dev session — runs when the following are all true:
- *         - `CLERK_TEST_EMAIL` and `CLERK_TEST_PASSWORD` env vars are set
- *         - The dev server (http://localhost:5174) can reach Clerk's
- *           API (network access to clerk.accounts.dev / frontend API).
- *       In this mode we drive the actual Clerk sign-in form, capture
- *       cookies + localStorage, and save them.
+ *   (A) REAL browser sign-in — runs when `CLERK_TEST_EMAIL` /
+ *       `CLERK_TEST_PASSWORD` are set and Clerk is reachable. Drives the
+ *       ACTUAL Clerk sign-in form (identifier → password → "new device"
+ *       verification) and completes the 2FA step with the OTP delivered to
+ *       the mail.tm mailbox (MAILTM_ADDRESS / MAILTM_PASSWORD). This is the
+ *       path CI uses — a genuine browser session, no cookie injection.
  *
- *   (B) MINTED session — runs when `CLERK_SECRET_KEY` is set (no password
- *       needed): mints a real session token via the Clerk Backend API for
- *       the E2E admin account and injects it as the `__session` cookie —
- *       exactly what the browser holds after a normal sign-in. This is the
- *       path CI uses.
+ *   (B) MINTED session — fallback when only `CLERK_SECRET_KEY` is set (no
+ *       password / mailbox): mints a real session token via the Clerk
+ *       Backend API and injects it as the `__session` cookie.
  *
- *   (C) FALLBACK — runs when the env vars are missing or Clerk is
- *       unreachable. We synthesize a Clerk-compatible cookie set
- *       and a small localStorage payload so the Admin app believes
- *       the user is signed in. The CvManager page mounts the
- *       "Loading…" state (the auth bridge is waiting on isLoaded),
- *       and the API contract is verified directly.
+ *   (C) FALLBACK — when the env vars are missing or Clerk is unreachable,
+ *       synthesize a stub storageState (documented, marked `stub`).
  *
  * The setup NEVER throws — it always writes a usable storageState
  * (real or stub) so the dependent specs can `test.use({ storageState })`.
@@ -33,10 +27,11 @@
  * Run: `pnpm exec playwright test --project=admin --grep="setup"`
  * or simply as a dependency of any admin spec via `test.use()`.
  */
-import { test as setup, type Page, type BrowserContext } from "@playwright/test";
+import { test as setup, type BrowserContext } from "@playwright/test";
 import { mkdirSync, readFileSync, writeFileSync } from "fs";
 import { resolve } from "path";
 import { mintClerkSession, resolveAdminEmail } from "./lib/clerk-session";
+import { ensureSigninUser, completeBrowserSignIn } from "./lib/real-signin";
 
 const AUTH_DIR = resolve(process.cwd(), "playwright/.auth");
 const STORAGE_FILE = resolve(AUTH_DIR, "admin.json");
@@ -196,36 +191,42 @@ async function tryRealClerkSignIn(context: BrowserContext): Promise<boolean> {
   if (!email || !password) return false;
   if (!(await clerkIsReachable())) return false;
 
+  // Provision the account (email + password) via the Backend API so the
+  // form can actually sign in. Tolerate failure — the user may already
+  // exist with the right password (e.g. a local run without the secret).
+  if (process.env.CLERK_SECRET_KEY) {
+    try {
+      await ensureSigninUser({ secretKey: process.env.CLERK_SECRET_KEY, email, password });
+    } catch (err) {
+      console.warn("[auth.setup] could not provision sign-in user:", (err as Error).message);
+    }
+  }
+
   const page = await context.newPage();
   try {
-    await page.goto(`${BASE_URL}/sign-in`, { waitUntil: "domcontentloaded" });
-    // Clerk v5 renders the sign-in form in-page, but only after its JS
-    // hydrates — wait for the identifier field before choosing a path.
-    // Older Clerk versions rendered the form inside an iframe.
-    const inPageIdentifier = page.locator('input[name="identifier"]').first();
-    const inPage = await inPageIdentifier
-      .waitFor({ state: "visible", timeout: 10_000 })
-      .then(() => true)
-      .catch(() => false);
-
-    if (inPage) {
-      await inPageIdentifier.fill(email);
-      await inPageIdentifier.press("Enter");
-      const passwordField = page.locator('input[name="password"]');
-      await passwordField.fill(password);
-      await passwordField.press("Enter");
-    } else {
-      const frame = page.frameLocator("iframe[src*='clerk']").first();
-      await frame.locator('input[name="identifier"]').fill(email);
-      await frame.locator('input[name="identifier"]').press("Enter");
-      await frame.locator('input[name="password"]').fill(password);
-      await frame.locator('input[name="password"]').press("Enter");
-    }
-    // Wait for the post-sign-in redirect to /overview.
+    // Genuine sign-in: identifier → password → new-device verification OTP
+    // read from the mail.tm mailbox (dev-mode 424242 when no mailbox).
+    const result = await completeBrowserSignIn({
+      page,
+      baseURL: BASE_URL,
+      email,
+      password,
+      mailtmAddress: process.env.MAILTM_ADDRESS,
+      mailtmPassword: process.env.MAILTM_PASSWORD,
+    });
+    console.log(`[auth.setup] real sign-in completed (2FA via ${result.codeSource})`);
+    // Require the authenticated shell — a "Clerk Setup Required" screen
+    // renders in place without redirecting and must not count as success.
     await page.waitForURL(/\/overview/, { timeout: 20_000 });
+    if (new URL(page.url()).pathname.includes("/sign-in")) return false;
+    if ((await page.getByText("Clerk Setup Required").count()) > 0) return false;
+    await page.locator("aside, nav[aria-label*='navigation' i]").first().waitFor({
+      state: "visible",
+      timeout: 10_000,
+    });
     return true;
   } catch (err) {
-    console.warn("[auth.setup] real Clerk sign-in failed:", err);
+    console.warn("[auth.setup] real Clerk sign-in failed:", (err as Error).message);
     return false;
   } finally {
     await page.close();
