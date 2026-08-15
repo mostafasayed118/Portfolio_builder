@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { singletonUpsert } from "./singleton-upsert";
 
 export const SEED_HERO = {
   heading: "Hi, I'm",
@@ -59,7 +60,7 @@ async function seedCollection<T>(
 }
 
 export async function seedHerContent(supabase: SupabaseClient): Promise<void> {
-  await supabase.from("hero_content").upsert({
+  await singletonUpsert(supabase, "hero_content", {
     heading: SEED_HERO.heading, name: SEED_HERO.name, roles: SEED_HERO.roles,
     description: SEED_HERO.description, github_url: SEED_HERO.github,
     linkedin_url: SEED_HERO.linkedin, email: SEED_HERO.email, is_published: true,
@@ -67,7 +68,7 @@ export async function seedHerContent(supabase: SupabaseClient): Promise<void> {
 }
 
 export async function seedAboutContent(supabase: SupabaseClient): Promise<void> {
-  await supabase.from("about_content").upsert({
+  await singletonUpsert(supabase, "about_content", {
     bio: SEED_ABOUT.bio, education: SEED_ABOUT.education,
     languages: SEED_ABOUT.languages, interests: SEED_ABOUT.interests, is_published: true,
   });

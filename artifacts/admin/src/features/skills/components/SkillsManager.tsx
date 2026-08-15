@@ -1,13 +1,16 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@workspace/ui";
-import { Plus, Pencil, Trash2, Download } from "lucide-react";
+import { Plus, Download } from "lucide-react";
 import { logError } from "@/lib/logger";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, Slider, Switch } from "@workspace/ui";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Input, Label, Slider, Switch } from "@workspace/ui";
 import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
 import { SmartEmptyState } from "@/components/SmartEmptyState";
 import { AdminErrorState } from "@/components/AdminErrorState";
 import { AdminLoadingState } from "@/components/AdminLoadingState";
+import { PageHeader } from "@/components/PageHeader";
+import { RowActions } from "@/components/RowActions";
+import { FormDialogFooter } from "@/components/FormDialogFooter";
 import { api } from "@/lib/api-client";
 import { useSkillsList } from "@/features/skills/hooks/useSkills";
 import { type SkillRow, BLANK_SKILL, mapToSkillRow } from "@/features/skills/types";
@@ -83,21 +86,21 @@ export default function SkillsManager() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex-1 min-w-[120px]">
-          <h1 className="text-2xl font-bold">Skills Manager</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{skills?.length ?? 0} skills across {cats.length} categories.</p>
-        </div>
-        <Button size="sm" variant="outline" onClick={() => skills && exportToCsv(skills.map(s => ({ name: s.name, category: s.category, proficiency: s.proficiency, icon: s.icon ?? "", is_visible: s.is_visible ?? true, sort_order: s.sort_order ?? 0 })), [
-          { key: "name", label: "Name" },
-          { key: "category", label: "Category" },
-          { key: "proficiency", label: "Proficiency" },
-          { key: "icon", label: "Icon" },
-          { key: "is_visible", label: "Visible" },
-          { key: "sort_order", label: "Sort Order" },
-        ], `skills-${Date.now()}.csv`)}><Download className="h-4 w-4 mr-1.5" />Export</Button>
-        <Button size="sm" onClick={openNew} className="min-h-[44px]"><Plus className="h-4 w-4 mr-1.5" />Add Skill</Button>
-      </div>
+      <PageHeader
+        title="Skills Manager"
+        description={`${skills?.length ?? 0} skills across ${cats.length} categories.`}
+        actions={<>
+          <Button size="sm" variant="outline" onClick={() => skills && exportToCsv(skills.map(s => ({ name: s.name, category: s.category, proficiency: s.proficiency, icon: s.icon ?? "", is_visible: s.is_visible ?? true, sort_order: s.sort_order ?? 0 })), [
+            { key: "name", label: "Name" },
+            { key: "category", label: "Category" },
+            { key: "proficiency", label: "Proficiency" },
+            { key: "icon", label: "Icon" },
+            { key: "is_visible", label: "Visible" },
+            { key: "sort_order", label: "Sort Order" },
+          ], `skills-${Date.now()}.csv`)}><Download className="h-4 w-4 mr-1.5" />Export</Button>
+          <Button size="sm" onClick={openNew} className="min-h-[44px]"><Plus className="h-4 w-4 mr-1.5" />Add Skill</Button>
+        </>}
+      />
 
       {(!skills || skills.length === 0) ? (
         <SmartEmptyState
@@ -127,9 +130,8 @@ export default function SkillsManager() {
                     <div className="bg-primary rounded-full h-1 transition-all" style={{ width: `${row.proficiency}%` }} />
                   </div>
                 </div>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
-                  <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]" aria-label="Edit skill" onClick={() => openEdit(row)}><Pencil className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] text-destructive hover:text-destructive hover:bg-destructive/10" aria-label="Delete skill" onClick={() => setDeleteTarget(row.id)}><Trash2 className="h-4 w-4" /></Button>
+                <div className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
+                  <RowActions editLabel="Edit skill" deleteLabel="Delete skill" onEdit={() => openEdit(row)} onDelete={() => setDeleteTarget(row.id)} />
                 </div>
               </div>
               );
@@ -175,10 +177,7 @@ export default function SkillsManager() {
               </div>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditing(null)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
-          </DialogFooter>
+          <FormDialogFooter onCancel={() => setEditing(null)} onSave={handleSave} saving={saving} />
         </DialogContent>
       </Dialog>
 
