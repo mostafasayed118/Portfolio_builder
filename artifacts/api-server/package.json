@@ -15,7 +15,7 @@
     "lint": "eslint src scripts build.mjs vitest.config.ts --max-warnings=0"
   },
   "dependencies": {
-    "@clerk/backend": "^3.4.9",
+    "@clerk/backend": "^3.16.6",
     "@supabase/supabase-js": "^2.105.4",
     "@types/compression": "^1.8.1",
     "@workspace/api-zod": "workspace:*",
@@ -26,10 +26,10 @@
     "cors": "^2",
     "csrf-csrf": "^4.0.3",
     "express": "^5",
-    "express-rate-limit": "^8.5.2",
+    "express-rate-limit": "^8.6.2",
     "helmet": "^8.1.0",
     "jspdf": "^4.2.1",
-    "multer": "^2.1.1",
+    "multer": "^2.2.0",
     "nodemailer": "^9.0.5",
     "pino": "^9",
     "pino-http": "^10",
