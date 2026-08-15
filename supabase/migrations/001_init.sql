@@ -93,7 +93,7 @@ CREATE TABLE IF NOT EXISTS seo_settings (
   og_title TEXT NOT NULL DEFAULT 'Mustafa Sayed — Data Engineer',
   og_description TEXT NOT NULL DEFAULT 'Building scalable data pipelines and transforming raw data into actionable insights.',
   og_image TEXT,
-  canonical_url TEXT NOT NULL DEFAULT 'https://mustafasayed.replit.app',
+  canonical_url TEXT NOT NULL DEFAULT 'https://mustafa-sayed-portfolio.vercel.app',
   twitter_card TEXT NOT NULL DEFAULT 'summary_large_image',
   twitter_creator TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),

@@ -19,6 +19,7 @@ tags:
   - name: admin.projects
   - name: admin.experience
   - name: admin.certifications
+  - name: admin.theme-presets
   - name: admin.posts
   - name: admin.messages
   - name: admin.contact-info
@@ -247,6 +248,35 @@ paths:
                           data: { type: object, nullable: true }
                   - $ref: "#/components/schemas/ApiError"
 
+  /v1/images/reorder:
+    post:
+      operationId: reorderImages
+      tags: [images]
+      summary: Reorder images (admin only)
+      security: [{ adminAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ordered_ids]
+              properties:
+                ordered_ids: { type: array, items: { type: string } }
+      responses:
+        "200":
+          description: Reordered
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
+
   # ─────────────────────────────────────────────────────────────────────
   # Admin: hero (singleton)
   # ─────────────────────────────────────────────────────────────────────
@@ -422,6 +452,114 @@ paths:
       operationId: deleteSkill
       tags: [admin.skills]
       summary: Delete a skill
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Admin: theme presets CRUD
+  # ─────────────────────────────────────────────────────────────────────
+  /v1/admin/theme-presets:
+    get:
+      operationId: listThemePresets
+      tags: [admin.theme-presets]
+      summary: List theme presets
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: userId
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: List of theme presets
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { $ref: "#/components/schemas/PaginatedThemePresets" }
+                  - $ref: "#/components/schemas/ApiError"
+    post:
+      operationId: createThemePreset
+      tags: [admin.theme-presets]
+      summary: Create a theme preset
+      security: [{ adminAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ThemePresetInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Duplicate name
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+
+  /v1/admin/theme-presets/{id}:
+    put:
+      operationId: updateThemePreset
+      tags: [admin.theme-presets]
+      summary: Update a theme preset
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ThemePresetUpdateInput" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
+    delete:
+      operationId: deleteThemePreset
+      tags: [admin.theme-presets]
+      summary: Delete a theme preset
       security: [{ adminAuth: [] }]
       parameters:
         - name: id
@@ -1771,6 +1909,8 @@ components:
       properties:
         success: { type: boolean, enum: [false] }
         message: { type: string }
+        code: { type: string }
+        existingId: { type: string }
 
     Pagination:
       type: object
@@ -1902,6 +2042,20 @@ components:
         icon: { type: string, nullable: true }
         sort_order: { type: integer, nullable: true }
         is_visible: { type: boolean, nullable: true }
+        user_id: { type: string, nullable: true }
+        deleted_at: { type: string, nullable: true }
+        created_at: { type: string }
+        updated_at: { type: string }
+
+    ThemePreset:
+      type: object
+      required: [id, name, description, palette, sort_order, user_id, deleted_at, created_at, updated_at]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        palette: { type: object }
+        sort_order: { type: integer, nullable: true }
         user_id: { type: string, nullable: true }
         deleted_at: { type: string, nullable: true }
         created_at: { type: string }
@@ -2279,6 +2433,12 @@ components:
         data: { type: array, items: { $ref: "#/components/schemas/Skill" } }
         pagination: { $ref: "#/components/schemas/Pagination" }
 
+    PaginatedThemePresets:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/ThemePreset" } }
+        pagination: { $ref: "#/components/schemas/Pagination" }
+
     PaginatedProjects:
       type: object
       properties:
@@ -2391,6 +2551,21 @@ components:
         icon: { type: string, nullable: true }
         sort_order: { type: integer }
         is_visible: { type: boolean }
+
+    ThemePresetInput:
+      type: object
+      required: [name, palette]
+      properties:
+        name: { type: string }
+        description: { type: string }
+        palette: { type: object }
+
+    ThemePresetUpdateInput:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string }
+        palette: { type: object }
 
     ProjectInput:
       type: object

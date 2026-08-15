@@ -37,6 +37,7 @@ import type {
   CreatePost201,
   CreateProject201,
   CreateSkill201,
+  CreateThemePreset201,
   CsrfTokenResponse,
   CvSettingsInput,
   DeleteCertification200,
@@ -47,6 +48,7 @@ import type {
   DeletePost200,
   DeleteProject200,
   DeleteSkill200,
+  DeleteThemePreset200,
   ExperienceInput,
   GenerateDescription200,
   GetAbout200,
@@ -81,6 +83,8 @@ import type {
   ListSectionSettings200,
   ListSkills200,
   ListSkillsParams,
+  ListThemePresets200,
+  ListThemePresetsParams,
   ListUsers200,
   MarkMessageRead200,
   MarkMessageUnread200,
@@ -88,6 +92,8 @@ import type {
   PostInput,
   PreviewEntity200,
   ProjectInput,
+  ReorderImages200,
+  ReorderImagesBody,
   ReorderInput,
   ReorderSectionSettings200,
   ReplyMessage200,
@@ -101,6 +107,8 @@ import type {
   SuggestCategories200,
   SuggestTags200,
   ThemeInput,
+  ThemePresetInput,
+  ThemePresetUpdateInput,
   TypographyInput,
   UnreadMessageCount200,
   UnreadMessageCountParams,
@@ -118,6 +126,7 @@ import type {
   UpdateSiteLanguage200,
   UpdateSiteSettings200,
   UpdateSkill200,
+  UpdateThemePreset200,
   UpdateThemeSettings200,
   UpdateTypographySettings200,
   UpdateUserRole200,
@@ -837,6 +846,77 @@ export const useDeleteImage = <TError = ErrorType<unknown>,
       return useMutation(getDeleteImageMutationOptions(options));
     }
 
+export const getReorderImagesUrl = () => {
+
+
+
+
+  return `/api/v1/images/reorder`
+}
+
+/**
+ * @summary Reorder images (admin only)
+ */
+export const reorderImages = async (reorderImagesBody: ReorderImagesBody, options?: Parameters<typeof customFetch>[1]): Promise<ReorderImages200> => {
+
+  return customFetch<ReorderImages200>(getReorderImagesUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(reorderImagesBody)
+  }
+);}
+
+
+
+
+
+export const getReorderImagesMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reorderImages>>, TError,{data: BodyType<ReorderImagesBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reorderImages>>, TError,{data: BodyType<ReorderImagesBody>}, TContext> => {
+
+const mutationKey = ['reorderImages'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reorderImages>>, {data: BodyType<ReorderImagesBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  reorderImages(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReorderImagesMutationResult = NonNullable<Awaited<ReturnType<typeof reorderImages>>>
+    export type ReorderImagesMutationBody = BodyType<ReorderImagesBody>
+    export type ReorderImagesMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Reorder images (admin only)
+ */
+export const useReorderImages = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reorderImages>>, TError,{data: BodyType<ReorderImagesBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reorderImages>>,
+        TError,
+        {data: BodyType<ReorderImagesBody>},
+        TContext
+      > => {
+      return useMutation(getReorderImagesMutationOptions(options));
+    }
+
 export const getGetHeroUrl = () => {
 
 
@@ -1429,6 +1509,304 @@ export const useDeleteSkill = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteSkillMutationOptions(options));
+    }
+
+export const getListThemePresetsUrl = (params?: ListThemePresetsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/admin/theme-presets?${stringifiedParams}` : `/api/v1/admin/theme-presets`
+}
+
+/**
+ * @summary List theme presets
+ */
+export const listThemePresets = async (params?: ListThemePresetsParams, options?: Parameters<typeof customFetch>[1]): Promise<ListThemePresets200> => {
+
+  return customFetch<ListThemePresets200>(getListThemePresetsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListThemePresetsQueryKey = (params?: ListThemePresetsParams,) => {
+    return [
+    `/api/v1/admin/theme-presets`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListThemePresetsQueryOptions = <TData = Awaited<ReturnType<typeof listThemePresets>>, TError = ErrorType<unknown>>(params?: ListThemePresetsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listThemePresets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListThemePresetsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listThemePresets>>> = ({ signal }) => listThemePresets(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listThemePresets>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListThemePresetsQueryResult = NonNullable<Awaited<ReturnType<typeof listThemePresets>>>
+export type ListThemePresetsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List theme presets
+ */
+
+export function useListThemePresets<TData = Awaited<ReturnType<typeof listThemePresets>>, TError = ErrorType<unknown>>(
+ params?: ListThemePresetsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listThemePresets>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListThemePresetsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateThemePresetUrl = () => {
+
+
+
+
+  return `/api/v1/admin/theme-presets`
+}
+
+/**
+ * @summary Create a theme preset
+ */
+export const createThemePreset = async (themePresetInput: ThemePresetInput, options?: Parameters<typeof customFetch>[1]): Promise<CreateThemePreset201> => {
+
+  return customFetch<CreateThemePreset201>(getCreateThemePresetUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(themePresetInput)
+  }
+);}
+
+
+
+
+
+export const getCreateThemePresetMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createThemePreset>>, TError,{data: BodyType<ThemePresetInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createThemePreset>>, TError,{data: BodyType<ThemePresetInput>}, TContext> => {
+
+const mutationKey = ['createThemePreset'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createThemePreset>>, {data: BodyType<ThemePresetInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createThemePreset(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateThemePresetMutationResult = NonNullable<Awaited<ReturnType<typeof createThemePreset>>>
+    export type CreateThemePresetMutationBody = BodyType<ThemePresetInput>
+    export type CreateThemePresetMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Create a theme preset
+ */
+export const useCreateThemePreset = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createThemePreset>>, TError,{data: BodyType<ThemePresetInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createThemePreset>>,
+        TError,
+        {data: BodyType<ThemePresetInput>},
+        TContext
+      > => {
+      return useMutation(getCreateThemePresetMutationOptions(options));
+    }
+
+export const getUpdateThemePresetUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/admin/theme-presets/${id}`
+}
+
+/**
+ * @summary Update a theme preset
+ */
+export const updateThemePreset = async (id: string,
+    themePresetUpdateInput: ThemePresetUpdateInput, options?: Parameters<typeof customFetch>[1]): Promise<UpdateThemePreset200> => {
+
+  return customFetch<UpdateThemePreset200>(getUpdateThemePresetUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(themePresetUpdateInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateThemePresetMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateThemePreset>>, TError,{id: string;data: BodyType<ThemePresetUpdateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateThemePreset>>, TError,{id: string;data: BodyType<ThemePresetUpdateInput>}, TContext> => {
+
+const mutationKey = ['updateThemePreset'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateThemePreset>>, {id: string;data: BodyType<ThemePresetUpdateInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateThemePreset(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateThemePresetMutationResult = NonNullable<Awaited<ReturnType<typeof updateThemePreset>>>
+    export type UpdateThemePresetMutationBody = BodyType<ThemePresetUpdateInput>
+    export type UpdateThemePresetMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update a theme preset
+ */
+export const useUpdateThemePreset = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateThemePreset>>, TError,{id: string;data: BodyType<ThemePresetUpdateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateThemePreset>>,
+        TError,
+        {id: string;data: BodyType<ThemePresetUpdateInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateThemePresetMutationOptions(options));
+    }
+
+export const getDeleteThemePresetUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/admin/theme-presets/${id}`
+}
+
+/**
+ * @summary Delete a theme preset
+ */
+export const deleteThemePreset = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<DeleteThemePreset200> => {
+
+  return customFetch<DeleteThemePreset200>(getDeleteThemePresetUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteThemePresetMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteThemePreset>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteThemePreset>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['deleteThemePreset'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteThemePreset>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteThemePreset(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteThemePresetMutationResult = NonNullable<Awaited<ReturnType<typeof deleteThemePreset>>>
+
+    export type DeleteThemePresetMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete a theme preset
+ */
+export const useDeleteThemePreset = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteThemePreset>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteThemePreset>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getDeleteThemePresetMutationOptions(options));
     }
 
 export const getListProjectsUrl = (params?: ListProjectsParams,) => {

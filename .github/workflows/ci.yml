@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   pull_request:
-    branches: [main]
+    branches: [main, master]
 
 # Cancel in-progress runs of the same branch on new pushes.
 concurrency:
@@ -27,7 +27,7 @@ jobs:
           version: 9.15.0
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm run typecheck
@@ -57,10 +57,83 @@ jobs:
           version: 9.15.0
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm run lint
+      - name: Check for bare JS in the portfolio (TypeScript-only policy)
+        # Fails if any .js/.jsx file exists in artifacts/portfolio without a
+        # tracked .ts/.tsx twin — plain JavaScript must not slip into the
+        # TypeScript codebase.
+        run: pnpm --filter @workspace/scripts check-ts-twin
+      - name: Check for duplicate components and code blocks
+        # Fails if two shared components serve the same purpose (near-identical
+        # files) or duplicate code blocks reappear (copy-pasted runs of >= 10
+        # lines) anywhere in app source. New duplication fails the build.
+        run: pnpm --filter @workspace/scripts check-duplication
+
+  db-migrations:
+    name: Supabase migrations (fresh DB)
+    runs-on: ubuntu-latest
+    needs: [typecheck, lint]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+
+      # Boots the local stack (postgres, auth, storage) and applies all
+      # migrations in order. Fails if any migration errors against the
+      # fresh database — the same surface the remote `supabase db push`
+      # would hit on merge.
+      - name: Start local Supabase stack
+        run: supabase start
+
+      # Reset discards the freshly-started DB and replays every migration
+      # from scratch, proving the whole chain is idempotent and applies
+      # cleanly on an empty database.
+      - name: Re-apply all migrations from scratch
+        run: supabase db reset
+
+      - name: Verify expected schema exists
+        run: |
+          COUNT=$(docker exec supabase_db_Portfolio-Fixer psql -U postgres -d postgres -tAc \
+            "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public';")
+          echo "public tables: $COUNT"
+          [ "$COUNT" -gt 0 ] || { echo "FAIL: no public tables after migration reset"; exit 1; }
+
+      - name: Verify singleton guard index (migration 047)
+        run: |
+          COUNT=$(docker exec supabase_db_Portfolio-Fixer psql -U postgres -d postgres -tAc \
+            "SELECT count(*) FROM pg_indexes WHERE indexdef LIKE '%(true)%' AND tablename = 'theme_settings';")
+          echo "singleton guard indexes: $COUNT"
+          [ "$COUNT" -ge 1 ] || { echo "FAIL: migration 047 singleton guard index missing"; exit 1; }
+
+  data-integrity:
+    name: Supabase duplicate scan
+    runs-on: ubuntu-latest
+    needs: [typecheck, lint]
+    env:
+      # Service-role access to read every table (same secret the E2E job uses).
+      SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Scan all tables for duplicate rows
+        # scan-duplicates.ts exits 1 when any table has duplicate rows,
+        # which fails this job and therefore the whole build.
+        run: pnpm --filter @workspace/scripts scan-duplicates
 
   component-tests:
     name: Vitest component tests (admin + portfolio)
@@ -73,7 +146,7 @@ jobs:
           version: 9.15.0
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Run component tests
@@ -100,13 +173,19 @@ jobs:
           version: 9.15.0
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Build portfolio
         run: pnpm --filter @workspace/portfolio build
       - name: Build admin
         run: pnpm --filter @workspace/admin build
+      - name: Check for UTF-8 BOMs (env files, env vars, bundles)
+        # Fails the build if any env file, process.env value, or bundle asset
+        # starts with a UTF-8 BOM — a BOM in an env value silently corrupts it
+        # (e.g. VITE_SITE_URL becomes "\uFEFFhttps://…") and a BOM in a bundle
+        # asset ships a non-standard first byte to production.
+        run: pnpm --filter @workspace/scripts check-bom
       - name: Analyze bundle sizes
         run: |
           echo "## Bundle Size Report" >> $GITHUB_STEP_SUMMARY
@@ -155,6 +234,7 @@ jobs:
       CSRF_SECRET: ${{ secrets.CSRF_SECRET }}
       # Secrets scoped to E2E job only
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
       CLERK_TEST_EMAIL: ${{ secrets.CLERK_TEST_EMAIL }}
       CLERK_TEST_PASSWORD: ${{ secrets.CLERK_TEST_PASSWORD }}
     steps:
@@ -164,7 +244,7 @@ jobs:
           version: 9.15.0
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
 

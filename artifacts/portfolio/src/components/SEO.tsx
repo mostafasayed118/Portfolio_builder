@@ -5,7 +5,7 @@ import { HERO, PROJECTS, CONTACT } from "@/data/portfolio";
 import { useBranding } from "@/lib/branding";
 import { useLanguage } from "@/lib/language";
 
-const SITE_URL = import.meta.env.VITE_SITE_URL ?? "https://mustafasayed.replit.app";
+const SITE_URL = import.meta.env.VITE_SITE_URL ?? "https://mustafa-sayed-portfolio.vercel.app";
 const DEFAULT_IMAGE = `${SITE_URL}/opengraph.jpg`;
 const TWITTER_HANDLE = import.meta.env.VITE_TWITTER_HANDLE ?? "";
 

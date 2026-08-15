@@ -114,10 +114,9 @@ export async function runCollectionQuery<T = unknown>(
     } else {
       query = query.eq(userColumn, targetUserId);
     }
-  } else if (options.includeOrphans) {
-    // Superadmin resolving no explicit target user — show only unowned rows.
-    query = query.is(userColumn, null);
   }
+  // Superadmin with no explicit target user — leave the query unfiltered so
+  // “All users” returns every row (owned and unowned alike).
 
   if (options.orderBy) {
     query = query.order(options.orderBy, { ascending: options.orderAsc ?? true });

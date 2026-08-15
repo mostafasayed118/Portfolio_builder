@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useLanguage } from "@/lib/language";
 import { FolderKanban } from "lucide-react";
 import { useProjects, mapDbProject, PROJECTS } from "@/features/projects/hooks/useProjects";
 import ProjectCard from "@/features/projects/components/ProjectCard";
+import { imageVariants } from "@/features/projects/components/ProjectGallery";
+import { useProjectCovers } from "@/hooks/use-portfolio-data";
 import { ProjectsSkeleton } from "@/features/projects/components/ProjectsSkeleton";
 import SectionHeader from "@/components/SectionHeader";
 import EmptyState from "@/components/EmptyState";
@@ -11,13 +13,18 @@ export default function ProjectsSection() {
   const [active, setActive] = useState("all");
   const { t } = useLanguage();
   const { data: projectsData, isLoading } = useProjects();
+  const projectIds = useMemo(() => (projectsData ?? []).map((p) => p.id), [projectsData]);
+  const { data: covers } = useProjectCovers(projectIds);
 
   if (isLoading) return <ProjectsSkeleton />;
 
   const allProjects = projectsData && projectsData.length > 0
     ? [...projectsData].filter((p) => p.is_published !== false)
         .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-        .map((p, i) => mapDbProject(p, i))
+        .map((p, i) => {
+          const coverUrl = covers?.[p.id];
+          return mapDbProject(p, i, coverUrl ? { url: coverUrl, variants: imageVariants(coverUrl) } : undefined);
+        })
     : PROJECTS;
 
   const categories = [

@@ -2,11 +2,11 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { Switch, Route, Router as WouterRouter, Redirect, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import AdminLayout from "@/components/AdminLayout";
-import { Toaster, TooltipProvider } from "@workspace/ui";
+import { Toaster, TooltipProvider, ApiHealthCheck } from "@workspace/ui";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { ViewingUserProvider } from "@/lib/viewing-user-context";
 import { ProtectedRoute, SignInPage } from "@/features/auth";
-import { ApiHealthCheck } from "@/components/ApiHealthCheck";
+import { getApiUrl } from "@/lib/env";
 import { abortAllRequests, beginRequestGroup } from "@/lib/api-client";
 
 const Overview = lazy(() => import("@/pages/Overview"));
@@ -104,7 +104,11 @@ function App() {
                   </ProtectedRoute>
                 </Route>
               </Switch>
-              <ApiHealthCheck />
+              <ApiHealthCheck
+                apiUrl={getApiUrl()}
+                title="API Server Unreachable"
+                message="Admin operations require the API server. Check that it is running."
+              />
               <Toaster />
             </WouterRouter>
           </ViewingUserProvider>

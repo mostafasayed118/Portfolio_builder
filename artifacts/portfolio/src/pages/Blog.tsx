@@ -52,7 +52,7 @@ export default function Blog() {
       <SEO
         title={heading}
         description={subtitle}
-        url={`${import.meta.env.VITE_SITE_URL ?? "https://mustafasayed.replit.app"}/blog`}
+        url={`${import.meta.env.VITE_SITE_URL ?? "https://mustafa-sayed-portfolio.vercel.app"}/blog`}
         type="website"
       />
       <main className="min-h-screen pt-20 relative overflow-hidden">

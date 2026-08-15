@@ -12,6 +12,8 @@ export interface SuccessEnvelope {
 export interface ApiError {
   success: false;
   message: string;
+  code?: string;
+  existingId?: string;
 }
 
 export interface Pagination {
@@ -122,6 +124,20 @@ export interface Skill {
   icon: string | null;
   sort_order: number | null;
   is_visible: boolean | null;
+  user_id: string | null;
+  deleted_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ThemePresetPalette = { [key: string]: unknown };
+
+export interface ThemePreset {
+  id: string;
+  name: string;
+  description: string | null;
+  palette: ThemePresetPalette;
+  sort_order: number | null;
   user_id: string | null;
   deleted_at: string | null;
   created_at: string;
@@ -509,6 +525,11 @@ export interface PaginatedSkills {
   pagination?: Pagination;
 }
 
+export interface PaginatedThemePresets {
+  data?: ThemePreset[];
+  pagination?: Pagination;
+}
+
 export interface PaginatedProjects {
   data?: Project[];
   pagination?: Pagination;
@@ -607,6 +628,22 @@ export interface SkillInput {
   icon?: string | null;
   sort_order?: number;
   is_visible?: boolean;
+}
+
+export type ThemePresetInputPalette = { [key: string]: unknown };
+
+export interface ThemePresetInput {
+  name: string;
+  description?: string;
+  palette: ThemePresetInputPalette;
+}
+
+export type ThemePresetUpdateInputPalette = { [key: string]: unknown };
+
+export interface ThemePresetUpdateInput {
+  name?: string;
+  description?: string;
+  palette?: ThemePresetUpdateInputPalette;
 }
 
 export interface ProjectInput {
@@ -910,6 +947,14 @@ export type DeleteImage200 = SuccessEnvelope & ({
   data?: { [key: string]: unknown } | null;
 }) | ApiError;
 
+export type ReorderImagesBody = {
+  ordered_ids: string[];
+};
+
+export type ReorderImages200 = SuccessEnvelope & ({
+  data?: { [key: string]: unknown } | null;
+}) | ApiError;
+
 export type GetHero200 = SuccessEnvelope & {
   data?: HeroContent;
 } | ApiError;
@@ -943,6 +988,26 @@ export type UpdateSkill200 = SuccessEnvelope & ({
 }) | ApiError;
 
 export type DeleteSkill200 = SuccessEnvelope & ({
+  data?: { [key: string]: unknown } | null;
+}) | ApiError;
+
+export type ListThemePresetsParams = {
+userId?: string;
+};
+
+export type ListThemePresets200 = SuccessEnvelope & {
+  data?: PaginatedThemePresets;
+} | ApiError;
+
+export type CreateThemePreset201 = SuccessEnvelope & ({
+  data?: { [key: string]: unknown } | null;
+}) | ApiError;
+
+export type UpdateThemePreset200 = SuccessEnvelope & ({
+  data?: { [key: string]: unknown } | null;
+}) | ApiError;
+
+export type DeleteThemePreset200 = SuccessEnvelope & ({
   data?: { [key: string]: unknown } | null;
 }) | ApiError;
 

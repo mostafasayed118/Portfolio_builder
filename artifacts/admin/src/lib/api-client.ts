@@ -53,6 +53,10 @@ import {
   updateTypographySettings,
   getSeoSettings,
   updateSeoSettings,
+  listThemePresets,
+  createThemePreset,
+  updateThemePreset,
+  deleteThemePreset,
   listSectionSettings,
   updateSectionSetting,
   reorderSectionSettings,
@@ -74,6 +78,8 @@ import {
   suggestTags,
   analyzeContent,
   submitContactForm,
+  deleteImage,
+  reorderImages,
 } from "@workspace/api-client-react";
 
 /** Map an optional viewing-user id to the generated `{ userId }` query param. */
@@ -137,6 +143,10 @@ export const api = {
   contact: {
     submit: (data: Parameters<typeof submitContactForm>[0]) => submitContactForm(data),
   },
+  images: {
+    delete: (id: string) => deleteImage(id),
+    reorder: (orderedIds: string[]) => reorderImages({ ordered_ids: orderedIds }),
+  },
   contactInfo: {
     get: () => getContactInfo(),
     update: (data: Parameters<typeof updateContactInfo>[0]) => updateContactInfo(data),
@@ -144,6 +154,12 @@ export const api = {
   themeSettings: {
     get: () => getThemeSettings(),
     update: (data: Parameters<typeof updateThemeSettings>[0]) => updateThemeSettings(data),
+  },
+  themePresets: {
+    list: (userId?: string) => listThemePresets(userIdParam(userId)),
+    create: (data: Parameters<typeof createThemePreset>[0]) => createThemePreset(data),
+    update: (id: string, data: Parameters<typeof updateThemePreset>[1]) => updateThemePreset(id, data),
+    delete: (id: string) => deleteThemePreset(id),
   },
   typographySettings: {
     get: () => getTypographySettings(),

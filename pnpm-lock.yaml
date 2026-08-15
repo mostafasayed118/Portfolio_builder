@@ -189,6 +189,9 @@ importers:
       eslint-plugin-react-hooks:
         specifier: ^7.1.1
         version: 7.1.1(eslint@9.39.4(jiti@2.6.1))
+      globals:
+        specifier: ^17.11.0
+        version: 17.11.0
       husky:
         specifier: ^9.1.7
         version: 9.1.7
@@ -228,6 +231,9 @@ importers:
       '@workspace/auth':
         specifier: workspace:*
         version: link:../../lib/auth
+      '@workspace/db':
+        specifier: workspace:*
+        version: link:../../lib/db
       '@workspace/logging':
         specifier: workspace:*
         version: link:../../lib/logging
@@ -831,6 +837,9 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2
         version: 2.105.4
+      '@workspace/logging':
+        specifier: workspace:*
+        version: link:../lib/logging
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -3976,6 +3985,10 @@ packages:
 
   globals@14.0.0:
     resolution: {integrity: sha512-oahGvuMGQlPw/ivIYBjVSrWAfWLBeku5tpPE2fOPLi+WHffIWbuh2tCjhyQhTBPMf5E9jDEH4FOmTYgYwbKwtQ==}
+    engines: {node: '>=18'}
+
+  globals@17.11.0:
+    resolution: {integrity: sha512-Z2I8hM+PbJDXQDq3Icgpzv+mPdwr68iZUU9d5WW4FuXfDUQfkZaZuvjMv42/5crNyw154+9+VWXbYrUgDXbxNw==}
     engines: {node: '>=18'}
 
   gopd@1.2.0:
@@ -9179,6 +9192,8 @@ snapshots:
       ini: 6.0.0
 
   globals@14.0.0: {}
+
+  globals@17.11.0: {}
 
   gopd@1.2.0: {}
 

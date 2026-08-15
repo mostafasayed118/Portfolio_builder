@@ -45,6 +45,8 @@ export interface TranslationKeys {
     challenges: string;
     outcome: string;
     completedAt: string;
+    galleryEmptyTitle: string;
+    galleryEmptyHint: string;
   };
   experience: {
     title: string;
@@ -82,12 +84,15 @@ export interface TranslationKeys {
     successTitle: string;
     successMessage: string;
     errorMessage: string;
+    chatOnWhatsApp: string;
+    whatsappPrefill: string;
     labels: {
       email: string;
       phone: string;
       location: string;
       github: string;
       linkedin: string;
+      whatsapp: string;
     };
   };
   common: {
@@ -158,6 +163,8 @@ export const en: TranslationKeys = {
     challenges: "Challenges",
     outcome: "Outcome",
     completedAt: "Completed",
+    galleryEmptyTitle: "No screenshots yet",
+    galleryEmptyHint: "Gallery images added from the admin dashboard's Project Editor will appear here.",
   },
   experience: {
     title: "Work Experience",
@@ -195,12 +202,15 @@ export const en: TranslationKeys = {
     successTitle: "Message sent!",
     successMessage: "Thank you for reaching out. I'll get back to you soon.",
     errorMessage: "Failed to send message. Please try again.",
+    chatOnWhatsApp: "Chat on WhatsApp",
+    whatsappPrefill: "Hi Mustafa! I found your portfolio and I'd like to get in touch.",
     labels: {
       email: "Email",
       phone: "Phone",
       location: "Location",
       github: "GitHub",
       linkedin: "LinkedIn",
+      whatsapp: "WhatsApp",
     },
   },
   common: {

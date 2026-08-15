@@ -32,6 +32,10 @@ export function rateLimited(res: Response, message = "Too many requests, please 
   return res.status(429).json({ success: false, message });
 }
 
+export function conflict(res: Response, message: string, extra: Record<string, unknown> = {}) {
+  return res.status(409).json({ success: false, message, ...extra });
+}
+
 export function serverError(res: Response, message = "Internal server error") {
   return res.status(500).json({ success: false, message });
 }

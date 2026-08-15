@@ -79,3 +79,11 @@ test-*.log
 
 supabase/.temp/
 testsprite_tests/tmp/config.json
+
+# Pulled/derived env dumps (contain live secrets — never commit)
+*.env.tmp
+*.env.e2e-*
+.e2e-*
+
+# Temp inspection artifacts
+.tmp-img/
