@@ -2,10 +2,10 @@ import { type ReactNode, useEffect, useCallback, useRef } from "react";
 import { useAuthUser } from "@workspace/auth";
 import { useAuth } from "@clerk/clerk-react";
 import { Redirect, useLocation } from "wouter";
-import { Button } from "@workspace/ui";
 import { diag } from "./diag";
 import { SIGN_IN_URL } from "./constants";
 import { NotAdminScreen } from "./NotAdminScreen";
+import { AuthFallbackScreen } from "./AuthFallbackScreen";
 
 /**
  * Guard for every authenticated Admin route.
@@ -124,27 +124,20 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
       path: location,
     });
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-6">
-        <div className="max-w-md text-center space-y-4 p-8 rounded-xl border border-border bg-card">
-          <div className="text-4xl">🔒</div>
-          <h1 className="text-2xl font-bold text-foreground">Session Expired</h1>
-          <p className="text-muted-foreground text-sm">
-            Your Clerk session is active, but the server could not
-            verify your admin credentials. This can happen when:
-          </p>
-          <ul className="text-muted-foreground text-sm text-left list-disc list-inside space-y-1">
-            <li>Your JWT token has expired</li>
-            <li>Your email is not in the admin allow-list</li>
-            <li>The server is temporarily unreachable</li>
-          </ul>
-          <p className="text-muted-foreground text-sm mt-2">
-            Sign out and sign back in to refresh your session.
-          </p>
-          <Button onClick={handleSignOut} className="mt-4 min-h-[44px]">
-            Sign Out
-          </Button>
-        </div>
-      </div>
+      <AuthFallbackScreen emoji="🔒" title="Session Expired" onSignOut={handleSignOut}>
+        <p className="text-muted-foreground text-sm">
+          Your Clerk session is active, but the server could not
+          verify your admin credentials. This can happen when:
+        </p>
+        <ul className="text-muted-foreground text-sm text-left list-disc list-inside space-y-1">
+          <li>Your JWT token has expired</li>
+          <li>Your email is not in the admin allow-list</li>
+          <li>The server is temporarily unreachable</li>
+        </ul>
+        <p className="text-muted-foreground text-sm">
+          Sign out and sign back in to refresh your session.
+        </p>
+      </AuthFallbackScreen>
     );
   }
 

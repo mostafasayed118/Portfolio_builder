@@ -3,7 +3,7 @@ import { env } from "./env";
 import { getSupabaseClient } from "./supabase-client";
 import { withRetry } from "./retry";
 
-const ADMIN_EMAILS = env.ADMIN_EMAILS.split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
+const ADMIN_EMAILS = env.ADMIN_EMAIL_LIST;
 
 /**
  * `null` and PostgREST "no rows" errors are expected when the user

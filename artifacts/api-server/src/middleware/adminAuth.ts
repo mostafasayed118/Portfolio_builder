@@ -5,7 +5,7 @@ import { logger } from "../lib/logger";
 import { env } from "../lib/env";
 import { syncUserFromClerk, getDefaultAdminUser } from "../lib/user-sync";
 
-const ADMIN_EMAILS = env.ADMIN_EMAILS.split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
+const ADMIN_EMAILS = env.ADMIN_EMAIL_LIST;
 const clerkClient = env.CLERK_SECRET_KEY ? createClerkClient({ secretKey: env.CLERK_SECRET_KEY }) : null;
 
 function isApiKeyValid(key: string | undefined): key is string {

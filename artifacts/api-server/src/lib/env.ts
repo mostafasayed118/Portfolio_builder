@@ -157,6 +157,11 @@ export const env = {
   // legacy fallback — the client bundle must never reference it, otherwise
   // Vite inlines the full admin allowlist into the public JS.
   get ADMIN_EMAILS() { return optional("ADMIN_EMAILS") ?? optional("VITE_ADMIN_EMAILS") ?? ""; },
+  // Parsed allowlist (trimmed, lowercased, empty entries dropped). Shared by
+  // adminAuth and user-sync so the parse logic lives in one place.
+  get ADMIN_EMAIL_LIST(): string[] {
+    return this.ADMIN_EMAILS.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
+  },
 
   // CSRF / sessions
   get CSRF_SECRET() { return require_("CSRF_SECRET"); },
