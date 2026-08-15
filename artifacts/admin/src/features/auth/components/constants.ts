@@ -28,6 +28,6 @@ export const SIGN_IN_URL = "/sign-in";
  * Bundle version marker for cache-busting verification.
  * Logged on mount so DevTools can confirm the latest source is running.
  */
-export const BUNDLE_VERSION = "auth-fix-2026-06-05-jwt-template";
+export const BUNDLE_VERSION = "auth-fix-2026-08-15-token-refresh";
 
 export { clerkPublishableKey };

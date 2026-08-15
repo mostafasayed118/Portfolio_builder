@@ -60,6 +60,7 @@ async function doFetch<T>(
   body: unknown,
   withAuth: boolean,
   retryCount = 0,
+  tokenOverride?: string,
 ): Promise<ApiResult<T>> {
   // Fail fast with a clear message instead of issuing a relative fetch that
   // would 404 when VITE_API_URL is missing in a production build.
@@ -70,7 +71,7 @@ async function doFetch<T>(
   const headers: Record<string, string> = { "Content-Type": "application/json" };
 
   if (withAuth) {
-    const clerkToken = await getClerkToken();
+    const clerkToken = tokenOverride ?? await getClerkToken();
     if (!isTokenLikelyValid(clerkToken)) {
       if (import.meta.env.DEV) {
         logError(
@@ -157,8 +158,11 @@ async function doFetch<T>(
             { method, url },
           );
         }
-        await getClerkToken(true);
-        return doFetch<T>(url, method, body, withAuth, retryCount + 1);
+        const refreshedToken = await getClerkToken(true);
+        if (isTokenLikelyValid(refreshedToken)) {
+          return doFetch<T>(url, method, body, withAuth, retryCount + 1, refreshedToken);
+        }
+        return { success: false, message: AUTH_MISSING_MESSAGE };
       }
 
       // ── Auth failure (all retries exhausted) ─────────────────────────

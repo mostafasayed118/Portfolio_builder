@@ -66,6 +66,26 @@ describe("auth-token", () => {
       expect(getter).toHaveBeenCalledTimes(2);
     });
 
+    it("refreshes an expired cached token before firing the missing-auth handler", async () => {
+      const now = Math.floor(Date.now() / 1000);
+      const expired = `header.${btoa(JSON.stringify({ exp: now - 10 }))}.expired-signature-long-enough`;
+      const fresh = `header.${btoa(JSON.stringify({ exp: now + 3600 }))}.fresh-signature-long-enough`;
+      const getter = vi.fn()
+        .mockResolvedValueOnce(expired)
+        .mockResolvedValueOnce(fresh);
+      const handler = vi.fn();
+      setAuthMissingHandler(handler);
+      setAuthReady(true);
+      setAuthTokenGetter(getter);
+
+      const token = await getClerkToken();
+
+      expect(token).toBe(fresh);
+      expect(getter).toHaveBeenNthCalledWith(1, false);
+      expect(getter).toHaveBeenNthCalledWith(2, true);
+      expect(handler).not.toHaveBeenCalled();
+    });
+
     it("returns null after 750ms timeout when getter is never set", async () => {
       vi.useFakeTimers();
       const handler = vi.fn();
@@ -361,30 +381,24 @@ describe("auth-token", () => {
       expect(getter).toHaveBeenCalledWith(false);
     });
 
-    it("on 401 retry: caller can force-refresh and get a new token", async () => {
-      // Simulate: first call returns expired token (exp in the past),
-      // force-refresh call returns fresh token (exp in the future).
+    it("refreshes an expired token and supports explicit force-refresh calls", async () => {
       let callCount = 0;
       const getter = vi.fn().mockImplementation(async (forceRefresh?: boolean) => {
         callCount++;
         const now = Math.floor(Date.now() / 1000);
-        if (callCount === 1) {
-          // Expired token: exp = now - 3600 (1 hour ago)
+        if (!forceRefresh) {
           return `header.${btoa(JSON.stringify({ exp: now - 3600 }))}.expired`;
         }
-        if (forceRefresh) {
-          // Fresh token: exp = now + 3600 (1 hour from now)
-          return `header.${btoa(JSON.stringify({ exp: now + 3600 }))}.fresh`;
-        }
-        return null;
+        return `header.${btoa(JSON.stringify({ exp: now + 3600 }))}.fresh`;
       });
       setAuthTokenGetter(getter);
 
       const token1 = await getClerkToken();
       const token2 = await getClerkToken(true);
 
-      expect(token1).toBeNull(); // expired token rejected by isTokenLikelyValid
-      expect(token2).toMatch(/^header\.\w+\.fresh$/); // fresh token accepted
+      expect(token1).toMatch(/^header\.\w+\.fresh$/);
+      expect(token2).toMatch(/^header\.\w+\.fresh$/);
+      expect(callCount).toBe(3);
     });
   });
 });
