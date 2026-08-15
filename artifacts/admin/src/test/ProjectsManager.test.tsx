@@ -1,6 +1,6 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { renderWithProviders, stubUseToast } from "./helpers";
 import { ProjectsManager } from "@/features/projects";
 
 const { mockListProjects, mockCreateProject, mockUpdateProject, mockDeleteProject } =
@@ -27,22 +27,11 @@ vi.mock("@/lib/api-client", () => ({
   },
 }));
 
-vi.mock("@workspace/ui", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@workspace/ui")>();
-  return {
-    ...actual,
-    useToast: () => ({ toast: vi.fn() }),
-  };
-});
+vi.mock("@workspace/ui", (importOriginal) => stubUseToast(importOriginal));
 
 vi.mock("@/components/ImageUploader", () => ({
   default: () => null,
 }));
-
-function renderWithProviders(ui: React.ReactElement) {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
-}
 
 const mockProjects = [
   {
