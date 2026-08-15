@@ -61,16 +61,30 @@ export default function ClerkAuthBridge({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (isLoaded && getToken) {
       diag(`setAuthTokenGetter called — using JWT template "${jwtTemplate}"`);
-      // Wrap so the template arg is applied on every call. The
-      // `forceRefresh` parameter is passed through from the caller
-      // (e.g. api-client's 401 retry). Clerk's `getToken()` always
-      // makes a network call to fetch the JWT, but on session expiry
-      // it returns null — the 401 retry in api-client.ts calls
-      // `getClerkToken(true)` which calls this getter again, giving
-      // Clerk a second chance to refresh its internal session.
-      setAuthTokenGetter((forceRefresh?: boolean) =>
-        getToken({ template: jwtTemplate }),
-      );
+      // Prefer the configured template because it includes the email claim
+      // used by the API allowlist. If the template is missing or rejected,
+      // fall back to Clerk's normal session token so a valid Clerk session
+      // is not trapped on the sign-in screen. `skipCache` is important for
+      // the api-client's one-time 401 refresh retry.
+      setAuthTokenGetter(async (forceRefresh = false) => {
+        const options = {
+          template: jwtTemplate,
+          ...(forceRefresh ? { skipCache: true } : {}),
+        };
+        try {
+          const templatedToken = await getToken(options);
+          if (templatedToken) return templatedToken;
+        } catch (error) {
+          diag("JWT template token request failed; trying the default Clerk token", String(error));
+        }
+
+        try {
+          return await getToken(forceRefresh ? { skipCache: true } : undefined);
+        } catch (error) {
+          diag("Default Clerk token request failed", String(error));
+          return null;
+        }
+      });
     }
   }, [isLoaded, getToken, jwtTemplate]);
 
