@@ -51,6 +51,13 @@ export default defineConfig({
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
     rollupOptions: {
+      // Shared UI primitives are bundled from workspace source files whose
+      // `use client` directives can trigger a false-positive source-map
+      // location warning in Rollup. Keep all other warnings visible.
+      onwarn(warning, warn) {
+        if (warning.code === "SOURCEMAP_ERROR") return;
+        warn(warning);
+      },
       output: {
         manualChunks(id: string) {
           if (!id.includes("node_modules")) return;
