@@ -428,9 +428,10 @@ export default function MessagesManager() {
         isOpen: showCleanupDialog,
         title: "Archive all test submissions?",
         message:
-          "This archives every visible message from automated E2E tests " +
-          "(emails starting with e2e-). Real inquiries are untouched, and " +
-          "you can restore anything from the Archived tab.",
+          "This archives every visible message from automated tests " +
+          "(emails starting with e2e- or qa.verify., or test@test.com). " +
+          "Real inquiries are untouched, and you can restore anything from " +
+          "the Archived tab.",
         confirmLabel: "Archive test submissions",
         variant: "warning",
         onConfirm: handleCleanupTestSubmissions,

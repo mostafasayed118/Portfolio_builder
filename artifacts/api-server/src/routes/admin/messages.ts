@@ -144,32 +144,47 @@ router.post("/mark-all-read", doubleCsrfProtection, async (req: AuthenticatedReq
 });
 
 /**
- * One-click cleanup: archive every automated E2E test submission
- * (email matching `e2e-%`) that is still visible. Server-side on purpose —
- * the list endpoint paginates, so the client could never see all rows.
- * Superadmin only: it is a global maintenance action, not a per-user one.
- * Idempotent: re-running only touches rows still visible (deleted_at null).
+ * Email predicate for automated test submissions. Shared by the count and
+ * update statements so they can never drift apart: any row whose email
+ * starts with `e2e-` or `qa.verify.` (the E2E suite and the QA verify
+ * fixture), or is exactly `test@test.com` (the generic test inbox), is a
+ * test submission — never a real inquiry.
+ *
+ * One `.or()` expression (not chained `.ilike()`s, which would AND together).
+ * All three patterns are ILIKE so matching is case-insensitive; `@` and `.`
+ * are literal in ILIKE, so `email.ilike.test@test.com` only ever matches the
+ * exact test@test.com address.
+ */
+const TEST_SUBMISSION_EMAILS =
+  "email.ilike.e2e-%,email.ilike.qa.verify.%,email.ilike.test@test.com";
+
+/**
+ * One-click cleanup: archive every automated test submission that is still
+ * visible. Server-side on purpose — the list endpoint paginates, so the
+ * client could never see all rows. Superadmin only: it is a global
+ * maintenance action, not a per-user one. Idempotent: re-running only
+ * touches rows still visible (deleted_at null).
  */
 router.post("/archive-test-submissions", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
   if (req.user?.role !== "superadmin") {
     return res.status(403).json({ success: false, message: "Superadmin required" });
   }
   const supabase = getSupabaseClient();
-  // Count the visible E2E rows first (typed head-count, same as unread-count)
+  // Count the visible test rows first (typed head-count, same as unread-count)
   // so the response can report how many were archived. The update then
   // targets the identical predicate. Any row inserted between the two
   // statements is out of scope for this run — fine for a cleanup tool.
   const { count, error: countError } = await supabase
     .from("messages")
     .select("id", { count: "exact", head: true })
-    .ilike("email", "e2e-%")
+    .or(TEST_SUBMISSION_EMAILS)
     .is("deleted_at", null);
   if (countError) return serverError(res, countError.message);
 
   const { error } = await supabase
     .from("messages")
     .update({ deleted_at: new Date().toISOString() })
-    .ilike("email", "e2e-%")
+    .or(TEST_SUBMISSION_EMAILS)
     .is("deleted_at", null);
   if (error) return serverError(res, error.message);
   return ok(res, { archived: count ?? 0 });
