@@ -1,15 +1,16 @@
-# Keep deploys lean, but NEVER exclude build outputs (dist/out) — Vercel
-# applies this file to git deployments too, so excluding dist would strip
-# the SPA build output and fail the deploy. Only skip deps and tooling dirs.
-.git
-.vercel
-node_modules
-artifacts/*/node_modules
-lib/*/node_modules
-skills
-testsprite_tests
-graphify-out
-.tmp-img
-coverage
-artifacts/*/coverage
-lib/*/coverage
+# Keep deploys lean, but ONLY skip root-level tooling/deps — bare patterns
+# match at ANY depth, so e.g. "skills" would also strip
+# artifacts/portfolio/src/features/skills and break the build (EISDIR on
+# deploy). Anchor everything to the repo root with a leading slash.
+/.git
+/.vercel
+/node_modules
+/artifacts/*/node_modules
+/lib/*/node_modules
+/skills
+/testsprite_tests
+/graphify-out
+/.tmp-img
+/coverage
+/artifacts/*/coverage
+/lib/*/coverage
