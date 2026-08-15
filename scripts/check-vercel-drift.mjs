@@ -7,13 +7,15 @@
  *
  *   1. Presence — `CLERK_SECRET_KEY` must exist in the project's Production
  *      env (catches accidental deletion or a target-only change).
- *   2. Interop — if the value is readable (an `encrypted` var) it is validated
- *      against Clerk and byte-compared with the repo secret. If it is masked
- *      (a `sensitive` var), a session token is minted with the REPO secret and
- *      presented to the DEPLOYED API: resolving the user's email forces the
- *      deployed process to call Clerk's Backend API with ITS key. A dead,
- *      rotated, or foreign-instance key fails that call and the round-trip,
- *      surfacing the drift that byte comparison cannot reach.
+ *   2. Parity — if the var is an `encrypted` type (readable), its plaintext is
+ *      fetched via the env detail endpoint, validated against Clerk, and
+ *      byte-compared with the GitHub secret — a mismatch fails the build so
+ *      the two stores can never drift. If it is `sensitive` (write-only, the
+ *      value can never be read back), a session token is minted with the
+ *      GITHUB secret and presented to the DEPLOYED API: resolving the user's
+ *      email forces the deployed process to call Clerk's Backend API with ITS
+ *      key. A dead, rotated, or foreign-instance key fails that call and the
+ *      round-trip, surfacing the drift that byte comparison cannot reach.
  *
  * Fail-closed: any error, missing input, or non-2xx aborts with exit 1.
  *
@@ -61,7 +63,18 @@ async function findOrCreateUser(secretKey, email) {
   if (!list.ok) fail(`cannot reach Clerk with the repo secret (${list.status}) — repo key drift?`);
   const body = await list.json();
   const users = Array.isArray(body) ? body : (body.data ?? []);
-  if (users.length > 0) return users[0].id;
+  // Clerk's `email_address[]` filter is unreliable (it can return unrelated
+  // users first), so never trust `users[0]` — verify the address actually
+  // matches before reusing the account, otherwise the probe session is minted
+  // for the wrong person and the round-trip fails with a false drift alarm.
+  const match = users.find((u) => {
+    const addrs = Array.isArray(u.email_addresses) ? u.email_addresses : [];
+    return (
+      addrs.some((a) => a.email_address?.toLowerCase() === email.toLowerCase()) ||
+      u.primary_email_address?.toLowerCase() === email.toLowerCase()
+    );
+  });
+  if (match) return match.id;
   const create = await clerkFetch("/users", {
     secretKey,
     method: "POST",
@@ -115,23 +128,38 @@ async function main() {
   }
   log("CLERK_SECRET_KEY present in Vercel Production env");
 
-  // ── 2a. If readable: validate + byte-compare with the repo secret ──
-  const vercelValue = productionEntry.value ?? "";
-  if (vercelValue.length > 0) {
-    log("Vercel value is readable — validating against Clerk and comparing with the repo secret");
+  // ── 2a. Readable (encrypted) var: fetch the plaintext, validate + byte-compare ──
+  if (productionEntry.type !== "sensitive") {
+    log("Vercel value is readable — fetching the plaintext to compare with the GitHub secret");
+    let detail;
+    try {
+      const detailRes = await fetch(
+        `${VERCEL_API}/v9/projects/${project}/env/${productionEntry.id}?${teamQuery.replace(/^&/, "")}`,
+        { headers: baseHeaders, signal: AbortSignal.timeout(15_000) },
+      );
+      if (!detailRes.ok) fail(`could not read the Vercel CLERK_SECRET_KEY value (${detailRes.status})`);
+      detail = await detailRes.json();
+    } catch (err) {
+      fail(`could not read the Vercel CLERK_SECRET_KEY value (${err?.message ?? err})`);
+    }
+    const vercelValue = detail?.value ?? "";
+    if (!vercelValue) fail("Vercel returned an empty CLERK_SECRET_KEY value");
     const clerkCheck = await clerkFetch("/instance", { secretKey: vercelValue });
     if (!clerkCheck.ok) {
       fail(`the key Vercel holds is invalid against Clerk (${clerkCheck.status})`);
     }
     if (vercelValue !== repoKey) {
-      fail("DRIFT: Vercel's CLERK_SECRET_KEY differs from the repo secret — the deployed API will keep failing until they match");
+      fail(
+        "DRIFT: GitHub's CLERK_SECRET_KEY differs from the Vercel Production value — " +
+          "update one of the stores so both match",
+      );
     }
-    log("Vercel CLERK_SECRET_KEY validated against Clerk and matches the repo secret");
+    log("Vercel CLERK_SECRET_KEY matches the GitHub secret and is valid against Clerk");
     return;
   }
 
   // ── 2b. Masked (sensitive, write-only): interop check through the deployed API ──
-  log("Vercel value is masked (sensitive type) — verifying interop through the deployed API");
+  log("Vercel value is masked (sensitive, write-only) — verifying interop through the deployed API");
   const email = resolveProbeEmail();
   const userId = await findOrCreateUser(repoKey, email);
 
@@ -172,7 +200,7 @@ async function main() {
         "update it in the Vercel project settings (Production) and redeploy.",
     );
   }
-  log("deployed API accepted the repo-secret token — Vercel's CLERK_SECRET_KEY is in sync");
+  log("deployed API accepted the GitHub-secret token — Vercel's CLERK_SECRET_KEY is in sync");
 }
 
 main().catch((err) => fail(err?.message ?? String(err)));
