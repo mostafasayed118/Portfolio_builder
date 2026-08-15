@@ -90,7 +90,7 @@ export function SeedDialog() {
                     </div>
                   )}
                 {result.errors.length > 0 && (
-                  <div className="mt-2 text-xs text-red-500">
+                  <div className="mt-2 text-xs text-destructive">
                     {result.errors.map((e) => (
                       <div key={e}>• {e}</div>
                     ))}

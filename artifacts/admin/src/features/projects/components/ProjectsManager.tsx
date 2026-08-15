@@ -98,7 +98,7 @@ export default function ProjectsManager() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-medium text-sm">{p.title}</span>
-                  {p.featured && <Star size={12} className="text-yellow-500 fill-yellow-500" />}
+                  {p.featured && <Star size={12} className="text-warning fill-warning" />}
                   <Badge variant="outline" className="text-xs">{p.category}</Badge>
                   {!p.is_published && <Badge variant="secondary" className="text-xs">Draft</Badge>}
                 </div>

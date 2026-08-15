@@ -4,9 +4,9 @@ import { cn } from "@/lib/utils";
 
 const variantConfig = {
   danger: { icon: Trash2, iconClass: "text-destructive", defaultConfirm: "Delete", defaultCancel: "Cancel" },
-  warning: { icon: AlertTriangle, iconClass: "text-amber-600 dark:text-amber-400", defaultConfirm: "Continue", defaultCancel: "Cancel" },
+  warning: { icon: AlertTriangle, iconClass: "text-warning", defaultConfirm: "Continue", defaultCancel: "Cancel" },
   info: { icon: HelpCircle, iconClass: "text-primary", defaultConfirm: "OK", defaultCancel: "Cancel" },
-  success: { icon: CheckCircle, iconClass: "text-emerald-600 dark:text-emerald-400", defaultConfirm: "Confirm", defaultCancel: "Cancel" },
+  success: { icon: CheckCircle, iconClass: "text-success", defaultConfirm: "Confirm", defaultCancel: "Cancel" },
 };
 
 interface ConfirmDialogState {
@@ -77,7 +77,7 @@ export function SmartConfirmDialog({ state, onCancel }: SmartConfirmDialogProps)
   return (
     <>
       <div
-        className="fixed inset-0 z-50 bg-black/50"
+        className="fixed inset-0 z-50 bg-overlay/50"
         aria-hidden="true"
         onClick={confirming ? undefined : handleCancel}
       />

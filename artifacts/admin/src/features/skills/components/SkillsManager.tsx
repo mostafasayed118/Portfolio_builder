@@ -117,7 +117,7 @@ export default function SkillsManager() {
               const row = mapToSkillRow(skill);
               return (
               <div key={row.id} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/40 transition-colors group">
-                <div className={`w-2 h-2 rounded-full shrink-0 ${row.is_visible ? "bg-emerald-500" : "bg-muted-foreground/30"}`} />
+                <div className={`w-2 h-2 rounded-full shrink-0 ${row.is_visible ? "bg-success" : "bg-muted-foreground/30"}`} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">{row.name}</span>

@@ -3,9 +3,9 @@ import { Check, X, AlertTriangle } from "lucide-react";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
 
 function StatusRow({ label, status }: { label: string; status: "complete" | "partial" | "missing" }) {
-  const icon = status === "complete" ? <Check className="h-4 w-4 text-green-500" />
-    : status === "partial" ? <AlertTriangle className="h-4 w-4 text-yellow-500" />
-    : <X className="h-4 w-4 text-red-500" />;
+  const icon = status === "complete" ? <Check className="h-4 w-4 text-success" />
+    : status === "partial" ? <AlertTriangle className="h-4 w-4 text-warning" />
+    : <X className="h-4 w-4 text-destructive" />;
   return <div className="flex items-center justify-between text-sm py-1"><span className="text-muted-foreground">{label}</span>{icon}</div>;
 }
 

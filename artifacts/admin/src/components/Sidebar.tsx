@@ -51,7 +51,7 @@ export default function Sidebar({ open, onClose }: Props) {
     <>
       {open && (
         <div
-          className="fixed inset-0 bg-black/40 z-20 lg:hidden"
+          className="fixed inset-0 bg-overlay/40 z-20 lg:hidden"
           onClick={onClose}
         />
       )}
@@ -127,7 +127,7 @@ export default function Sidebar({ open, onClose }: Props) {
             rel="noopener noreferrer"
             className="flex items-center gap-2 text-xs text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors"
           >
-            <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+            <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
             View Live Portfolio
           </a>
           <button
