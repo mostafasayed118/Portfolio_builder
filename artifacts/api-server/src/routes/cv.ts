@@ -17,7 +17,7 @@ function sanitizeFileName(name: string): string {
  * If CV contains sensitive info, add auth middleware here.
  */
 router.get("/cv", async (req: Request, res: Response) => {
-  const portfolioUrl = env.VITE_SITE_URL ?? "https://mustafasayed.replit.app";
+  const portfolioUrl = env.VITE_SITE_URL ?? "https://mustafa-sayed-portfolio.vercel.app";
 
   try {
     const supabase = getSupabaseClient();
