@@ -23,8 +23,8 @@ export default defineConfig({
     hookTimeout: 15_000,
     projects: [
       {
-        name: "portfolio",
         test: {
+          name: "portfolio",
           root: path.resolve(dirname, "artifacts/portfolio"),
           environment: "jsdom",
           globals: true,
@@ -47,8 +47,8 @@ export default defineConfig({
         },
       },
       {
-        name: "admin",
         test: {
+          name: "admin",
           root: path.resolve(dirname, "artifacts/admin"),
           environment: "jsdom",
           globals: true,
@@ -67,8 +67,8 @@ export default defineConfig({
         },
       },
       {
-        name: "api-server",
         test: {
+          name: "api-server",
           root: path.resolve(dirname, "artifacts/api-server"),
           environment: "node",
           include: ["src/**/*.test.ts"],
@@ -77,8 +77,8 @@ export default defineConfig({
         },
       },
       {
-        name: "logging",
         test: {
+          name: "logging",
           root: path.resolve(dirname, "lib/logging"),
           environment: "node",
           include: ["src/**/*.test.ts"],
@@ -87,8 +87,8 @@ export default defineConfig({
         },
       },
       {
-        name: "validation",
         test: {
+          name: "validation",
           root: path.resolve(dirname, "lib/validation"),
           environment: "node",
           include: ["src/**/*.test.ts"],
@@ -97,8 +97,8 @@ export default defineConfig({
         },
       },
       {
-        name: "db",
         test: {
+          name: "db",
           root: path.resolve(dirname, "lib/db"),
           environment: "node",
           include: ["src/**/*.test.ts"],
@@ -107,8 +107,8 @@ export default defineConfig({
         },
       },
       {
-        name: "scripts",
         test: {
+          name: "scripts",
           root: path.resolve(dirname, "scripts"),
           environment: "node",
           include: ["**/*.test.mjs", "src/**/*.test.ts"],
