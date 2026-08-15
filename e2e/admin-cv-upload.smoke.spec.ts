@@ -79,7 +79,7 @@ test.describe("Admin CV upload — critical-path smoke (Browser → API → Supa
     expect(res.status()).toBe(401);
   });
 
-  test("Admin UI: /cv-manager mounts without crashing (Loading, sign-in, or form are all acceptable states)", async ({ page }) => {
+  test("Admin UI: /cv mounts without crashing (Loading, sign-in, or form are all acceptable states)", async ({ page }) => {
     // The mount states are auth-dependent: with a real session the form
     // renders, and with the CI stub the app lands on Clerk's sign-in — but
     // only when Clerk's frontend API is reachable from the runner. In a
@@ -92,7 +92,7 @@ test.describe("Admin CV upload — critical-path smoke (Browser → API → Supa
     });
     page.on("pageerror", (err) => consoleErrors.push(`pageerror: ${err.message}`));
 
-    const response = await page.goto("/cv_manager", { waitUntil: "domcontentloaded" });
+    const response = await page.goto("/cv", { waitUntil: "domcontentloaded" });
     expect(response, "navigation must produce a response").not.toBeNull();
     expect(response!.status()).toBeLessThan(500);
 
