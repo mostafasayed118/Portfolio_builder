@@ -7,7 +7,6 @@ import { CertCard } from "./CertCard";
 import CertFilters, { getFilters } from "./CertFilters";
 import CertStats from "./CertStats";
 import { CERTIFICATIONS, type Certificate } from "@/data/portfolio";
-import { useReveal } from "@/hooks/use-reveal";
 import { useCertifications } from "@/hooks/use-portfolio-data";
 
 const VALID_CATEGORIES = new Set([
@@ -63,7 +62,6 @@ function CertificationsSkeleton() {
 export default function CertificationsSection() {
   const { t, lang } = useLanguage();
   const [active, setActive] = useState("all");
-  const { ref } = useReveal();
   const { data: certsData, isLoading } = useCertifications();
   const FILTERS = getFilters(t);
 
@@ -121,7 +119,6 @@ export default function CertificationsSection() {
   return (
     <section
       id="certifications"
-      ref={ref}
       className="py-24 px-6"
     >
       <div className="max-w-5xl mx-auto">
@@ -159,7 +156,7 @@ export default function CertificationsSection() {
             className="absolute start-4 top-0 bottom-0 w-px bg-gradient-to-b from-primary/40 via-primary/20 to-transparent md:hidden"
             aria-hidden="true"
           />
-          <div className="md:grid md:grid-cols-2 md:gap-x-12 md:gap-y-4 section-reveal">
+          <div className="md:grid md:grid-cols-2 md:gap-x-12 md:gap-y-4">
             {sortedGroups.map(([monthKey, certs]) => (
               <div key={monthKey} className="mb-4">
                 <div className="flex items-center gap-2 mb-3 md:ms-0 ms-12">
@@ -171,8 +168,8 @@ export default function CertificationsSection() {
                     {certs.length} cert{certs.length !== 1 ? "s" : ""}
                   </span>
                 </div>
-                {certs.map((cert, i) => (
-                  <CertCard key={cert.id} cert={cert} index={i} t={t} />
+                {certs.map((cert) => (
+                  <CertCard key={cert.id} cert={cert} t={t} />
                 ))}
               </div>
             ))}
