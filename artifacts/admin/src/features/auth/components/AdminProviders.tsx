@@ -3,11 +3,9 @@ import { type ReactNode } from "react";
 import ClerkAuthBridge from "./ClerkAuthBridge";
 import { ClerkConfigCheck } from "./ClerkConfigCheck";
 import { BUNDLE_VERSION } from "./constants";
+import { authLogger } from "./auth-logger";
 
-if (import.meta.env.DEV) {
-  // eslint-disable-next-line no-console
-  console.log(`[auth-guard] BUNDLE_VERSION=${BUNDLE_VERSION} loaded at ${new Date().toISOString()}`);
-}
+authLogger.logInfo(`BUNDLE_VERSION=${BUNDLE_VERSION} loaded at ${new Date().toISOString()}`);
 
 const clerkPublishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string | undefined;
 
