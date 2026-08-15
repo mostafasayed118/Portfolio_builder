@@ -58,6 +58,9 @@ testsprite_tests/.env
 
 .vercel
 
+# Turbo build cache
+.turbo
+
 # Local scratch / tooling artifacts
 .freebuff/
 section-check.tmp.mjs
