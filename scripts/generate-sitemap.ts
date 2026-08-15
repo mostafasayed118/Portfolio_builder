@@ -17,7 +17,7 @@ const LOG_CTX = "generate-sitemap";
  */
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const BASE_URL = process.env.SITE_URL ?? "https://mustafasayed.replit.app";
+const BASE_URL = process.env.SITE_URL ?? "https://mustafa-sayed-portfolio.vercel.app";
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 

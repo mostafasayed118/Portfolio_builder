@@ -142,7 +142,7 @@ export default function ProjectDetail({ slug }: ProjectDetailProps) {
       <SEO
         title={project.title}
         description={project.shortDescription}
-        url={`${import.meta.env.VITE_SITE_URL ?? "https://mustafasayed.replit.app"}/projects/${project.slug}`}
+        url={`${import.meta.env.VITE_SITE_URL ?? "https://mustafa-sayed-portfolio.vercel.app"}/projects/${project.slug}`}
         type="article"
         publishedTime={project.completedAt}
         tags={project.techStack}
