@@ -127,13 +127,24 @@ async function tryMintedClerkSession(context: BrowserContext): Promise<boolean> 
     ]);
 
     // Phase 3 — reload into the protected route and require it to STAY there
-    // (a real assertion, not just matching the initial URL).
+    // (a real assertion, not just matching the initial URL). The URL check
+    // alone is NOT enough: a misconfigured admin app (missing
+    // VITE_CLERK_PUBLISHABLE_KEY) renders a "Clerk Setup Required" screen in
+    // place without redirecting — which would pass the URL check while the
+    // session never authenticated. Require the authenticated shell to render.
     await page.goto(`${BASE_URL}/overview`, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(2_000);
     await page.waitForURL(/\/overview/, { timeout: 20_000 });
     if (new URL(page.url()).pathname.includes("/sign-in")) {
       throw new Error("minted session bounced back to /sign-in");
     }
+    if ((await page.getByText("Clerk Setup Required").count()) > 0) {
+      throw new Error("admin app is not configured (Clerk Setup Required)");
+    }
+    await page.locator("aside, nav[aria-label*='navigation' i]").first().waitFor({
+      state: "visible",
+      timeout: 10_000,
+    });
     await page.close();
     return true;
   } catch (err) {

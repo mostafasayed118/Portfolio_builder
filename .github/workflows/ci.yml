@@ -289,6 +289,13 @@ jobs:
       # skill tags) never render.
       VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
       VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      # The admin SPA needs its Clerk config to hydrate. Without the
+      # publishable key it renders a "Clerk Setup Required" screen and every
+      # authenticated admin test fails. These are non-secret (the publishable
+      # key ships in the browser bundle); stored as Actions variables.
+      VITE_CLERK_PUBLISHABLE_KEY: ${{ vars.VITE_CLERK_PUBLISHABLE_KEY }}
+      VITE_CLERK_ISSUER: ${{ vars.VITE_CLERK_ISSUER }}
+      VITE_CLERK_JWT_TEMPLATE: ${{ vars.VITE_CLERK_JWT_TEMPLATE }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
