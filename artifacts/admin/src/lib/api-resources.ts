@@ -15,7 +15,7 @@ import type {
   TypographySettings, SeoSettings, SectionSetting, SiteSettings,
   User, BlogPost,
 } from "@workspace/supabase/types";
-import { request, type CvSettings } from "./api-client";
+import { request, type CvSettings } from "./request-core";
 
 function userIdParam(userId?: string): string {
   return userId ? `?userId=${encodeURIComponent(userId)}` : "";
