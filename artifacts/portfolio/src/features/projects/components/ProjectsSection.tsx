@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useLanguage } from "@/lib/language";
 import { FolderKanban } from "lucide-react";
-import { useReveal } from "@/hooks/use-reveal";
 import { useProjects, mapDbProject, PROJECTS } from "@/features/projects/hooks/useProjects";
 import ProjectCard from "@/features/projects/components/ProjectCard";
 import { ProjectsSkeleton } from "@/features/projects/components/ProjectsSkeleton";
@@ -10,7 +9,6 @@ import EmptyState from "@/components/EmptyState";
 
 export default function ProjectsSection() {
   const [active, setActive] = useState("all");
-  const { ref, revealed } = useReveal();
   const { t } = useLanguage();
   const { data: projectsData, isLoading } = useProjects();
 
@@ -32,7 +30,7 @@ export default function ProjectsSection() {
   const filtered = active === "all" ? allProjects : allProjects.filter((p) => p.category === active);
 
   return (
-    <section id="projects" ref={ref} className="py-24 px-6">
+    <section id="projects" className="py-24 px-6">
       <div className="max-w-5xl mx-auto">
         <SectionHeader
           label={t.projects.title}
@@ -52,7 +50,7 @@ export default function ProjectsSection() {
           <EmptyState icon={FolderKanban} title="No projects found"
             description={active !== "all" ? "Try a different category filter." : "No projects have been added yet."} compact />
         ) : (
-          <div className={`masonry-grid section-reveal ${revealed ? "revealed" : ""}`}>
+          <div className="masonry-grid">
             {filtered.map((project) => <ProjectCard key={project.id} project={project} />)}
           </div>
         )}
