@@ -28,6 +28,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
 });
 
 interface Project { slug: string | null; updated_at: string | null; is_published: boolean | null }
+interface BlogPost { slug: string; updated_at: string | null; is_published: boolean | null }
 
 const { data, error } = await supabase
   .from("projects")
@@ -43,12 +44,28 @@ if (error) {
 
 const projects = (data ?? []) as Project[];
 
+const { data: blogData, error: blogError } = await supabase
+  .from("blog_posts")
+  .select("slug, updated_at, is_published")
+  .eq("is_published", true)
+  .is("deleted_at", null)
+  .order("updated_at", { ascending: false });
+
+if (blogError) {
+  console.error("[sitemap] Blog query failed:", blogError.message);
+  process.exit(1);
+}
+
+const blogPosts = (blogData ?? []) as BlogPost[];
+
 const today = new Date().toISOString().split("T")[0];
 const urls: string[] = [
   `  <url><loc>${BASE_URL}/</loc><lastmod>${today}</lastmod><changefreq>weekly</changefreq><priority>1.0</priority></url>`,
   ...projects
     .filter((p) => p.slug)
     .map((p) => `  <url><loc>${BASE_URL}/projects/${p.slug}</loc><lastmod>${(p.updated_at ?? today).split("T")[0]}</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>`),
+  ...blogPosts
+    .map((post) => `  <url><loc>${BASE_URL}/blog/${post.slug}</loc><lastmod>${(post.updated_at ?? today).split("T")[0]}</lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>`),
 ];
 
 const xml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -59,4 +76,4 @@ ${urls.join("\n")}
 
 const out = resolve(__dirname, "../public/sitemap.xml");
 writeFileSync(out, xml, "utf-8");
-console.log(`[sitemap] Wrote ${projects.length} project URL(s) to ${out}`);
+console.log(`[sitemap] Wrote ${projects.length} project URL(s) and ${blogPosts.length} blog URL(s) to ${out}`);

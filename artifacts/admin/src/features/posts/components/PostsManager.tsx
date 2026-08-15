@@ -51,17 +51,22 @@ export default function PostsManager() {
   const [editing, setEditing] = useState<Partial<BlogPost> & { id?: string }>(BLANK_POST);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "published" | "draft">("all");
   const [deleteTarget, setDeleteTarget] = useState<BlogPost | null>(null);
 
   const filtered = useMemo(() => {
     if (!posts) return [];
     const q = search.trim().toLowerCase();
-    if (!q) return posts;
-    return posts.filter((p) =>
-      p.title.toLowerCase().includes(q) ||
-      p.tags?.some((t) => t.toLowerCase().includes(q)),
-    );
-  }, [posts, search]);
+    return posts.filter((p) => {
+      const matchesSearch = !q
+        || p.title.toLowerCase().includes(q)
+        || Boolean(p.tags?.some((t) => t.toLowerCase().includes(q)));
+      const matchesStatus = statusFilter === "all"
+        || (statusFilter === "published" && p.is_published === true)
+        || (statusFilter === "draft" && p.is_published !== true);
+      return matchesSearch && matchesStatus;
+    });
+  }, [posts, search, statusFilter]);
 
   const openNew = () => {
     setEditing({ ...BLANK_POST });
@@ -188,13 +193,27 @@ export default function PostsManager() {
           </Button>
         </div>
 
-        <div>
+        <div className="flex flex-wrap items-center gap-3">
           <Input
             placeholder="Search posts…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="max-w-sm"
           />
+          <div className="flex items-center gap-1" aria-label="Post status filter">
+            {(["all", "published", "draft"] as const).map((status) => (
+              <Button
+                key={status}
+                type="button"
+                size="sm"
+                variant={statusFilter === status ? "secondary" : "ghost"}
+                onClick={() => setStatusFilter(status)}
+                aria-pressed={statusFilter === status}
+              >
+                {status === "all" ? "All" : status === "published" ? "Published" : "Drafts"}
+              </Button>
+            ))}
+          </div>
         </div>
 
         {filtered.length === 0 ? (

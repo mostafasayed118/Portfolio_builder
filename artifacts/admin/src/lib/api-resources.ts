@@ -133,6 +133,7 @@ export const api = {
       days: number;
       pageViews: Array<{ date: string; count: number }>;
       topProjects: Array<{ slug: string; title: string; views: number }>;
+      topPosts: Array<{ slug: string; title: string; views: number }>;
       cvDownloads: number;
       contactClicks: number;
       totalViews: number;

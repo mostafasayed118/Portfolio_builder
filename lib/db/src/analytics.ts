@@ -32,6 +32,7 @@ export async function fetchEventStats(
 ): Promise<{
   pageViews: Array<{ date: string; count: number }>;
   topProjects: Array<{ slug: string; title: string; views: number }>;
+  topPosts: Array<{ slug: string; title: string; views: number }>;
   cvDownloads: number;
   contactClicks: number;
   totalViews: number;
@@ -41,7 +42,7 @@ export async function fetchEventStats(
 
   const { data: pageViewRows, error: pvError } = await supabase
     .from("analytics_events")
-    .select("created_at")
+    .select("created_at, path")
     .eq("type", "page_view")
     .gte("created_at", since.toISOString())
     .order("created_at", { ascending: true });
@@ -71,6 +72,28 @@ export async function fetchEventStats(
     .slice(0, 10)
     .map((p) => ({ ...p, title: p.slug }));
 
+  const postCounts = new Map<string, number>();
+  for (const row of pageViewRows ?? []) {
+    const match = typeof row.path === "string" ? row.path.match(/^\/blog\/([^/?#]+)/) : null;
+    if (match?.[1]) postCounts.set(match[1], (postCounts.get(match[1]) ?? 0) + 1);
+  }
+  const postSlugs = Array.from(postCounts.keys());
+  let topPosts: Array<{ slug: string; title: string; views: number }> = [];
+  if (postSlugs.length > 0) {
+    const { data: blogPosts, error: blogError } = await supabase
+      .from("blog_posts")
+      .select("slug, title")
+      .in("slug", postSlugs)
+      .eq("is_published", true)
+      .is("deleted_at", null);
+    if (blogError) console.error("[analytics] blog post query failed:", blogError.message);
+    const titles = new Map((blogPosts ?? []).map((post: { slug: string; title: string }) => [post.slug, post.title]));
+    topPosts = postSlugs
+      .map((slug) => ({ slug, title: titles.get(slug) ?? slug, views: postCounts.get(slug) ?? 0 }))
+      .sort((a, b) => b.views - a.views)
+      .slice(0, 10);
+  }
+
   const { count: cvDownloads } = await supabase
     .from("analytics_events")
     .select("id", { count: "exact", head: true })
@@ -92,6 +115,7 @@ export async function fetchEventStats(
   return {
     pageViews,
     topProjects,
+    topPosts,
     cvDownloads: cvDownloads ?? 0,
     contactClicks: contactClicks ?? 0,
     totalViews: totalViews ?? 0,
