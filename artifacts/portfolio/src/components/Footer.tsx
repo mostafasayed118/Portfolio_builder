@@ -53,7 +53,7 @@ export default function Footer() {
         </div>
 
         <p className="text-xs text-muted-foreground flex items-center gap-1">
-          {t.footer.madeWith} <Heart className="h-3 w-3 text-red-400 fill-red-400/30" /> {CONTACT.location}
+          {t.footer.madeWith} <Heart className="h-3 w-3 text-destructive fill-destructive/30" /> {CONTACT.location}
           <span className="hidden sm:inline"> · {new Date().getFullYear()}</span>
         </p>
       </div>

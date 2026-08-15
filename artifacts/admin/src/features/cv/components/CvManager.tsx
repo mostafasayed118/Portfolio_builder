@@ -94,12 +94,12 @@ export default function CvManager() {
         <p className="text-sm text-muted-foreground">Upload your resume PDF. It will be served at <code className="bg-muted px-1 py-0.5 rounded text-xs">/api/v1/cv</code> and linked from the portfolio's Download CV button.</p>
       </div>
       {settings?.objectPath && (
-        <Card className="border-emerald-500/30 bg-emerald-500/5">
+        <Card className="border-success/30 bg-success/5">
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0"><FileText size={20} className="text-emerald-500" /></div>
+              <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center shrink-0"><FileText size={20} className="text-success" /></div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap"><span className="font-medium text-sm truncate">{settings.fileName}</span><Badge variant="default" className="text-xs bg-emerald-600 hover:bg-emerald-600">Live</Badge></div>
+                <div className="flex items-center gap-2 flex-wrap"><span className="font-medium text-sm truncate">{settings.fileName}</span><Badge variant="default" className="text-xs bg-success hover:bg-success/90">Live</Badge></div>
                 <p className="text-xs text-muted-foreground mt-0.5">Last updated {fmt(settings.updatedAt)}</p>
               </div>
               <div className="flex gap-2 shrink-0">

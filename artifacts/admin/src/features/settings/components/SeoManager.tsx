@@ -21,7 +21,7 @@ function CharCounter({ current, max, label }: { current: number; max: number; la
       <span className={cn(
         "text-xs",
         over ? "text-destructive font-semibold" :
-        nearLimit ? "text-amber-600 dark:text-amber-400" :
+        nearLimit ? "text-warning" :
         "text-muted-foreground"
       )}>
         {over
@@ -168,8 +168,8 @@ export default function SeoManager() {
           <CardHeader className="pb-3"><CardTitle className="text-sm">Google Search Preview</CardTitle></CardHeader>
           <CardContent>
             <div className="rounded-lg border bg-background p-4 space-y-1">
-              <div className="text-blue-600 dark:text-blue-400 font-medium text-sm hover:underline cursor-pointer">{form.title || "Page Title"}</div>
-              <div className="text-emerald-700 dark:text-emerald-500 text-xs">{form.canonical_url || "https://your-site.replit.app"}</div>
+              <div className="text-info font-medium text-sm hover:underline cursor-pointer">{form.title || "Page Title"}</div>
+              <div className="text-success text-xs">{form.canonical_url || "https://your-site.replit.app"}</div>
               <div className="text-muted-foreground text-xs leading-relaxed">{form.description || "Page description…"}</div>
             </div>
           </CardContent>

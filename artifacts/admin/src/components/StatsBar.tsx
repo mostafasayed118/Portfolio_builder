@@ -63,32 +63,32 @@ export function StatsBar() {
         label="Unread Messages"
         value={unread.data ?? "–"}
         icon={MessageSquare}
-        color="text-blue-500"
+        color="text-info"
       />
       <StatsCard
         label="Skills"
         value={skills.data?.length ?? "–"}
         icon={Code2}
-        color="text-emerald-500"
+        color="text-success"
       />
       <StatsCard
         label="Projects"
         value={projects.data?.length ?? "–"}
         icon={FolderKanban}
-        color="text-violet-500"
+        color="text-chart-3"
       />
       <StatsCard
         label="Status"
         value="Live"
         icon={TrendingUp}
-        color="text-green-500"
+        color="text-success"
       />
       {showSeedWarning && (
-        <Card className="col-span-full border-amber-500/30 bg-amber-500/5">
+        <Card className="col-span-full border-warning/30 bg-warning/5">
           <CardContent className="pt-4 pb-4 flex items-center gap-3">
-            <AlertCircle className="h-5 w-5 text-amber-500" />
+            <AlertCircle className="h-5 w-5 text-warning" />
             <div className="flex-1">
-              <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
+              <p className="text-sm font-medium text-warning-foreground">
                 No portfolio data found. Click "Import Static Data" to populate content.
               </p>
             </div>

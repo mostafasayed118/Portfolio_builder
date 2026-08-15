@@ -248,7 +248,7 @@ export default function ImageUploader({
                 <X size={14} />
               </button>
               <div className="absolute bottom-1 left-1">
-                <CheckCircle size={14} className="text-emerald-500" />
+                <CheckCircle size={14} className="text-success" />
               </div>
             </div>
           ))}

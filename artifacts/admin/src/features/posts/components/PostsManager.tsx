@@ -205,7 +205,7 @@ export default function PostsManager() {
                   <CardContent className="p-5 space-y-3">
                     <div className="flex items-center gap-2 flex-wrap">
                       {published ? (
-                        <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">Published</Badge>
+                        <Badge variant="outline" className="bg-success/10 text-success border-success/30">Published</Badge>
                       ) : (
                         <Badge variant="outline" className="bg-muted text-muted-foreground">Draft</Badge>
                       )}
