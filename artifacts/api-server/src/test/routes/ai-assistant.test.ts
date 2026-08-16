@@ -4,6 +4,11 @@ import { mockAdminKey } from "../helpers";
 import app from "../../app";
 import { generateContent } from "../../lib/gemini";
 
+const { mockLoggerInfo, mockLoggerWarn } = vi.hoisted(() => ({
+  mockLoggerInfo: vi.fn(),
+  mockLoggerWarn: vi.fn(),
+}));
+
 vi.mock("../../lib/gemini", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../lib/gemini")>();
   return {
@@ -12,11 +17,17 @@ vi.mock("../../lib/gemini", async (importOriginal) => {
   };
 });
 
+vi.mock("../../lib/logger", () => ({
+  logger: { info: mockLoggerInfo, warn: mockLoggerWarn, error: vi.fn(), debug: vi.fn() },
+}));
+
 const mockedGenerateContent = vi.mocked(generateContent);
 
 describe("AI Assistant API", () => {
   beforeEach(() => {
     mockedGenerateContent.mockReset();
+    mockLoggerInfo.mockClear();
+    mockLoggerWarn.mockClear();
   });
 
   describe("POST /api/v1/admin/ai-assistant/generate-description", () => {
@@ -47,9 +58,13 @@ describe("AI Assistant API", () => {
       expect(res.body.success).toBe(true);
       expect(res.body.data.description).toContain("My App is a full-stack web application");
       expect(mockedGenerateContent).toHaveBeenCalledOnce();
+      expect(mockLoggerInfo).toHaveBeenCalledWith(
+        expect.objectContaining({ path: expect.stringContaining("generate-description"), status: 200 }),
+        "ai-assistant request",
+      );
     });
 
-    it("returns 500 when Gemini fails", async () => {
+    it("returns 500 and logs a warning when Gemini fails", async () => {
       mockedGenerateContent.mockRejectedValue(new Error("Gemini API 400"));
       const res = await request(app)
         .post("/api/v1/admin/ai-assistant/generate-description")
@@ -57,6 +72,10 @@ describe("AI Assistant API", () => {
         .send({ techStack: ["react"] });
       expect(res.status).toBe(500);
       expect(res.body.success).toBe(false);
+      expect(mockLoggerWarn).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 500 }),
+        "ai-assistant request",
+      );
     });
   });
 
