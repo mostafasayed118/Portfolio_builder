@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { ChevronRight, X, LogOut, Keyboard } from "lucide-react";
+import { ChevronRight, X, LogOut, Keyboard, Mail } from "lucide-react";
 import { SHORTCUTS_OPENED_EVENT } from "./ShortcutsDialog";
 import { OneTimeHint, type OneTimeHintHandle } from "./OneTimeHint";
 import { isSupabaseConfigured } from "@/lib/supabase";
@@ -13,6 +13,33 @@ import { NAV_ITEMS, NAV_GROUPS } from "@/lib/nav-config";
 interface Props {
   open: boolean;
   onClose: () => void;
+}
+
+/**
+ * One-time nudge making the unread badge discoverable: shown on any page
+ * while unread messages exist, then never again once the user visits the
+ * Messages inbox or dismisses it (shared OneTimeHint pattern, same key the
+ * Sidebar persists when the user lands on /messages).
+ */
+function UnreadInboxHint() {
+  const { data: count, isError } = useUnreadCountQuery();
+  const n = isError ? 0 : (count ?? 0);
+  if (!n) return null;
+  return (
+    <OneTimeHint
+      storageKey="messages-unread-hint-dismissed"
+      dismissLabel="Dismiss unread inbox hint"
+      className="rounded-md border border-sidebar-border bg-sidebar-accent/40 px-3 py-2 text-sidebar-foreground/70"
+    >
+      <span className="flex items-center gap-2">
+        <Mail size={13} className="shrink-0" />
+        <span className="flex-1">
+          You have {n} unread message{n === 1 ? "" : "s"} — check the Messages
+          inbox.
+        </span>
+      </span>
+    </OneTimeHint>
+  );
 }
 
 function UnreadBadge() {
@@ -47,6 +74,18 @@ export default function Sidebar({ open, onClose }: Props) {
     window.addEventListener(SHORTCUTS_OPENED_EVENT, handler);
     return () => window.removeEventListener(SHORTCUTS_OPENED_EVENT, handler);
   }, []);
+
+  // Visiting the Messages inbox serves the unread nudge's purpose — persist
+  // the dismissal so it never returns (the OneTimeHint reads the same key).
+  useEffect(() => {
+    if (location.startsWith(`${base}/messages`)) {
+      try {
+        localStorage.setItem("messages-unread-hint-dismissed", "1");
+      } catch {
+        /* storage unavailable — persist best-effort only */
+      }
+    }
+  }, [location, base]);
 
   const handleMouseEnter = (path: string) => {
     prefetch(path.replace(/^\//, ""));
@@ -131,6 +170,9 @@ export default function Sidebar({ open, onClose }: Props) {
         </nav>
 
         <div className="px-4 py-3 border-t border-sidebar-border shrink-0 space-y-2">
+          {/* The unread nudge points at the badge from anywhere except the
+              inbox itself (where the badge is already in view). */}
+          {!location.startsWith(`${base}/messages`) && <UnreadInboxHint />}
           {location.startsWith(`${base}/messages`) && (
             <OneTimeHint
               ref={shortcutsHintRef}
