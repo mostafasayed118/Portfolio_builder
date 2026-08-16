@@ -14,9 +14,10 @@
  *       the mail.tm mailbox (MAILTM_ADDRESS / MAILTM_PASSWORD). This is the
  *       path CI uses — a genuine browser session, no cookie injection.
  *
- *   (B) MINTED session — fallback when only `CLERK_SECRET_KEY` is set (no
- *       password / mailbox): mints a real session token via the Clerk
- *       Backend API and injects it as the `__session` cookie.
+ *   (B) TESTING TOKEN — fallback when only `CLERK_SECRET_KEY` is set (no
+ *       password / mailbox): signs in through the official @clerk/testing
+ *       flow — a server-side token minted via the Clerk Backend API that
+ *       bypasses verification, injected as the dev-browser testing token.
  *
  *   (C) FALLBACK — when the env vars are missing or Clerk is unreachable,
  *       synthesize a stub storageState (documented, marked `stub`).
@@ -30,7 +31,8 @@
 import { test as setup, type BrowserContext } from "@playwright/test";
 import { mkdirSync, readFileSync, writeFileSync } from "fs";
 import { resolve } from "path";
-import { mintClerkSession, resolveAdminEmail } from "./lib/clerk-session";
+import { clerk } from "@clerk/testing/playwright";
+import { resolveAdminEmail } from "./lib/clerk-session";
 import { ensureSigninUser, completeBrowserSignIn } from "./lib/real-signin";
 
 const AUTH_DIR = resolve(process.cwd(), "playwright/.auth");
@@ -64,7 +66,7 @@ function writeStubStorage(reason: string) {
 }
 
 /**
- * Tag an already-written storageState (real sign-in or minted session)
+ * Tag an already-written storageState (real sign-in or testing-token session)
  * with the __e2e_auth_mode marker so downstream specs can tell a real
  * browser session from the stub. `context.storageState()` snapshots the
  * live browser state, so the marker is merged in afterwards.
@@ -87,51 +89,39 @@ function markStorageMode(mode: "real" | "minted") {
 }
 
 /**
- * Path B: mint a real Clerk session token (no password) and inject it as
- * the __session cookie, then confirm the protected /overview route accepts
- * it. Runs when CLERK_SECRET_KEY is set.
+ * Path B: sign in via @clerk/testing's Testing Token flow (no password).
+ * `clerk.signIn({ emailAddress })` creates a server-side token through the
+ * Backend API that bypasses all verification (email, MFA) and injects the
+ * testing token into the browser, which lets the dev instance accept the
+ * session without the manual dev-browser handshake the old cookie-injection
+ * approach depended on. Runs when CLERK_SECRET_KEY is set.
  */
-async function tryMintedClerkSession(context: BrowserContext): Promise<boolean> {
-  const secretKey = process.env.CLERK_SECRET_KEY;
-  if (!secretKey) return false;
+async function tryClerkTestingSignIn(context: BrowserContext): Promise<boolean> {
+  if (!process.env.CLERK_SECRET_KEY) return false;
   const email = resolveAdminEmail();
-  let session;
+  const page = await context.newPage();
   try {
-    session = await mintClerkSession({ secretKey, email });
-  } catch (err) {
-    console.warn("[auth.setup] minted-session path failed:", (err as Error).message);
-    return false;
-  }
-  try {
-    const page = await context.newPage();
-
-    // Phase 1 — dev-browser handshake. Clerk dev instances only accept a
-    // session token from a browser that already talked to the frontend API
-    // once, so let clerk-js do a real first visit before injecting.
-    const handshake = page
-      .waitForResponse((r) => r.url().includes("/v1/client"), { timeout: 20_000 })
-      .catch(() => null);
+    // First load an unprotected route so clerk-js boots and the testing
+    // token can be injected into this exact browser context.
     await page.goto(`${BASE_URL}/sign-in`, { waitUntil: "domcontentloaded" });
-    await handshake;
     await page.waitForTimeout(1_500);
 
-    // Phase 2 — inject the minted session (what a completed sign-in leaves).
-    await context.addCookies([
-      { name: "__session", value: session.jwt, url: BASE_URL },
-      { name: "__client_uat", value: String(Math.floor(Date.now() / 1000)), url: BASE_URL },
-    ]);
+    const frontendApiUrl = clerkFrontendApi()?.replace(/^https?:\/\//, "");
+    await clerk.signIn({
+      page,
+      emailAddress: email,
+      ...(frontendApiUrl
+        ? { setupClerkTestingTokenOptions: { frontendApiUrl } }
+        : {}),
+    });
 
-    // Phase 3 — reload into the protected route and require it to STAY there
-    // (a real assertion, not just matching the initial URL). The URL check
-    // alone is NOT enough: a misconfigured admin app (missing
-    // VITE_CLERK_PUBLISHABLE_KEY) renders a "Clerk Setup Required" screen in
-    // place without redirecting — which would pass the URL check while the
-    // session never authenticated. Require the authenticated shell to render.
+    // Require the authenticated shell to render (see note below about why
+    // the URL check alone is not enough).
     await page.goto(`${BASE_URL}/overview`, { waitUntil: "domcontentloaded" });
     await page.waitForTimeout(2_000);
     await page.waitForURL(/\/overview/, { timeout: 20_000 });
     if (new URL(page.url()).pathname.includes("/sign-in")) {
-      throw new Error("minted session bounced back to /sign-in");
+      throw new Error("testing-token session bounced back to /sign-in");
     }
     if ((await page.getByText("Clerk Setup Required").count()) > 0) {
       throw new Error("admin app is not configured (Clerk Setup Required)");
@@ -143,7 +133,8 @@ async function tryMintedClerkSession(context: BrowserContext): Promise<boolean> 
     await page.close();
     return true;
   } catch (err) {
-    console.warn("[auth.setup] minted-session cookie injection failed:", (err as Error).message);
+    console.warn("[auth.setup] @clerk/testing sign-in failed:", (err as Error).message);
+    await page.close().catch(() => {});
     return false;
   }
 }
@@ -246,12 +237,12 @@ setup("authenticate admin user", async ({ context, baseURL }) => {
     return;
   }
 
-  // Path B: minted session (CLERK_SECRET_KEY present) — no password needed.
-  const minted = await tryMintedClerkSession(context);
-  if (minted) {
+  // Path B: @clerk/testing token sign-in (CLERK_SECRET_KEY present) — no password needed.
+  const testing = await tryClerkTestingSignIn(context);
+  if (testing) {
     await context.storageState({ path: STORAGE_FILE });
     markStorageMode("minted");
-    console.log(`[auth.setup] wrote minted Clerk session → ${STORAGE_FILE}`);
+    console.log(`[auth.setup] wrote @clerk/testing session → ${STORAGE_FILE}`);
     return;
   }
 
@@ -261,7 +252,7 @@ setup("authenticate admin user", async ({ context, baseURL }) => {
     !process.env.CLERK_TEST_EMAIL || !process.env.CLERK_TEST_PASSWORD;
   const reachable = await clerkIsReachable();
   const reason = [
-    missingSecret ? "missing CLERK_SECRET_KEY (minted-session path unavailable)" : null,
+    missingSecret ? "missing CLERK_SECRET_KEY (testing-token path unavailable)" : null,
     missingCreds ? "missing CLERK_TEST_EMAIL / CLERK_TEST_PASSWORD env vars" : null,
     !reachable ? "Clerk frontend API unreachable from this sandbox" : null,
     !missingCreds && reachable ? "real Clerk sign-in did not complete (2FA / credentials)" : null,
@@ -272,7 +263,7 @@ setup("authenticate admin user", async ({ context, baseURL }) => {
   console.warn(
     `[auth.setup] FALLBACK path engaged (${reason}). ` +
       `A stub storageState was written to ${STORAGE_FILE}. ` +
-      `Set CLERK_SECRET_KEY (minted session) or CLERK_TEST_EMAIL / ` +
+      `Set CLERK_SECRET_KEY (testing-token sign-in) or CLERK_TEST_EMAIL / ` +
       `CLERK_TEST_PASSWORD (real sign-in) in CI for real admin auth.`,
   );
 });
