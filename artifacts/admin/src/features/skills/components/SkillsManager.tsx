@@ -12,6 +12,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { RowActions } from "@/components/RowActions";
 import { FormDialogFooter } from "@/components/FormDialogFooter";
 import { api } from "@/lib/api-client";
+import AiTextButton from "@/features/ai/components/AiTextButton";
 import { useSkillsList } from "@/features/skills/hooks/useSkills";
 import { type SkillRow, BLANK_SKILL, mapToSkillRow } from "@/features/skills/types";
 import { exportToCsv } from "@/lib/export-csv";
@@ -161,10 +162,24 @@ export default function SkillsManager() {
                 <div className="space-y-1.5">
                   <Label className="text-xs">Name</Label>
                   <Input value={editing.name ?? ""} onChange={e => setEditing(x => x ? ({ ...x, name: e.target.value }) : x)} className="h-9" />
+                  <AiTextButton
+                    contentType="skill"
+                    label="✨ Generate name"
+                    text={editing.name ?? ""}
+                    instructions="Recommend a short, professional skill name (1-2 words, capitalized, e.g. 'React', 'TypeScript', 'Figma', 'AWS'). Return only the name, no quotes or commentary."
+                    onResult={(t) => setEditing((x) => (x ? { ...x, name: t } : x))}
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">Category</Label>
                   <Input value={editing.category ?? ""} onChange={e => setEditing(x => x ? ({ ...x, category: e.target.value }) : x)} className="h-9" />
+                  <AiTextButton
+                    contentType="skill"
+                    label="✨ Generate category"
+                    text={editing.category ?? ""}
+                    instructions="Recommend only a short skill category name (e.g. 'Frontend', 'Backend', 'DevOps', 'Design', 'AI/ML'). Return only the category name, no quotes or commentary."
+                    onResult={(t) => setEditing((x) => (x ? { ...x, category: t } : x))}
+                  />
                 </div>
               </div>
               <div className="space-y-2">
