@@ -1,6 +1,9 @@
+import { useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { ChevronRight, X, LogOut } from "lucide-react";
+import { ChevronRight, X, LogOut, Keyboard } from "lucide-react";
+import { SHORTCUTS_OPENED_EVENT } from "./ShortcutsDialog";
+import { OneTimeHint, type OneTimeHintHandle } from "./OneTimeHint";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { useUnreadCountQuery } from "@/lib/use-entity-query";
 import { usePrefetch } from "@/hooks/usePrefetchRoutes";
@@ -32,6 +35,18 @@ export default function Sidebar({ open, onClose }: Props) {
   const base = import.meta.env.BASE_URL.replace(/\/$/, "");
   const { prefetch } = usePrefetch();
   const { signOut } = useAuthUser();
+
+  // One-time "Press ?" nudge for the Messages page's keyboard shortcuts,
+  // shown only while on /messages (the `?` key is page-scoped there). It
+  // dismisses via its ✕ OR automatically once the user opens the shortcuts
+  // modal by any route (ShortcutsHelp dispatches the event) — the shared
+  // OneTimeHint handles the persistence.
+  const shortcutsHintRef = useRef<OneTimeHintHandle>(null);
+  useEffect(() => {
+    const handler = () => shortcutsHintRef.current?.dismiss();
+    window.addEventListener(SHORTCUTS_OPENED_EVENT, handler);
+    return () => window.removeEventListener(SHORTCUTS_OPENED_EVENT, handler);
+  }, []);
 
   const handleMouseEnter = (path: string) => {
     prefetch(path.replace(/^\//, ""));
@@ -116,6 +131,25 @@ export default function Sidebar({ open, onClose }: Props) {
         </nav>
 
         <div className="px-4 py-3 border-t border-sidebar-border shrink-0 space-y-2">
+          {location.startsWith(`${base}/messages`) && (
+            <OneTimeHint
+              ref={shortcutsHintRef}
+              storageKey="messages-shortcuts-hint-dismissed"
+              dismissLabel="Dismiss shortcuts hint"
+              className="rounded-md border border-sidebar-border bg-sidebar-accent/40 px-3 py-2 text-sidebar-foreground/70"
+            >
+              <span className="flex items-center gap-2">
+                <Keyboard size={13} className="shrink-0" />
+                <span className="flex-1">
+                  Press{" "}
+                  <kbd className="rounded border border-border bg-muted px-1 py-0.5 font-mono text-[10px]">
+                    ?
+                  </kbd>
+                  {" "}for keyboard shortcuts
+                </span>
+              </span>
+            </OneTimeHint>
+          )}
           <a
             href={import.meta.env.VITE_PORTFOLIO_URL as string || "/"}
             target="_blank"

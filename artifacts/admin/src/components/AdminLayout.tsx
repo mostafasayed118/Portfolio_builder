@@ -3,6 +3,7 @@ import Sidebar from "./Sidebar";
 import Header from "./Header";
 import UserSwitcher from "./UserSwitcher";
 import CommandPalette from "./CommandPalette";
+import ShortcutsHelp from "./ShortcutsHelp";
 import { useGlobalShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useAuthUser } from "@workspace/auth";
 import { useViewingUser } from "@/lib/viewing-user-context";
@@ -43,6 +44,7 @@ export default function AdminLayout({ children }: Props) {
         Skip to content
       </a>
       <CommandPalette />
+      <ShortcutsHelp />
       <Sidebar open={sidebarOpen} onClose={handleClose} />
       <div className="flex flex-col flex-1 min-w-0">
         <Header onMenuClick={handleMenuClick} />

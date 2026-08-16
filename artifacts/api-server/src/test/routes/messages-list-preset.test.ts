@@ -43,6 +43,10 @@ const chain = {
   or: vi.fn().mockReturnThis(),
   order: vi.fn().mockReturnThis(),
   range: vi.fn().mockResolvedValue({ data: [], count: 0, error: null }),
+  // Serves the bulk-unarchive route in the parity test below (the update
+  // chain is the same object; awaiting it resolves the plain chain, whose
+  // `error` is undefined → success).
+  update: vi.fn().mockReturnThis(),
 } as unknown as {
   select: ReturnType<typeof vi.fn>;
   is: ReturnType<typeof vi.fn>;
@@ -52,6 +56,7 @@ const chain = {
   or: ReturnType<typeof vi.fn>;
   order: ReturnType<typeof vi.fn>;
   range: ReturnType<typeof vi.fn>;
+  update: ReturnType<typeof vi.fn>;
 };
 
 const mockSupabase = {
@@ -139,6 +144,37 @@ describe("GET /api/v1/admin/messages?preset=", () => {
     expect(res.body.errors.preset).toEqual(
       expect.arrayContaining([expect.stringContaining("cannot be combined")]),
     );
+  });
+
+  it("archived view and bulk-unarchive's archived filter share byte-identical predicates", async () => {
+    // The Archived chip pages over exactly the rows bulk-unarchive's filter
+    // restores. Both derive from viewSpec, but the predicate APPLICATION is
+    // duplicated (runCollectionQuery's internal softDelete branch vs
+    // applyViewSpec) — if one side drifts to a different column/operator,
+    // the restore would touch a different set than the list shows. Pin both
+    // calls to each other, byte for byte.
+    const listRes = await request(app)
+      .get("/api/v1/admin/messages?status=archived")
+      .set("x-admin-key", mockAdminKey);
+    expect(listRes.status).toBe(200);
+
+    const restoreRes = await request(app)
+      .post("/api/v1/admin/messages/bulk-unarchive")
+      .set("x-admin-key", mockAdminKey)
+      .send({ filter: { status: "archived" } });
+    expect(restoreRes.status).toBe(200);
+
+    // The exact same predicate, in the same order, from both routes.
+    expect(chain.not.mock.calls).toEqual([
+      ["deleted_at", "is", null],
+      ["deleted_at", "is", null],
+    ]);
+    // Neither route adds a conflicting filter: no `deleted_at IS NULL`
+    // (would AND away the archived set) and no status clause.
+    expect(chain.is).not.toHaveBeenCalledWith("deleted_at", null);
+    expect(chain.eq).not.toHaveBeenCalledWith("status", expect.anything());
+    // And the restore clears exactly the field the view filters on.
+    expect(chain.update).toHaveBeenCalledWith({ deleted_at: null });
   });
 
   it("surfaces a Supabase error as a 500", async () => {
