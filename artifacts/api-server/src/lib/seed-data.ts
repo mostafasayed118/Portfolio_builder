@@ -6,9 +6,9 @@ export const SEED_HERO = {
   name: "Your Name",
   roles: ["Data Engineer", "Python Developer", "Full-Stack Developer", "ETL Specialist"],
   description: "Software & Data Engineer passionate about building scalable web platforms and robust ETL pipelines.",
-  github: "https://github.com/yourusername",
-  linkedin: "https://www.linkedin.com/in/yourusername",
-  email: "admin@example.com",
+  github: "https://github.com/mostafasayed118",
+  linkedin: "https://www.linkedin.com/in/mustafa-sayed11",
+  email: "mustafasayed20002@gmail.com",
 };
 
 export const SEED_ABOUT = {
