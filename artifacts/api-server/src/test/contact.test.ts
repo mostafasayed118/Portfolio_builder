@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
 import app from "../app";
 import { getSupabaseClient } from "../lib/supabase-client";
+import { flagSpamIfNeeded } from "../lib/ai/spam";
 
 // Bypass the express rate limiters for these route-level unit tests — the
 // limiters have their own dedicated test file (middleware/rateLimiter.test.ts).
@@ -16,6 +17,7 @@ vi.mock("../middleware/rateLimiter", () => {
     imageMetadataLimiter: pass,
     imageUploadLimiter: pass,
     apiKeyLimiter: pass,
+    chatLimiter: pass,
   };
 });
 
@@ -25,11 +27,19 @@ vi.mock("../lib/supabase-client", () => ({
   getSupabaseClient: vi.fn(),
 }));
 
+vi.mock("../lib/ai/spam", () => ({
+  flagSpamIfNeeded: vi.fn().mockResolvedValue(undefined),
+}));
+
 /** Build a minimal supabase client whose `.from().insert()` resolves to the given value. */
 function clientWithInsertResult(insertResult: unknown) {
   return {
     from: vi.fn().mockReturnValue({
-      insert: vi.fn().mockResolvedValue(insertResult),
+      insert: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue(insertResult),
+        }),
+      }),
     }),
   } as never;
 }
@@ -40,7 +50,7 @@ describe("POST /api/v1/contact", () => {
     vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-key");
     // Default: insert succeeds.
     vi.mocked(getSupabaseClient).mockReturnValue(
-      clientWithInsertResult({ data: null, error: null }),
+      clientWithInsertResult({ data: { id: "msg-1" }, error: null }),
     );
   });
 
@@ -72,6 +82,20 @@ describe("POST /api/v1/contact", () => {
       .send({ name: "Test User", email: "test@example.com", message: "This is a valid message with enough content" });
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
+  });
+
+  it("triggers AI spam scoring when opt-in is enabled", async () => {
+    vi.stubEnv("AI_SPAM_ENABLED", "true");
+    vi.stubEnv("AI_API_KEY", "test-key");
+    vi.mocked(flagSpamIfNeeded).mockClear();
+
+    const res = await request(app)
+      .post("/api/v1/contact")
+      .send({ name: "Test User", email: "test@example.com", message: "This is a valid message with enough content" });
+    expect(res.status).toBe(200);
+    expect(flagSpamIfNeeded).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "msg-1", email: "test@example.com" }),
+    );
   });
 
   it("returns 429 with a friendly message when the DB per-email spam guard rejects the insert", async () => {

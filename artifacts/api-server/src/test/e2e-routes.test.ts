@@ -118,7 +118,11 @@ describe("Rate limiting", () => {
   it("contact endpoint returns 200 with valid payload (mocked)", async () => {
     // The contact endpoint is public and doesn't require auth
     // It uses rate limiting but since we mock, we just test the route exists
-    mockInsert.mockResolvedValue({ data: { id: "1" }, error: null });
+    mockInsert.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        single: vi.fn().mockResolvedValue({ data: { id: "1" }, error: null }),
+      }),
+    });
     mockMaybeSingle.mockResolvedValue({ data: null, error: null });
 
     const res = await request(app)
