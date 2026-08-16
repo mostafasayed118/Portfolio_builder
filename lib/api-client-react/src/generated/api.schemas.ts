@@ -1449,23 +1449,44 @@ export type GetAnalytics200 = SuccessEnvelope & {
 export type GenerateDescription200 = SuccessEnvelope & {
   data?: {
   description?: string;
+  /**
+     * Number of Gemini API calls before success (1 = no retries)
+     * @minimum 1
+     */
+  attempts?: number;
 };
 } | ApiError;
 
 export type SuggestCategories200 = SuccessEnvelope & {
   data?: {
   categories?: string[];
+  /**
+     * Number of Gemini API calls before success (1 = no retries)
+     * @minimum 1
+     */
+  attempts?: number;
 };
 } | ApiError;
 
 export type SuggestTags200 = SuccessEnvelope & {
   data?: {
   tags?: string[];
+  /**
+     * Number of Gemini API calls before success (1 = no retries)
+     * @minimum 1
+     */
+  attempts?: number;
 };
 } | ApiError;
 
 export type AnalyzeContent200 = SuccessEnvelope & {
-  data?: AiAnalysis;
+  data?: AiAnalysis & {
+  /**
+     * Number of Gemini API calls before success (1 = no retries)
+     * @minimum 1
+     */
+  attempts?: number;
+};
 } | ApiError;
 
 export type ChatConfig200 = SuccessEnvelope & {

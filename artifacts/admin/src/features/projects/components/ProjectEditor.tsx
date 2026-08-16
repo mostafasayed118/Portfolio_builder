@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Image as ImageIcon, Plus } from "lucide-react";
+import { X, Image as ImageIcon, Plus, Sparkles } from "lucide-react";
 import { Badge, Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, Switch, Textarea, useToast } from "@workspace/ui";
 import ImageUploader from "@/components/ImageUploader";
 import { getSupabase } from "@/lib/supabase";
@@ -23,6 +23,10 @@ export function ProjectEditor({ editing, isNew, saving, onEdit, onSaved }: Proje
   const { toast } = useToast();
   const [techInput, setTechInput] = useState("");
   const [metricInput, setMetricInput] = useState("");
+  const [tagInput, setTagInput] = useState("");
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiSuggestingTags, setAiSuggestingTags] = useState(false);
+  const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
   const [projectImages, setProjectImages] = useState<{ id: string; url: string }[]>([]);
 
   // Load the project's attached gallery images (image_metadata) when editing.
@@ -52,15 +56,68 @@ export function ProjectEditor({ editing, isNew, saving, onEdit, onSaved }: Proje
     return () => { cancelled = true; };
   }, [editing?.id]);
 
-  const addTag = (field: "tech_stack" | "metrics", val: string, setter: (v: string) => void) => {
+  const addTag = (field: "tech_stack" | "metrics" | "tags", val: string, setter: (v: string) => void) => {
     const v = val.trim();
     if (!v || !editing) return;
-    onEdit(e => e ? ({ ...e, [field]: [...(e[field] as string[]), v] }) : e);
+    onEdit(e => e ? ({ ...e, [field]: [...((e[field] as string[] | undefined) ?? []), v] }) : e);
     setter("");
   };
 
-  const removeTag = (field: "tech_stack" | "metrics", val: string) =>
-    onEdit(e => e ? ({ ...e, [field]: (e[field] as string[]).filter(x => x !== val) }) : e);
+  const removeTag = (field: "tech_stack" | "metrics" | "tags", val: string) =>
+    onEdit(e => e ? ({ ...e, [field]: ((e[field] as string[] | undefined) ?? []).filter(x => x !== val) }) : e);
+
+  /** Ask Gemini to draft a description from the current title + tech stack. */
+  const generateDescription = async () => {
+    if (!editing) return;
+    const stack = editing.tech_stack ?? [];
+    if (stack.length === 0) {
+      toast({ title: "Add a tech stack first", variant: "destructive" });
+      return;
+    }
+    setAiGenerating(true);
+    try {
+      const res = await api.ai.generateDescription(stack, editing.title || undefined);
+      if (!res.success) throw new Error(res.message);
+      onEdit(x => x ? ({ ...x, description: res.data?.description ?? "" }) : x);
+      toast({ title: "Description generated" });
+    } catch (err) {
+      logError("Failed to generate description", err, "ProjectEditor");
+      toast({ title: "Generation failed", variant: "destructive" });
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
+  /** Ask Gemini for short lowercase tags for the current stack + category. */
+  const suggestTags = async () => {
+    if (!editing) return;
+    const stack = editing.tech_stack ?? [];
+    if (stack.length === 0) {
+      toast({ title: "Add a tech stack first", variant: "destructive" });
+      return;
+    }
+    setAiSuggestingTags(true);
+    try {
+      const res = await api.ai.suggestTags(stack, editing.category || undefined);
+      if (!res.success) throw new Error(res.message);
+      setTagSuggestions(res.data?.tags ?? []);
+    } catch (err) {
+      logError("Failed to suggest tags", err, "ProjectEditor");
+      toast({ title: "Suggestion failed", variant: "destructive" });
+    } finally {
+      setAiSuggestingTags(false);
+    }
+  };
+
+  /** Append a suggested tag to the project's tags (deduped, case-insensitive). */
+  const applyTagSuggestion = (tag: string) => {
+    onEdit(e => {
+      if (!e) return e;
+      const current = e.tags ?? [];
+      if (current.some(t => t.toLowerCase() === tag.toLowerCase())) return e;
+      return { ...e, tags: [...current, tag] };
+    });
+  };
 
   /** Permanently delete an attached gallery image (storage file + metadata). */
   const deleteProjectImage = async (imageId: string) => {
@@ -93,7 +150,7 @@ export function ProjectEditor({ editing, isNew, saving, onEdit, onSaved }: Proje
   };
 
   return (
-    <Dialog open={!!editing} onOpenChange={o => !o && onEdit(null)}>
+    <Dialog open={!!editing} onOpenChange={o => { if (!o) { onEdit(null); setTagSuggestions([]); } }}>
       <DialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isNew ? "Add Project" : "Edit Project"}</DialogTitle>
@@ -105,7 +162,13 @@ export function ProjectEditor({ editing, isNew, saving, onEdit, onSaved }: Proje
           <div className="space-y-4 py-2">
             <div className="space-y-1.5"><Label className="text-xs">Title</Label>
               <Input value={editing.title} onChange={e => onEdit(x => x ? ({ ...x, title: e.target.value }) : x)} className="h-9" /></div>
-            <div className="space-y-1.5"><Label className="text-xs">Description</Label>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">Description</Label>
+                <Button type="button" size="sm" variant="outline" onClick={generateDescription} disabled={aiGenerating || !editing.tech_stack?.length} className="min-h-[44px] h-7 px-2">
+                  <Sparkles className="h-3.5 w-3.5 mr-1.5" />{aiGenerating ? "Generating…" : "Generate with AI"}
+                </Button>
+              </div>
               <Textarea value={editing.description} onChange={e => onEdit(x => x ? ({ ...x, description: e.target.value }) : x)} rows={3} />
               <div className="pt-1">
                 <AiTextButton
@@ -113,7 +176,8 @@ export function ProjectEditor({ editing, isNew, saving, onEdit, onSaved }: Proje
                   text={editing.description ?? ""}
                   onResult={(t) => onEdit((x) => (x ? { ...x, description: t } : x))}
                 />
-              </div></div>
+              </div>
+            </div>
             <div className="space-y-2">
               <Label className="text-xs flex items-center gap-1.5"><ImageIcon size={12} /> Project Images</Label>
               <ImageUploader
@@ -143,6 +207,30 @@ export function ProjectEditor({ editing, isNew, saving, onEdit, onSaved }: Proje
                 <Input value={techInput} onChange={e => setTechInput(e.target.value)} onKeyDown={e => e.key === "Enter" && addTag("tech_stack", techInput, setTechInput)} placeholder="Add tech…" className="h-8 text-sm" />
                 <Button size="sm" variant="outline" onClick={() => addTag("tech_stack", techInput, setTechInput)} className="min-h-[44px]" aria-label="Add technology"><Plus className="h-4 w-4" /></Button>
               </div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">Tags</Label>
+                <Button type="button" size="sm" variant="outline" onClick={suggestTags} disabled={aiSuggestingTags || !editing.tech_stack?.length} className="min-h-[44px] h-7 px-2">
+                  <Sparkles className="h-3.5 w-3.5 mr-1.5" />{aiSuggestingTags ? "…" : "Suggest tags"}
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {editing.tags?.map(t => <Badge key={t} variant="secondary" className="flex items-center gap-1 pr-1">{t}<button type="button" onClick={() => removeTag("tags", t)} className="relative flex items-center justify-center h-5 w-5 after:absolute after:inset-[-8px] after:content-['']" aria-label={`Remove tag ${t}`}><X className="h-3 w-3" /></button></Badge>)}
+              </div>
+              <div className="flex gap-2">
+                <Input value={tagInput} onChange={e => setTagInput(e.target.value)} onKeyDown={e => e.key === "Enter" && addTag("tags", tagInput, setTagInput)} placeholder="Add tag…" className="h-8 text-sm" />
+                <Button size="sm" variant="outline" onClick={() => addTag("tags", tagInput, setTagInput)} className="min-h-[44px]" aria-label="Add tag"><Plus className="h-4 w-4" /></Button>
+              </div>
+              {tagSuggestions.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1" data-testid="tag-suggestions">
+                  {tagSuggestions.map(t => (
+                    <Badge key={t} variant="outline" className="cursor-pointer" onClick={() => applyTagSuggestion(t)}>
+                      {t}
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="space-y-2"><Label className="text-xs">Metrics (optional)</Label>
               <div className="flex flex-wrap gap-1">
