@@ -10,6 +10,7 @@ import {
   updateRoleSchema,
   contactSubmissionSchema,
   bulkDeleteMessagesSchema,
+  bulkArchiveMessagesSchema,
   aiGenerateDescriptionSchema,
   aiSuggestCategoriesSchema,
   aiSuggestTagsSchema,
@@ -183,6 +184,39 @@ describe("admin schemas", () => {
       expect(
         bulkDeleteMessagesSchema.safeParse({ ids: ["nope"] }).success,
       ).toBe(false);
+    });
+  });
+
+  describe("bulkArchiveMessagesSchema", () => {
+    it("accepts an explicit ids batch", () => {
+      const r = bulkArchiveMessagesSchema.safeParse({
+        ids: ["11111111-1111-1111-1111-111111111111"],
+      });
+      expect(r.success).toBe(true);
+    });
+
+    it("accepts a filter instead of ids (status or preset)", () => {
+      expect(bulkArchiveMessagesSchema.safeParse({ filter: { status: "unread" } }).success).toBe(true);
+      expect(
+        bulkArchiveMessagesSchema.safeParse({ filter: { preset: "needs_reply" } }).success,
+      ).toBe(true);
+    });
+
+    it("rejects ids AND filter together", () => {
+      const r = bulkArchiveMessagesSchema.safeParse({
+        ids: ["11111111-1111-1111-1111-111111111111"],
+        filter: { status: "unread" },
+      });
+      expect(r.success).toBe(false);
+    });
+
+    it("rejects neither ids nor filter", () => {
+      expect(bulkArchiveMessagesSchema.safeParse({}).success).toBe(false);
+    });
+
+    it("rejects empty ids and empty filter", () => {
+      expect(bulkArchiveMessagesSchema.safeParse({ ids: [] }).success).toBe(false);
+      expect(bulkArchiveMessagesSchema.safeParse({ filter: {} }).success).toBe(false);
     });
   });
 

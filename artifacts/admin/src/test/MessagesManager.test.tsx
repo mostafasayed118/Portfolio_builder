@@ -87,6 +87,9 @@ const mockMessages = [
 describe("MessagesViewer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // The one-time shortcut hint persists in localStorage — reset between
+    // tests so each starts from a genuine "first visit".
+    localStorage.clear();
     // The list endpoint applies the server-side `status`/`preset` filter AND
     // pages by limit/offset — the mock stands in for both, so filtered views
     // only return matching rows and the batched fetcher gets a real
@@ -276,7 +279,7 @@ describe("MessagesViewer", () => {
     await userEvent.click(screen.getByRole("button", { name: "Archive selected" }));
 
     await waitFor(() => {
-      expect(mockBulkArchiveMessage).toHaveBeenCalledWith(["1", "2"]);
+      expect(mockBulkArchiveMessage).toHaveBeenCalledWith({ ids: ["1", "2"] });
     });
 
     // Selection clears after archiving.
@@ -358,6 +361,92 @@ describe("MessagesViewer", () => {
     expect(screen.getByText("0 selected")).toBeInTheDocument();
   });
 
+  it("archives the selected messages with the 'e' shortcut", async () => {
+    renderAdmin(<MessagesManager />);
+
+    await screen.findByText("Alice");
+
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select message from Alice" }));
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select message from Bob" }));
+
+    fireEvent.keyDown(document, { key: "e" });
+
+    await waitFor(() => {
+      expect(mockBulkArchiveMessage).toHaveBeenCalledWith({ ids: ["1", "2"] });
+    });
+    // Same effect as the toolbar button: the selection clears after archiving.
+    await waitFor(() => {
+      expect(screen.queryByText("2 selected")).not.toBeInTheDocument();
+    });
+  });
+
+  it("restores the selected archived messages with the 'u' shortcut", async () => {
+    renderAdmin(<MessagesManager />);
+
+    await screen.findByText("Alice");
+
+    await userEvent.click(screen.getByText(/Archived \(1\)/));
+    await screen.findByText("Charlie");
+
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select message from Charlie" }));
+
+    fireEvent.keyDown(document, { key: "u" });
+
+    await waitFor(() => {
+      expect(mockBulkUnarchiveMessage).toHaveBeenCalledWith(["3"]);
+    });
+  });
+
+  it("ignores 'e' in the Archived view and 'u' outside it", async () => {
+    renderAdmin(<MessagesManager />);
+
+    await screen.findByText("Alice");
+
+    // In All view: 'e' archives but 'u' is a no-op.
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select message from Alice" }));
+    fireEvent.keyDown(document, { key: "u" });
+    expect(mockBulkUnarchiveMessage).not.toHaveBeenCalled();
+
+    // In Archived view: 'u' restores but 'e' is a no-op (nothing to archive).
+    await userEvent.click(screen.getByText(/Archived \(1\)/));
+    await screen.findByText("Charlie");
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select message from Charlie" }));
+    fireEvent.keyDown(document, { key: "e" });
+    expect(mockBulkArchiveMessage).not.toHaveBeenCalled();
+  });
+
+  it("opens the keyboard-shortcuts help popover", async () => {
+    renderAdmin(<MessagesManager />);
+
+    await screen.findByText("Alice");
+
+    await userEvent.click(screen.getByRole("button", { name: "Keyboard shortcuts" }));
+
+    // The heading is unique to the popover; the two shortcut labels also
+    // exist as toolbar text/buttons, so assert them as the second occurrence.
+    expect(screen.getByText("Keyboard shortcuts")).toBeInTheDocument();
+    expect(screen.getAllByText("Select all on page").length).toBeGreaterThan(1);
+    expect(screen.getAllByText("Archive selected").length).toBeGreaterThan(1);
+    expect(screen.getByText("Restore selected (Archived)")).toBeInTheDocument();
+  });
+
+  it("gates the E/U shortcuts while a dialog is open", async () => {
+    renderAdmin(<MessagesManager />);
+
+    await screen.findByText("Alice");
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Archive test submissions" }),
+    );
+    await screen.findByRole("alertdialog");
+
+    fireEvent.keyDown(document, { key: "e" });
+    fireEvent.keyDown(document, { key: "u" });
+
+    expect(mockBulkArchiveMessage).not.toHaveBeenCalled();
+    expect(mockBulkUnarchiveMessage).not.toHaveBeenCalled();
+  });
+
   it("select-all on page toggles off when everything is already selected", async () => {
     renderAdmin(<MessagesManager />);
 
@@ -383,7 +472,7 @@ describe("MessagesViewer", () => {
     await userEvent.click(screen.getByRole("button", { name: "Archive selected" }));
 
     await waitFor(() => {
-      expect(mockBulkArchiveMessage).toHaveBeenCalledWith(["1", "2", "3"]);
+      expect(mockBulkArchiveMessage).toHaveBeenCalledWith({ ids: ["1", "2", "3"] });
     });
     // Selection clears after archiving.
     await waitFor(() => {
@@ -489,9 +578,28 @@ describe("MessagesViewer", () => {
     await waitFor(() => {
       expect(mockBulkArchiveMessage).toHaveBeenCalledTimes(1);
     });
-    const ids = mockBulkArchiveMessage.mock.calls[0][0] as string[];
-    expect(ids).toHaveLength(250);
-    expect(ids).toContain("250");
+    const input = mockBulkArchiveMessage.mock.calls[0][0] as { ids?: string[] };
+    expect(input.ids).toHaveLength(250);
+    expect(input.ids).toContain("250");
+  });
+
+  it("archives the whole filtered view via the filter when every matching row is selected", async () => {
+    renderAdmin(<MessagesManager />);
+
+    await screen.findByText("Alice");
+
+    await userEvent.click(screen.getByText(/Unread \(1\)/));
+    await screen.findByText("Alice");
+
+    // Selecting the only matching unread row means the whole view is
+    // selected — the archive must send the server-side filter, not a
+    // one-row id payload, so it scales to thousands of matches.
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select message from Alice" }));
+    await userEvent.click(screen.getByRole("button", { name: "Archive selected" }));
+
+    await waitFor(() => {
+      expect(mockBulkArchiveMessage).toHaveBeenCalledWith({ filter: { status: "unread" } });
+    });
   });
 
   it("hides the select-all-matching action when the page holds every matching row", async () => {
@@ -600,6 +708,46 @@ describe("MessagesViewer", () => {
     await waitFor(() => {
       expect(mockUnarchiveMessage).toHaveBeenCalledWith("3");
     });
+  });
+
+  it("shows the one-time Ctrl+A hint in the empty selection toolbar on first visit", async () => {
+    renderAdmin(<MessagesManager />);
+
+    await screen.findByText("Alice");
+    expect(screen.getByText(/select all on this page/i)).toBeInTheDocument();
+    expect(localStorage.getItem("messages-shortcut-hint-dismissed")).toBeNull();
+  });
+
+  it("hides the hint forever once a selection is made", async () => {
+    const first = renderAdmin(<MessagesManager />);
+    await screen.findByText("Alice");
+
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select message from Alice" }));
+
+    // Gone from the now-populated toolbar, and the dismissal is persisted.
+    expect(screen.queryByText(/select all on this page/i)).not.toBeInTheDocument();
+    expect(localStorage.getItem("messages-shortcut-hint-dismissed")).toBe("1");
+    first.unmount();
+
+    // A fresh visit never shows it again.
+    renderAdmin(<MessagesManager />);
+    await screen.findByText("Alice");
+    expect(screen.queryByText(/select all on this page/i)).not.toBeInTheDocument();
+  });
+
+  it("dismisses the hint via its close button and never shows it again", async () => {
+    const first = renderAdmin(<MessagesManager />);
+    await screen.findByText("Alice");
+
+    await userEvent.click(screen.getByRole("button", { name: "Dismiss shortcut hint" }));
+
+    expect(screen.queryByText(/select all on this page/i)).not.toBeInTheDocument();
+    expect(localStorage.getItem("messages-shortcut-hint-dismissed")).toBe("1");
+    first.unmount();
+
+    renderAdmin(<MessagesManager />);
+    await screen.findByText("Alice");
+    expect(screen.queryByText(/select all on this page/i)).not.toBeInTheDocument();
   });
 
   it("shows empty state when no messages", async () => {

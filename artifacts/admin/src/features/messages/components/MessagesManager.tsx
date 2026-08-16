@@ -1,9 +1,21 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useState, useMemo, useRef, useEffect, useCallback } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@workspace/ui";
+import { useState, useMemo, useRef, useEffect, useCallback, type ReactNode } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@workspace/ui";
 import { useToast } from "@workspace/ui";
 import {
   Mail,
+  X,
+  Keyboard,
 } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { Button, Card, CardContent, Input, Textarea } from "@workspace/ui";
@@ -25,6 +37,14 @@ function formatDate(ts: string): string {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function Kbd({ children }: { children: ReactNode }) {
+  return (
+    <kbd className="rounded border border-border bg-muted px-1 py-0.5 font-mono text-[10px]">
+      {children}
+    </kbd>
+  );
 }
 
 type MessageFilter = "all" | "unread" | "read" | "archived";
@@ -51,6 +71,25 @@ export default function MessagesManager() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showCleanupDialog, setShowCleanupDialog] = useState(false);
   const [showRestoreAllDialog, setShowRestoreAllDialog] = useState(false);
+  // One-time "Press Ctrl/Cmd+A" hint: shown in the empty selection toolbar on
+  // the first visit, then never again once the user makes a selection or
+  // dismisses it explicitly (persisted in localStorage).
+  const [shortcutHintDismissed, setShortcutHintDismissed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("messages-shortcut-hint-dismissed") === "1";
+    } catch {
+      return false; // storage unavailable — the hint may reappear; harmless
+    }
+  });
+
+  const dismissShortcutHint = useCallback(() => {
+    setShortcutHintDismissed(true);
+    try {
+      localStorage.setItem("messages-shortcut-hint-dismissed", "1");
+    } catch {
+      /* storage unavailable — persist best-effort only */
+    }
+  }, []);
 
   // The active chip or preset drives a server-side filter on the collection
   // endpoint: status chips page over exactly those rows (not a client-side
@@ -238,6 +277,12 @@ export default function MessagesManager() {
     setSelectedIds(new Set());
   };
 
+  // Once the user makes ANY selection, the hint has served its purpose —
+  // persist the dismissal so it never returns on future visits.
+  useEffect(() => {
+    if (selectedIds.size > 0 && !shortcutHintDismissed) dismissShortcutHint();
+  }, [selectedIds.size, shortcutHintDismissed, dismissShortcutHint]);
+
   const toggleSelect = (msg: Msg) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -297,17 +342,32 @@ export default function MessagesManager() {
     }
   };
 
-  const handleBulkArchive = async () => {
+  const handleBulkArchive = useCallback(async () => {
     const ids = [...selectedIds];
     if (ids.length === 0) return;
     try {
-      const res = await api.messages.bulkArchive(ids);
+      // When every row matching the active view is selected, archive via the
+      // server-side filter in ONE statement — no giant id payload, so it
+      // scales to thousands of rows. A partial selection sends the ids.
+      const allMatchingSelected = totalMatching > 0 && selectedIds.size >= totalMatching;
+      const viewFilter = allMatchingSelected
+        ? isPreset
+          ? { preset: view as MessagePreset }
+          : view === "unread" || view === "read"
+            ? { status: view }
+            : undefined
+        : undefined;
+      const res = viewFilter
+        ? await api.messages.bulkArchive({ filter: viewFilter })
+        : await api.messages.bulkArchive({ ids });
       if (!res.success) throw new Error(res.message);
       await queryClient.invalidateQueries({ queryKey: ["messages"] });
       await queryClient.invalidateQueries({ queryKey: ["unreadCount"] });
       setSelectedIds(new Set());
       toast({
-        title: `Archived ${ids.length} message${ids.length === 1 ? "" : "s"}`,
+        title: viewFilter
+          ? `Archived all ${totalMatching} matching message${totalMatching === 1 ? "" : "s"}`
+          : `Archived ${ids.length} message${ids.length === 1 ? "" : "s"}`,
       });
     } catch (err) {
       toast({
@@ -316,9 +376,9 @@ export default function MessagesManager() {
         variant: "destructive",
       });
     }
-  };
+  }, [selectedIds, totalMatching, view, isPreset, queryClient, toast]);
 
-  const handleBulkUnarchive = async () => {
+  const handleBulkUnarchive = useCallback(async () => {
     const ids = [...selectedIds];
     if (ids.length === 0) return;
     try {
@@ -337,7 +397,32 @@ export default function MessagesManager() {
         variant: "destructive",
       });
     }
-  };
+  }, [selectedIds, queryClient, toast]);
+
+  // Gmail-style bulk shortcuts: `e` archives the selection, `u` restores it
+  // from the Archived view — mirroring whichever bulk action the toolbar shows
+  // for the active view. Same guards as Ctrl/Cmd+A (ignored in inputs, gated
+  // while a dialog is open); both handlers no-op on an empty selection.
+  const bulkShortcuts = useMemo(
+    () => [
+      {
+        key: "e",
+        handler: () => {
+          if (view !== "archived") handleBulkArchive();
+        },
+        description: "Archive selected",
+      },
+      {
+        key: "u",
+        handler: () => {
+          if (view === "archived") handleBulkUnarchive();
+        },
+        description: "Restore selected",
+      },
+    ],
+    [view, handleBulkArchive, handleBulkUnarchive],
+  );
+  useKeyboardShortcuts(bulkShortcuts, !dialogsOpen);
 
   const handleArchive = async (msg: Msg) => {
     try {
@@ -439,6 +524,35 @@ export default function MessagesManager() {
         >
           Archive test submissions
         </Button>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              size="sm"
+              variant="outline"
+              className="min-h-[44px]"
+              aria-label="Keyboard shortcuts"
+            >
+              <Keyboard size={14} />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-64">
+            <div className="text-sm font-semibold mb-2">Keyboard shortcuts</div>
+            <ul className="space-y-1.5 text-xs text-muted-foreground">
+              <li className="flex items-center justify-between gap-3">
+                <span>Select all on page</span>
+                <Kbd>Ctrl/Cmd+A</Kbd>
+              </li>
+              <li className="flex items-center justify-between gap-3">
+                <span>Archive selected</span>
+                <Kbd>E</Kbd>
+              </li>
+              <li className="flex items-center justify-between gap-3">
+                <span>Restore selected (Archived)</span>
+                <Kbd>U</Kbd>
+              </li>
+            </ul>
+          </PopoverContent>
+        </Popover>
       </div>
 
       {msgs && msgs.length > 0 && (
@@ -457,6 +571,25 @@ export default function MessagesManager() {
           <span className="text-sm font-medium">
             {selectedIds.size} selected
           </span>
+          {selectedIds.size === 0 && !shortcutHintDismissed && (
+            <span
+              className="flex items-center gap-2 text-xs text-muted-foreground"
+              role="status"
+            >
+              <span>
+                Tip: press <Kbd>Ctrl/Cmd</Kbd>+<Kbd>A</Kbd> to select all on
+                this page.
+              </span>
+              <button
+                type="button"
+                aria-label="Dismiss shortcut hint"
+                onClick={dismissShortcutHint}
+                className="rounded p-1 text-muted-foreground/60 hover:text-foreground transition-colors"
+              >
+                <X size={12} />
+              </button>
+            </span>
+          )}
           {canSelectAllMatching && (
             <Button
               size="sm"

@@ -18,6 +18,7 @@ export {
   updateRoleSchema,
   contactSubmissionSchema,
   bulkDeleteMessagesSchema,
+  bulkArchiveMessagesSchema,
   aiGenerateDescriptionSchema,
   aiSuggestCategoriesSchema,
   aiSuggestTagsSchema,
