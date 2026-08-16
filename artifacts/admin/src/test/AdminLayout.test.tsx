@@ -1,13 +1,23 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import AdminLayout from "@/components/AdminLayout";
 
 vi.mock("@/components/Sidebar", () => ({
-  default: ({ open }: { open: boolean }) => <div data-testid="sidebar" data-open={open} />,
+  default: ({ open, collapsed }: { open: boolean; collapsed: boolean }) => (
+    <div data-testid="sidebar" data-open={open} data-collapsed={collapsed} />
+  ),
 }));
 
 vi.mock("@/components/Header", () => ({
-  default: () => <div data-testid="header" />,
+  default: ({ onMenuClick }: { onMenuClick: () => void }) => (
+    <div data-testid="header">
+      <button data-testid="header-toggle" onClick={onMenuClick} />
+    </div>
+  ),
 }));
+
+beforeEach(() => {
+  localStorage.clear();
+});
 
 describe("AdminLayout", () => {
   it("renders sidebar and header", () => {
@@ -24,5 +34,22 @@ describe("AdminLayout", () => {
   it("sidebar starts open", () => {
     render(<AdminLayout><div /></AdminLayout>);
     expect(screen.getByTestId("sidebar")).toHaveAttribute("data-open", "true");
+  });
+
+  it("toggles the desktop sidebar between expanded and collapsed states", () => {
+    render(<AdminLayout><div /></AdminLayout>);
+    const sidebar = screen.getByTestId("sidebar");
+
+    expect(sidebar).toHaveAttribute("data-collapsed", "false");
+    fireEvent.click(screen.getByTestId("header-toggle"));
+    expect(sidebar).toHaveAttribute("data-collapsed", "true");
+  });
+
+  it("restores the persisted desktop sidebar state", () => {
+    localStorage.setItem("admin-sidebar-collapsed", "1");
+
+    render(<AdminLayout><div /></AdminLayout>);
+
+    expect(screen.getByTestId("sidebar")).toHaveAttribute("data-collapsed", "true");
   });
 });

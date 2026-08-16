@@ -12,6 +12,7 @@ import { NAV_ITEMS, NAV_GROUPS } from "@/lib/nav-config";
 
 interface Props {
   open: boolean;
+  collapsed?: boolean;
   onClose: () => void;
 }
 
@@ -42,7 +43,7 @@ function UnreadInboxHint() {
   );
 }
 
-function UnreadBadge() {
+function UnreadBadge({ collapsed }: { collapsed: boolean }) {
   // Single canonical source for the unread badge: the same API-backed query
   // StatsBar uses (GET /api/v1/admin/messages/unread-count), which counts
   // only status='unread' rows. Keyed by viewingUserId so the badge follows
@@ -51,13 +52,18 @@ function UnreadBadge() {
   const n = isError ? 0 : (count ?? 0);
   if (!n) return null;
   return (
-    <span className="ml-auto min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center px-1 leading-none">
+    <span
+      className={cn(
+        "min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center px-1 leading-none",
+        collapsed ? "absolute top-1 right-1" : "ml-auto",
+      )}
+    >
       {n > 99 ? "99+" : n}
     </span>
   );
 }
 
-export default function Sidebar({ open, onClose }: Props) {
+export default function Sidebar({ open, collapsed = false, onClose }: Props) {
   const [location] = useLocation();
   const base = import.meta.env.BASE_URL.replace(/\/$/, "");
   const { prefetch } = usePrefetch();
@@ -106,17 +112,28 @@ export default function Sidebar({ open, onClose }: Props) {
       )}
       <aside
         className={cn(
-          "fixed lg:static z-30 inset-y-0 left-0 flex flex-col w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border transition-transform duration-200",
+          "fixed lg:static z-30 inset-y-0 left-0 flex flex-col w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border transition-[width,transform] duration-200",
+          collapsed && "lg:w-16",
           open ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
           !open && "lg:w-0 lg:overflow-hidden"
         )}
       >
-        <div className="flex items-center justify-between h-16 px-5 border-b border-sidebar-border shrink-0">
+        <div
+          className={cn(
+            "flex items-center justify-between h-16 px-5 border-b border-sidebar-border shrink-0",
+            collapsed && "lg:px-3 lg:justify-center",
+          )}
+        >
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-md bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground font-bold text-sm">
               MS
             </div>
-            <span className="font-semibold text-sm tracking-wide text-sidebar-foreground">
+            <span
+              className={cn(
+                "font-semibold text-sm tracking-wide text-sidebar-foreground",
+                collapsed && "lg:sr-only",
+              )}
+            >
               Portfolio CMS
             </span>
           </div>
@@ -135,7 +152,12 @@ export default function Sidebar({ open, onClose }: Props) {
             if (!items.length) return null;
             return (
               <div key={group}>
-                <p className="px-2 mb-1 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
+                <p
+                  className={cn(
+                    "px-2 mb-1 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40",
+                    collapsed && "lg:sr-only",
+                  )}
+                >
                   {group}
                 </p>
                 <ul className="space-y-0.5">
@@ -146,18 +168,23 @@ export default function Sidebar({ open, onClose }: Props) {
                         aria-current={isActive(path) ? "page" : undefined}
                         data-preload="true"
                         onMouseEnter={() => handleMouseEnter(path)}
+                        title={label}
                         className={cn(
-                          "flex items-center gap-2.5 px-3 py-2.5 min-h-[44px] rounded-md text-sm font-medium transition-colors group",
+                          "relative flex items-center gap-2.5 px-3 py-2.5 min-h-[44px] rounded-md text-sm font-medium transition-colors group",
+                          collapsed && "lg:justify-center lg:px-2",
+
                           isActive(path)
                             ? "bg-sidebar-primary text-sidebar-primary-foreground border-s-[3px] border-sidebar-primary-foreground/30"
                             : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground border-s-[3px] border-transparent"
                         )}
                       >
                         <Icon size={15} className="shrink-0" />
-                        <span className="flex-1">{label}</span>
+                        <span className={cn("flex-1", collapsed && "lg:sr-only")}>
+                          {label}
+                        </span>
                         {path === "/messages" && isSupabaseConfigured ? (
-                          <UnreadBadge />
-                        ) : isActive(path) ? (
+                          <UnreadBadge collapsed={collapsed} />
+                        ) : isActive(path) && !collapsed ? (
                           <ChevronRight size={12} className="opacity-60" />
                         ) : null}
                       </Link>
@@ -172,13 +199,20 @@ export default function Sidebar({ open, onClose }: Props) {
         <div className="px-4 py-3 border-t border-sidebar-border shrink-0 space-y-2">
           {/* The unread nudge points at the badge from anywhere except the
               inbox itself (where the badge is already in view). */}
-          {!location.startsWith(`${base}/messages`) && <UnreadInboxHint />}
+          {!location.startsWith(`${base}/messages`) && (
+            <div className={collapsed ? "lg:hidden" : undefined}>
+              <UnreadInboxHint />
+            </div>
+          )}
           {location.startsWith(`${base}/messages`) && (
             <OneTimeHint
               ref={shortcutsHintRef}
               storageKey="messages-shortcuts-hint-dismissed"
               dismissLabel="Dismiss shortcuts hint"
-              className="rounded-md border border-sidebar-border bg-sidebar-accent/40 px-3 py-2 text-sidebar-foreground/70"
+              className={cn(
+                "rounded-md border border-sidebar-border bg-sidebar-accent/40 px-3 py-2 text-sidebar-foreground/70",
+                collapsed && "lg:hidden",
+              )}
             >
               <span className="flex items-center gap-2">
                 <Keyboard size={13} className="shrink-0" />
@@ -196,17 +230,29 @@ export default function Sidebar({ open, onClose }: Props) {
             href={import.meta.env.VITE_PORTFOLIO_URL as string || "/"}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 text-xs text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors"
+            title="View Live Portfolio"
+            aria-label="View Live Portfolio"
+            className={cn(
+              "flex items-center gap-2 text-xs text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors",
+              collapsed && "lg:justify-center",
+            )}
           >
             <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
-            View Live Portfolio
+            <span className={collapsed ? "lg:sr-only" : undefined}>
+              View Live Portfolio
+            </span>
           </a>
           <button
             onClick={() => signOut()}
-            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent rounded-md transition-colors"
+            title="Logout"
+            aria-label="Logout"
+            className={cn(
+              "flex items-center gap-2 w-full px-3 py-2 text-sm text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent rounded-md transition-colors",
+              collapsed && "lg:justify-center",
+            )}
           >
             <LogOut size={15} />
-            Logout
+            <span className={collapsed ? "lg:sr-only" : undefined}>Logout</span>
           </button>
         </div>
       </aside>
