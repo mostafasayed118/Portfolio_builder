@@ -185,13 +185,13 @@ export const bulkDeleteMessagesSchema = z.object({
 });
 
 /**
- * Body for bulk-archive: exactly one of an explicit `ids` batch or a `filter`
- * describing the view to archive (status/preset — the same server-side
- * predicates the list endpoint applies). A filter-based archive touches every
- * matching row in ONE statement, so "archive all matching" scales past any
- * id-list payload.
+ * Body for bulk archive/unarchive: exactly one of an explicit `ids` batch or
+ * a `filter` describing the view to act on (status/preset — the same
+ * server-side predicates the list endpoint applies). A filter-based action
+ * touches every matching row in ONE statement, so "archive/restore all
+ * matching" scales past any id-list payload.
  */
-export const bulkArchiveMessagesSchema = z
+export const bulkActionMessagesSchema = z
   .object({
     ids: z.array(z.string().uuid()).min(1, "At least one ID required").optional(),
     filter: z
@@ -206,6 +206,12 @@ export const bulkArchiveMessagesSchema = z
     (b) => (b.ids?.length ?? 0) > 0 || !!b.filter?.status || !!b.filter?.preset,
     "Provide at least one id or a status/preset filter",
   );
+
+/** Bulk-archive accepts `{ ids }` or `{ filter }` (see `bulkActionMessagesSchema`). */
+export const bulkArchiveMessagesSchema = bulkActionMessagesSchema;
+
+/** Bulk-unarchive accepts `{ ids }` or `{ filter }` (see `bulkActionMessagesSchema`). */
+export const bulkUnarchiveMessagesSchema = bulkActionMessagesSchema;
 
 export const postSchema = z.object({
   title: z.string().trim().min(1, "Title is required").max(180, "Title must be under 180 characters"),

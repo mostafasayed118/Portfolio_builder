@@ -1259,13 +1259,15 @@ paths:
     post:
       operationId: bulkUnarchiveMessages
       tags: [admin.messages]
-      summary: Bulk-unarchive messages (restore to inbox)
+      summary: >-
+        Bulk-unarchive messages (restore to inbox) — by explicit id list or
+        by the active view filter, in one server-side statement
       security: [{ adminAuth: [] }]
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/BulkDeleteInput" }
+            schema: { $ref: "#/components/schemas/BulkUnarchiveInput" }
       responses:
         "200":
           description: Restored
@@ -2980,6 +2982,23 @@ components:
         filter:
           type: object
           description: The view to archive, mirroring the list endpoint's `status` / `preset`.
+          properties:
+            status: { type: string, enum: [unread, read, archived] }
+            preset:
+              type: string
+              enum: [unread_today, unread_or_archived, needs_reply]
+
+    BulkUnarchiveInput:
+      type: object
+      description: >-
+        Provide exactly one of `ids` (restore a specific batch) or `filter`
+        (restore every row matching the view — the same server-side status /
+        preset predicates the list endpoint applies, in one statement).
+      properties:
+        ids: { type: array, items: { type: string } }
+        filter:
+          type: object
+          description: The view to restore, mirroring the list endpoint's `status` / `preset`.
           properties:
             status: { type: string, enum: [unread, read, archived] }
             preset:

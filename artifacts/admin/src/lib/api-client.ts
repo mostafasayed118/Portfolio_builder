@@ -177,7 +177,13 @@ export const api = {
      * payload (the contract: exactly one of `ids` / `filter`).
      */
     bulkArchive: (opts: Parameters<typeof bulkArchiveMessages>[0]) => bulkArchiveMessages(opts),
-    bulkUnarchive: (ids: string[]) => bulkUnarchiveMessages({ ids }),
+    /**
+     * Restore by explicit id list or by the active view filter — the mirror
+     * of bulkArchive. When every row in the Archived view is selected, pass
+     * `{ filter }` so the whole set is restored server-side in one statement
+     * (the contract: exactly one of `ids` / `filter`).
+     */
+    bulkUnarchive: (opts: Parameters<typeof bulkUnarchiveMessages>[0]) => bulkUnarchiveMessages(opts),
     archiveTestSubmissions: () => archiveTestSubmissions(),
     restoreAllArchived: () => restoreAllArchivedMessages(),
     reply: (id: string, reply: string) => replyMessage(id, { reply }),

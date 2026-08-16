@@ -4,7 +4,11 @@ import { doubleCsrfProtection } from "../../middleware/csrf";
 import type { AuthenticatedRequest } from "../../middleware/adminAuth";
 import { validateQueryUserId, validateParamId } from "../../middleware/validateUuid";
 import type { Response } from "express";
-import { bulkDeleteMessagesSchema, bulkArchiveMessagesSchema } from "@workspace/api-zod";
+import {
+  bulkDeleteMessagesSchema,
+  bulkArchiveMessagesSchema,
+  bulkUnarchiveMessagesSchema,
+} from "@workspace/api-zod";
 import type { MsgStatus } from "@workspace/supabase/types";
 import { getSupabaseClient } from "../../lib/supabase-client";
 import { ok, badRequest, serverError, notFound } from "../../lib/api-response";
@@ -434,19 +438,33 @@ router.post("/bulk-archive", doubleCsrfProtection, async (req: AuthenticatedRequ
 });
 
 /**
- * Bulk unarchive — clears `deleted_at` back to null for the whole batch,
- * restoring every row to the inbox in one statement. The inverse of
- * bulk-archive, with the same `{ ids }` contract and user scoping.
+ * Bulk unarchive — clears `deleted_at` back to null, restoring every row to
+ * the inbox in one statement. The inverse of bulk-archive, with the same
+ * `{ ids }` OR `{ filter }` contract and user scoping: a filter-based restore
+ * applies the SAME view predicates as the list endpoint (shared viewSpec), so
+ * "restore all matching" in the Archived tab is one statement too.
  */
 router.post("/bulk-unarchive", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
   const supabase = getSupabaseClient();
-  const result = bulkDeleteSchema.safeParse(req.body);
+  const result = bulkUnarchiveMessagesSchema.safeParse(req.body);
   if (!result.success) {
-    return badRequest(res, result.error.flatten().fieldErrors);
+    const flat = result.error.flatten();
+    return badRequest(res, {
+      ...flat.fieldErrors,
+      ...(flat.formErrors.length ? { form: flat.formErrors } : {}),
+    });
   }
-  const { ids } = result.data;
+  const { ids, filter } = result.data;
   const isSuperadmin = req.user?.role === "superadmin";
-  let query = supabase.from("messages").update({ deleted_at: null }).in("id", ids);
+  let query = supabase.from("messages").update({ deleted_at: null });
+  if (ids) {
+    query = query.in("id", ids);
+  } else {
+    // Filter-based restore: the same view predicates as the list endpoint,
+    // so "restore all matching" is ONE server-side statement regardless of
+    // how many rows match — no giant id payload.
+    query = applyViewSpec(query, viewSpec(filter?.status, filter?.preset));
+  }
   if (!isSuperadmin) {
     query = query.eq("user_id", req.user?.id ?? "");
   }
