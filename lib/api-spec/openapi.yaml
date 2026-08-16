@@ -2549,7 +2549,7 @@ components:
 
     Message:
       type: object
-      required: [id, name, email, subject, message, status, reply_email_draft, replied_at, user_id, deleted_at, created_at, updated_at]
+      required: [id, name, email, subject, message, status, reply_email_draft, replied_at, user_id, deleted_at, created_at, updated_at, spam_score, spam_reason, is_spam]
       properties:
         id: { type: string }
         name: { type: string }
@@ -2563,6 +2563,9 @@ components:
         deleted_at: { type: string, nullable: true }
         created_at: { type: string }
         updated_at: { type: string }
+        spam_score: { type: integer, nullable: true }
+        spam_reason: { type: string, nullable: true }
+        is_spam: { type: boolean }
 
     ContactInfo:
       type: object
