@@ -71,6 +71,26 @@ describe("ProjectsManager", () => {
     mockDeleteProject.mockResolvedValue({ success: true });
   });
 
+  afterEach(() => {
+    window.location.hash = "";
+  });
+
+  it("auto-opens the Add Project dialog from the #new deep link", async () => {
+    window.location.hash = "#new";
+    renderWithProviders(<ProjectsManager />);
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Add Project")).toBeInTheDocument();
+  });
+
+  it("auto-opens the editor for the project targeted by the #edit-<id> deep link", async () => {
+    window.location.hash = "#edit-1";
+    renderWithProviders(<ProjectsManager />);
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Edit Project")).toBeInTheDocument();
+  });
+
   it("renders projects table", async () => {
     renderWithProviders(<ProjectsManager />);
 

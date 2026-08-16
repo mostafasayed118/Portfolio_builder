@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, NotebookPen, CalendarCheck2, Image as ImageIcon } from "lucide-react";
 import { api } from "@/lib/api-client";
@@ -72,6 +72,40 @@ export default function PostsManager() {
     setEditing({ ...BLANK_POST });
     setDialogOpen(true);
   };
+
+  // Deep-link support: the command palette's quick actions navigate here
+  // with a URL hash — #new opens the create dialog, #edit-<id> opens the
+  // editor for that post (used by "Edit Latest Draft"). The hash is stripped
+  // after opening so refetches don't re-open the dialog.
+  useEffect(() => {
+    const handleDeepLink = () => {
+      const hash = window.location.hash.replace(/^#/, "");
+      if (hash === "new") {
+        setEditing({ ...BLANK_POST });
+        setDialogOpen(true);
+        clearDeepLinkHash();
+        return;
+      }
+      if (hash.startsWith("edit-")) {
+        const post = posts?.find((p) => p.id === hash.slice("edit-".length));
+        if (post) {
+          setEditing({
+            id: post.id, title: post.title, slug: post.slug, excerpt: post.excerpt ?? "",
+            content: post.content, cover_image_url: post.cover_image_url,
+            tags: post.tags ?? [], is_published: post.is_published ?? false,
+          });
+          setDialogOpen(true);
+          clearDeepLinkHash();
+        }
+      }
+    };
+    const clearDeepLinkHash = () => {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    };
+    handleDeepLink();
+    window.addEventListener("hashchange", handleDeepLink);
+    return () => window.removeEventListener("hashchange", handleDeepLink);
+  }, [posts]);
 
   const openEdit = (post: BlogPost) => {
     setEditing({

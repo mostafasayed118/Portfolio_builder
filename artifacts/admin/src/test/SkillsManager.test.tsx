@@ -64,6 +64,26 @@ describe("SkillsManager", () => {
     mockDeleteSkill.mockResolvedValue({ success: true });
   });
 
+  afterEach(() => {
+    window.location.hash = "";
+  });
+
+  it("auto-opens the Add Skill dialog from the #new deep link", async () => {
+    window.location.hash = "#new";
+    renderWithProviders(<SkillsManager />);
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Add Skill")).toBeInTheDocument();
+  });
+
+  it("auto-opens the editor for the skill targeted by the #edit-<id> deep link", async () => {
+    window.location.hash = "#edit-1";
+    renderWithProviders(<SkillsManager />);
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Edit Skill")).toBeInTheDocument();
+  });
+
   it("renders skills grouped by category", async () => {
     renderWithProviders(<SkillsManager />);
 

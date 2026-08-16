@@ -88,6 +88,26 @@ describe("CertificationsManager", () => {
     mockDeleteCertification.mockResolvedValue({ success: true });
   });
 
+  afterEach(() => {
+    window.location.hash = "";
+  });
+
+  it("auto-opens the Add Certification dialog from the #new deep link", async () => {
+    window.location.hash = "#new";
+    renderWithProviders(<CertificationsManager />);
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Add Certification")).toBeInTheDocument();
+  });
+
+  it("auto-opens the editor for the certification targeted by the #edit-<id> deep link", async () => {
+    window.location.hash = "#edit-2";
+    renderWithProviders(<CertificationsManager />);
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Edit Certification")).toBeInTheDocument();
+  });
+
   it("renders certifications grid", async () => {
     renderWithProviders(<CertificationsManager />);
 

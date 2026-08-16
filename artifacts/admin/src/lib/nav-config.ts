@@ -40,11 +40,18 @@ export const PATH_LABELS: Record<string, string> = Object.fromEntries(
   NAV_ITEMS.map(item => [item.path, item.label])
 );
 
+// Deep-link quick actions navigate to `<path>#new` (open the create dialog)
+// or `<path>#edit-<id>` (open a specific item's editor). See the convention
+// note at the top of components/CommandPalette.tsx; the target entity pages
+// handle those hashes on arrival.
 export const QUICK_ACTIONS = [
   { label: "View Live Portfolio", icon: ExternalLink, action: "view-portfolio", keywords: ["live", "portfolio", "site", "view"] },
   { label: "Add New Project", icon: Plus, action: "add-project", keywords: ["add", "new", "create", "project"] },
   { label: "Add New Skill", icon: Plus, action: "add-skill", keywords: ["add", "new", "create", "skill"] },
   { label: "Add New Experience", icon: Plus, action: "add-experience", keywords: ["add", "new", "create", "experience"] },
+  { label: "Add New Post", icon: Plus, action: "add-post", keywords: ["add", "new", "create", "post", "blog", "article", "write", "editor"] },
+  { label: "Add New Certification", icon: Plus, action: "add-certification", keywords: ["add", "new", "create", "certification", "cert", "credential", "badge", "editor"] },
+  { label: "Edit Latest Draft", icon: NotebookPen, action: "edit-latest-draft", keywords: ["edit", "draft", "unpublished", "latest", "newest", "post", "blog", "continue", "resume"] },
   { label: "Generate Project Description", icon: Sparkles, action: "ai-generate-description", keywords: ["ai", "generate", "description", "write", "draft", "project"] },
   { label: "Suggest Categories for Skill", icon: Sparkles, action: "ai-suggest-categories", keywords: ["ai", "suggest", "categories", "category", "skill"] },
   { label: "Suggest Tags for Project", icon: Sparkles, action: "ai-suggest-tags", keywords: ["ai", "suggest", "tags", "tag", "project"] },

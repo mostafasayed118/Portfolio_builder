@@ -1,5 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from "vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   renderWithProviders,
@@ -57,6 +57,26 @@ describe("ExperienceManager", () => {
     mockList.mockResolvedValue({ success: true, data: mockExpItems });
     mockCreate.mockResolvedValue({ success: true });
     mockDelete.mockResolvedValue({ success: true });
+  });
+
+  afterEach(() => {
+    window.location.hash = "";
+  });
+
+  it("auto-opens the Add Experience dialog from the #new deep link", async () => {
+    window.location.hash = "#new";
+    renderWithProviders(<ExperienceManager />);
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Add Experience")).toBeInTheDocument();
+  });
+
+  it("auto-opens the editor for the experience targeted by the #edit-<id> deep link", async () => {
+    window.location.hash = "#edit-1";
+    renderWithProviders(<ExperienceManager />);
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Edit Experience")).toBeInTheDocument();
   });
 
   it("renders experience list", async () => {
