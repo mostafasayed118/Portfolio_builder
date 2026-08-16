@@ -332,6 +332,9 @@ export interface Message {
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
+  spam_score: number | null;
+  spam_reason: string | null;
+  is_spam: boolean;
 }
 
 export type ContactInfoSocialLinks = { [key: string]: unknown } | null;

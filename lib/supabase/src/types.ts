@@ -886,6 +886,9 @@ export interface Database {
           deleted_at: string | null;
           created_at: string;
           updated_at: string;
+          spam_score: number | null;
+          spam_reason: string | null;
+          is_spam: boolean;
         };
         Insert: {
           id?: string;
@@ -900,6 +903,9 @@ export interface Database {
           deleted_at?: string | null;
           created_at?: string;
           updated_at?: string;
+          spam_score?: number | null;
+          spam_reason?: string | null;
+          is_spam?: boolean;
         };
         Update: {
           id?: string;
@@ -914,6 +920,9 @@ export interface Database {
           deleted_at?: string | null;
           created_at?: string;
           updated_at?: string;
+          spam_score?: number | null;
+          spam_reason?: string | null;
+          is_spam?: boolean;
         };
         Relationships: [];
       };
