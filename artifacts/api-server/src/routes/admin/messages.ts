@@ -26,23 +26,94 @@ const replySchema = z.object({
 /** Valid values for the list endpoint's `?status=` filter. Omitted = default view. */
 const messageStatusSchema = z.enum(["unread", "read", "archived", "all"]).optional();
 
+/** Valid values for the list endpoint's `?preset=` compound views. */
+const messagePresetSchema = z.enum(["unread_today", "unread_or_archived", "needs_reply"]).optional();
+
 /**
- * List messages, optionally filtered server-side by status.
+ * Map a saved preset onto collection-query options.
+ *
+ * - `unread_today` — active unread messages created since UTC midnight.
+ * - `unread_or_archived` — every row that is unread OR archived: visible
+ *   unread messages plus anything soft-deleted, regardless of its status.
+ *   Read-and-visible rows are excluded. Expressed as one `.or()` disjunction
+ *   (soft-delete off, since the clause already covers deleted rows).
+ * - `needs_reply` — read but never replied to (actionable: the sender is
+ *   waiting). `replied_at IS NULL` excludes messages the admin answered.
+ */
+function presetOptions(preset: NonNullable<z.infer<typeof messagePresetSchema>>) {
+  const startOfToday = new Date();
+  startOfToday.setUTCHours(0, 0, 0, 0);
+
+  switch (preset) {
+    case "unread_today":
+      return {
+        softDelete: true,
+        orderBy: "created_at",
+        orderAsc: false,
+        includeOrphans: true,
+        filters: {
+          eq: { status: "unread" },
+          gte: { created_at: startOfToday.toISOString() },
+        },
+      };
+    case "needs_reply":
+      return {
+        softDelete: true,
+        orderBy: "created_at",
+        orderAsc: false,
+        includeOrphans: true,
+        filters: {
+          eq: { status: "read" },
+          isNull: ["replied_at"],
+        },
+      };
+    case "unread_or_archived":
+      return {
+        softDelete: false,
+        orderBy: "created_at",
+        orderAsc: false,
+        includeOrphans: true,
+        or: "status.eq.unread,deleted_at.not.is.null",
+      };
+  }
+}
+
+/**
+ * List messages, optionally filtered server-side by status or a saved preset.
  *
  * `?status=unread` / `?status=read` page over exactly those rows — the client
  * must not filter a single fetched page client-side, because once more than
  * the page size of messages exists the unread set silently truncates.
  * `?status=archived` pages over the soft-deleted set (normally hidden by the
  * soft-delete filter). `all` or omitting the param keeps the default view.
+ * `?preset=` applies one of the compound saved views (mutually exclusive
+ * with `status`).
  */
 router.get("/", validateQueryUserId, async (req: AuthenticatedRequest, res: Response) => {
-  const parsed = messageStatusSchema.safeParse(req.query.status);
-  if (!parsed.success) {
+  const statusResult = messageStatusSchema.safeParse(req.query.status);
+  if (!statusResult.success) {
     return badRequest(res, {
       status: ["status must be one of: unread, read, archived, all"],
     });
   }
-  const status = parsed.data;
+  const presetResult = messagePresetSchema.safeParse(req.query.preset);
+  if (!presetResult.success) {
+    return badRequest(res, {
+      preset: ["preset must be one of: unread_today, unread_or_archived, needs_reply"],
+    });
+  }
+  const status = statusResult.data;
+  const preset = presetResult.data;
+
+  if (status && preset) {
+    return badRequest(res, {
+      preset: ["preset cannot be combined with status"],
+    });
+  }
+
+  if (preset) {
+    return runCollectionQuery(req, res, "messages", presetOptions(preset));
+  }
 
   return runCollectionQuery(req, res, "messages", {
     softDelete: status === "archived" ? "only" : true,

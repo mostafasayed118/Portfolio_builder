@@ -86,11 +86,23 @@ export async function runCollectionQuery(
     userColumn?: string; // default: "user_id"
     targetUserId?: string | null;
     includeOrphans?: boolean; // also return rows with user_id IS NULL
-    /** Extra equality filters applied after soft-delete and user scope, before ordering. */
+    /** Extra filters applied after soft-delete, before user scope and ordering. */
     filters?: {
       /** Applied as `.eq(column, value)` for each entry. */
       eq?: Record<string, string | number | boolean>;
+      /** Applied as `.gte(column, value)` for each entry (e.g. `created_at >= today`). */
+      gte?: Record<string, string>;
+      /** Applied as `.is(column, null)` for each entry (e.g. `replied_at IS NULL`). */
+      isNull?: string[];
     };
+    /**
+     * Raw PostgREST `or()` expression, AND-composed with everything else.
+     * Chaining a second `.or()` yields a second `or=` query parameter, which
+     * PostgREST combines with AND — so a preset disjunction like
+     * `status.eq.unread,deleted_at.not.is.null` correctly ANDs with the user
+     * scope's own `.or()` instead of replacing it.
+     */
+    or?: string;
   } = {},
 ): Promise<Response> {
   const supabase = getSupabaseClient();
@@ -122,6 +134,19 @@ export async function runCollectionQuery(
     for (const [column, value] of Object.entries(options.filters.eq)) {
       query = query.eq(column, value);
     }
+  }
+  if (options.filters?.gte) {
+    for (const [column, value] of Object.entries(options.filters.gte)) {
+      query = query.gte(column, value);
+    }
+  }
+  if (options.filters?.isNull) {
+    for (const column of options.filters.isNull) {
+      query = query.is(column, null);
+    }
+  }
+  if (options.or) {
+    query = query.or(options.or);
   }
 
   if (targetUserId) {

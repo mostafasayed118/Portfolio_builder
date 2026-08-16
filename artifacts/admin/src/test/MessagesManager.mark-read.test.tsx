@@ -33,7 +33,12 @@ vi.mock("@/components/SmartConfirmDialog", () => ({
     <button data-testid="confirm-delete" onClick={onConfirm}>Confirm</button>
   ),
 }));
-vi.mock("@/components/SmartEmptyState", () => ({ default: () => null }));
+vi.mock("@/components/SmartEmptyState", () => ({
+  // MessagesManager imports the NAMED export; a `default`-only stub throws
+  // once the empty state actually renders (e.g. an empty list page).
+  SmartEmptyState: () => null,
+  default: () => null,
+}));
 vi.mock("@workspace/ui", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@workspace/ui")>();
   return { ...actual, useToast: () => ({ toast: mockToast }) };
@@ -49,7 +54,15 @@ const fakeMsgs = [
 describe("MessagesManager — UX-025 regression + a11y + mark-read flow", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockList.mockResolvedValue({ success: true, data: fakeMsgs });
+    // The collection endpoint returns the paginated envelope the batched
+    // fetcher unwraps — a bare array would read as an empty page.
+    mockList.mockResolvedValue({
+      success: true,
+      data: {
+        data: fakeMsgs,
+        pagination: { total: fakeMsgs.length, limit: 200, offset: 0, hasMore: false },
+      },
+    });
     mockMarkRead.mockResolvedValue({ success: true });
     mockMarkAllRead.mockResolvedValue({ success: true, data: { marked: 2 } });
     mockDelete.mockResolvedValue({ success: true });

@@ -142,11 +142,24 @@ export const api = {
      * `status` mirrors the list endpoint's server-side filter — omit or pass
      * `"all"` for the default view; `"unread"`/`"read"`/`"archived"` page
      * over exactly those rows instead of a client-side slice of page one.
+     * `preset` applies one of the saved compound views and is mutually
+     * exclusive with `status`. `limit`/`offset` drive server-side pagination
+     * (the admin fetches every matching row in batches of 200, the server's
+     * MAX_LIMIT, so a view never stops at the default 50-row page).
      */
-    list: (userId?: string, status?: "unread" | "read" | "archived" | "all") =>
+    list: (
+      userId?: string,
+      status?: "unread" | "read" | "archived" | "all",
+      limit?: number,
+      offset?: number,
+      preset?: "unread_today" | "unread_or_archived" | "needs_reply",
+    ) =>
       listMessages({
         ...userIdParam(userId),
         ...(status && status !== "all" ? { status } : {}),
+        ...(preset ? { preset } : {}),
+        ...(limit !== undefined ? { limit } : {}),
+        ...(offset !== undefined ? { offset } : {}),
       }),
     unreadCount: (userId?: string) => unreadMessageCount(userIdParam(userId)),
     markRead: (id: string) => markMessageRead(id),

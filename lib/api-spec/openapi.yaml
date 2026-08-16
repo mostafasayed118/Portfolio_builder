@@ -1010,10 +1010,31 @@ paths:
           description: >-
             Server-side status filter. `unread`/`read` page over exactly those
             rows; `archived` pages over the soft-deleted set (normally hidden).
-            Omit or pass `all` for every visible message.
+            Omit or pass `all` for every visible message. Mutually exclusive
+            with `preset`.
           schema:
             type: string
             enum: [unread, read, archived, all]
+        - name: preset
+          in: query
+          description: >-
+            Saved compound view. `unread_today` — unread messages created
+            since UTC midnight; `unread_or_archived` — every unread or
+            archived row (excludes read, visible messages); `needs_reply` —
+            read but never replied to. Mutually exclusive with `status`.
+          schema:
+            type: string
+            enum: [unread_today, unread_or_archived, needs_reply]
+        - name: limit
+          in: query
+          description: >-
+            Page size (1-200, default 50). The admin fetches every matching row
+            in batches of the maximum to page past the first 50.
+          schema: { type: integer }
+        - name: offset
+          in: query
+          description: Row offset into the filtered set (default 0).
+          schema: { type: integer }
       responses:
         "200":
           description: List of messages

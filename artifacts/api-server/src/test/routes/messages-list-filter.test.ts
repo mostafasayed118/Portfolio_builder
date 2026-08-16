@@ -143,6 +143,18 @@ describe("GET /api/v1/admin/messages?status=", () => {
     );
   });
 
+  it("passes limit/offset through to the paginated range", async () => {
+    const res = await request(app)
+      .get("/api/v1/admin/messages?limit=5&offset=10")
+      .set("x-admin-key", mockAdminKey);
+
+    expect(res.status).toBe(200);
+    // parsePagination clamps limit to [1, 200]; runCollectionQuery maps
+    // limit/offset onto `.range(offset, offset + limit - 1)`. This is the
+    // wiring the admin's batched fetcher depends on to page past 50 rows.
+    expect(chain.range).toHaveBeenCalledWith(10, 14);
+  });
+
   it("surfaces a Supabase error as a 500", async () => {
     chain.range.mockResolvedValue({ data: null, count: null, error: { message: "boom" } });
     const res = await request(app)
