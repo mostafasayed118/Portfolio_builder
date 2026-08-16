@@ -3,12 +3,14 @@ import { Sparkles } from "lucide-react";
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label } from "@workspace/ui";
 import { api } from "@/lib/api-client";
 import { logError } from "@/lib/logger";
+import { RetryNotice } from "./RetryNotice";
 
 export function CategoriesTool() {
   const [skillName, setSkillName] = useState("");
   const [suggesting, setSuggesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
+  const [attempts, setAttempts] = useState<number | undefined>(undefined);
 
   const suggest = async () => {
     const name = skillName.trim();
@@ -19,6 +21,7 @@ export function CategoriesTool() {
       const res = await api.ai.suggestCategories(name);
       if (!res.success) throw new Error(res.message);
       setCategories(res.data?.categories ?? []);
+      setAttempts(res.data?.attempts);
     } catch (err) {
       logError("AI category suggestion failed", err, "CategoriesTool");
       setError(err instanceof Error ? err.message : "Suggestion failed");
@@ -45,8 +48,11 @@ export function CategoriesTool() {
         </Button>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         {categories.length > 0 && (
-          <div className="flex flex-wrap gap-1.5" data-testid="category-results">
-            {categories.map(cat => <Badge key={cat} variant="secondary">{cat}</Badge>)}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-wrap gap-1.5" data-testid="category-results">
+              {categories.map(cat => <Badge key={cat} variant="secondary">{cat}</Badge>)}
+            </div>
+            <RetryNotice attempts={attempts} />
           </div>
         )}
       </CardContent>

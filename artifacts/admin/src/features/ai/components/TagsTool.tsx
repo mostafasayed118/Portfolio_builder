@@ -4,6 +4,7 @@ import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitl
 import { api } from "@/lib/api-client";
 import { logError } from "@/lib/logger";
 import { TagInput } from "./TagInput";
+import { RetryNotice } from "./RetryNotice";
 
 export function TagsTool() {
   const [techStack, setTechStack] = useState<string[]>([]);
@@ -11,6 +12,7 @@ export function TagsTool() {
   const [suggesting, setSuggesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tags, setTags] = useState<string[]>([]);
+  const [attempts, setAttempts] = useState<number | undefined>(undefined);
   const [copied, setCopied] = useState(false);
 
   const suggest = async () => {
@@ -21,6 +23,7 @@ export function TagsTool() {
       const res = await api.ai.suggestTags(techStack, category.trim() || undefined);
       if (!res.success) throw new Error(res.message);
       setTags(res.data?.tags ?? []);
+      setAttempts(res.data?.attempts);
     } catch (err) {
       logError("AI tag suggestion failed", err, "TagsTool");
       setError(err instanceof Error ? err.message : "Suggestion failed");
@@ -64,8 +67,11 @@ export function TagsTool() {
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         {tags.length > 0 && (
           <div className="space-y-2">
-            <div className="flex flex-wrap gap-1.5" data-testid="tag-results">
-              {tags.map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-wrap gap-1.5" data-testid="tag-results">
+                {tags.map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
+              </div>
+              <RetryNotice attempts={attempts} />
             </div>
             <div className="flex justify-end">
               <Button size="sm" variant="outline" onClick={copy} className="min-h-[44px]">

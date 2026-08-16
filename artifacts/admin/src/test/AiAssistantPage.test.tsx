@@ -90,6 +90,31 @@ describe("AiAssistantPage", () => {
     expect(within(results).getByText("Mobile")).toBeInTheDocument();
   });
 
+  it("shows a retry badge when Gemini needed retries and stays quiet on first try", async () => {
+    // First try — no retry notice should render.
+    mockSuggestCategories.mockResolvedValueOnce({
+      success: true,
+      data: { categories: ["Frontend"], attempts: 1 },
+    });
+    renderWithProviders(<AiAssistantPage />);
+    const tool = screen.getByTestId("tool-categories");
+
+    await userEvent.type(within(tool).getByPlaceholderText("e.g. React Native"), "React Native");
+    await userEvent.click(within(tool).getByRole("button", { name: "Suggest categories" }));
+    await within(tool).findByTestId("category-results");
+    expect(within(tool).queryByTestId("retry-notice")).not.toBeInTheDocument();
+
+    // Second run — Gemini needed 3 attempts, so the badge appears.
+    mockSuggestCategories.mockResolvedValueOnce({
+      success: true,
+      data: { categories: ["Frontend", "Mobile"], attempts: 3 },
+    });
+    await userEvent.click(within(tool).getByRole("button", { name: "Suggest categories" }));
+    const notice = await within(tool).findByTestId("retry-notice");
+    expect(notice).toHaveTextContent("retried 2×");
+    expect(notice).toHaveAttribute("title", expect.stringContaining("attempt 3"));
+  });
+
   it("suggests tags from a tech stack with an optional category", async () => {
     mockSuggestTags.mockResolvedValue({
       success: true,

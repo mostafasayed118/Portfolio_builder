@@ -90,12 +90,12 @@ router.post("/generate-description", doubleCsrfProtection, async (req: Authentic
     "Plain text only — no quotes, no markdown.";
 
   try {
-    const text = await generateContent(prompt, { temperature: 0.6 });
+    const { text, attempts } = await generateContent(prompt, { temperature: 0.6 });
     const description = text.replace(/^["'`]+|["'`]+$/g, "").trim();
     if (!description) {
       return serverError(res, "Gemini returned an empty description");
     }
-    return ok(res, { description });
+    return ok(res, { description, attempts });
   } catch (err) {
     return serverError(res, err instanceof Error ? err.message : "Gemini request failed");
   }
@@ -114,13 +114,13 @@ router.post("/suggest-categories", doubleCsrfProtection, async (req: Authenticat
     "Return only the category names, comma-separated.";
 
   try {
-    const text = await generateContent(prompt, { temperature: 0.2 });
+    const { text, attempts } = await generateContent(prompt, { temperature: 0.2 });
     const whitelist = new Set(CATEGORY_WHITELIST);
     const categories = parseListResponse(text, 3).filter((c) => whitelist.has(c));
     if (categories.length === 0) {
       return serverError(res, "Gemini returned no valid categories");
     }
-    return ok(res, { categories });
+    return ok(res, { categories, attempts });
   } catch (err) {
     return serverError(res, err instanceof Error ? err.message : "Gemini request failed");
   }
@@ -138,12 +138,12 @@ router.post("/suggest-tags", doubleCsrfProtection, async (req: AuthenticatedRequ
     "suggest up to 5 short lowercase tags (1-2 words each). Return only the tags, comma-separated.";
 
   try {
-    const text = await generateContent(prompt, { temperature: 0.4 });
+    const { text, attempts } = await generateContent(prompt, { temperature: 0.4 });
     const tags = parseListResponse(text, 5);
     if (tags.length === 0) {
       return serverError(res, "Gemini returned no tags");
     }
-    return ok(res, { tags });
+    return ok(res, { tags, attempts });
   } catch (err) {
     return serverError(res, err instanceof Error ? err.message : "Gemini request failed");
   }
@@ -161,12 +161,12 @@ router.post("/analyze-content", doubleCsrfProtection, async (req: AuthenticatedR
     `{"score": 0-100, "suggestions": ["..."], "strengths": ["..."]}. Content:\n"""\n${content.slice(0, 3000)}\n"""`;
 
   try {
-    const text = await generateContent(prompt, { temperature: 0.2 });
+    const { text, attempts } = await generateContent(prompt, { temperature: 0.2 });
     const analysis = parseContentAnalysis(text);
     if (!analysis) {
       return serverError(res, "Gemini returned an unparseable analysis");
     }
-    return ok(res, analysis);
+    return ok(res, { ...analysis, attempts });
   } catch (err) {
     return serverError(res, err instanceof Error ? err.message : "Gemini request failed");
   }

@@ -47,9 +47,10 @@ describe("AI Assistant API", () => {
     });
 
     it("returns the Gemini description with valid input", async () => {
-      mockedGenerateContent.mockResolvedValue(
-        "My App is a full-stack web application built with React, Node.js, and PostgreSQL.",
-      );
+      mockedGenerateContent.mockResolvedValue({
+        text: "My App is a full-stack web application built with React, Node.js, and PostgreSQL.",
+        attempts: 1,
+      });
       const res = await request(app)
         .post("/api/v1/admin/ai-assistant/generate-description")
         .set("x-admin-key", mockAdminKey)
@@ -57,11 +58,25 @@ describe("AI Assistant API", () => {
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.data.description).toContain("My App is a full-stack web application");
+      expect(res.body.data.attempts).toBe(1);
       expect(mockedGenerateContent).toHaveBeenCalledOnce();
       expect(mockLoggerInfo).toHaveBeenCalledWith(
         expect.objectContaining({ path: expect.stringContaining("generate-description"), status: 200 }),
         "ai-assistant request",
       );
+    });
+
+    it("surfaces the retry attempt count when Gemini needed retries", async () => {
+      mockedGenerateContent.mockResolvedValue({
+        text: "Retried once then succeeded.",
+        attempts: 2,
+      });
+      const res = await request(app)
+        .post("/api/v1/admin/ai-assistant/generate-description")
+        .set("x-admin-key", mockAdminKey)
+        .send({ techStack: ["react"] });
+      expect(res.status).toBe(200);
+      expect(res.body.data.attempts).toBe(2);
     });
 
     it("returns 500 and logs a warning when Gemini fails", async () => {
@@ -96,7 +111,7 @@ describe("AI Assistant API", () => {
     });
 
     it("returns the Gemini categories filtered to the whitelist", async () => {
-      mockedGenerateContent.mockResolvedValue("Frontend, Backend, Database");
+      mockedGenerateContent.mockResolvedValue({ text: "Frontend, Backend, Database", attempts: 1 });
       const res = await request(app)
         .post("/api/v1/admin/ai-assistant/suggest-categories")
         .set("x-admin-key", mockAdminKey)
@@ -104,20 +119,22 @@ describe("AI Assistant API", () => {
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.data.categories).toEqual(["Frontend", "Backend", "Database"]);
+      expect(res.body.data.attempts).toBe(1);
     });
 
     it("drops non-whitelisted categories", async () => {
-      mockedGenerateContent.mockResolvedValue("Frontend, SomethingElse");
+      mockedGenerateContent.mockResolvedValue({ text: "Frontend, SomethingElse", attempts: 2 });
       const res = await request(app)
         .post("/api/v1/admin/ai-assistant/suggest-categories")
         .set("x-admin-key", mockAdminKey)
         .send({ skillName: "React" });
       expect(res.status).toBe(200);
       expect(res.body.data.categories).toEqual(["Frontend"]);
+      expect(res.body.data.attempts).toBe(2);
     });
 
     it("returns 500 when Gemini returns nothing valid", async () => {
-      mockedGenerateContent.mockResolvedValue("No idea");
+      mockedGenerateContent.mockResolvedValue({ text: "No idea", attempts: 1 });
       const res = await request(app)
         .post("/api/v1/admin/ai-assistant/suggest-categories")
         .set("x-admin-key", mockAdminKey)
@@ -135,7 +152,7 @@ describe("AI Assistant API", () => {
     });
 
     it("returns the Gemini tags with valid input", async () => {
-      mockedGenerateContent.mockResolvedValue("react, node, fullstack, webapp");
+      mockedGenerateContent.mockResolvedValue({ text: "react, node, fullstack, webapp", attempts: 3 });
       const res = await request(app)
         .post("/api/v1/admin/ai-assistant/suggest-tags")
         .set("x-admin-key", mockAdminKey)
@@ -143,6 +160,7 @@ describe("AI Assistant API", () => {
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.data.tags).toEqual(["react", "node", "fullstack", "webapp"]);
+      expect(res.body.data.attempts).toBe(3);
     });
 
     it("returns 500 when Gemini fails", async () => {
@@ -180,13 +198,14 @@ describe("AI Assistant API", () => {
     });
 
     it("returns the parsed Gemini analysis with valid input", async () => {
-      mockedGenerateContent.mockResolvedValue(
-        JSON.stringify({
+      mockedGenerateContent.mockResolvedValue({
+        text: JSON.stringify({
           score: 85,
           suggestions: ["Add more detail"],
           strengths: ["Good length"],
         }),
-      );
+        attempts: 1,
+      });
       const res = await request(app)
         .post("/api/v1/admin/ai-assistant/analyze-content")
         .set("x-admin-key", mockAdminKey)
@@ -200,11 +219,12 @@ describe("AI Assistant API", () => {
         score: 85,
         suggestions: ["Add more detail"],
         strengths: ["Good length"],
+        attempts: 1,
       });
     });
 
     it("returns 500 when Gemini output is not parseable JSON", async () => {
-      mockedGenerateContent.mockResolvedValue("Here is my analysis: it is good.");
+      mockedGenerateContent.mockResolvedValue({ text: "Here is my analysis: it is good.", attempts: 2 });
       const res = await request(app)
         .post("/api/v1/admin/ai-assistant/analyze-content")
         .set("x-admin-key", mockAdminKey)

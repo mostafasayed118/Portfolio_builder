@@ -2027,6 +2027,10 @@ paths:
                             type: object
                             properties:
                               description: { type: string }
+                              attempts:
+                                type: integer
+                                minimum: 1
+                                description: Number of Gemini API calls before success (1 = no retries)
                   - $ref: "#/components/schemas/ApiError"
 
   /v1/admin/ai-assistant/suggest-categories:
@@ -2057,6 +2061,10 @@ paths:
                               categories:
                                 type: array
                                 items: { type: string }
+                              attempts:
+                                type: integer
+                                minimum: 1
+                                description: Number of Gemini API calls before success (1 = no retries)
                   - $ref: "#/components/schemas/ApiError"
 
   /v1/admin/ai-assistant/suggest-tags:
@@ -2087,6 +2095,10 @@ paths:
                               tags:
                                 type: array
                                 items: { type: string }
+                              attempts:
+                                type: integer
+                                minimum: 1
+                                description: Number of Gemini API calls before success (1 = no retries)
                   - $ref: "#/components/schemas/ApiError"
 
   /v1/admin/ai-assistant/analyze-content:
@@ -2111,7 +2123,15 @@ paths:
                       - $ref: "#/components/schemas/SuccessEnvelope"
                       - type: object
                         properties:
-                          data: { $ref: "#/components/schemas/AiAnalysis" }
+                          data:
+                            allOf:
+                              - $ref: "#/components/schemas/AiAnalysis"
+                              - type: object
+                                properties:
+                                  attempts:
+                                    type: integer
+                                    minimum: 1
+                                    description: Number of Gemini API calls before success (1 = no retries)
                   - $ref: "#/components/schemas/ApiError"
 
 components:
