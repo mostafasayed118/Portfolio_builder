@@ -198,7 +198,7 @@ export const bulkActionMessagesSchema = z
     ids: z.array(z.string().uuid()).min(1, "At least one ID required").optional(),
     filter: z
       .object({
-        status: z.enum(["unread", "read", "archived"]).optional(),
+        status: z.enum(["unread", "read", "archived", "spam"]).optional(),
         preset: z.enum(["unread_today", "unread_or_archived", "needs_reply"]).optional(),
       })
       .optional(),

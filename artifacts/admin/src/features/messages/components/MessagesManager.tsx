@@ -36,7 +36,7 @@ function formatDate(ts: string): string {
   });
 }
 
-type MessageFilter = "all" | "unread" | "read" | "archived";
+type MessageFilter = "all" | "unread" | "read" | "archived" | "spam";
 
 /** Either a status chip or a saved compound preset. */
 type MessageView = MessageFilter | MessagePreset;
@@ -102,6 +102,7 @@ export default function MessagesManager() {
   // unread, so counting them would under-report the others.
   const readCount = useMemo(() => allMsgs?.filter((m) => !isUnread(m) && !isArchived(m)).length ?? 0, [allMsgs]);
   const archivedCount = useMemo(() => allMsgs?.filter(isArchived).length ?? 0, [allMsgs]);
+  const spamCount = useMemo(() => allMsgs?.filter((m) => m.is_spam).length ?? 0, [allMsgs]);
 
   // Server-side filtering makes a client-side `filtered` memo redundant —
   // `msgs` already is the filtered set, so pagination pages over exactly
@@ -375,7 +376,7 @@ export default function MessagesManager() {
       const viewFilter = allMatchingSelected
         ? isPreset
           ? { preset: view as MessagePreset }
-          : view === "unread" || view === "read"
+          : view === "unread" || view === "read" || view === "spam"
             ? { status: view }
             : undefined
         : undefined;
@@ -689,6 +690,7 @@ export default function MessagesManager() {
         unreadCount={unread ?? 0}
         readCount={readCount}
         archivedCount={archivedCount}
+        spamCount={spamCount}
       />
 
       {msgs && msgs.length === 0 && (
