@@ -12,6 +12,7 @@ import { InterestsEditor } from "@/features/about-content/components/InterestsEd
 import { EditorErrorState, EditorLoadingState } from "@/components/EditorStates";
 import { EditorHeader, EditorLayout } from "@/components/EditorScaffold";
 import { EditorCard, EditorField } from "@/components/EditorForm";
+import AiTextButton from "@/features/ai/components/AiTextButton";
 
 type AboutFormData = {
   bio: string;
@@ -156,6 +157,13 @@ export default function AboutEditor() {
       >
           <EditorCard title="Bio">
             <Textarea {...register("bio")} placeholder="Tell your story..." rows={6} className="resize-none" />
+            <div className="mt-2">
+              <AiTextButton
+                contentType="about"
+                text={watchedData.bio ?? ""}
+                onResult={(t) => setValue("bio", t, { shouldDirty: true })}
+              />
+            </div>
           </EditorCard>
 
           <EditorCard
