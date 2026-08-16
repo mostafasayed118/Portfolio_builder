@@ -36,7 +36,7 @@ describe("generateContent retry behavior", () => {
     const promise = generateContent("hello", { timeoutMs: 5_000, maxRetries: 2 });
     await vi.advanceTimersByTimeAsync(1_000);
 
-    await expect(promise).resolves.toBe("OK");
+    await expect(promise).resolves.toEqual({ text: "OK", attempts: 1 });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
@@ -50,7 +50,7 @@ describe("generateContent retry behavior", () => {
     const promise = generateContent("hello", { timeoutMs: 5_000, maxRetries: 2 });
     await vi.advanceTimersByTimeAsync(10_000);
 
-    await expect(promise).resolves.toBe("OK");
+    await expect(promise).resolves.toEqual({ text: "OK", attempts: 2 });
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
@@ -65,7 +65,7 @@ describe("generateContent retry behavior", () => {
     const promise = generateContent("hello", { timeoutMs: 5_000, maxRetries: 2 });
     await vi.advanceTimersByTimeAsync(20_000);
 
-    await expect(promise).resolves.toBe("OK");
+    await expect(promise).resolves.toEqual({ text: "OK", attempts: 3 });
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
@@ -79,7 +79,7 @@ describe("generateContent retry behavior", () => {
     const promise = generateContent("hello", { timeoutMs: 5_000, maxRetries: 2 });
     await vi.advanceTimersByTimeAsync(10_000);
 
-    await expect(promise).resolves.toBe("OK");
+    await expect(promise).resolves.toEqual({ text: "OK", attempts: 2 });
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
@@ -169,7 +169,7 @@ describe("generateContent retry behavior", () => {
       fakedElapsed += 50;
     }
 
-    await expect(promise).resolves.toBe("OK");
+    await expect(promise).resolves.toEqual({ text: "OK", attempts: 2 });
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fakedElapsed).toBeLessThanOrEqual(2_000 + 50);
   });

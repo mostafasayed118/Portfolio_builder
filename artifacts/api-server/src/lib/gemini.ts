@@ -63,6 +63,13 @@ export interface GenerateContentOptions {
   totalTimeoutMs?: number;
 }
 
+/** Result of a generateContent call, including retry activity. */
+export interface GeminiResult {
+  text: string;
+  /** How many API calls were made before one succeeded (1 = no retries). */
+  attempts: number;
+}
+
 interface AttemptConfig {
   model: string;
   temperature: number;
@@ -122,7 +129,7 @@ async function callOnce(apiKey: string, prompt: string, cfg: AttemptConfig): Pro
 export async function generateContent(
   prompt: string,
   opts?: GenerateContentOptions,
-): Promise<string> {
+): Promise<GeminiResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error("GEMINI_API_KEY is not configured");
@@ -137,11 +144,11 @@ export async function generateContent(
   const totalTimeoutMs = opts?.totalTimeoutMs ?? DEFAULT_TOTAL_TIMEOUT_MS;
   const startedAt = Date.now();
 
-  let attempt = 0;
+  let attempt = 1;
   let lastError: unknown;
   for (;;) {
     const remaining = totalTimeoutMs - (Date.now() - startedAt);
-    if (remaining <= 0 && attempt > 0) {
+    if (remaining <= 0 && attempt > 1) {
       // Budget exhausted — surface the most recent provider failure rather
       // than starting an attempt that can't finish in time.
       throw lastError;
@@ -149,17 +156,18 @@ export async function generateContent(
     try {
       // Cap the attempt timeout to the remaining budget so a single slow
       // attempt can't push the request past the total deadline.
-      return await callOnce(apiKey, prompt, {
+      const text = await callOnce(apiKey, prompt, {
         ...cfg,
         timeoutMs: Math.min(cfg.timeoutMs, Math.max(remaining, 1)),
       });
+      return { text, attempts: attempt };
     } catch (err) {
       lastError = err;
-      if (attempt >= maxRetries || !isRetryable(err)) {
+      if (attempt > maxRetries || !isRetryable(err)) {
         throw err;
       }
       attempt += 1;
-      const backoff = Math.min(BASE_RETRY_DELAY_MS * 2 ** (attempt - 1), MAX_RETRY_DELAY_MS);
+      const backoff = Math.min(BASE_RETRY_DELAY_MS * 2 ** (attempt - 2), MAX_RETRY_DELAY_MS);
       // Full jitter (0…backoff added) spreads concurrent retries; don't wait
       // past the deadline either.
       const remainingAfterFailure = totalTimeoutMs - (Date.now() - startedAt);

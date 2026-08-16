@@ -21,6 +21,7 @@ import {
 } from "@workspace/ui";
 import { api } from "@/lib/api-client";
 import { logError } from "@/lib/logger";
+import { RetryNotice } from "./RetryNotice";
 
 const CONTENT_TYPES = [
   { value: "hero", label: "Hero" },
@@ -42,6 +43,7 @@ export function ContentAnalysisTool() {
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [attempts, setAttempts] = useState<number | undefined>(undefined);
 
   const analyze = async () => {
     if (!content.trim()) return;
@@ -56,6 +58,7 @@ export function ContentAnalysisTool() {
         suggestions: data?.suggestions ?? [],
         strengths: data?.strengths ?? [],
       });
+      setAttempts(data?.attempts);
     } catch (err) {
       logError("AI content analysis failed", err, "ContentAnalysisTool");
       setError(err instanceof Error ? err.message : "Analysis failed");
@@ -110,6 +113,7 @@ export function ContentAnalysisTool() {
                 />
               </div>
               <Badge variant="outline">score / 100</Badge>
+              <RetryNotice attempts={attempts} />
             </div>
             {result.strengths.length > 0 && (
               <div className="space-y-1.5">

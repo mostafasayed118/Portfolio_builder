@@ -4,6 +4,7 @@ import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitl
 import { api } from "@/lib/api-client";
 import { logError } from "@/lib/logger";
 import { TagInput } from "./TagInput";
+import { RetryNotice } from "./RetryNotice";
 
 export function ProjectDescriptionTool() {
   const [title, setTitle] = useState("");
@@ -11,6 +12,7 @@ export function ProjectDescriptionTool() {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
+  const [attempts, setAttempts] = useState<number | undefined>(undefined);
   const [copied, setCopied] = useState(false);
 
   const generate = async () => {
@@ -21,6 +23,7 @@ export function ProjectDescriptionTool() {
       const res = await api.ai.generateDescription(techStack, title.trim() || undefined);
       if (!res.success) throw new Error(res.message);
       setResult(res.data?.description ?? "");
+      setAttempts(res.data?.attempts);
     } catch (err) {
       logError("AI description generation failed", err, "ProjectDescriptionTool");
       setError(err instanceof Error ? err.message : "Generation failed");
@@ -64,7 +67,10 @@ export function ProjectDescriptionTool() {
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         {result && (
           <div className="rounded-lg border p-3 space-y-2">
-            <Textarea readOnly value={result} rows={4} aria-label="Generated description" />
+            <div className="flex items-center justify-between gap-2">
+              <Textarea readOnly value={result} rows={4} aria-label="Generated description" className="flex-1" />
+              <RetryNotice attempts={attempts} />
+            </div>
             <div className="flex justify-end">
               <Button size="sm" variant="outline" onClick={copy} className="min-h-[44px]">
                 {copied ? <Check className="h-4 w-4 mr-1.5" /> : <Copy className="h-4 w-4 mr-1.5" />}
