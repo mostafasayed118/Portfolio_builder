@@ -37,7 +37,7 @@ export function TagsTool() {
   };
 
   return (
-    <Card data-testid="tool-tags">
+    <Card id="ai-suggest-tags" data-testid="tool-tags">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base"><Sparkles className="h-4 w-4" /> Suggest Tags</CardTitle>
         <CardDescription>

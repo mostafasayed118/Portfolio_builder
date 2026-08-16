@@ -45,4 +45,8 @@ export const QUICK_ACTIONS = [
   { label: "Add New Project", icon: Plus, action: "add-project", keywords: ["add", "new", "create", "project"] },
   { label: "Add New Skill", icon: Plus, action: "add-skill", keywords: ["add", "new", "create", "skill"] },
   { label: "Add New Experience", icon: Plus, action: "add-experience", keywords: ["add", "new", "create", "experience"] },
+  { label: "Generate Project Description", icon: Sparkles, action: "ai-generate-description", keywords: ["ai", "generate", "description", "write", "draft", "project"] },
+  { label: "Suggest Categories for Skill", icon: Sparkles, action: "ai-suggest-categories", keywords: ["ai", "suggest", "categories", "category", "skill"] },
+  { label: "Suggest Tags for Project", icon: Sparkles, action: "ai-suggest-tags", keywords: ["ai", "suggest", "tags", "tag", "project"] },
+  { label: "Analyze Content", icon: Sparkles, action: "ai-analyze-content", keywords: ["ai", "analyze", "content", "score", "review", "improve"] },
 ];
