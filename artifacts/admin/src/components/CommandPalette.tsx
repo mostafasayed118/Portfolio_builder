@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React from "react";
 import { useLocation } from "wouter";
 import {
   CommandDialog,
@@ -11,29 +11,26 @@ import {
 } from "@workspace/ui";
 import { NAV_ITEMS, NAV_GROUPS, QUICK_ACTIONS } from "@/lib/nav-config";
 
-export default function CommandPalette() {
-  const [open, setOpen] = useState(false);
+interface CommandPaletteProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+/**
+ * Controlled search palette — the shell (SearchPalette) owns the open state
+ * and the Ctrl/Cmd+K shortcut, mirroring the ShortcutsHelp/ShortcutsDialog
+ * split. This component only renders the dialog and its navigation.
+ */
+export default function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const [, setLocation] = useLocation();
 
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
-      e.preventDefault();
-      setOpen((prev) => !prev);
-    }
-  }, []);
-
-  useEffect(() => {
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [handleKeyDown]);
-
   const navigate = (path: string) => {
-    setOpen(false);
+    onOpenChange(false);
     setLocation(path);
   };
 
   const handleAction = (action: string) => {
-    setOpen(false);
+    onOpenChange(false);
     switch (action) {
       case "view-portfolio":
         window.open(import.meta.env.VITE_PORTFOLIO_URL || "/", "_blank");
@@ -51,7 +48,7 @@ export default function CommandPalette() {
   };
 
   return (
-    <CommandDialog open={open} onOpenChange={setOpen}>
+    <CommandDialog open={open} onOpenChange={onOpenChange}>
       <CommandInput placeholder="Type a command or search..." />
       <CommandList className="max-h-[400px]">
         <CommandEmpty>No results found.</CommandEmpty>

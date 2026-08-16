@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import CommandPalette from "@/components/CommandPalette";
+import SearchPalette from "@/components/SearchPalette";
 
 const mockSetLocation = vi.fn();
 vi.mock("wouter", () => ({
@@ -38,18 +38,18 @@ vi.mock("@workspace/ui", () => {
   };
 });
 
-describe("CommandPalette", () => {
+describe("SearchPalette — shell Ctrl/Cmd+K search", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("is closed by default", () => {
-    render(<CommandPalette />);
+    render(<SearchPalette />);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("opens on Ctrl+K", async () => {
-    render(<CommandPalette />);
+    render(<SearchPalette />);
     fireEvent.keyDown(document, { key: "k", ctrlKey: true });
     await waitFor(() => {
       expect(screen.getByRole("dialog")).toBeInTheDocument();
@@ -57,7 +57,7 @@ describe("CommandPalette", () => {
   });
 
   it("opens on Cmd+K (Mac)", async () => {
-    render(<CommandPalette />);
+    render(<SearchPalette />);
     fireEvent.keyDown(document, { key: "k", metaKey: true });
     await waitFor(() => {
       expect(screen.getByRole("dialog")).toBeInTheDocument();
@@ -65,7 +65,7 @@ describe("CommandPalette", () => {
   });
 
   it("has a search input", async () => {
-    render(<CommandPalette />);
+    render(<SearchPalette />);
     fireEvent.keyDown(document, { key: "k", ctrlKey: true });
     await waitFor(() => {
       expect(screen.getByTestId("command-input")).toBeInTheDocument();
@@ -73,7 +73,7 @@ describe("CommandPalette", () => {
   });
 
   it("input has correct placeholder", async () => {
-    render(<CommandPalette />);
+    render(<SearchPalette />);
     fireEvent.keyDown(document, { key: "k", ctrlKey: true });
     await waitFor(() => {
       expect(screen.getByPlaceholderText("Type a command or search...")).toBeInTheDocument();
@@ -81,7 +81,7 @@ describe("CommandPalette", () => {
   });
 
   it("shows all navigation groups", async () => {
-    render(<CommandPalette />);
+    render(<SearchPalette />);
     fireEvent.keyDown(document, { key: "k", ctrlKey: true });
     await waitFor(() => {
       expect(screen.getByText("Dashboard")).toBeInTheDocument();
@@ -93,7 +93,7 @@ describe("CommandPalette", () => {
   });
 
   it("contains Overview in navigation items", async () => {
-    render(<CommandPalette />);
+    render(<SearchPalette />);
     fireEvent.keyDown(document, { key: "k", ctrlKey: true });
     await waitFor(() => {
       expect(screen.getByText("Overview")).toBeInTheDocument();
@@ -101,7 +101,7 @@ describe("CommandPalette", () => {
   });
 
   it("contains all content items", async () => {
-    render(<CommandPalette />);
+    render(<SearchPalette />);
     fireEvent.keyDown(document, { key: "k", ctrlKey: true });
     await waitFor(() => {
       for (const item of ["Hero", "About", "Projects", "Skills", "Experience", "Certifications"]) {
@@ -111,7 +111,7 @@ describe("CommandPalette", () => {
   });
 
   it("contains all site items", async () => {
-    render(<CommandPalette />);
+    render(<SearchPalette />);
     fireEvent.keyDown(document, { key: "k", ctrlKey: true });
     await waitFor(() => {
       for (const item of ["CV / Resume", "SEO", "Typography", "Section Order", "Theme", "Site Settings"]) {
@@ -121,7 +121,7 @@ describe("CommandPalette", () => {
   });
 
   it("contains Quick Actions", async () => {
-    render(<CommandPalette />);
+    render(<SearchPalette />);
     fireEvent.keyDown(document, { key: "k", ctrlKey: true });
     await waitFor(() => {
       for (const item of ["View Live Portfolio", "Add New Project", "Add New Skill", "Add New Experience"]) {
@@ -131,7 +131,7 @@ describe("CommandPalette", () => {
   });
 
   it("navigates to page when clicking an item", async () => {
-    render(<CommandPalette />);
+    render(<SearchPalette />);
     fireEvent.keyDown(document, { key: "k", ctrlKey: true });
     await waitFor(() => {
       const overviewItem = screen.getByText("Overview").closest("[data-testid='command-item']");
@@ -141,7 +141,7 @@ describe("CommandPalette", () => {
   });
 
   it("closes after selecting an item", async () => {
-    render(<CommandPalette />);
+    render(<SearchPalette />);
     fireEvent.keyDown(document, { key: "k", ctrlKey: true });
     await waitFor(() => {
       const overviewItem = screen.getByText("Overview").closest("[data-testid='command-item']");
@@ -151,7 +151,7 @@ describe("CommandPalette", () => {
   });
 
   it("opens and closes with Ctrl+K toggle", async () => {
-    render(<CommandPalette />);
+    render(<SearchPalette />);
     // Open
     fireEvent.keyDown(document, { key: "k", ctrlKey: true });
     await waitFor(() => {
@@ -162,5 +162,20 @@ describe("CommandPalette", () => {
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     });
+  });
+
+  it("does not open while another dialog is open (no stacking)", () => {
+    // Simulate a dialog opened by a page component the shell can't see.
+    const blocker = document.createElement("div");
+    blocker.setAttribute("role", "dialog");
+    document.body.appendChild(blocker);
+
+    render(<SearchPalette />);
+    fireEvent.keyDown(document, { key: "k", ctrlKey: true });
+
+    // The palette must stay closed — use the testid so the blocker's own
+    // role="dialog" doesn't confuse the query.
+    expect(screen.queryByTestId("command-dialog")).not.toBeInTheDocument();
+    blocker.remove();
   });
 });
