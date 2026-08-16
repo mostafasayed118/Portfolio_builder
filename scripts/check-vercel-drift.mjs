@@ -98,13 +98,36 @@ function resolveProbeEmail() {
   return first ?? "e2e-admin-tester@example.com";
 }
 
+/**
+ * Fail if the Vercel token is a `vca_`-prefixed CLI session token instead of
+ * a long-lived dashboard access token.
+ *
+ * The Vercel CLI's OAuth login writes a short-lived session token (`vca_` +
+ * 54 chars) that it silently rotates. Storing THAT in the VERCEL_TOKEN
+ * secret makes the drift job work today and die with auth errors the moment
+ * the session rotates or expires — the rotating-token trap. Dashboard tokens
+ * (vercel.com/account/tokens) are plain alphanumeric and never expire, and
+ * the `vca_` prefix is the reliable tell, so a session token fails here
+ * regardless of whether it still authenticates right now.
+ */
+function assertDashboardToken(token) {
+  if (!token) fail("VERCEL_TOKEN is not set as a GitHub Actions secret");
+  if (token.startsWith("vca_")) {
+    fail(
+      "VERCEL_TOKEN is a vca_ session token (written by the Vercel CLI), not a " +
+        "dashboard access token. Create a long-lived token at " +
+        "https://vercel.com/account/tokens, then update the GitHub secret.",
+    );
+  }
+  return token;
+}
+
 async function main() {
-  const token = env.VERCEL_TOKEN;
+  const token = assertDashboardToken(env.VERCEL_TOKEN);
   const project = env.VERCEL_API_PROJECT;
   const deployedUrl = (env.VERCEL_API_URL || "").replace(/\/+$/, "");
   const repoKey = env.CLERK_SECRET_KEY;
 
-  if (!token) fail("VERCEL_TOKEN is not set as a GitHub Actions secret");
   if (!project) fail("VERCEL_API_PROJECT is not set");
   if (!deployedUrl) fail("VERCEL_API_URL is not set");
   if (!repoKey) fail("CLERK_SECRET_KEY is not set as a GitHub Actions secret");
@@ -219,4 +242,4 @@ if (isMain) {
   });
 }
 
-export { findOrCreateUser, resolveProbeEmail, clerkFetch, fail, log, main };
+export { findOrCreateUser, resolveProbeEmail, assertDashboardToken, clerkFetch, fail, log, main };

@@ -16,7 +16,7 @@
  */
 
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { findOrCreateUser, resolveProbeEmail } from "./check-vercel-drift.mjs";
+import { findOrCreateUser, resolveProbeEmail, assertDashboardToken } from "./check-vercel-drift.mjs";
 
 const TARGET_EMAIL = "al3tar66@gmail.com";
 // Unrelated account returned FIRST — the trap the old code fell into.
@@ -109,6 +109,28 @@ describe("findOrCreateUser — email-match selection (regression)", () => {
     );
 
     await expect(findOrCreateUser("sk_test_x", TARGET_EMAIL)).rejects.toThrow(/cannot create probe user/);
+  });
+});
+
+describe("assertDashboardToken — rotating-token guard", () => {
+  it("rejects a vca_ CLI session token with a remediation message", () => {
+    expect(() => assertDashboardToken("vca_741rIa9abcdefghijklmnop")).toThrow(
+      /vca_ session token/,
+    );
+    // The failure must point at where the dashboard token is created — not a
+    // generic auth error, so a future operator knows exactly what to do.
+    expect(() => assertDashboardToken("vca_741rIa9abcdefghijklmnop")).toThrow(
+      /vercel\.com\/account\/tokens/,
+    );
+  });
+
+  it("accepts a dashboard access token (plain alphanumeric, no prefix)", () => {
+    expect(() => assertDashboardToken("abcdefghijklmnopqrstuvwx")).not.toThrow();
+  });
+
+  it("rejects a missing token", () => {
+    expect(() => assertDashboardToken("")).toThrow(/not set/);
+    expect(() => assertDashboardToken(undefined)).toThrow(/not set/);
   });
 });
 
