@@ -10,13 +10,33 @@ describe("contactInfo", () => {
 
   describe("getContactInfo", () => {
     it("returns data when found", async () => {
-      const mockData = { id: "1", email: "test@example.com", phone: "+20 123" };
+      const mockData = { id: "1", email: "john@company.com", phone: "+20 123" };
       supabase.maybeSingle.mockResolvedValueOnce({ data: mockData, error: null });
       const result = await getContactInfo(supabase as any);
       expect(result).toEqual(mockData);
       expect(supabase.from).toHaveBeenCalledWith("contact_info");
       expect(supabase.select).toHaveBeenCalledWith("*");
       expect(supabase.limit).toHaveBeenCalledWith(1);
+    });
+
+    it("replaces placeholder social URLs and email with canonical ones on read", async () => {
+      const mockData = {
+        id: "1",
+        email: "admin@example.com",
+        github: "https://github.com/yourusername",
+        linkedin: "https://linkedin.com/in/mustafasayed",
+        youtube: "https://www.youtube.com/yourchannel",
+        facebook: null,
+      };
+      supabase.maybeSingle.mockResolvedValueOnce({ data: mockData, error: null });
+      const result = await getContactInfo(supabase as any);
+      expect(result).toMatchObject({
+        email: "mustafasayed20002@gmail.com",
+        github: "https://github.com/mostafasayed118",
+        linkedin: "https://www.linkedin.com/in/mustafa-sayed11",
+        youtube: "https://www.youtube.com/@MustafaSayed273",
+        facebook: null,
+      });
     });
 
     it("returns null when no data", async () => {
@@ -53,7 +73,7 @@ describe("contactInfo", () => {
       expect(supabase.insert).toHaveBeenCalled();
 
       const insertCall = supabase.insert.mock.calls[0][0];
-      expect(insertCall.email).toBe("mustafasayedsaeed@outlook.com");
+      expect(insertCall.email).toBe("mustafasayed20002@gmail.com");
       expect(insertCall.phone).toBe("+20 100 000 0000");
       expect(insertCall.location).toBe("Cairo, Egypt");
       expect(insertCall.github).toBe("https://github.com/mostafasayed118");
