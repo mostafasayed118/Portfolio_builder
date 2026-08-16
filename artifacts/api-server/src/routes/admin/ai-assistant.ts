@@ -9,6 +9,7 @@ import {
   aiAnalyzeContentSchema,
 } from "@workspace/api-zod";
 import { badRequest, ok } from "../../lib/api-response";
+import { generateContent, isGeminiConfigured, parseListResponse } from "../../lib/gemini";
 
 const router: IRouter = Router();
 
@@ -229,6 +230,99 @@ function analyzeContent(content: string, contentType: string): { score: number; 
   };
 }
 
+// ── Gemini-backed variants (fall back to the deterministic rules above) ──
+//
+// Each helper prefers a real Gemini call when GEMINI_API_KEY is configured,
+// and falls back to the keyword/template logic when the key is missing or
+// the provider call fails — the feature keeps working and the response
+// shapes stay identical either way.
+
+interface ContentAnalysis {
+  score: number;
+  suggestions: string[];
+  strengths: string[];
+}
+
+function parseContentAnalysis(text: string): ContentAnalysis | null {
+  const cleaned = text.replace(/^```(?:json)?\s*/i, "").replace(/```$/, "").trim();
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    return null;
+  }
+  if (typeof parsed !== "object" || parsed === null) return null;
+  const obj = parsed as Record<string, unknown>;
+  if (typeof obj.score !== "number") return null;
+  return {
+    score: Math.max(0, Math.min(100, Math.round(obj.score))),
+    suggestions: Array.isArray(obj.suggestions) ? obj.suggestions.map(String).slice(0, 5) : [],
+    strengths: Array.isArray(obj.strengths) ? obj.strengths.map(String).slice(0, 3) : [],
+  };
+}
+
+async function describeWithAi(techStack: string[], title?: string): Promise<string> {
+  if (!isGeminiConfigured()) return generateProjectDescription(techStack, title);
+  const prompt =
+    "You help a portfolio admin write project descriptions. Write a concise, professional 2-3 sentence " +
+    `description for a project${title ? ` titled "${title}"` : ""} using this tech stack: ${techStack.join(", ")}. ` +
+    "Plain text only — no quotes, no markdown.";
+  try {
+    const text = await generateContent(prompt, { temperature: 0.6 });
+    const cleaned = text.replace(/^["'`]+|["'`]+$/g, "").trim();
+    return cleaned || generateProjectDescription(techStack, title);
+  } catch {
+    return generateProjectDescription(techStack, title);
+  }
+}
+
+async function suggestCategoriesWithAi(skillName: string): Promise<string[]> {
+  if (!isGeminiConfigured()) return suggestCategories(skillName);
+  const prompt =
+    `Given the skill "${skillName}" for a portfolio, suggest 1-3 categories from this exact list: ` +
+    "Frontend, Backend, Database, DevOps, Mobile, AI/ML, Tools, Design. " +
+    "Return only the category names, comma-separated.";
+  try {
+    const text = await generateContent(prompt, { temperature: 0.2 });
+    const known = new Set(Object.keys(skillKeywordCategories));
+    const categories = parseListResponse(text, 3).filter((c) => known.has(c));
+    return categories.length > 0 ? categories : ["Other"];
+  } catch {
+    return suggestCategories(skillName);
+  }
+}
+
+async function suggestTagsWithAi(techStack: string[], category?: string): Promise<string[]> {
+  if (!isGeminiConfigured()) return suggestProjectTags(techStack, category);
+  const prompt =
+    `For a portfolio project using: ${techStack.join(", ")}${category ? ` (category ${category})` : ""}, ` +
+    "suggest up to 5 short lowercase tags (1-2 words each). Return only the tags, comma-separated.";
+  try {
+    const text = await generateContent(prompt, { temperature: 0.4 });
+    const tags = parseListResponse(text, 5);
+    return tags.length > 0 ? tags : suggestProjectTags(techStack, category);
+  } catch {
+    return suggestProjectTags(techStack, category);
+  }
+}
+
+async function analyzeContentWithAi(
+  content: string,
+  contentType: string,
+): Promise<ContentAnalysis> {
+  if (!isGeminiConfigured()) return analyzeContent(content, contentType);
+  const prompt =
+    `Analyze this ${contentType} section from a portfolio for quality. Return STRICT JSON only, no markdown: ` +
+    `{"score": 0-100, "suggestions": ["..."], "strengths": ["..."]}. Content:\n"""\n${content.slice(0, 3000)}\n"""`;
+  try {
+    const text = await generateContent(prompt, { temperature: 0.2 });
+    const parsed = parseContentAnalysis(text);
+    return parsed ?? analyzeContent(content, contentType);
+  } catch {
+    return analyzeContent(content, contentType);
+  }
+}
+
 router.post("/generate-description", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
   const parseResult = generateDescriptionSchema.safeParse(req.body);
   if (!parseResult.success) {
@@ -236,7 +330,7 @@ router.post("/generate-description", doubleCsrfProtection, async (req: Authentic
   }
 
   const { techStack, title } = parseResult.data;
-  const description = generateProjectDescription(techStack, title);
+  const description = await describeWithAi(techStack, title);
 
   return ok(res, { description });
 });
@@ -248,7 +342,7 @@ router.post("/suggest-categories", doubleCsrfProtection, async (req: Authenticat
   }
 
   const { skillName } = parseResult.data;
-  const categories = suggestCategories(skillName);
+  const categories = await suggestCategoriesWithAi(skillName);
 
   return ok(res, { categories });
 });
@@ -260,7 +354,7 @@ router.post("/suggest-tags", doubleCsrfProtection, async (req: AuthenticatedRequ
   }
 
   const { techStack, category } = parseResult.data;
-  const tags = suggestProjectTags(techStack, category);
+  const tags = await suggestTagsWithAi(techStack, category);
 
   return ok(res, { tags });
 });
@@ -272,7 +366,7 @@ router.post("/analyze-content", doubleCsrfProtection, async (req: AuthenticatedR
   }
 
   const { content, contentType } = parseResult.data;
-  const analysis = analyzeContent(content, contentType);
+  const analysis = await analyzeContentWithAi(content, contentType);
 
   return ok(res, analysis);
 });
