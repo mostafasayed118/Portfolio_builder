@@ -79,3 +79,12 @@ export const apiKeyLimiter = rateLimit({
     return `apikey:${ipKeyGenerator(ip)}`;
   },
 });
+
+export const chatLimiter = rateLimit({
+  windowMs: env.AI_CHAT_RATE_LIMIT_WINDOW_MS,
+  max: env.AI_CHAT_RATE_LIMIT_MAX,
+  skip: skipIfDev,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: "Too many chat messages, please try again later" },
+});

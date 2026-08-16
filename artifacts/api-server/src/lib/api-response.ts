@@ -40,6 +40,10 @@ export function serverError(res: Response, message = "Internal server error") {
   return res.status(500).json({ success: false, message });
 }
 
+export function serviceUnavailable(res: Response, message = "Service unavailable") {
+  return res.status(503).json({ success: false, message });
+}
+
 export function paginated(
   res: Response,
   data: unknown[],
