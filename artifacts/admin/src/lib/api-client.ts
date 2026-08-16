@@ -47,6 +47,7 @@ import {
   bulkArchiveMessages,
   bulkUnarchiveMessages,
   archiveTestSubmissions,
+  restoreAllArchivedMessages,
   getHero,
   updateHero,
   getAbout,
@@ -172,6 +173,7 @@ export const api = {
     bulkArchive: (ids: string[]) => bulkArchiveMessages({ ids }),
     bulkUnarchive: (ids: string[]) => bulkUnarchiveMessages({ ids }),
     archiveTestSubmissions: () => archiveTestSubmissions(),
+    restoreAllArchived: () => restoreAllArchivedMessages(),
     reply: (id: string, reply: string) => replyMessage(id, { reply }),
   },
   contact: {

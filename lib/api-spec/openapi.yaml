@@ -1306,6 +1306,35 @@ paths:
                               archived: { type: integer }
                   - $ref: "#/components/schemas/ApiError"
 
+  /v1/admin/messages/restore-all-archived:
+    post:
+      operationId: restoreAllArchivedMessages
+      tags: [admin.messages]
+      summary: Restore every archived message to the inbox (superadmin)
+      description: >-
+        One-click restore: brings every soft-deleted (archived) message back
+        to the inbox in one server-side statement, so the whole Archived tab
+        can be emptied in one call. The inverse of archive-test-submissions.
+        Superadmin only; idempotent.
+      security: [{ adminAuth: [] }]
+      responses:
+        "200":
+          description: Restored count
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data:
+                            type: object
+                            required: [restored]
+                            properties:
+                              restored: { type: integer }
+                  - $ref: "#/components/schemas/ApiError"
+
   /v1/admin/messages/mark-all-read:
     post:
       operationId: markAllMessagesRead

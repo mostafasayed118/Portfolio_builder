@@ -113,6 +113,21 @@ describe("POST /api/v1/admin/messages/mark-all-read", () => {
     expect(updateChain.or).not.toHaveBeenCalled();
   });
 
+  it("keeps the count and update predicates identical (no drift)", async () => {
+    await request(app)
+      .post("/api/v1/admin/messages/mark-all-read")
+      .set("x-admin-key", mockAdminKey);
+
+    const countChain = mockSupabase.select.mock.results[0].value as Chain;
+    const updateChain = mockSupabase.update.mock.results[0].value as Chain;
+    // The update must target the identical set it counted — same status and
+    // soft-delete clauses, same user scope. Comparing the actual call args
+    // to each other (not to hardcoded copies) catches any divergence.
+    expect(updateChain.eq.mock.calls).toEqual(countChain.eq.mock.calls);
+    expect(updateChain.is.mock.calls).toEqual(countChain.is.mock.calls);
+    expect(updateChain.or.mock.calls).toEqual(countChain.or.mock.calls);
+  });
+
   it("scopes to the admin's own rows (or unowned) for non-superadmins", async () => {
     mockRole = "admin";
     const res = await request(app)

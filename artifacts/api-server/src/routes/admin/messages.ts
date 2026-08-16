@@ -261,6 +261,43 @@ router.post("/archive-test-submissions", doubleCsrfProtection, async (req: Authe
   return ok(res, { archived: count ?? 0 });
 });
 
+/**
+ * Predicate selecting every soft-deleted (archived) row: `deleted_at IS NOT
+ * NULL`. Shared by the count and update statements of restore-all-archived so
+ * they can never drift apart.
+ */
+const ARCHIVED_ROWS = ["deleted_at", "is", null] as const;
+
+/**
+ * One-click restore: bring every archived (soft-deleted) message back to the
+ * inbox in one server-side statement — the inverse of archive-test-submissions,
+ * so the whole Archived tab can be emptied in one call. Superadmin only: it
+ * is a global maintenance action, not a per-user one. Idempotent: re-running
+ * only touches rows still archived (deleted_at NOT NULL).
+ */
+router.post("/restore-all-archived", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
+  if (req.user?.role !== "superadmin") {
+    return res.status(403).json({ success: false, message: "Superadmin required" });
+  }
+  const supabase = getSupabaseClient();
+  // Count the archived rows first (typed head-count) so the response can
+  // report how many were restored. The update then targets the identical
+  // predicate. Any row archived between the two statements is out of scope
+  // for this run — fine for a bulk restore tool.
+  const { count, error: countError } = await supabase
+    .from("messages")
+    .select("id", { count: "exact", head: true })
+    .not(...ARCHIVED_ROWS);
+  if (countError) return serverError(res, countError.message);
+
+  const { error } = await supabase
+    .from("messages")
+    .update({ deleted_at: null })
+    .not(...ARCHIVED_ROWS);
+  if (error) return serverError(res, error.message);
+  return ok(res, { restored: count ?? 0 });
+});
+
 router.delete("/:id", doubleCsrfProtection, validateParamId, async (req: AuthenticatedRequest, res: Response) => {
   return softDeleteByIdAndUser(req, res, "messages", req.params.id as string, "Message");
 });

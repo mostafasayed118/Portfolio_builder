@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@workspace/ui";
 import { useToast } from "@workspace/ui";
 import {
@@ -16,6 +16,7 @@ import { MessageFilterBar } from "@/features/messages/components/MessageFilterBa
 import { MessagePresetBar } from "@/features/messages/components/MessagePresetBar";
 import { MessagePagination } from "@/features/messages/components/MessagePagination";
 import { useAllMessages, useUnreadCountQuery, type MessagePreset } from "@/lib/use-entity-query";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 
 function formatDate(ts: string): string {
   return new Date(ts).toLocaleDateString("en-US", {
@@ -49,6 +50,7 @@ export default function MessagesManager() {
   const [pageSize, setPageSize] = useState(20);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showCleanupDialog, setShowCleanupDialog] = useState(false);
+  const [showRestoreAllDialog, setShowRestoreAllDialog] = useState(false);
 
   // The active chip or preset drives a server-side filter on the collection
   // endpoint: status chips page over exactly those rows (not a client-side
@@ -108,7 +110,18 @@ export default function MessagesManager() {
     }
   }, [somePageSelected, allPageSelected]);
 
-  const toggleSelectAllOnPage = () => {
+  // Tab title reflects the current selection (Gmail-style "(N)" prefix), so
+  // the selection state is visible even when the tab is unfocused. The base
+  // title is captured on mount and restored on unmount.
+  useEffect(() => {
+    const base = document.title;
+    document.title = selectedIds.size > 0 ? `(${selectedIds.size}) ${base}` : base;
+    return () => {
+      document.title = base;
+    };
+  }, [selectedIds.size]);
+
+  const toggleSelectAllOnPage = useCallback(() => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (allPageSelected) {
@@ -118,7 +131,42 @@ export default function MessagesManager() {
       }
       return next;
     });
-  };
+  }, [allPageSelected, pageIds]);
+
+  // Ctrl/Cmd+A selects (or clears) the whole rendered page — the same toggle
+  // as the toolbar checkbox. The hook ignores the shortcut while focus is in
+  // an input/textarea, so native select-all-in-field keeps working, and
+  // `enabled` gates it while a dialog is open (the selection lives behind
+  // the dialog and shouldn't change underneath it).
+  const dialogsOpen = !!replyTo || showCleanupDialog || showRestoreAllDialog;
+  const selectPageShortcut = useMemo(
+    () => [
+      {
+        key: "a",
+        ctrl: true,
+        handler: () => toggleSelectAllOnPage(),
+        description: "Select all on page",
+      },
+    ],
+    [toggleSelectAllOnPage],
+  );
+  useKeyboardShortcuts(selectPageShortcut, !dialogsOpen);
+
+  // Gmail-style "Select all N matching": the batched fetcher has already
+  // loaded EVERY row matching the active view, so grabbing them all is a
+  // local Set over `msgs` — and the follow-up Archive/Restore then hits the
+  // whole matching set in ONE bulk call, beyond the current page. Shown only
+  // while a partial selection exists and matching rows remain unselected.
+  const totalMatching = msgs?.length ?? 0;
+  const allMatchingIds = useMemo(
+    () => (msgs ?? []).map((m) => m.id).filter((id): id is string => !!id),
+    [msgs],
+  );
+  const canSelectAllMatching = selectedIds.size > 0 && selectedIds.size < totalMatching;
+
+  const selectAllMatching = useCallback(() => {
+    setSelectedIds(new Set(allMatchingIds));
+  }, [allMatchingIds]);
 
   const openReply = (msg: Msg) => {
     setReplyTo(msg);
@@ -219,6 +267,30 @@ export default function MessagesManager() {
     } catch (err) {
       toast({
         title: "Failed to archive test submissions",
+        description: err instanceof Error ? err.message : "Unknown error",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRestoreAllArchived = async () => {
+    try {
+      const res = await api.messages.restoreAllArchived();
+      if (!res.success) throw new Error(res.message);
+      const restored = (res as { data?: { restored?: number } }).data?.restored ?? 0;
+      await queryClient.invalidateQueries({ queryKey: ["messages"] });
+      await queryClient.invalidateQueries({ queryKey: ["unreadCount"] });
+      setShowRestoreAllDialog(false);
+      setSelectedIds(new Set());
+      toast({
+        title:
+          restored > 0
+            ? `Restored ${restored} message${restored === 1 ? "" : "s"} to the inbox`
+            : "No archived messages to restore",
+      });
+    } catch (err) {
+      toast({
+        title: "Failed to restore archived messages",
         description: err instanceof Error ? err.message : "Unknown error",
         variant: "destructive",
       });
@@ -349,6 +421,16 @@ export default function MessagesManager() {
             Mark All Read
           </Button>
         )}
+        {view === "archived" && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="min-h-[44px]"
+            onClick={() => setShowRestoreAllDialog(true)}
+          >
+            Restore all archived
+          </Button>
+        )}
         <Button
           size="sm"
           variant="outline"
@@ -375,6 +457,16 @@ export default function MessagesManager() {
           <span className="text-sm font-medium">
             {selectedIds.size} selected
           </span>
+          {canSelectAllMatching && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="min-h-[44px]"
+              onClick={selectAllMatching}
+            >
+              Select all {totalMatching} matching
+            </Button>
+          )}
           <Button
             size="sm"
             onClick={view === "archived" ? handleBulkUnarchive : handleBulkArchive}
@@ -516,6 +608,20 @@ export default function MessagesManager() {
         onConfirm: handleCleanupTestSubmissions,
       }}
       onCancel={() => setShowCleanupDialog(false)}
+    />
+
+    <SmartConfirmDialog
+      state={{
+        isOpen: showRestoreAllDialog,
+        title: "Restore all archived messages?",
+        message:
+          "This brings every archived message back to the inbox in one call. " +
+          "If you only want some, use the selection toolbar instead.",
+        confirmLabel: "Restore all archived",
+        variant: "warning",
+        onConfirm: handleRestoreAllArchived,
+      }}
+      onCancel={() => setShowRestoreAllDialog(false)}
     />
     </>
   );

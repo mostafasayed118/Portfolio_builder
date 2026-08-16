@@ -41,9 +41,12 @@ import { getSupabaseClient } from "../../lib/supabase-client";
 // Chain shapes:
 //  - count: from().select(id, {count, head}).or().is() -> { count, error }
 //  - update: from().update(patch).or().is() -> { error }
+// Both carry a `range` spy so the no-truncation guard can assert the whole-
+// table cleanup never paginates (a reintroduced `.range()` would cap it).
 type Chain = {
   or: ReturnType<typeof vi.fn>;
   is: ReturnType<typeof vi.fn>;
+  range: ReturnType<typeof vi.fn>;
 };
 
 /** The exact predicate the route must apply to both statements. */
@@ -66,6 +69,7 @@ function countChain(): Chain {
   return {
     or: vi.fn().mockReturnThis(),
     is: vi.fn().mockResolvedValue({ count: 2, error: null }),
+    range: vi.fn().mockReturnThis(),
   };
 }
 
@@ -73,6 +77,7 @@ function updateChain(): Chain {
   return {
     or: vi.fn().mockReturnThis(),
     is: vi.fn().mockResolvedValue({ error: null }),
+    range: vi.fn().mockReturnThis(),
   };
 }
 
@@ -137,6 +142,39 @@ describe("POST /api/v1/admin/messages/archive-test-submissions", () => {
     // The exact test@test.com address must appear as a value, not a pattern
     // with a wildcard (so test@test.com is matched, but nothing broader).
     expect(predicate).not.toContain("test@test.com%");
+  });
+
+  it("counts and cleans up in single statements — no 50-row page cap", async () => {
+    await request(app)
+      .post("/api/v1/admin/messages/archive-test-submissions")
+      .set("x-admin-key", mockAdminKey);
+
+    // The count is an exact head-count over the whole table, NOT a fetched
+    // row page — fetching rows (`select("*")` + range) is exactly how
+    // truncation sneaks back in and under-reports what got cleaned.
+    expect(mockSupabase.select).toHaveBeenCalledWith("id", { count: "exact", head: true });
+
+    const countChain = mockSupabase.select.mock.results[0].value as Chain;
+    const updateChain = mockSupabase.update.mock.results[0].value as Chain;
+    // Neither statement paginates — a reintroduced `.range(0, 49)` would
+    // leave test rows past page one unarchived while claiming success.
+    expect(countChain.range).not.toHaveBeenCalled();
+    expect(updateChain.range).not.toHaveBeenCalled();
+  });
+
+  it("uses the exact same predicate string on the count and update statements", async () => {
+    await request(app)
+      .post("/api/v1/admin/messages/archive-test-submissions")
+      .set("x-admin-key", mockAdminKey);
+
+    const countChain = mockSupabase.select.mock.results[0].value as Chain;
+    const updateChain = mockSupabase.update.mock.results[0].value as Chain;
+    const countPredicate = countChain.or.mock.calls[0][0] as string;
+    const updatePredicate = updateChain.or.mock.calls[0][0] as string;
+    // Compare the two ACTUAL calls to each other — not to a hardcoded copy —
+    // so even a coordinated change that rewrites both predicates (and any
+    // test constant) still fails if they diverge by a single character.
+    expect(updatePredicate).toBe(countPredicate);
   });
 
   it("reports 0 when the count query finds nothing", async () => {

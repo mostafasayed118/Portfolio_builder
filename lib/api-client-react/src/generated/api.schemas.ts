@@ -1180,6 +1180,12 @@ export type ArchiveTestSubmissions200 = SuccessEnvelope & {
 };
 } | ApiError;
 
+export type RestoreAllArchivedMessages200 = SuccessEnvelope & {
+  data?: {
+  restored: number;
+};
+} | ApiError;
+
 export type MarkAllMessagesRead200 = SuccessEnvelope & {
   data?: {
   marked: number;

@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { screen, waitFor, within, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderAdmin } from "./helpers";
 import { MessagesManager } from "@/features/messages";
@@ -12,6 +12,7 @@ const {
   mockBulkArchiveMessage,
   mockBulkUnarchiveMessage,
   mockArchiveTestSubmissions,
+  mockRestoreAllArchived,
   mockUnreadCount,
 } = vi.hoisted(() => ({
   mockListMessages: vi.fn(),
@@ -22,6 +23,7 @@ const {
   mockBulkArchiveMessage: vi.fn(),
   mockBulkUnarchiveMessage: vi.fn(),
   mockArchiveTestSubmissions: vi.fn(),
+  mockRestoreAllArchived: vi.fn(),
   mockUnreadCount: vi.fn(),
 }));
 
@@ -42,6 +44,7 @@ vi.mock("@/lib/api-client", () => ({
       bulkArchive: mockBulkArchiveMessage,
       bulkUnarchive: mockBulkUnarchiveMessage,
       archiveTestSubmissions: mockArchiveTestSubmissions,
+      restoreAllArchived: mockRestoreAllArchived,
     },
   },
 }));
@@ -120,6 +123,7 @@ describe("MessagesViewer", () => {
     mockBulkArchiveMessage.mockResolvedValue({ success: true });
     mockBulkUnarchiveMessage.mockResolvedValue({ success: true });
     mockArchiveTestSubmissions.mockResolvedValue({ success: true, data: { archived: 3 } });
+    mockRestoreAllArchived.mockResolvedValue({ success: true, data: { restored: 3 } });
     // The unread chip/tab count is API-backed (matches the sidebar badge).
     mockUnreadCount.mockResolvedValue({ success: true, data: 1 });
   });
@@ -300,6 +304,60 @@ describe("MessagesViewer", () => {
     expect(screen.getByText("3 selected")).toBeInTheDocument();
   });
 
+  it("shows the selected count in the tab title", async () => {
+    document.title = "Admin";
+    renderAdmin(<MessagesManager />);
+
+    expect(await screen.findByText("Alice")).toBeInTheDocument();
+    expect(document.title).toBe("Admin");
+
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select message from Alice" }));
+    expect(document.title).toBe("(1) Admin");
+
+    // Selecting more rows bumps the count.
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select message from Bob" }));
+    expect(document.title).toBe("(2) Admin");
+
+    // Clearing the selection restores the plain title.
+    await userEvent.click(screen.getByRole("button", { name: "Clear" }));
+    expect(document.title).toBe("Admin");
+  });
+
+  it("selects the whole page with Ctrl/Cmd+A and toggles off on a second press", async () => {
+    renderAdmin(<MessagesManager />);
+
+    await screen.findByText("Alice");
+
+    fireEvent.keyDown(document, { key: "a", ctrlKey: true });
+
+    for (const name of ["Alice", "Bob", "Charlie"]) {
+      expect(
+        screen.getByRole("checkbox", { name: `Select message from ${name}` }),
+      ).toBeChecked();
+    }
+    expect(screen.getByText("3 selected")).toBeInTheDocument();
+
+    // A second press clears the page selection, matching the toolbar toggle.
+    fireEvent.keyDown(document, { key: "a", ctrlKey: true });
+    expect(screen.getByText("0 selected")).toBeInTheDocument();
+  });
+
+  it("ignores Ctrl+A while a dialog is open", async () => {
+    renderAdmin(<MessagesManager />);
+
+    await screen.findByText("Alice");
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Archive test submissions" }),
+    );
+    await screen.findByRole("alertdialog");
+
+    fireEvent.keyDown(document, { key: "a", ctrlKey: true });
+
+    // The selection behind the dialog must not change underneath it.
+    expect(screen.getByText("0 selected")).toBeInTheDocument();
+  });
+
   it("select-all on page toggles off when everything is already selected", async () => {
     renderAdmin(<MessagesManager />);
 
@@ -384,6 +442,72 @@ describe("MessagesViewer", () => {
     expect(screen.queryByText("1 selected")).not.toBeInTheDocument();
   });
 
+  it("selects every matching row across pages and archives them in one bulk call", async () => {
+    const many = Array.from({ length: 250 }, (_, i) => ({
+      id: String(i + 1),
+      name: `Person ${i + 1}`,
+      email: `p${i + 1}@test.com`,
+      message: `Message ${i + 1}`,
+      status: "unread",
+      created_at: new Date(Date.UTC(2024, 0, i + 1)).toISOString(),
+    }));
+    mockListMessages.mockImplementation(async (_userId, status, limit = 200, offset = 0) => {
+      const page = many.slice(offset, offset + limit);
+      return {
+        success: true,
+        data: {
+          data: page,
+          pagination: {
+            total: many.length,
+            limit,
+            offset,
+            hasMore: offset + page.length < many.length,
+          },
+        },
+      };
+    });
+
+    renderAdmin(<MessagesManager />);
+    await screen.findByText("Person 1");
+
+    // Select the rendered page first (20 rows on page 1), which surfaces the
+    // Gmail-style action.
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select all on page" }));
+    expect(screen.getByText("20 selected")).toBeInTheDocument();
+
+    // One click grabs every matching row across ALL pages.
+    await userEvent.click(screen.getByRole("button", { name: "Select all 250 matching" }));
+    expect(screen.getByText("250 selected")).toBeInTheDocument();
+    // Nothing left to select — the action disappears.
+    expect(
+      screen.queryByRole("button", { name: "Select all 250 matching" }),
+    ).not.toBeInTheDocument();
+
+    // Archiving the selection is ONE bulk call carrying the full id set,
+    // reaching rows far beyond the current page.
+    await userEvent.click(screen.getByRole("button", { name: "Archive selected" }));
+    await waitFor(() => {
+      expect(mockBulkArchiveMessage).toHaveBeenCalledTimes(1);
+    });
+    const ids = mockBulkArchiveMessage.mock.calls[0][0] as string[];
+    expect(ids).toHaveLength(250);
+    expect(ids).toContain("250");
+  });
+
+  it("hides the select-all-matching action when the page holds every matching row", async () => {
+    renderAdmin(<MessagesManager />);
+
+    await screen.findByText("Alice");
+
+    // With only 3 matching rows and a page that fits all of them, selecting
+    // the page already selects everything — no cross-page action needed.
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select all on page" }));
+    expect(screen.getByText("3 selected")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Select all 3 matching" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("restores selected archived rows from the Archived tab in one click", async () => {
     renderAdmin(<MessagesManager />);
 
@@ -406,6 +530,29 @@ describe("MessagesViewer", () => {
 
     await waitFor(() => {
       expect(mockBulkUnarchiveMessage).toHaveBeenCalledWith(["3"]);
+    });
+  });
+
+  it("restores every archived message from the one-click action in the Archived tab", async () => {
+    renderAdmin(<MessagesManager />);
+
+    await screen.findByText("Alice");
+
+    // The action only exists in the Archived view.
+    expect(
+      screen.queryByRole("button", { name: "Restore all archived" }),
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByText(/Archived \(1\)/));
+    await screen.findByText("Charlie");
+
+    await userEvent.click(screen.getByRole("button", { name: "Restore all archived" }));
+
+    const dialog = await screen.findByRole("alertdialog");
+    await userEvent.click(within(dialog).getByText("Restore all archived"));
+
+    await waitFor(() => {
+      expect(mockRestoreAllArchived).toHaveBeenCalledTimes(1);
     });
   });
 
