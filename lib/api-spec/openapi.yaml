@@ -34,6 +34,7 @@ tags:
   - name: admin.preview
   - name: admin.analytics
   - name: admin.ai
+  - name: chat
 
 paths:
   # ─────────────────────────────────────────────────────────────────────
@@ -1009,12 +1010,13 @@ paths:
           in: query
           description: >-
             Server-side status filter. `unread`/`read` page over exactly those
-            rows; `archived` pages over the soft-deleted set (normally hidden).
+            rows; `archived` pages over the soft-deleted set (normally hidden);
+            `spam` filters messages the AI classifier quarantined (is_spam).
             Omit or pass `all` for every visible message. Mutually exclusive
             with `preset`.
           schema:
             type: string
-            enum: [unread, read, archived, all]
+            enum: [unread, read, archived, spam, all]
         - name: preset
           in: query
           description: >-
@@ -2134,6 +2136,130 @@ paths:
                                     description: Number of Gemini API calls before success (1 = no retries)
                   - $ref: "#/components/schemas/ApiError"
 
+  /v1/chat/config:
+    get:
+      operationId: chatConfig
+      tags: [chat]
+      summary: Whether the public AI chat is enabled
+      responses:
+        "200":
+          description: Chat enabled flag
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data:
+                            type: object
+                            required: [enabled]
+                            properties:
+                              enabled: { type: boolean }
+                  - $ref: "#/components/schemas/ApiError"
+
+  /v1/chat:
+    post:
+      operationId: chatSend
+      tags: [chat]
+      summary: Send a message to the public AI assistant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ChatMessagesInput" }
+      responses:
+        "200":
+          description: Assistant reply
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data:
+                            type: object
+                            required: [reply]
+                            properties:
+                              reply: { type: string }
+                  - $ref: "#/components/schemas/ApiError"
+        "503":
+          description: AI not configured
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+
+  /v1/admin/ai/generate:
+    post:
+      operationId: adminAiGenerate
+      tags: [admin.ai]
+      summary: Generate new site content with AI (admin)
+      security: [{ adminAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AiGenerateInput" }
+      responses:
+        "200":
+          description: Generated text
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data:
+                            type: object
+                            required: [text]
+                            properties:
+                              text: { type: string }
+                  - $ref: "#/components/schemas/ApiError"
+        "503":
+          description: AI not configured
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+
+  /v1/admin/ai/improve:
+    post:
+      operationId: adminAiImprove
+      tags: [admin.ai]
+      summary: Rewrite/improve existing site content with AI (admin)
+      security: [{ adminAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AiImproveInput" }
+      responses:
+        "200":
+          description: Improved text
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data:
+                            type: object
+                            required: [text]
+                            properties:
+                              text: { type: string }
+                  - $ref: "#/components/schemas/ApiError"
+        "503":
+          description: AI not configured
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+
 components:
   schemas:
     SuccessEnvelope:
@@ -2150,6 +2276,36 @@ components:
         message: { type: string }
         code: { type: string }
         existingId: { type: string }
+
+    ChatMessagesInput:
+      type: object
+      required: [messages]
+      properties:
+        messages:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            required: [role, content]
+            properties:
+              role: { type: string, enum: [user, assistant] }
+              content: { type: string }
+
+    AiGenerateInput:
+      type: object
+      required: [contentType]
+      properties:
+        contentType: { type: string, enum: [hero, about, project, skill, experience, general] }
+        instructions: { type: string }
+        context: { type: string }
+
+    AiImproveInput:
+      type: object
+      required: [contentType, text]
+      properties:
+        contentType: { type: string, enum: [hero, about, project, skill, experience, general] }
+        text: { type: string }
+        instructions: { type: string }
 
     Pagination:
       type: object
@@ -2414,7 +2570,7 @@ components:
 
     Message:
       type: object
-      required: [id, name, email, subject, message, status, reply_email_draft, replied_at, user_id, deleted_at, created_at, updated_at]
+      required: [id, name, email, subject, message, status, reply_email_draft, replied_at, user_id, deleted_at, created_at, updated_at, spam_score, spam_reason, is_spam]
       properties:
         id: { type: string }
         name: { type: string }
@@ -2428,6 +2584,9 @@ components:
         deleted_at: { type: string, nullable: true }
         created_at: { type: string }
         updated_at: { type: string }
+        spam_score: { type: integer, nullable: true }
+        spam_reason: { type: string, nullable: true }
+        is_spam: { type: boolean }
 
     ContactInfo:
       type: object
@@ -3011,7 +3170,7 @@ components:
           type: object
           description: The view to archive, mirroring the list endpoint's `status` / `preset`.
           properties:
-            status: { type: string, enum: [unread, read, archived] }
+            status: { type: string, enum: [unread, read, archived, spam] }
             preset:
               type: string
               enum: [unread_today, unread_or_archived, needs_reply]
@@ -3028,7 +3187,7 @@ components:
           type: object
           description: The view to restore, mirroring the list endpoint's `status` / `preset`.
           properties:
-            status: { type: string, enum: [unread, read, archived] }
+            status: { type: string, enum: [unread, read, archived, spam] }
             preset:
               type: string
               enum: [unread_today, unread_or_archived, needs_reply]

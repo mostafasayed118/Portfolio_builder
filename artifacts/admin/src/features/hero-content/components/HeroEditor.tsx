@@ -13,6 +13,7 @@ import { HeroLivePreview, type HeroFormData } from "@/features/hero-content/comp
 import { EditorErrorState, EditorLoadingState } from "@/components/EditorStates";
 import { EditorHeader, EditorLayout } from "@/components/EditorScaffold";
 import { EditorCard, EditorField } from "@/components/EditorForm";
+import AiTextButton from "@/features/ai/components/AiTextButton";
 
 
 export default function HeroEditor() {
@@ -174,6 +175,13 @@ export default function HeroEditor() {
               </EditorField>
               <EditorField label="Bio">
                 <Textarea {...register("bio")} placeholder="Short bio..." rows={4} />
+                <div className="mt-2">
+                  <AiTextButton
+                    contentType="hero"
+                    text={watchedData.bio ?? ""}
+                    onResult={(t) => setValue("bio", t, { shouldDirty: true })}
+                  />
+                </div>
               </EditorField>
           </EditorCard>
 

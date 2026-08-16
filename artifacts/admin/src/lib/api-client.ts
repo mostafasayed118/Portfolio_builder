@@ -87,6 +87,8 @@ import {
   submitContactForm,
   deleteImage,
   reorderImages,
+  adminAiGenerate,
+  adminAiImprove,
 } from "@workspace/api-client-react";
 
 /** Map an optional viewing-user id to the generated `{ userId }` query param. */
@@ -150,7 +152,7 @@ export const api = {
      */
     list: (
       userId?: string,
-      status?: "unread" | "read" | "archived" | "all",
+      status?: "unread" | "read" | "archived" | "spam" | "all",
       limit?: number,
       offset?: number,
       preset?: "unread_today" | "unread_or_archived" | "needs_reply",
@@ -252,6 +254,8 @@ export const api = {
     suggestTags: (techStack: string[], category?: string) => suggestTags({ techStack, category }),
     analyzeContent: (content: string, contentType: "hero" | "about" | "project") =>
       analyzeContent({ content, contentType }),
+    generate: (data: Parameters<typeof adminAiGenerate>[0]) => adminAiGenerate(data),
+    improve: (data: Parameters<typeof adminAiImprove>[0]) => adminAiImprove(data),
   },
 };
 

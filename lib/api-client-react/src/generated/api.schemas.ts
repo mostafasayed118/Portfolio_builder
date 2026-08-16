@@ -16,6 +16,60 @@ export interface ApiError {
   existingId?: string;
 }
 
+export type ChatMessagesInputMessagesItemRole = typeof ChatMessagesInputMessagesItemRole[keyof typeof ChatMessagesInputMessagesItemRole];
+
+
+export const ChatMessagesInputMessagesItemRole = {
+  user: 'user',
+  assistant: 'assistant',
+} as const;
+
+export type ChatMessagesInputMessagesItem = {
+  role: ChatMessagesInputMessagesItemRole;
+  content: string;
+};
+
+export interface ChatMessagesInput {
+  /** @maxItems 20 */
+  messages: ChatMessagesInputMessagesItem[];
+}
+
+export type AiGenerateInputContentType = typeof AiGenerateInputContentType[keyof typeof AiGenerateInputContentType];
+
+
+export const AiGenerateInputContentType = {
+  hero: 'hero',
+  about: 'about',
+  project: 'project',
+  skill: 'skill',
+  experience: 'experience',
+  general: 'general',
+} as const;
+
+export interface AiGenerateInput {
+  contentType: AiGenerateInputContentType;
+  instructions?: string;
+  context?: string;
+}
+
+export type AiImproveInputContentType = typeof AiImproveInputContentType[keyof typeof AiImproveInputContentType];
+
+
+export const AiImproveInputContentType = {
+  hero: 'hero',
+  about: 'about',
+  project: 'project',
+  skill: 'skill',
+  experience: 'experience',
+  general: 'general',
+} as const;
+
+export interface AiImproveInput {
+  contentType: AiImproveInputContentType;
+  text: string;
+  instructions?: string;
+}
+
 export interface Pagination {
   total: number;
   limit: number;
@@ -278,6 +332,9 @@ export interface Message {
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
+  spam_score: number | null;
+  spam_reason: string | null;
+  is_spam: boolean;
 }
 
 export type ContactInfoSocialLinks = { [key: string]: unknown } | null;
@@ -887,6 +944,7 @@ export const BulkArchiveInputFilterStatus = {
   unread: 'unread',
   read: 'read',
   archived: 'archived',
+  spam: 'spam',
 } as const;
 
 export type BulkArchiveInputFilterPreset = typeof BulkArchiveInputFilterPreset[keyof typeof BulkArchiveInputFilterPreset];
@@ -922,6 +980,7 @@ export const BulkUnarchiveInputFilterStatus = {
   unread: 'unread',
   read: 'read',
   archived: 'archived',
+  spam: 'spam',
 } as const;
 
 export type BulkUnarchiveInputFilterPreset = typeof BulkUnarchiveInputFilterPreset[keyof typeof BulkUnarchiveInputFilterPreset];
@@ -1172,7 +1231,7 @@ export type DeletePost200 = SuccessEnvelope & ({
 export type ListMessagesParams = {
 userId?: string;
 /**
- * Server-side status filter. `unread`/`read` page over exactly those rows; `archived` pages over the soft-deleted set (normally hidden). Omit or pass `all` for every visible message. Mutually exclusive with `preset`.
+ * Server-side status filter. `unread`/`read` page over exactly those rows; `archived` pages over the soft-deleted set (normally hidden); `spam` filters messages the AI classifier quarantined (is_spam). Omit or pass `all` for every visible message. Mutually exclusive with `preset`.
  */
 status?: ListMessagesStatus;
 /**
@@ -1196,6 +1255,7 @@ export const ListMessagesStatus = {
   unread: 'unread',
   read: 'read',
   archived: 'archived',
+  spam: 'spam',
   all: 'all',
 } as const;
 
@@ -1426,6 +1486,30 @@ export type AnalyzeContent200 = SuccessEnvelope & {
      * @minimum 1
      */
   attempts?: number;
+};
+} | ApiError;
+
+export type ChatConfig200 = SuccessEnvelope & {
+  data?: {
+  enabled: boolean;
+};
+} | ApiError;
+
+export type ChatSend200 = SuccessEnvelope & {
+  data?: {
+  reply: string;
+};
+} | ApiError;
+
+export type AdminAiGenerate200 = SuccessEnvelope & {
+  data?: {
+  text: string;
+};
+} | ApiError;
+
+export type AdminAiImprove200 = SuccessEnvelope & {
+  data?: {
+  text: string;
 };
 } | ApiError;
 
