@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@workspace/ui";
-import { Plus, Download } from "lucide-react";
+import { Plus, Download, Sparkles } from "lucide-react";
 import { logError } from "@/lib/logger";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Input, Label, Slider, Switch } from "@workspace/ui";
 import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
@@ -34,10 +34,30 @@ export default function SkillsManager() {
   const [editing, setEditing] = useState<Partial<SkillRow> | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [aiSuggesting, setAiSuggesting] = useState(false);
+  const [categorySuggestions, setCategorySuggestions] = useState<string[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
-  const openNew = () => { setIsNew(true); setEditing(BLANK_SKILL); };
-  const openEdit = (s: SkillRow) => { setIsNew(false); setEditing({ ...s }); };
+  const openNew = () => { setIsNew(true); setEditing(BLANK_SKILL); setCategorySuggestions([]); };
+  const openEdit = (s: SkillRow) => { setIsNew(false); setEditing({ ...s }); setCategorySuggestions([]); };
+
+  /** Ask Gemini for 1–3 portfolio categories for the skill name (click a chip to apply). */
+  const suggestCategories = async () => {
+    if (!editing) return;
+    const name = editing.name?.trim();
+    if (!name) { toast({ title: "Enter a skill name first", variant: "destructive" }); return; }
+    setAiSuggesting(true);
+    try {
+      const res = await api.ai.suggestCategories(name);
+      if (!res.success) throw new Error(res.message);
+      setCategorySuggestions(res.data?.categories ?? []);
+    } catch (err) {
+      logError("Failed to suggest categories", err, "SkillsManager");
+      toast({ title: "Suggestion failed", variant: "destructive" });
+    } finally {
+      setAiSuggesting(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!editing) return;
@@ -147,7 +167,7 @@ export default function SkillsManager() {
         </Card>
       ))}
 
-      <Dialog open={!!editing} onOpenChange={o => !o && setEditing(null)}>
+      <Dialog open={!!editing} onOpenChange={o => { if (!o) { setEditing(null); setCategorySuggestions([]); } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{isNew ? "Add Skill" : "Edit Skill"}</DialogTitle>
@@ -164,7 +184,21 @@ export default function SkillsManager() {
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">Category</Label>
-                  <Input value={editing.category ?? ""} onChange={e => setEditing(x => x ? ({ ...x, category: e.target.value }) : x)} className="h-9" />
+                  <div className="flex gap-2">
+                    <Input value={editing.category ?? ""} onChange={e => setEditing(x => x ? ({ ...x, category: e.target.value }) : x)} className="h-9 flex-1" />
+                    <Button type="button" size="sm" variant="outline" onClick={suggestCategories} disabled={aiSuggesting || !editing.name?.trim()} className="min-h-[44px]">
+                      <Sparkles className="h-3.5 w-3.5 mr-1.5" />{aiSuggesting ? "…" : "Suggest"}
+                    </Button>
+                  </div>
+                  {categorySuggestions.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pt-1" data-testid="category-suggestions">
+                      {categorySuggestions.map(c => (
+                        <Badge key={c} variant="outline" className="cursor-pointer" onClick={() => setEditing(x => x ? ({ ...x, category: c }) : x)}>
+                          {c}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="space-y-2">
