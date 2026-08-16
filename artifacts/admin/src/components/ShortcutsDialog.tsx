@@ -32,8 +32,8 @@ interface ShortcutsDialogProps {
 
 /**
  * The keyboard-shortcuts help modal, shared across the admin. The one-time
- * tip explaining E/U/Ctrl+A shows inside on the first open, then never again
- * (persisted in localStorage).
+ * tip explaining the main keys (E/U/Ctrl+A/R/X) shows inside on the first
+ * open, then never again (persisted in localStorage).
  */
 export function ShortcutsDialog({ open, onOpenChange }: ShortcutsDialogProps) {
   const tipRef = useRef<OneTimeHintHandle>(null);
@@ -61,8 +61,9 @@ export function ShortcutsDialog({ open, onOpenChange }: ShortcutsDialogProps) {
           className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-muted-foreground"
         >
           Tip: <Kbd>E</Kbd> archives the selected messages, <Kbd>U</Kbd>{" "}
-          restores them from the Archived tab, and <Kbd>Ctrl/Cmd+A</Kbd>{" "}
-          selects the whole page.
+          restores them from the Archived tab, <Kbd>Ctrl/Cmd+A</Kbd> selects
+          the whole page, <Kbd>R</Kbd> replies to the focused message, and{" "}
+          <Kbd>X</Kbd> selects it.
         </OneTimeHint>
         <ul className="space-y-1.5 text-xs text-muted-foreground">
           {ADMIN_SHORTCUTS.map((shortcut, i) => {

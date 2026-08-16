@@ -2,12 +2,13 @@ import { Link } from "wouter";
 import {
   Palette, Type, User, Code2, FolderKanban, Briefcase,
   Award, Mail, MessageSquare, Search, Layers, Settings,
-  ArrowRight, Zap, BarChart3
+  ArrowRight, Zap, BarChart3, Sparkles
 } from "lucide-react";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { Badge, Card, CardContent } from "@workspace/ui";
 import { StatsBar } from "@/components/StatsBar";
 import { SeedDialog } from "@/components/SeedDialog";
+import { OneTimeHint } from "@/components/OneTimeHint";
 
 const MODULES = [
   { path: "/analytics", label: "Analytics", icon: BarChart3, desc: "Views, top projects, messages", group: "Dashboard" },
@@ -43,6 +44,21 @@ export default function Overview() {
         </div>
         {isSupabaseConfigured && <SeedDialog />}
       </div>
+
+      {/* First-visit welcome: the shared OneTimeHint pattern, used here to
+          teach the whole admin surface once instead of a shortcut. */}
+      <OneTimeHint
+        storageKey="overview-welcome-dismissed"
+        dismissLabel="Dismiss welcome tip"
+        className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2"
+      >
+        <Sparkles size={14} className="shrink-0 text-primary" />
+        <span>
+          Welcome to your portfolio CMS — edit content (Hero, About,
+          Projects…), theme and typography, and answer Messages from your
+          contact form. Everything saves instantly.
+        </span>
+      </OneTimeHint>
 
       {isSupabaseConfigured && <StatsBar />}
 

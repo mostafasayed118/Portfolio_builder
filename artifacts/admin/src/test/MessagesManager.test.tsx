@@ -472,20 +472,95 @@ describe("MessagesViewer", () => {
     expect(await screen.findByText("Reply to Alice")).toBeInTheDocument();
   });
 
-  it("ignores 'r' unless exactly one message is selected", async () => {
+  it("ignores 'r' with no cursor and no selection", async () => {
     renderAdmin(<MessagesManager />);
     await screen.findByText("Alice");
 
-    // No selection: nothing to reply to.
+    // Nothing focused, nothing selected: nothing to reply to.
     fireEvent.keyDown(document, { key: "r" });
     expect(screen.queryByText("Reply to Alice")).not.toBeInTheDocument();
+  });
 
-    // Two selected: ambiguous — no-op rather than replying to one silently.
+  it("replies to the row under the cursor with 'r' even with a multi-selection", async () => {
+    renderAdmin(<MessagesManager />);
+    await screen.findByText("Alice");
+
+    // A multi-selection is no longer ambiguous: the cursor (last row
+    // interacted with — Bob) is the unambiguous reply target.
     await userEvent.click(screen.getByRole("checkbox", { name: "Select message from Alice" }));
     await userEvent.click(screen.getByRole("checkbox", { name: "Select message from Bob" }));
     fireEvent.keyDown(document, { key: "r" });
-    expect(screen.queryByText("Reply to Alice")).not.toBeInTheDocument();
-    expect(screen.queryByText("Reply to Bob")).not.toBeInTheDocument();
+    expect(await screen.findByText("Reply to Bob")).toBeInTheDocument();
+  });
+
+  it("moves the cursor with ArrowDown and ArrowUp and 'x' toggles the row under it", async () => {
+    renderAdmin(<MessagesManager />);
+    await screen.findByText("Alice");
+
+    // ArrowDown focuses the first row.
+    fireEvent.keyDown(document, { key: "ArrowDown" });
+    expect(
+      document.querySelector('[data-message-id="1"]'),
+    ).toHaveAttribute("data-focused", "true");
+
+    // ArrowDown again moves the cursor to Bob.
+    fireEvent.keyDown(document, { key: "ArrowDown" });
+    expect(
+      document.querySelector('[data-message-id="2"]'),
+    ).toHaveAttribute("data-focused", "true");
+    expect(
+      document.querySelector('[data-message-id="1"]'),
+    ).not.toHaveAttribute("data-focused");
+
+    // `x` toggles the row under the cursor — Bob — with no mouse interaction.
+    fireEvent.keyDown(document, { key: "x" });
+    expect(
+      screen.getByRole("checkbox", { name: "Select message from Bob" }),
+    ).toBeChecked();
+    expect(
+      screen.getByRole("checkbox", { name: "Select message from Alice" }),
+    ).not.toBeChecked();
+
+    // ArrowUp moves back to Alice; `x` toggles her on.
+    fireEvent.keyDown(document, { key: "ArrowUp" });
+    fireEvent.keyDown(document, { key: "x" });
+    expect(
+      screen.getByRole("checkbox", { name: "Select message from Alice" }),
+    ).toBeChecked();
+  });
+
+  it("clamps the cursor at the list edges without wrapping", async () => {
+    renderAdmin(<MessagesManager />);
+    await screen.findByText("Alice");
+
+    // ArrowUp before anything is focused starts at the first row...
+    fireEvent.keyDown(document, { key: "ArrowUp" });
+    expect(
+      document.querySelector('[data-message-id="1"]'),
+    ).toHaveAttribute("data-focused", "true");
+
+    // ...and ArrowDown at the last row stays there.
+    fireEvent.keyDown(document, { key: "ArrowDown" });
+    fireEvent.keyDown(document, { key: "ArrowDown" });
+    fireEvent.keyDown(document, { key: "ArrowDown" });
+    fireEvent.keyDown(document, { key: "ArrowDown" });
+    expect(
+      document.querySelector('[data-message-id="3"]'),
+    ).toHaveAttribute("data-focused", "true");
+    expect(
+      document.querySelector('[data-message-id="2"]'),
+    ).not.toHaveAttribute("data-focused");
+  });
+
+  it("replies to the focused row with 'r' after arrow navigation — no selection needed", async () => {
+    renderAdmin(<MessagesManager />);
+    await screen.findByText("Alice");
+
+    // Cursor to Bob entirely by keyboard, then `r` replies to him.
+    fireEvent.keyDown(document, { key: "ArrowDown" });
+    fireEvent.keyDown(document, { key: "ArrowDown" });
+    fireEvent.keyDown(document, { key: "r" });
+    expect(await screen.findByText("Reply to Bob")).toBeInTheDocument();
   });
 
   it("toggles the focused message with the 'x' shortcut", async () => {

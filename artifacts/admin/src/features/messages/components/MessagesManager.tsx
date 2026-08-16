@@ -203,6 +203,42 @@ export default function MessagesManager() {
     setBody(`Hi ${msg.name},\n\nThanks for reaching out.\n\n`);
   }, []);
 
+  // Arrow-key navigation moves a cursor (the focused row) through the visible
+  // page, so `x` and `r` can act on a row with no mouse interaction at all.
+  // The focused row is scrolled into view so the cursor never points at an
+  // off-screen message.
+  const scrollMessageIntoView = useCallback((id: string) => {
+    requestAnimationFrame(() => {
+      // `scrollIntoView` isn't implemented in jsdom and is optional on some
+      // embedded browsers — degrade gracefully rather than crash navigation.
+      document
+        .querySelector(`[data-message-id="${id}"]`)
+        ?.scrollIntoView?.({ block: "nearest" });
+    });
+  }, []);
+
+  const navigate = useCallback(
+    (dir: 1 | -1) => {
+      const list = paginatedMessages;
+      if (list.length === 0) return;
+      const currentIndex = focusedId
+        ? list.findIndex((m) => m.id === focusedId)
+        : -1;
+      // Nothing focused yet: both arrows start at the first row. Otherwise
+      // clamp at the list edges (Gmail-style — no wrap-around).
+      const nextIndex =
+        currentIndex === -1
+          ? 0
+          : Math.min(list.length - 1, Math.max(0, currentIndex + dir));
+      const next = list[nextIndex];
+      if (next?.id) {
+        setFocusedId(next.id);
+        scrollMessageIntoView(next.id);
+      }
+    },
+    [paginatedMessages, focusedId, scrollMessageIntoView],
+  );
+
   const sendReply = async () => {
     if (!replyTo) return;
     if (!body.trim()) {
@@ -393,6 +429,26 @@ export default function MessagesManager() {
     }
   }, [selectedIds, totalMatching, queryClient, toast]);
 
+  // Arrow-key navigation: moves the keyboard cursor between the rows on the
+  // current page. Same guards as the other shortcuts (ignored in inputs,
+  // gated while a dialog is open).
+  const navigationShortcuts = useMemo(
+    () => [
+      {
+        key: "ArrowDown",
+        handler: () => navigate(1),
+        description: "Next message",
+      },
+      {
+        key: "ArrowUp",
+        handler: () => navigate(-1),
+        description: "Previous message",
+      },
+    ],
+    [navigate],
+  );
+  useKeyboardShortcuts(navigationShortcuts, !dialogsOpen);
+
   // Gmail-style bulk shortcuts: `e` archives the selection, `u` restores it
   // from the Archived view — mirroring whichever bulk action the toolbar shows
   // for the active view. Same guards as Ctrl/Cmd+A (ignored in inputs, gated
@@ -418,21 +474,30 @@ export default function MessagesManager() {
   );
   useKeyboardShortcuts(bulkShortcuts, !dialogsOpen);
 
-  // Gmail-style keys: `r` replies to the single selected message; `x` toggles
-  // the selection of the focused (last-toggled) message — falling back to the
-  // first row on the page so the key is never dead. Same guards as the other
-  // shortcuts (ignored in inputs, gated while a dialog is open).
+  // Gmail-style keys: `r` replies to the row under the cursor (the focused
+  // message, set by arrow keys or any row interaction); `x` toggles its
+  // selection — falling back to the first row on the page so the key is never
+  // dead. Same guards as the other shortcuts (ignored in inputs, gated while
+  // a dialog is open).
   const gmailShortcuts = useMemo(
     () => [
       {
         key: "r",
         handler: () => {
-          if (selectedIds.size !== 1) return;
-          const id = [...selectedIds][0];
-          const msg = (msgs ?? []).find((m) => m.id === id);
-          if (msg) openReply(msg);
+          const list = msgs ?? [];
+          // The cursor is the unambiguous reply target — no selection needed.
+          // Fall back to the legacy "exactly one selected" rule only when
+          // nothing has been focused yet.
+          let target: Msg | undefined;
+          if (focusedId) {
+            target = list.find((m) => m.id === focusedId);
+          } else if (selectedIds.size === 1) {
+            const id = [...selectedIds][0];
+            target = list.find((m) => m.id === id);
+          }
+          if (target) openReply(target);
         },
-        description: "Reply to selected",
+        description: "Reply to focused",
       },
       {
         key: "x",
@@ -643,17 +708,26 @@ export default function MessagesManager() {
 
       <div className="space-y-3">
         {paginatedMessages.map((msg, i) => (
-          <MessageCard
+          /* The wrapper carries the row's data attributes: the focused row is
+             scrolled into view by data-message-id, and data-focused marks the
+             keyboard cursor for tests and styling hooks. */
+          <div
             key={msg.id ?? i}
-            message={msg}
-            selected={msg.id ? selectedIds.has(msg.id) : false}
-            onToggleSelect={toggleSelect}
-            onReply={openReply}
-            onMarkRead={handleMarkRead}
-            onArchive={handleArchive}
-            onUnarchive={handleUnarchive}
-            formatDate={formatDate}
-          />
+            data-message-id={msg.id ?? undefined}
+            data-focused={msg.id && msg.id === focusedId ? "true" : undefined}
+          >
+            <MessageCard
+              message={msg}
+              selected={msg.id ? selectedIds.has(msg.id) : false}
+              focused={!!msg.id && msg.id === focusedId}
+              onToggleSelect={toggleSelect}
+              onReply={openReply}
+              onMarkRead={handleMarkRead}
+              onArchive={handleArchive}
+              onUnarchive={handleUnarchive}
+              formatDate={formatDate}
+            />
+          </div>
         ))}
       </div>
 
