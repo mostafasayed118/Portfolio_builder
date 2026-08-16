@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useState, useMemo, useRef, useEffect, useCallback, type ReactNode } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,7 @@ import {
   Keyboard,
 } from "lucide-react";
 import { api } from "@/lib/api-client";
+import { SHORTCUTS_OPENED_EVENT } from "@/components/ShortcutsDialog";
 import { Button, Card, CardContent, Input, Textarea } from "@workspace/ui";
 import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
 import { SmartEmptyState } from "@/components/SmartEmptyState";
@@ -33,14 +34,6 @@ function formatDate(ts: string): string {
     hour: "2-digit",
     minute: "2-digit",
   });
-}
-
-function Kbd({ children }: { children: ReactNode }) {
-  return (
-    <kbd className="rounded border border-border bg-muted px-1 py-0.5 font-mono text-[10px]">
-      {children}
-    </kbd>
-  );
 }
 
 type MessageFilter = "all" | "unread" | "read" | "archived";
@@ -65,38 +58,17 @@ export default function MessagesManager() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  // The row most recently toggled — the target of the Gmail-style `x` key
+  // (which toggles the focused message like Gmail's checkbox shortcut).
+  const [focusedId, setFocusedId] = useState<string | null>(null);
   const [showCleanupDialog, setShowCleanupDialog] = useState(false);
   const [showRestoreAllDialog, setShowRestoreAllDialog] = useState(false);
-  // The keyboard-shortcuts help lives in a modal (not the selection toolbar),
-  // opened by the header icon or the `?` / `Shift+?` shortcut. The one-time
-  // tip explaining the keys shows inside the modal on the first open, then
-  // never again (persisted in localStorage).
-  const [showShortcutsDialog, setShowShortcutsDialog] = useState(false);
-  const [showShortcutsTip, setShowShortcutsTip] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem("messages-shortcuts-tip-dismissed") !== "1";
-    } catch {
-      return true; // storage unavailable — the tip may reappear; harmless
-    }
-  });
-
-  const openShortcuts = useCallback(() => setShowShortcutsDialog(true), []);
-
-  const closeShortcuts = useCallback(
-    (open: boolean) => {
-      setShowShortcutsDialog(open);
-      // Once the dialog closes, the first-visit tip has been seen.
-      if (!open && showShortcutsTip) {
-        setShowShortcutsTip(false);
-        try {
-          localStorage.setItem("messages-shortcuts-tip-dismissed", "1");
-        } catch {
-          /* storage unavailable — persist best-effort only */
-        }
-      }
-    },
-    [showShortcutsTip],
-  );
+  // The keyboard-shortcuts help is global now: the `?` / `Shift+?` keys and
+  // the modal live in the shell (ShortcutsHelp), so the header icon below
+  // only needs to request it via the shared event.
+  const openShortcuts = useCallback(() => {
+    window.dispatchEvent(new Event(SHORTCUTS_OPENED_EVENT));
+  }, []);
 
   // The active chip or preset drives a server-side filter on the collection
   // endpoint: status chips page over exactly those rows (not a client-side
@@ -184,31 +156,30 @@ export default function MessagesManager() {
   // an input/textarea, so native select-all-in-field keeps working, and
   // `enabled` gates it while a dialog is open (the selection lives behind
   // the dialog and shouldn't change underneath it).
-  const dialogsOpen = !!replyTo || showCleanupDialog || showRestoreAllDialog || showShortcutsDialog;
+  const dialogsOpen = !!replyTo || showCleanupDialog || showRestoreAllDialog;
   const selectPageShortcut = useMemo(
     () => [
       {
         key: "a",
         ctrl: true,
-        handler: () => toggleSelectAllOnPage(),
+        handler: () => {
+          if (pageIds.length === 0) return;
+          // Confirm the keyboard path: the toggle is silent by itself, so
+          // tell the user what it did (E/U already confirm via their bulk
+          // action toasts).
+          toggleSelectAllOnPage();
+          toast({
+            title: allPageSelected
+              ? "Selection cleared"
+              : `Selected ${pageIds.length} on this page`,
+          });
+        },
         description: "Select all on page",
       },
     ],
-    [toggleSelectAllOnPage],
+    [toggleSelectAllOnPage, allPageSelected, pageIds, toast],
   );
   useKeyboardShortcuts(selectPageShortcut, !dialogsOpen);
-
-  // `?` (and `Shift+?` — the US-layout key is `?` with shift held) opens the
-  // shortcuts help modal from anywhere on the page. Gated while another
-  // dialog is open so modals never stack.
-  const shortcutsHelpShortcut = useMemo(
-    () => [
-      { key: "?", handler: () => openShortcuts(), description: "Open keyboard shortcuts" },
-      { key: "/", shift: true, handler: () => openShortcuts(), description: "Open keyboard shortcuts" },
-    ],
-    [openShortcuts],
-  );
-  useKeyboardShortcuts(shortcutsHelpShortcut, !dialogsOpen);
 
   // Gmail-style "Select all N matching": the batched fetcher has already
   // loaded EVERY row matching the active view, so grabbing them all is a
@@ -226,11 +197,11 @@ export default function MessagesManager() {
     setSelectedIds(new Set(allMatchingIds));
   }, [allMatchingIds]);
 
-  const openReply = (msg: Msg) => {
+  const openReply = useCallback((msg: Msg) => {
     setReplyTo(msg);
     setSubject(`Re: ${msg.name}`);
     setBody(`Hi ${msg.name},\n\nThanks for reaching out.\n\n`);
-  };
+  }, []);
 
   const sendReply = async () => {
     if (!replyTo) return;
@@ -296,7 +267,9 @@ export default function MessagesManager() {
     setSelectedIds(new Set());
   };
 
-  const toggleSelect = (msg: Msg) => {
+  const toggleSelect = useCallback((msg: Msg) => {
+    // Interacting with a row makes it the focused message for the `x` key.
+    setFocusedId(msg.id ?? null);
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (msg.id) {
@@ -305,7 +278,7 @@ export default function MessagesManager() {
       }
       return next;
     });
-  };
+  }, []);
 
   const handleCleanupTestSubmissions = async () => {
     try {
@@ -444,6 +417,42 @@ export default function MessagesManager() {
     [view, handleBulkArchive, handleBulkUnarchive],
   );
   useKeyboardShortcuts(bulkShortcuts, !dialogsOpen);
+
+  // Gmail-style keys: `r` replies to the single selected message; `x` toggles
+  // the selection of the focused (last-toggled) message — falling back to the
+  // first row on the page so the key is never dead. Same guards as the other
+  // shortcuts (ignored in inputs, gated while a dialog is open).
+  const gmailShortcuts = useMemo(
+    () => [
+      {
+        key: "r",
+        handler: () => {
+          if (selectedIds.size !== 1) return;
+          const id = [...selectedIds][0];
+          const msg = (msgs ?? []).find((m) => m.id === id);
+          if (msg) openReply(msg);
+        },
+        description: "Reply to selected",
+      },
+      {
+        key: "x",
+        handler: () => {
+          const list = msgs ?? [];
+          const target = focusedId ? list.find((m) => m.id === focusedId) : list[0];
+          if (!target) return;
+          // Confirm the keyboard path with the touched row's name.
+          const willSelect = !(target.id ? selectedIds.has(target.id) : false);
+          toggleSelect(target);
+          toast({
+            title: willSelect ? `Selected ${target.name}` : `Deselected ${target.name}`,
+          });
+        },
+        description: "Select message",
+      },
+    ],
+    [selectedIds, msgs, focusedId, openReply, toggleSelect, toast],
+  );
+  useKeyboardShortcuts(gmailShortcuts, !dialogsOpen);
 
   const handleArchive = async (msg: Msg) => {
     try {
@@ -657,49 +666,6 @@ export default function MessagesManager() {
           onPageSizeChange={setPageSize}
         />
       )}
-
-      <Dialog
-        open={showShortcutsDialog}
-        onOpenChange={closeShortcuts}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Keyboard shortcuts</DialogTitle>
-            <DialogDescription>
-              Quick keys for working with the inbox. Press{" "}
-              <Kbd>?</Kbd> anytime to reopen this.
-            </DialogDescription>
-          </DialogHeader>
-          {showShortcutsTip && (
-            <div
-              role="status"
-              className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-muted-foreground"
-            >
-              Tip: <Kbd>E</Kbd> archives the selected messages, <Kbd>U</Kbd>{" "}
-              restores them from the Archived tab, and <Kbd>Ctrl/Cmd+A</Kbd>{" "}
-              selects the whole page.
-            </div>
-          )}
-          <ul className="space-y-1.5 text-xs text-muted-foreground">
-            <li className="flex items-center justify-between gap-3">
-              <span>Select all on page</span>
-              <Kbd>Ctrl/Cmd+A</Kbd>
-            </li>
-            <li className="flex items-center justify-between gap-3">
-              <span>Archive selected</span>
-              <Kbd>E</Kbd>
-            </li>
-            <li className="flex items-center justify-between gap-3">
-              <span>Restore selected (Archived)</span>
-              <Kbd>U</Kbd>
-            </li>
-            <li className="flex items-center justify-between gap-3">
-              <span>Open keyboard shortcuts</span>
-              <Kbd>?</Kbd>
-            </li>
-          </ul>
-        </DialogContent>
-      </Dialog>
 
       <Dialog
         open={!!replyTo}

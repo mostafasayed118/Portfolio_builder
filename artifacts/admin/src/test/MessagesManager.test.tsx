@@ -2,6 +2,7 @@ import { screen, waitFor, within, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderAdmin } from "./helpers";
 import { MessagesManager } from "@/features/messages";
+import { SHORTCUTS_OPENED_EVENT } from "@/components/ShortcutsDialog";
 
 const {
   mockListMessages,
@@ -14,6 +15,7 @@ const {
   mockArchiveTestSubmissions,
   mockRestoreAllArchived,
   mockUnreadCount,
+  mockToast,
 } = vi.hoisted(() => ({
   mockListMessages: vi.fn(),
   mockMarkMessageRead: vi.fn(),
@@ -25,6 +27,7 @@ const {
   mockArchiveTestSubmissions: vi.fn(),
   mockRestoreAllArchived: vi.fn(),
   mockUnreadCount: vi.fn(),
+  mockToast: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase", () => ({
@@ -53,7 +56,7 @@ vi.mock("@workspace/ui", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@workspace/ui")>();
   return {
     ...actual,
-    useToast: () => ({ toast: vi.fn() }),
+    useToast: () => ({ toast: mockToast }),
   };
 });
 
@@ -345,6 +348,28 @@ describe("MessagesViewer", () => {
     expect(screen.getByText("0 selected")).toBeInTheDocument();
   });
 
+  it("confirms the Ctrl+A action with a toast", async () => {
+    renderAdmin(<MessagesManager />);
+    await screen.findByText("Alice");
+
+    fireEvent.keyDown(document, { key: "a", ctrlKey: true });
+    expect(mockToast).toHaveBeenCalledWith({ title: "Selected 3 on this page" });
+
+    fireEvent.keyDown(document, { key: "a", ctrlKey: true });
+    expect(mockToast).toHaveBeenCalledWith({ title: "Selection cleared" });
+  });
+
+  it("confirms the 'x' action with a toast naming the touched row", async () => {
+    renderAdmin(<MessagesManager />);
+    await screen.findByText("Alice");
+
+    fireEvent.keyDown(document, { key: "x" });
+    expect(mockToast).toHaveBeenCalledWith({ title: "Selected Alice" });
+
+    fireEvent.keyDown(document, { key: "x" });
+    expect(mockToast).toHaveBeenCalledWith({ title: "Deselected Alice" });
+  });
+
   it("ignores Ctrl+A while a dialog is open", async () => {
     renderAdmin(<MessagesManager />);
 
@@ -434,6 +459,68 @@ describe("MessagesViewer", () => {
 
     expect(mockBulkArchiveMessage).not.toHaveBeenCalled();
     expect(mockBulkUnarchiveMessage).not.toHaveBeenCalled();
+  });
+
+  it("replies to the single selected message with the 'r' shortcut", async () => {
+    renderAdmin(<MessagesManager />);
+    await screen.findByText("Alice");
+
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select message from Alice" }));
+    fireEvent.keyDown(document, { key: "r" });
+
+    // The same reply dialog the toolbar opens, prefilled for the selection.
+    expect(await screen.findByText("Reply to Alice")).toBeInTheDocument();
+  });
+
+  it("ignores 'r' unless exactly one message is selected", async () => {
+    renderAdmin(<MessagesManager />);
+    await screen.findByText("Alice");
+
+    // No selection: nothing to reply to.
+    fireEvent.keyDown(document, { key: "r" });
+    expect(screen.queryByText("Reply to Alice")).not.toBeInTheDocument();
+
+    // Two selected: ambiguous — no-op rather than replying to one silently.
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select message from Alice" }));
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select message from Bob" }));
+    fireEvent.keyDown(document, { key: "r" });
+    expect(screen.queryByText("Reply to Alice")).not.toBeInTheDocument();
+    expect(screen.queryByText("Reply to Bob")).not.toBeInTheDocument();
+  });
+
+  it("toggles the focused message with the 'x' shortcut", async () => {
+    renderAdmin(<MessagesManager />);
+    await screen.findByText("Alice");
+
+    // Toggling Alice's checkbox makes her the focused message; `x` then
+    // flips her selection back and forth.
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select message from Alice" }));
+    expect(
+      screen.getByRole("checkbox", { name: "Select message from Alice" }),
+    ).toBeChecked();
+
+    fireEvent.keyDown(document, { key: "x" });
+    expect(
+      screen.getByRole("checkbox", { name: "Select message from Alice" }),
+    ).not.toBeChecked();
+
+    fireEvent.keyDown(document, { key: "x" });
+    expect(
+      screen.getByRole("checkbox", { name: "Select message from Alice" }),
+    ).toBeChecked();
+  });
+
+  it("selects the first row with 'x' when nothing is focused yet", async () => {
+    renderAdmin(<MessagesManager />);
+    await screen.findByText("Alice");
+
+    fireEvent.keyDown(document, { key: "x" });
+
+    // No row has been interacted with — the key falls back to the first row
+    // so it is never dead on a fresh page.
+    expect(
+      screen.getByRole("checkbox", { name: "Select message from Alice" }),
+    ).toBeChecked();
   });
 
   it("select-all on page toggles off when everything is already selected", async () => {
@@ -759,86 +846,19 @@ describe("MessagesViewer", () => {
     });
   });
 
-  // The shortcuts dialog lists rows whose labels also exist in the toolbar,
-  // so assertions scope inside the dialog; the one-time tip renders with
-  // <Kbd> chips (text spans nodes), so its presence is checked via the
-  // role="status" element inside the dialog.
+  it("requests the shared shortcuts modal via the header icon", async () => {
+    // The modal itself is global (mounted in the shell by ShortcutsHelp) —
+    // the header icon's job is just to request it through the shared event.
+    const onOpen = vi.fn();
+    window.addEventListener(SHORTCUTS_OPENED_EVENT, onOpen);
 
-  it("opens the keyboard-shortcuts dialog via the ? key", async () => {
-    renderAdmin(<MessagesManager />);
-    await screen.findByText("Alice");
-
-    fireEvent.keyDown(document, { key: "?" });
-
-    const dialog = await screen.findByRole("dialog", { name: "Keyboard shortcuts" });
-    expect(within(dialog).getByText("Select all on page")).toBeInTheDocument();
-    expect(within(dialog).getByText("Archive selected")).toBeInTheDocument();
-    expect(within(dialog).getByText("Restore selected (Archived)")).toBeInTheDocument();
-    expect(within(dialog).getByText("Open keyboard shortcuts")).toBeInTheDocument();
-  });
-
-  it("opens the keyboard-shortcuts dialog via Shift+/", async () => {
-    renderAdmin(<MessagesManager />);
-    await screen.findByText("Alice");
-
-    fireEvent.keyDown(document, { key: "/", shiftKey: true });
-
-    expect(
-      await screen.findByRole("dialog", { name: "Keyboard shortcuts" }),
-    ).toBeInTheDocument();
-  });
-
-  it("opens the keyboard-shortcuts dialog via the header icon", async () => {
     renderAdmin(<MessagesManager />);
     await screen.findByText("Alice");
 
     await userEvent.click(screen.getByRole("button", { name: "Keyboard shortcuts" }));
 
-    expect(
-      await screen.findByRole("dialog", { name: "Keyboard shortcuts" }),
-    ).toBeInTheDocument();
-  });
-
-  it("shows the first-visit tip inside the shortcuts dialog once, then never again", async () => {
-    const first = renderAdmin(<MessagesManager />);
-    await screen.findByText("Alice");
-
-    fireEvent.keyDown(document, { key: "?" });
-    const dialog = await screen.findByRole("dialog", { name: "Keyboard shortcuts" });
-    // The one-time tip explaining E/U/Ctrl+A appears on the first open.
-    expect(within(dialog).getByRole("status")).toHaveTextContent(/archives the selected messages/i);
-
-    // Closing persists the dismissal.
-    fireEvent.keyDown(document, { key: "Escape" });
-    await waitFor(() => {
-      expect(screen.queryByRole("dialog", { name: "Keyboard shortcuts" })).not.toBeInTheDocument();
-    });
-    expect(localStorage.getItem("messages-shortcuts-tip-dismissed")).toBe("1");
-    first.unmount();
-
-    // A fresh visit: the dialog still opens, but the tip never returns.
-    renderAdmin(<MessagesManager />);
-    await screen.findByText("Alice");
-    fireEvent.keyDown(document, { key: "?" });
-    const again = await screen.findByRole("dialog", { name: "Keyboard shortcuts" });
-    expect(within(again).queryByRole("status")).not.toBeInTheDocument();
-  });
-
-  it("ignores the ? shortcut while another dialog is open", async () => {
-    renderAdmin(<MessagesManager />);
-    await screen.findByText("Alice");
-
-    await userEvent.click(
-      screen.getByRole("button", { name: "Archive test submissions" }),
-    );
-    await screen.findByRole("alertdialog");
-
-    fireEvent.keyDown(document, { key: "?" });
-
-    // The cleanup dialog stays the only open dialog — no stacking.
-    expect(
-      screen.queryByRole("dialog", { name: "Keyboard shortcuts" }),
-    ).not.toBeInTheDocument();
+    expect(onOpen).toHaveBeenCalledTimes(1);
+    window.removeEventListener(SHORTCUTS_OPENED_EVENT, onOpen);
   });
 
   it("shows empty state when no messages", async () => {
