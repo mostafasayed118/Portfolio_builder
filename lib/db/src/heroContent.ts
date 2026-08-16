@@ -1,16 +1,18 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { HeroContent, InsertHeroContent } from "@workspace/supabase/types";
 import { queryOrThrow } from "./query";
+import { CANONICAL_EMAIL, normalizeHeroContentFields, SOCIAL_LINKS } from "./contactFields";
 
 export type { HeroContent };
 
 export async function getHeroContent(
   supabase: SupabaseClient,
 ): Promise<HeroContent | null> {
-  return queryOrThrow(
+  const data = await queryOrThrow<HeroContent | null>(
     supabase.from("hero_content").select("*").limit(1).maybeSingle(),
     { table: "hero_content", operation: "getHeroContent" },
   );
+  return data ? normalizeHeroContentFields(data) : null;
 }
 
 export async function upsertHeroContent(
@@ -31,11 +33,11 @@ export async function upsertHeroContent(
       name: args.name ?? "Mustafa Sayed",
       roles: args.roles ?? ["Data Engineer", "ETL Developer", "Pipeline Architect"],
       description: args.description ?? "Passionate about building scalable data pipelines and transforming raw data into actionable insights.",
-      github_url: args.github_url ?? "https://github.com/mostafasayed118",
-      linkedin_url: args.linkedin_url ?? "https://www.linkedin.com/in/mustafa-sayed11",
+      github_url: args.github_url ?? SOCIAL_LINKS.github,
+      linkedin_url: args.linkedin_url ?? SOCIAL_LINKS.linkedin,
       youtube_url: args.youtube_url ?? null,
       facebook_url: args.facebook_url ?? null,
-      email: args.email ?? "mustafasayedsaeed@outlook.com",
+      email: args.email ?? CANONICAL_EMAIL,
       available: args.available ?? true,
       site_name: args.site_name ?? null, logo_url: args.logo_url ?? null,
       favicon_url: args.favicon_url ?? null, tagline: args.tagline ?? null,
@@ -58,11 +60,11 @@ export async function seedDefaultHeroContent(
       heading: "Hi, I'm", name: "Mustafa Sayed",
       roles: ["Data Engineer", "ETL Developer", "Pipeline Architect", "BI Developer"],
       description: "Passionate about building scalable data pipelines, transforming raw data into actionable insights, and architecting robust ETL solutions.",
-      github_url: "https://github.com/mostafasayed118",
-      linkedin_url: "https://www.linkedin.com/in/mustafa-sayed11",
-      youtube_url: "https://www.youtube.com/@MustafaSayed273",
-      facebook_url: "https://www.facebook.com/mustafa.sayed.91259",
-      email: "mustafasayedsaeed@outlook.com", available: true,
+      github_url: SOCIAL_LINKS.github,
+      linkedin_url: SOCIAL_LINKS.linkedin,
+      youtube_url: SOCIAL_LINKS.youtube,
+      facebook_url: SOCIAL_LINKS.facebook,
+      email: CANONICAL_EMAIL, available: true,
       cv_file_name: "Mustafa_Sayed_Resume.pdf", is_published: true,
       updated_at: new Date().toISOString(),
     }).select("id").single(),

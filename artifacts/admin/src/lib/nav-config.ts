@@ -2,7 +2,7 @@ import type { ElementType } from "react";
 import {
   LayoutDashboard, Palette, Type, User, Briefcase, Code2,
   FolderKanban, Award, MessageSquare, Search, Layers,
-  Settings, Zap, FileText, ExternalLink, Plus, Clock, NotebookPen, BarChart3
+  Settings, Zap, FileText, ExternalLink, Plus, Clock, NotebookPen, BarChart3, Sparkles
 } from "lucide-react";
 
 export interface NavItem {
@@ -19,6 +19,7 @@ export const NAV_ITEMS: NavItem[] = [
   { path: "/hero", label: "Hero", icon: Zap, group: "Content", keywords: ["hero", "banner", "header", "image"] },
   { path: "/about", label: "About", icon: User, group: "Content", keywords: ["about", "bio", "education", "languages"] },
   { path: "/projects", label: "Projects", icon: FolderKanban, group: "Content", keywords: ["projects", "portfolio", "work", "showcase"] },
+  { path: "/ai", label: "AI Assistant", icon: Sparkles, group: "Content", keywords: ["ai", "assistant", "generate", "description", "tags", "categories", "analyze", "content", "gemini", "writer"] },
   { path: "/skills", label: "Skills", icon: Code2, group: "Content", keywords: ["skills", "abilities", "technologies", "tech"] },
   { path: "/experience", label: "Experience", icon: Briefcase, group: "Content", keywords: ["experience", "work", "jobs", "career"] },
   { path: "/certifications", label: "Certifications", icon: Award, group: "Content", keywords: ["certifications", "certificates", "credentials", "badges"] },
@@ -44,4 +45,8 @@ export const QUICK_ACTIONS = [
   { label: "Add New Project", icon: Plus, action: "add-project", keywords: ["add", "new", "create", "project"] },
   { label: "Add New Skill", icon: Plus, action: "add-skill", keywords: ["add", "new", "create", "skill"] },
   { label: "Add New Experience", icon: Plus, action: "add-experience", keywords: ["add", "new", "create", "experience"] },
+  { label: "Generate Project Description", icon: Sparkles, action: "ai-generate-description", keywords: ["ai", "generate", "description", "write", "draft", "project"] },
+  { label: "Suggest Categories for Skill", icon: Sparkles, action: "ai-suggest-categories", keywords: ["ai", "suggest", "categories", "category", "skill"] },
+  { label: "Suggest Tags for Project", icon: Sparkles, action: "ai-suggest-tags", keywords: ["ai", "suggest", "tags", "tag", "project"] },
+  { label: "Analyze Content", icon: Sparkles, action: "ai-analyze-content", keywords: ["ai", "analyze", "content", "score", "review", "improve"] },
 ];

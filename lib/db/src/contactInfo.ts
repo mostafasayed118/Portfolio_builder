@@ -2,14 +2,16 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ContactInfo, InsertContactInfo } from "@workspace/supabase/types";
 import { sanitizeUrl } from "./utils";
 import { queryOrThrow } from "./query";
+import { CANONICAL_EMAIL, normalizeContactInfoFields, SOCIAL_LINKS } from "./contactFields";
 
 export async function getContactInfo(
   supabase: SupabaseClient,
 ): Promise<ContactInfo | null> {
-  return queryOrThrow(
+  const data = await queryOrThrow<ContactInfo | null>(
     supabase.from("contact_info").select("*").limit(1).maybeSingle(),
     { table: "contact_info", operation: "getContactInfo" },
   );
+  return data ? normalizeContactInfoFields(data) : null;
 }
 
 export async function upsertContactInfo(
@@ -27,11 +29,11 @@ export async function upsertContactInfo(
   }
   const data = await queryOrThrow<{ id: string }>(
     supabase.from("contact_info").insert({
-      email: args.email ?? "mustafasayedsaeed@outlook.com",
+      email: args.email ?? CANONICAL_EMAIL,
       phone: args.phone ?? "+20 100 000 0000",
       location: args.location ?? "Cairo, Egypt",
-      github: sanitizeUrl(args.github) ?? "https://github.com/mostafasayed118",
-      linkedin: sanitizeUrl(args.linkedin) ?? "https://www.linkedin.com/in/mustafa-sayed11",
+      github: sanitizeUrl(args.github) ?? SOCIAL_LINKS.github,
+      linkedin: sanitizeUrl(args.linkedin) ?? SOCIAL_LINKS.linkedin,
       youtube: sanitizeUrl(args.youtube) ?? null,
       facebook: sanitizeUrl(args.facebook) ?? null,
       whatsapp: args.whatsapp ?? null,
