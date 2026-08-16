@@ -1094,9 +1094,21 @@ export type DeletePost200 = SuccessEnvelope & ({
 export type ListMessagesParams = {
 userId?: string;
 /**
- * Server-side status filter. `unread`/`read` page over exactly those rows; `archived` pages over the soft-deleted set (normally hidden). Omit or pass `all` for every visible message.
+ * Server-side status filter. `unread`/`read` page over exactly those rows; `archived` pages over the soft-deleted set (normally hidden). Omit or pass `all` for every visible message. Mutually exclusive with `preset`.
  */
 status?: ListMessagesStatus;
+/**
+ * Saved compound view. `unread_today` — unread messages created since UTC midnight; `unread_or_archived` — every unread or archived row (excludes read, visible messages); `needs_reply` — read but never replied to. Mutually exclusive with `status`.
+ */
+preset?: ListMessagesPreset;
+/**
+ * Page size (1-200, default 50). The admin fetches every matching row in batches of the maximum to page past the first 50.
+ */
+limit?: number;
+/**
+ * Row offset into the filtered set (default 0).
+ */
+offset?: number;
 };
 
 export type ListMessagesStatus = typeof ListMessagesStatus[keyof typeof ListMessagesStatus];
@@ -1107,6 +1119,15 @@ export const ListMessagesStatus = {
   read: 'read',
   archived: 'archived',
   all: 'all',
+} as const;
+
+export type ListMessagesPreset = typeof ListMessagesPreset[keyof typeof ListMessagesPreset];
+
+
+export const ListMessagesPreset = {
+  unread_today: 'unread_today',
+  unread_or_archived: 'unread_or_archived',
+  needs_reply: 'needs_reply',
 } as const;
 
 export type ListMessages200 = SuccessEnvelope & {

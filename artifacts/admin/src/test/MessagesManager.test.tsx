@@ -84,17 +84,34 @@ const mockMessages = [
 describe("MessagesViewer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // The list endpoint applies the server-side `status` filter — the mock
-    // stands in for it, so filtered views only return matching rows (the
-    // same contract the real endpoint honors).
-    mockListMessages.mockImplementation(async (_userId, status) => {
+    // The list endpoint applies the server-side `status`/`preset` filter AND
+    // pages by limit/offset — the mock stands in for both, so filtered views
+    // only return matching rows and the batched fetcher gets a real
+    // short-page termination (same contract the real endpoint honors).
+    mockListMessages.mockImplementation(async (_userId, status, limit = 200, offset = 0, preset) => {
       const list = mockMessages.filter((m) => {
+        if (preset === "unread_today") return m.status === "unread";
+        if (preset === "unread_or_archived")
+          return m.status === "unread" || m.status === "archived";
+        if (preset === "needs_reply") return m.status === "read";
         if (status === "unread") return m.status === "unread";
         if (status === "read") return m.status === "read";
         if (status === "archived") return m.status === "archived";
         return true;
       });
-      return { success: true, data: list };
+      const page = list.slice(offset, offset + limit);
+      return {
+        success: true,
+        data: {
+          data: page,
+          pagination: {
+            total: list.length,
+            limit,
+            offset,
+            hasMore: offset + page.length < list.length,
+          },
+        },
+      };
     });
     mockMarkMessageRead.mockResolvedValue({ success: true });
     mockMarkAllRead.mockResolvedValue({ success: true, data: { marked: 2 } });
@@ -141,16 +158,63 @@ describe("MessagesViewer", () => {
     renderAdmin(<MessagesManager />);
 
     await screen.findByText("Alice");
-    // Initial load fetches the default (all) view with no status.
-    expect(mockListMessages).toHaveBeenCalledWith(undefined);
+    // Initial load fetches the default (all) view — no status or preset,
+    // first batch at offset 0 with the max page size.
+    expect(mockListMessages).toHaveBeenCalledWith(undefined, undefined, 200, 0, undefined);
 
     await userEvent.click(screen.getByText(/Unread \(1\)/));
 
     // The Unread chip must refetch with the status param — not filter the
     // already-fetched page client-side (which truncates past 50 rows).
     await waitFor(() => {
-      expect(mockListMessages).toHaveBeenCalledWith(undefined, "unread");
+      expect(mockListMessages).toHaveBeenCalledWith(undefined, "unread", 200, 0, undefined);
     });
+  });
+
+  it("fetches every matching row in batches instead of stopping at the first 50", async () => {
+    const many = Array.from({ length: 250 }, (_, i) => ({
+      id: String(i + 1),
+      name: `Person ${i + 1}`,
+      email: `p${i + 1}@test.com`,
+      message: `Message ${i + 1}`,
+      status: "unread",
+      created_at: new Date(Date.UTC(2024, 0, i + 1)).toISOString(),
+    }));
+    mockListMessages.mockImplementation(async (_userId, status, limit = 200, offset = 0) => {
+      const page = many.slice(offset, offset + limit);
+      return {
+        success: true,
+        data: {
+          data: page,
+          pagination: {
+            total: many.length,
+            limit,
+            offset,
+            hasMore: offset + page.length < many.length,
+          },
+        },
+      };
+    });
+
+    renderAdmin(<MessagesManager />);
+
+    // The batched fetcher walks the whole set: 200 + 50 — it never stops at
+    // the server's default 50-row page.
+    await waitFor(() => {
+      expect(mockListMessages).toHaveBeenCalledTimes(2);
+    });
+    expect(mockListMessages).toHaveBeenNthCalledWith(1, undefined, undefined, 200, 0, undefined);
+    expect(mockListMessages).toHaveBeenNthCalledWith(2, undefined, undefined, 200, 200, undefined);
+
+    // The footer reports the true total, not the first page's length.
+    expect(await screen.findByText(/Showing 1–20 of 250/)).toBeInTheDocument();
+
+    // Rows past the old 50-row cutoff are actually reachable: page 3 shows
+    // Person 51, proving the chips page over the complete fetched set.
+    const next = screen.getByRole("button", { name: "Next" });
+    await userEvent.click(next);
+    await userEvent.click(next);
+    expect(screen.getByText("Person 51")).toBeInTheDocument();
   });
 
   it("marks message as read on click", async () => {
@@ -269,6 +333,57 @@ describe("MessagesViewer", () => {
     });
   });
 
+  it("applies a saved preset with one click", async () => {
+    renderAdmin(<MessagesManager />);
+
+    await screen.findByText("Alice");
+
+    await userEvent.click(screen.getByText("Unread + archived"));
+
+    // The preset must refetch the collection with the preset param (the
+    // compound view the status chips can't express) — not filter client-side.
+    await waitFor(() => {
+      expect(mockListMessages).toHaveBeenCalledWith(undefined, undefined, 200, 0, "unread_or_archived");
+    });
+    // unread OR archived: Alice (unread) and Charlie (archived) shown, the
+    // read-and-visible Bob excluded.
+    expect(screen.getByText("Alice")).toBeInTheDocument();
+    expect(screen.getByText("Charlie")).toBeInTheDocument();
+    expect(screen.queryByText("Bob")).not.toBeInTheDocument();
+  });
+
+  it("clears the active preset when a status chip is clicked", async () => {
+    renderAdmin(<MessagesManager />);
+
+    await screen.findByText("Alice");
+
+    await userEvent.click(screen.getByText("Unread today"));
+    await waitFor(() => {
+      expect(mockListMessages).toHaveBeenCalledWith(undefined, undefined, 200, 0, "unread_today");
+    });
+
+    // A status chip replaces the preset view entirely — the preset param is
+    // dropped and the status param takes over.
+    await userEvent.click(screen.getByText(/Read \(1\)/));
+    await waitFor(() => {
+      expect(mockListMessages).toHaveBeenCalledWith(undefined, "read", 200, 0, undefined);
+    });
+    expect(screen.getByText("Bob")).toBeInTheDocument();
+    expect(screen.queryByText("Alice")).not.toBeInTheDocument();
+  });
+
+  it("clears the selection when a preset is applied", async () => {
+    renderAdmin(<MessagesManager />);
+
+    await screen.findByText("Alice");
+
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select message from Alice" }));
+    expect(screen.getByText("1 selected")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByText("Needs reply"));
+    expect(screen.queryByText("1 selected")).not.toBeInTheDocument();
+  });
+
   it("restores selected archived rows from the Archived tab in one click", async () => {
     renderAdmin(<MessagesManager />);
 
@@ -341,7 +456,10 @@ describe("MessagesViewer", () => {
   });
 
   it("shows empty state when no messages", async () => {
-    mockListMessages.mockResolvedValue({ success: true, data: [] });
+    mockListMessages.mockResolvedValue({
+      success: true,
+      data: { data: [], pagination: { total: 0, limit: 200, offset: 0, hasMore: false } },
+    });
 
     renderAdmin(<MessagesManager />);
 

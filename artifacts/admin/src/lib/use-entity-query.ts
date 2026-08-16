@@ -56,6 +56,68 @@ export function useEntityQuery<T>(
 }
 
 /**
+ * Batch size for the messages list fetch. The server clamps `limit` to its
+ * MAX_LIMIT (200), so one request per full batch; the loop stops on a short
+ * page, which the server guarantees once range() passes the end of the set.
+ */
+export const MESSAGE_BATCH_SIZE = 200;
+
+export type MessageStatus = "unread" | "read" | "archived" | "all";
+
+export type MessagePreset = "unread_today" | "unread_or_archived" | "needs_reply";
+
+/**
+ * Fetch EVERY message matching a status filter or saved preset, in batches
+ * of the server's max page size, so the Unread/Read/Archived chips and the
+ * preset views page over the complete set instead of stopping at the first
+ * 50 rows.
+ *
+ * The collection endpoint paginates at 50 by default — a single fetch would
+ * silently truncate every view once more than 50 messages exist. This hook
+ * walks the whole filtered set with `limit=200&offset=N` until a short page
+ * and returns the concatenated rows; the caller's client-side pagination
+ * then pages over the true total (and select-all / counts see every row).
+ */
+export function useAllMessages(
+  status?: MessageStatus,
+  preset?: MessagePreset,
+  options?: Omit<UseQueryOptions<Message[], Error, Message[], readonly unknown[]>, "queryKey" | "queryFn">,
+) {
+  const { viewingUserId } = useViewingUser();
+  return useQuery<Message[], Error, Message[], readonly unknown[]>({
+    queryKey: [
+      "messages",
+      viewingUserId,
+      status ?? "all",
+      preset ?? "default",
+    ] as readonly unknown[],
+    queryFn: async () => {
+      const rows: Message[] = [];
+      let offset = 0;
+      for (;;) {
+        const res = await api.messages.list(
+          viewingUserId ?? undefined,
+          status,
+          MESSAGE_BATCH_SIZE,
+          offset,
+          preset,
+        );
+        if (!res.success) throw new Error(res.message);
+        const batch = res.data?.data ?? [];
+        rows.push(...batch);
+        // A page smaller than the batch size means the filtered set is
+        // exhausted — range() past the end yields an empty page, so the
+        // server can never hand back a full page forever.
+        if (batch.length < MESSAGE_BATCH_SIZE) break;
+        offset += MESSAGE_BATCH_SIZE;
+      }
+      return rows;
+    },
+    ...options,
+  });
+}
+
+/**
  * Reactive unread-count query keyed by viewingUserId.
  * Lives next to useEntityQuery so the key strategy stays consistent.
  */

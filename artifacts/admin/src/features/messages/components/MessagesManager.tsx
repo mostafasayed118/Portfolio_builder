@@ -13,8 +13,9 @@ import { AdminErrorState } from "@/components/AdminErrorState";
 import { AdminLoadingState } from "@/components/AdminLoadingState";
 import { MessageCard, type Message as Msg, isUnread, isArchived } from "@/features/messages/components/MessageCard";
 import { MessageFilterBar } from "@/features/messages/components/MessageFilterBar";
+import { MessagePresetBar } from "@/features/messages/components/MessagePresetBar";
 import { MessagePagination } from "@/features/messages/components/MessagePagination";
-import { useEntityQuery, useUnreadCountQuery } from "@/lib/use-entity-query";
+import { useAllMessages, useUnreadCountQuery, type MessagePreset } from "@/lib/use-entity-query";
 
 function formatDate(ts: string): string {
   return new Date(ts).toLocaleDateString("en-US", {
@@ -27,42 +28,48 @@ function formatDate(ts: string): string {
 
 type MessageFilter = "all" | "unread" | "read" | "archived";
 
+/** Either a status chip or a saved compound preset. */
+type MessageView = MessageFilter | MessagePreset;
+
 export default function MessagesManager() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   // The All view: always fetched, drives the header/chip counts and the
   // default tab. Kept separate from the filtered fetch so switching chips
-  // never recomputes counts from a filtered page.
-  const { data: messages, isLoading: allLoading, isError, error, refetch } = useEntityQuery<Msg[]>(
-    "messages",
-    (uid) => api.messages.list(uid ?? undefined),
-  );
+  // never recomputes counts from a filtered page. Fetches EVERY visible
+  // row (batched at 200) so the total is real, not the first 50-row page.
+  const { data: messages, isLoading: allLoading, isError, error, refetch } = useAllMessages();
 
   const [replyTo, setReplyTo] = useState<Msg | null>(null);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
-  const [filter, setFilter] = useState<MessageFilter>("all");
+  const [view, setView] = useState<MessageView>("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showCleanupDialog, setShowCleanupDialog] = useState(false);
 
-  // The active chip drives a server-side status filter on the collection
-  // endpoint: Unread/Read page over exactly those rows (not a client-side
-  // slice of the first 50 fetched) and Archived pages over the soft-deleted
-  // set the All view hides. `enabled` keeps the filtered fetch off on All.
-  const statusParam = filter === "all" ? undefined : filter;
-  const { data: filteredMessages, isLoading: filteredLoading } = useEntityQuery<Msg[]>(
-    "messages",
-    (uid) => api.messages.list(uid ?? undefined, statusParam),
-    { enabled: filter !== "all" },
-    [statusParam ?? "all"],
+  // The active chip or preset drives a server-side filter on the collection
+  // endpoint: status chips page over exactly those rows (not a client-side
+  // slice of the first 50 fetched) and presets apply a compound view the
+  // chips can't express. Every fetch walks the ENTIRE filtered set in
+  // batches of 200 — the server's default 50-row page would otherwise
+  // truncate each view once more than 50 messages exist. `enabled` keeps
+  // the filtered fetch off on All.
+  const isPreset =
+    view === "unread_today" || view === "unread_or_archived" || view === "needs_reply";
+  const statusParam = !isPreset && view !== "all" ? (view as MessageFilter) : undefined;
+  const presetParam = isPreset ? (view as MessagePreset) : undefined;
+  const { data: filteredMessages, isLoading: filteredLoading } = useAllMessages(
+    statusParam,
+    presetParam,
+    { enabled: view !== "all" },
   );
 
   const allMsgs = messages as Msg[] | undefined;
-  const msgs = (filter === "all" ? messages : filteredMessages) as Msg[] | undefined;
-  const isLoading = filter === "all" ? allLoading : filteredLoading;
+  const msgs = (view === "all" ? messages : filteredMessages) as Msg[] | undefined;
+  const isLoading = view === "all" ? allLoading : filteredLoading;
 
   // The unread chip and Unread-tab count must match the sidebar badge and the
   // API's unread-count endpoint (status='unread' only). Computing them from
@@ -177,9 +184,8 @@ export default function MessagesManager() {
     }
   };
 
-  const handleFilterChange = (f: string) => {
-    // MessageFilterBar hands back one of the four chip keys.
-    setFilter(f as MessageFilter);
+  const changeView = (v: MessageView) => {
+    setView(v);
     setPage(1);
     setSelectedIds(new Set());
   };
@@ -371,11 +377,11 @@ export default function MessagesManager() {
           </span>
           <Button
             size="sm"
-            onClick={filter === "archived" ? handleBulkUnarchive : handleBulkArchive}
+            onClick={view === "archived" ? handleBulkUnarchive : handleBulkArchive}
             disabled={selectedIds.size === 0}
             className="min-h-[44px]"
           >
-            {filter === "archived" ? "Restore selected" : "Archive selected"}
+            {view === "archived" ? "Restore selected" : "Archive selected"}
           </Button>
           {selectedIds.size > 0 && (
             <Button
@@ -390,9 +396,14 @@ export default function MessagesManager() {
         </div>
       )}
 
+      <MessagePresetBar
+        active={isPreset ? (view as MessagePreset) : null}
+        onSelect={(p) => changeView(p)}
+      />
+
       <MessageFilterBar
-        filter={filter}
-        setFilter={handleFilterChange}
+        filter={view}
+        setFilter={(f) => changeView(f as MessageView)}
         totalCount={msgs?.length ?? 0}
         unreadCount={unread ?? 0}
         readCount={readCount}
