@@ -16,6 +16,60 @@ export interface ApiError {
   existingId?: string;
 }
 
+export type ChatMessagesInputMessagesItemRole = typeof ChatMessagesInputMessagesItemRole[keyof typeof ChatMessagesInputMessagesItemRole];
+
+
+export const ChatMessagesInputMessagesItemRole = {
+  user: 'user',
+  assistant: 'assistant',
+} as const;
+
+export type ChatMessagesInputMessagesItem = {
+  role: ChatMessagesInputMessagesItemRole;
+  content: string;
+};
+
+export interface ChatMessagesInput {
+  /** @maxItems 20 */
+  messages: ChatMessagesInputMessagesItem[];
+}
+
+export type AiGenerateInputContentType = typeof AiGenerateInputContentType[keyof typeof AiGenerateInputContentType];
+
+
+export const AiGenerateInputContentType = {
+  hero: 'hero',
+  about: 'about',
+  project: 'project',
+  skill: 'skill',
+  experience: 'experience',
+  general: 'general',
+} as const;
+
+export interface AiGenerateInput {
+  contentType: AiGenerateInputContentType;
+  instructions?: string;
+  context?: string;
+}
+
+export type AiImproveInputContentType = typeof AiImproveInputContentType[keyof typeof AiImproveInputContentType];
+
+
+export const AiImproveInputContentType = {
+  hero: 'hero',
+  about: 'about',
+  project: 'project',
+  skill: 'skill',
+  experience: 'experience',
+  general: 'general',
+} as const;
+
+export interface AiImproveInput {
+  contentType: AiImproveInputContentType;
+  text: string;
+  instructions?: string;
+}
+
 export interface Pagination {
   total: number;
   limit: number;
@@ -1406,5 +1460,29 @@ export type SuggestTags200 = SuccessEnvelope & {
 
 export type AnalyzeContent200 = SuccessEnvelope & {
   data?: AiAnalysis;
+} | ApiError;
+
+export type ChatConfig200 = SuccessEnvelope & {
+  data?: {
+  enabled: boolean;
+};
+} | ApiError;
+
+export type ChatSend200 = SuccessEnvelope & {
+  data?: {
+  reply: string;
+};
+} | ApiError;
+
+export type AdminAiGenerate200 = SuccessEnvelope & {
+  data?: {
+  text: string;
+};
+} | ApiError;
+
+export type AdminAiImprove200 = SuccessEnvelope & {
+  data?: {
+  text: string;
+};
 } | ApiError;
 
