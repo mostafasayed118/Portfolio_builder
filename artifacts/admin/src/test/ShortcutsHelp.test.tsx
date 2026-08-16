@@ -23,6 +23,7 @@ describe("ShortcutsHelp — global ? shortcut from any page", () => {
     expect(within(dialog).getByText("Gmail-style keys")).toBeInTheDocument();
     expect(within(dialog).getByText("Reply to selected")).toBeInTheDocument();
     expect(within(dialog).getByText("Select message")).toBeInTheDocument();
+    expect(within(dialog).getByText("Open search")).toBeInTheDocument();
     expect(within(dialog).getByText("Open keyboard shortcuts")).toBeInTheDocument();
   });
 

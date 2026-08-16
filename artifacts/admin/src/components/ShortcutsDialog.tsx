@@ -7,6 +7,7 @@ import {
   DialogTitle,
 } from "@workspace/ui";
 import { OneTimeHint, type OneTimeHintHandle } from "./OneTimeHint";
+import { ADMIN_SHORTCUTS } from "./shortcuts-registry";
 
 /**
  * Window event fired whenever the shortcuts help is requested (via the `?`
@@ -64,33 +65,24 @@ export function ShortcutsDialog({ open, onOpenChange }: ShortcutsDialogProps) {
           selects the whole page.
         </OneTimeHint>
         <ul className="space-y-1.5 text-xs text-muted-foreground">
-          <li className="flex items-center justify-between gap-3">
-            <span>Select all on page</span>
-            <Kbd>Ctrl/Cmd+A</Kbd>
-          </li>
-          <li className="flex items-center justify-between gap-3">
-            <span>Archive selected</span>
-            <Kbd>E</Kbd>
-          </li>
-          <li className="flex items-center justify-between gap-3">
-            <span>Restore selected (Archived)</span>
-            <Kbd>U</Kbd>
-          </li>
-          <li className="pt-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
-            Gmail-style keys
-          </li>
-          <li className="flex items-center justify-between gap-3">
-            <span>Reply to selected</span>
-            <Kbd>R</Kbd>
-          </li>
-          <li className="flex items-center justify-between gap-3">
-            <span>Select message</span>
-            <Kbd>X</Kbd>
-          </li>
-          <li className="flex items-center justify-between gap-3">
-            <span>Open keyboard shortcuts</span>
-            <Kbd>?</Kbd>
-          </li>
+          {ADMIN_SHORTCUTS.map((shortcut, i) => {
+            const isFirst = i === 0;
+            const newGroup =
+              i > 0 && ADMIN_SHORTCUTS[i - 1].group !== shortcut.group;
+            return (
+              <li key={`${shortcut.group}:${shortcut.label}`}>
+                {newGroup && !isFirst && (
+                  <div className="pb-1 pt-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+                    {shortcut.group}
+                  </div>
+                )}
+                <div className="flex items-center justify-between gap-3">
+                  <span>{shortcut.label}</span>
+                  <Kbd>{shortcut.keys}</Kbd>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       </DialogContent>
     </Dialog>

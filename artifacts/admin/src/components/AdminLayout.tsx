@@ -2,7 +2,7 @@ import { useCallback, useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 import UserSwitcher from "./UserSwitcher";
-import CommandPalette from "./CommandPalette";
+import SearchPalette from "./SearchPalette";
 import ShortcutsHelp from "./ShortcutsHelp";
 import { useGlobalShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useAuthUser } from "@workspace/auth";
@@ -43,7 +43,7 @@ export default function AdminLayout({ children }: Props) {
       >
         Skip to content
       </a>
-      <CommandPalette />
+      <SearchPalette />
       <ShortcutsHelp />
       <Sidebar open={sidebarOpen} onClose={handleClose} />
       <div className="flex flex-col flex-1 min-w-0">
