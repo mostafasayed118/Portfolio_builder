@@ -8,6 +8,8 @@ import { logger } from "../../lib/logger";
 import { env } from "../../lib/env";
 import { verifyTurnstileToken } from "../../lib/turnstile";
 import { notifyNewContact } from "../../lib/mailer";
+import { isAiConfigured } from "../../lib/ai/client";
+import { flagSpamIfNeeded } from "../../lib/ai/spam";
 
 /**
  * @public contact routes
@@ -123,12 +125,16 @@ router.post("/", contactLimiter, async (req: Request, res: Response) => {
   // Strip honeypot + time-trap fields before insert
   const { name, email, message } = result.data;
   const supabase = getSupabaseClient();
-  const { error } = await supabase.from("messages").insert({
-    name,
-    email,
-    message,
-    status: "unread",
-  });
+  const { data: inserted, error } = await supabase
+    .from("messages")
+    .insert({
+      name,
+      email,
+      message,
+      status: "unread",
+    })
+    .select("id")
+    .single();
 
   if (error) {
     // Distinguish the DB-level per-email spam guard (migration
@@ -176,6 +182,12 @@ router.post("/", contactLimiter, async (req: Request, res: Response) => {
   // Fire-and-forget email notification to the site owner (opt-in).
   // Never awaited/blocked-on; failures are logged by the mailer.
   notifyNewContact({ name, email, message }).catch(() => {});
+
+  // Fire-and-forget AI spam scoring (opt-in via AI_SPAM_ENABLED). Never
+  // awaited on the request path; on any error the message stays unread.
+  if (isAiConfigured() && env.AI_SPAM_ENABLED && inserted?.id) {
+    flagSpamIfNeeded({ id: inserted.id, name, email, message }).catch(() => {});
+  }
 
   return ok(res, undefined);
 });
