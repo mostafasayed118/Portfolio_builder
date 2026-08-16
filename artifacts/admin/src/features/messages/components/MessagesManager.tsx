@@ -7,14 +7,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
 } from "@workspace/ui";
 import { useToast } from "@workspace/ui";
 import {
   Mail,
-  X,
   Keyboard,
 } from "lucide-react";
 import { api } from "@/lib/api-client";
@@ -71,25 +67,36 @@ export default function MessagesManager() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showCleanupDialog, setShowCleanupDialog] = useState(false);
   const [showRestoreAllDialog, setShowRestoreAllDialog] = useState(false);
-  // One-time "Press Ctrl/Cmd+A" hint: shown in the empty selection toolbar on
-  // the first visit, then never again once the user makes a selection or
-  // dismisses it explicitly (persisted in localStorage).
-  const [shortcutHintDismissed, setShortcutHintDismissed] = useState<boolean>(() => {
+  // The keyboard-shortcuts help lives in a modal (not the selection toolbar),
+  // opened by the header icon or the `?` / `Shift+?` shortcut. The one-time
+  // tip explaining the keys shows inside the modal on the first open, then
+  // never again (persisted in localStorage).
+  const [showShortcutsDialog, setShowShortcutsDialog] = useState(false);
+  const [showShortcutsTip, setShowShortcutsTip] = useState<boolean>(() => {
     try {
-      return localStorage.getItem("messages-shortcut-hint-dismissed") === "1";
+      return localStorage.getItem("messages-shortcuts-tip-dismissed") !== "1";
     } catch {
-      return false; // storage unavailable — the hint may reappear; harmless
+      return true; // storage unavailable — the tip may reappear; harmless
     }
   });
 
-  const dismissShortcutHint = useCallback(() => {
-    setShortcutHintDismissed(true);
-    try {
-      localStorage.setItem("messages-shortcut-hint-dismissed", "1");
-    } catch {
-      /* storage unavailable — persist best-effort only */
-    }
-  }, []);
+  const openShortcuts = useCallback(() => setShowShortcutsDialog(true), []);
+
+  const closeShortcuts = useCallback(
+    (open: boolean) => {
+      setShowShortcutsDialog(open);
+      // Once the dialog closes, the first-visit tip has been seen.
+      if (!open && showShortcutsTip) {
+        setShowShortcutsTip(false);
+        try {
+          localStorage.setItem("messages-shortcuts-tip-dismissed", "1");
+        } catch {
+          /* storage unavailable — persist best-effort only */
+        }
+      }
+    },
+    [showShortcutsTip],
+  );
 
   // The active chip or preset drives a server-side filter on the collection
   // endpoint: status chips page over exactly those rows (not a client-side
@@ -177,7 +184,7 @@ export default function MessagesManager() {
   // an input/textarea, so native select-all-in-field keeps working, and
   // `enabled` gates it while a dialog is open (the selection lives behind
   // the dialog and shouldn't change underneath it).
-  const dialogsOpen = !!replyTo || showCleanupDialog || showRestoreAllDialog;
+  const dialogsOpen = !!replyTo || showCleanupDialog || showRestoreAllDialog || showShortcutsDialog;
   const selectPageShortcut = useMemo(
     () => [
       {
@@ -190,6 +197,18 @@ export default function MessagesManager() {
     [toggleSelectAllOnPage],
   );
   useKeyboardShortcuts(selectPageShortcut, !dialogsOpen);
+
+  // `?` (and `Shift+?` — the US-layout key is `?` with shift held) opens the
+  // shortcuts help modal from anywhere on the page. Gated while another
+  // dialog is open so modals never stack.
+  const shortcutsHelpShortcut = useMemo(
+    () => [
+      { key: "?", handler: () => openShortcuts(), description: "Open keyboard shortcuts" },
+      { key: "/", shift: true, handler: () => openShortcuts(), description: "Open keyboard shortcuts" },
+    ],
+    [openShortcuts],
+  );
+  useKeyboardShortcuts(shortcutsHelpShortcut, !dialogsOpen);
 
   // Gmail-style "Select all N matching": the batched fetcher has already
   // loaded EVERY row matching the active view, so grabbing them all is a
@@ -276,12 +295,6 @@ export default function MessagesManager() {
     setPage(1);
     setSelectedIds(new Set());
   };
-
-  // Once the user makes ANY selection, the hint has served its purpose —
-  // persist the dismissal so it never returns on future visits.
-  useEffect(() => {
-    if (selectedIds.size > 0 && !shortcutHintDismissed) dismissShortcutHint();
-  }, [selectedIds.size, shortcutHintDismissed, dismissShortcutHint]);
 
   const toggleSelect = (msg: Msg) => {
     setSelectedIds((prev) => {
@@ -532,35 +545,15 @@ export default function MessagesManager() {
         >
           Archive test submissions
         </Button>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              size="sm"
-              variant="outline"
-              className="min-h-[44px]"
-              aria-label="Keyboard shortcuts"
-            >
-              <Keyboard size={14} />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent align="end" className="w-64">
-            <div className="text-sm font-semibold mb-2">Keyboard shortcuts</div>
-            <ul className="space-y-1.5 text-xs text-muted-foreground">
-              <li className="flex items-center justify-between gap-3">
-                <span>Select all on page</span>
-                <Kbd>Ctrl/Cmd+A</Kbd>
-              </li>
-              <li className="flex items-center justify-between gap-3">
-                <span>Archive selected</span>
-                <Kbd>E</Kbd>
-              </li>
-              <li className="flex items-center justify-between gap-3">
-                <span>Restore selected (Archived)</span>
-                <Kbd>U</Kbd>
-              </li>
-            </ul>
-          </PopoverContent>
-        </Popover>
+        <Button
+          size="sm"
+          variant="outline"
+          className="min-h-[44px]"
+          aria-label="Keyboard shortcuts"
+          onClick={openShortcuts}
+        >
+          <Keyboard size={14} />
+        </Button>
       </div>
 
       {msgs && msgs.length > 0 && (
@@ -579,25 +572,6 @@ export default function MessagesManager() {
           <span className="text-sm font-medium">
             {selectedIds.size} selected
           </span>
-          {selectedIds.size === 0 && !shortcutHintDismissed && (
-            <span
-              className="flex items-center gap-2 text-xs text-muted-foreground"
-              role="status"
-            >
-              <span>
-                Tip: press <Kbd>Ctrl/Cmd</Kbd>+<Kbd>A</Kbd> to select all on
-                this page.
-              </span>
-              <button
-                type="button"
-                aria-label="Dismiss shortcut hint"
-                onClick={dismissShortcutHint}
-                className="rounded p-1 text-muted-foreground/60 hover:text-foreground transition-colors"
-              >
-                <X size={12} />
-              </button>
-            </span>
-          )}
           {canSelectAllMatching && (
             <Button
               size="sm"
@@ -683,6 +657,49 @@ export default function MessagesManager() {
           onPageSizeChange={setPageSize}
         />
       )}
+
+      <Dialog
+        open={showShortcutsDialog}
+        onOpenChange={closeShortcuts}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Keyboard shortcuts</DialogTitle>
+            <DialogDescription>
+              Quick keys for working with the inbox. Press{" "}
+              <Kbd>?</Kbd> anytime to reopen this.
+            </DialogDescription>
+          </DialogHeader>
+          {showShortcutsTip && (
+            <div
+              role="status"
+              className="rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs text-muted-foreground"
+            >
+              Tip: <Kbd>E</Kbd> archives the selected messages, <Kbd>U</Kbd>{" "}
+              restores them from the Archived tab, and <Kbd>Ctrl/Cmd+A</Kbd>{" "}
+              selects the whole page.
+            </div>
+          )}
+          <ul className="space-y-1.5 text-xs text-muted-foreground">
+            <li className="flex items-center justify-between gap-3">
+              <span>Select all on page</span>
+              <Kbd>Ctrl/Cmd+A</Kbd>
+            </li>
+            <li className="flex items-center justify-between gap-3">
+              <span>Archive selected</span>
+              <Kbd>E</Kbd>
+            </li>
+            <li className="flex items-center justify-between gap-3">
+              <span>Restore selected (Archived)</span>
+              <Kbd>U</Kbd>
+            </li>
+            <li className="flex items-center justify-between gap-3">
+              <span>Open keyboard shortcuts</span>
+              <Kbd>?</Kbd>
+            </li>
+          </ul>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={!!replyTo}
