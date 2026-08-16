@@ -124,10 +124,33 @@ describe("SearchPalette — shell Ctrl/Cmd+K search", () => {
     render(<SearchPalette />);
     fireEvent.keyDown(document, { key: "k", ctrlKey: true });
     await waitFor(() => {
-      for (const item of ["View Live Portfolio", "Add New Project", "Add New Skill", "Add New Experience"]) {
+      for (const item of ["View Live Portfolio", "Add New Project", "Add New Skill", "Add New Experience", "Generate Project Description", "Suggest Categories for Skill", "Suggest Tags for Project", "Analyze Content"]) {
         expect(screen.getByText(item)).toBeInTheDocument();
       }
     });
+  });
+
+  it("deep-links to an AI tool from its quick action", async () => {
+    render(<SearchPalette />);
+    fireEvent.keyDown(document, { key: "k", ctrlKey: true });
+    await waitFor(() => {
+      expect(screen.getByText("Generate Project Description")).toBeInTheDocument();
+    });
+    const item = screen.getByText("Generate Project Description").closest("[data-testid='command-item']");
+    fireEvent.click(item!);
+    expect(mockSetLocation).toHaveBeenCalledWith("/ai#generate-description");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("deep-links to the analyze-content tool from its quick action", async () => {
+    render(<SearchPalette />);
+    fireEvent.keyDown(document, { key: "k", ctrlKey: true });
+    await waitFor(() => {
+      expect(screen.getByText("Analyze Content")).toBeInTheDocument();
+    });
+    const item = screen.getByText("Analyze Content").closest("[data-testid='command-item']");
+    fireEvent.click(item!);
+    expect(mockSetLocation).toHaveBeenCalledWith("/ai#analyze-content");
   });
 
   it("navigates to page when clicking an item", async () => {

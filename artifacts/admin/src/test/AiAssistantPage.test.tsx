@@ -149,4 +149,15 @@ describe("AiAssistantPage", () => {
     await within(tool).findByTestId("analysis-results");
     expect(mockAnalyzeContent).toHaveBeenCalledWith("A short bio.", "about");
   });
+
+  it("scrolls to the tool referenced by the URL hash (command-palette deep link)", async () => {
+    const scrollSpy = vi.fn();
+    Element.prototype.scrollIntoView = scrollSpy;
+    window.location.hash = "#suggest-tags";
+
+    renderWithProviders(<AiAssistantPage />);
+
+    expect(scrollSpy).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
+    window.location.hash = "";
+  });
 });

@@ -28,7 +28,7 @@ export function CategoriesTool() {
   };
 
   return (
-    <Card data-testid="tool-categories">
+    <Card id="ai-suggest-categories" data-testid="tool-categories">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base"><Sparkles className="h-4 w-4" /> Suggest Categories</CardTitle>
         <CardDescription>

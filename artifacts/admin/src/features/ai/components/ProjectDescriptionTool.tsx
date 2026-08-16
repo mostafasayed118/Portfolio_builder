@@ -37,7 +37,7 @@ export function ProjectDescriptionTool() {
   };
 
   return (
-    <Card data-testid="tool-description">
+    <Card id="ai-generate-description" data-testid="tool-description">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base"><Sparkles className="h-4 w-4" /> Project Description</CardTitle>
         <CardDescription>
