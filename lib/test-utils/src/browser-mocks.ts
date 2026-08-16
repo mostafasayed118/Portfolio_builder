@@ -54,4 +54,21 @@ export function installBrowserMocks(): void {
     configurable: true,
     value: MockIntersectionObserver,
   });
+
+  // jsdom does not implement pointer capture, which Radix primitives (Select,
+  // DismissableLayer, …) call during pointer interactions. Without these
+  // no-ops, opening a Select or clicking inside a portal throws
+  // `target.hasPointerCapture is not a function`.
+  if (!Element.prototype.hasPointerCapture) {
+    Element.prototype.hasPointerCapture = () => false;
+  }
+  if (!Element.prototype.releasePointerCapture) {
+    Element.prototype.releasePointerCapture = () => {};
+  }
+  if (!Element.prototype.setPointerCapture) {
+    Element.prototype.setPointerCapture = () => {};
+  }
+  if (!Element.prototype.scrollIntoView) {
+    Element.prototype.scrollIntoView = () => {};
+  }
 }

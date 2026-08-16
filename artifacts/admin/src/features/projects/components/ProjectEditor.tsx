@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Image as ImageIcon, Plus } from "lucide-react";
+import { X, Image as ImageIcon, Plus, Sparkles } from "lucide-react";
 import { Badge, Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, Switch, Textarea, useToast } from "@workspace/ui";
 import ImageUploader from "@/components/ImageUploader";
 import { getSupabase } from "@/lib/supabase";
@@ -22,6 +22,7 @@ export function ProjectEditor({ editing, isNew, saving, onEdit, onSaved }: Proje
   const { toast } = useToast();
   const [techInput, setTechInput] = useState("");
   const [metricInput, setMetricInput] = useState("");
+  const [aiGenerating, setAiGenerating] = useState(false);
   const [projectImages, setProjectImages] = useState<{ id: string; url: string }[]>([]);
 
   // Load the project's attached gallery images (image_metadata) when editing.
@@ -60,6 +61,28 @@ export function ProjectEditor({ editing, isNew, saving, onEdit, onSaved }: Proje
 
   const removeTag = (field: "tech_stack" | "metrics", val: string) =>
     onEdit(e => e ? ({ ...e, [field]: (e[field] as string[]).filter(x => x !== val) }) : e);
+
+  /** Ask Gemini to draft a description from the current title + tech stack. */
+  const generateDescription = async () => {
+    if (!editing) return;
+    const stack = editing.tech_stack ?? [];
+    if (stack.length === 0) {
+      toast({ title: "Add a tech stack first", variant: "destructive" });
+      return;
+    }
+    setAiGenerating(true);
+    try {
+      const res = await api.ai.generateDescription(stack, editing.title || undefined);
+      if (!res.success) throw new Error(res.message);
+      onEdit(x => x ? ({ ...x, description: res.data?.description ?? "" }) : x);
+      toast({ title: "Description generated" });
+    } catch (err) {
+      logError("Failed to generate description", err, "ProjectEditor");
+      toast({ title: "Generation failed", variant: "destructive" });
+    } finally {
+      setAiGenerating(false);
+    }
+  };
 
   /** Permanently delete an attached gallery image (storage file + metadata). */
   const deleteProjectImage = async (imageId: string) => {
@@ -104,8 +127,15 @@ export function ProjectEditor({ editing, isNew, saving, onEdit, onSaved }: Proje
           <div className="space-y-4 py-2">
             <div className="space-y-1.5"><Label className="text-xs">Title</Label>
               <Input value={editing.title} onChange={e => onEdit(x => x ? ({ ...x, title: e.target.value }) : x)} className="h-9" /></div>
-            <div className="space-y-1.5"><Label className="text-xs">Description</Label>
-              <Textarea value={editing.description} onChange={e => onEdit(x => x ? ({ ...x, description: e.target.value }) : x)} rows={3} /></div>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">Description</Label>
+                <Button type="button" size="sm" variant="outline" onClick={generateDescription} disabled={aiGenerating || !editing.tech_stack?.length} className="min-h-[44px] h-7 px-2">
+                  <Sparkles className="h-3.5 w-3.5 mr-1.5" />{aiGenerating ? "Generating…" : "Generate with AI"}
+                </Button>
+              </div>
+              <Textarea value={editing.description} onChange={e => onEdit(x => x ? ({ ...x, description: e.target.value }) : x)} rows={3} />
+            </div>
             <div className="space-y-2">
               <Label className="text-xs flex items-center gap-1.5"><ImageIcon size={12} /> Project Images</Label>
               <ImageUploader
