@@ -16,7 +16,10 @@
  *
  * Directories that are never application source are skipped: `node_modules`,
  * `dist`, `.vercel`, `.replit-artifact`, `testsprite_tests`, and anything
- * hidden (dot-prefixed).
+ * hidden (dot-prefixed). `public/` is exempt too: Vite copies it verbatim
+ * and serves it as-is (service workers, manifests, favicons), so a `.ts`
+ * twin there would never be compiled or served — plain JS in `public/` is
+ * legitimate, not a TypeScript-policy violation.
  *
  * Usage:
  *   pnpm --filter @workspace/scripts check-ts-twin
@@ -67,6 +70,9 @@ function walkJsFiles(dir: string, out: string[]): string[] {
   for (const entry of readdirSync(dir)) {
     const full = join(dir, entry);
     if (isHidden(entry) || SKIP_DIRS.has(entry)) continue;
+    // public/ is served verbatim — see the header comment for why the twin
+    // policy doesn't apply to it.
+    if (entry === "public") continue;
     if (statSync(full).isDirectory()) {
       walkJsFiles(full, out);
     } else if (/\.(js|jsx)$/.test(entry)) {
