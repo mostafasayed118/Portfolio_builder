@@ -9,6 +9,7 @@ import SupabaseThemeSync from "@/components/SupabaseThemeSync";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import WhatsAppFloat from "@/features/contact/components/WhatsAppFloat";
+import ChatWidget from "@/features/chat/components/ChatWidget";
 import Home from "@/pages/Home";
 import NotFound from "@/pages/not-found";
 import SEO from "@/components/SEO";
@@ -61,6 +62,7 @@ function App() {
               </Switch>
               <Footer />
               <WhatsAppFloat />
+              <ChatWidget />
               <ApiHealthCheck
                 apiUrl={getApiUrl()}
                 title="API Unreachable"
