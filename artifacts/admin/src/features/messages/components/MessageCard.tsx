@@ -10,6 +10,10 @@ export interface Message {
   /** Present on rows returned by the `?status=archived` server filter. */
   deleted_at?: string | null;
   created_at: string;
+  /** AI spam scoring (migration 056): quarantined rows have is_spam=true. */
+  is_spam?: boolean;
+  spam_score?: number | null;
+  spam_reason?: string | null;
 }
 
 export function isArchived(msg: Message): boolean {
@@ -94,6 +98,15 @@ export function MessageCard({
               {isArchived(msg) && (
                 <Badge variant="secondary" className="text-xs px-1.5 py-0">
                   Archived
+                </Badge>
+              )}
+              {msg.is_spam && (
+                <Badge
+                  variant="destructive"
+                  className="text-xs px-1.5 py-0"
+                  title={msg.spam_reason ?? undefined}
+                >
+                  Spam{msg.spam_score != null ? ` ${msg.spam_score}%` : ""}
                 </Badge>
               )}
               <span className="text-xs text-muted-foreground ml-auto">

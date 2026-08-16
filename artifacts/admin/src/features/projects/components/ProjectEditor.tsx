@@ -6,6 +6,7 @@ import { getSupabase } from "@/lib/supabase";
 import { api } from "@/lib/api-client";
 import { logError } from "@/lib/logger";
 import { listEntityImages } from "@workspace/db/images";
+import AiTextButton from "@/features/ai/components/AiTextButton";
 import type { Project } from "@/features/projects/types";
 
 type ProjectForm = Partial<Project> & { id?: string };
@@ -169,6 +170,13 @@ export function ProjectEditor({ editing, isNew, saving, onEdit, onSaved }: Proje
                 </Button>
               </div>
               <Textarea value={editing.description} onChange={e => onEdit(x => x ? ({ ...x, description: e.target.value }) : x)} rows={3} />
+              <div className="pt-1">
+                <AiTextButton
+                  contentType="project"
+                  text={editing.description ?? ""}
+                  onResult={(t) => onEdit((x) => (x ? { ...x, description: t } : x))}
+                />
+              </div>
             </div>
             <div className="space-y-2">
               <Label className="text-xs flex items-center gap-1.5"><ImageIcon size={12} /> Project Images</Label>

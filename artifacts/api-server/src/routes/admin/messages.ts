@@ -28,7 +28,7 @@ const replySchema = z.object({
 });
 
 /** Valid values for the list endpoint's `?status=` filter. Omitted = default view. */
-const messageStatusSchema = z.enum(["unread", "read", "archived", "all"]).optional();
+const messageStatusSchema = z.enum(["unread", "read", "archived", "spam", "all"]).optional();
 
 /** Valid values for the list endpoint's `?preset=` compound views. */
 const messagePresetSchema = z.enum(["unread_today", "unread_or_archived", "needs_reply"]).optional();
@@ -52,7 +52,7 @@ const messagePresetSchema = z.enum(["unread_today", "unread_or_archived", "needs
  */
 interface ViewSpec {
   softDelete?: boolean | "only";
-  eq?: Record<string, string>;
+  eq?: Record<string, string | number | boolean>;
   gte?: Record<string, string>;
   isNull?: string[];
   or?: string;
@@ -79,6 +79,7 @@ function viewSpec(
   }
   if (status === "archived") return { softDelete: "only" };
   if (status === "unread" || status === "read") return { softDelete: true, eq: { status } };
+  if (status === "spam") return { softDelete: true, eq: { is_spam: true } };
   return { softDelete: true };
 }
 

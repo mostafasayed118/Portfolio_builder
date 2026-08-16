@@ -13,6 +13,7 @@ import { AdminLoadingState } from "@/components/AdminLoadingState";
 import { PageHeader } from "@/components/PageHeader";
 import { RowActions } from "@/components/RowActions";
 import { FormDialogFooter } from "@/components/FormDialogFooter";
+import AiTextButton from "@/features/ai/components/AiTextButton";
 import { useEntityQuery } from "@/lib/use-entity-query";
 import { exportToCsv } from "@/lib/export-csv";
 
@@ -82,6 +83,15 @@ export default function ExperienceManager() {
     setEditing(x => x ? ({ ...x, description: x.description.map((d, idx) => idx === i ? val : d) }) : x);
   const addDesc = () => setEditing(x => x ? ({ ...x, description: [...x.description, ""] }) : x);
   const removeDesc = (i: number) => setEditing(x => x ? ({ ...x, description: x.description.filter((_, idx) => idx !== i) }) : x);
+
+  /** Rewrite every description bullet from one AI pass — newline-separated. */
+  const handleImproveDescription = (t: string) => {
+    const bullets = t
+      .split("\n")
+      .map((s) => s.trim().replace(/^[-•]\s*/, ""))
+      .filter(Boolean);
+    setEditing(x => x ? ({ ...x, description: bullets.length ? bullets : [""] }) : x);
+  };
 
   const addTech = () => {
     const v = techInput.trim();
@@ -186,7 +196,15 @@ export default function ExperienceManager() {
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between"><Label className="text-xs">Description Bullets</Label>
-                  <Button size="sm" variant="ghost" className="min-h-[44px] text-xs" onClick={addDesc} aria-label="Add description bullet"><Plus className="h-4 w-4 mr-1" />Add</Button></div>
+                  <div className="flex items-center gap-2">
+                    <AiTextButton
+                      contentType="experience"
+                      label="Improve all"
+                      text={editing.description.join("\n")}
+                      onResult={handleImproveDescription}
+                    />
+                    <Button size="sm" variant="ghost" className="min-h-[44px] text-xs" onClick={addDesc} aria-label="Add description bullet"><Plus className="h-4 w-4 mr-1" />Add</Button>
+                  </div></div>
                 {editing.description.map((d, i) => (
                   <div key={i} className="flex gap-2">
                     <Input value={d} onChange={e => updateDesc(i, e.target.value)} className="h-8 text-sm flex-1" placeholder={`Bullet ${i + 1}…`} />

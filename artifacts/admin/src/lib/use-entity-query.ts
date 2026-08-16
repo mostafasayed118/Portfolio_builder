@@ -62,7 +62,7 @@ export function useEntityQuery<T>(
  */
 export const MESSAGE_BATCH_SIZE = 200;
 
-export type MessageStatus = "unread" | "read" | "archived" | "all";
+export type MessageStatus = "unread" | "read" | "archived" | "spam" | "all";
 
 export type MessagePreset = "unread_today" | "unread_or_archived" | "needs_reply";
 

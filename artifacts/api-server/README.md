@@ -51,17 +51,22 @@ All env access goes through `src/lib/env.ts`. Required at startup:
 
 Optional but commonly used:
 
-| Var                                | Purpose                                                                              |
-| ---------------------------------- | ------------------------------------------------------------------------------------ |
-| `CLERK_SECRET_KEY`                 | Enables Clerk JWT verification                                                       |
-| `CLERK_ISSUER`                     | Clerk issuer (optional)                                                              |
-| `ADMIN_API_KEY`                    | X-Admin-Key bypass for non-browser auth                                              |
-| `ADMIN_EMAILS`                     | Comma-separated allowlist of admin emails (server-only; do not use a `VITE_` prefix) |
-| `VITE_SITE_URL` / `VITE_ADMIN_URL` | CORS allowed origins                                                                 |
-| `VERCEL_URL`                       | Auto-added CORS origin on Vercel                                                     |
-| `PORT`                             | Server port (default 3001)                                                           |
-| `DISABLE_RATE_LIMIT`               | `true` disables all rate limiters (dev)                                              |
-| `LOG_LEVEL`                        | pino log level (default `info`)                                                      |
+| Var                                                          | Purpose                                                                               |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| `CLERK_SECRET_KEY`                                           | Enables Clerk JWT verification                                                        |
+| `CLERK_ISSUER`                                               | Clerk issuer (optional)                                                               |
+| `ADMIN_API_KEY`                                              | X-Admin-Key bypass for non-browser auth                                               |
+| `ADMIN_EMAILS`                                               | Comma-separated allowlist of admin emails (server-only; do not use a `VITE_` prefix)  |
+| `VITE_SITE_URL` / `VITE_ADMIN_URL`                           | CORS allowed origins                                                                  |
+| `VERCEL_URL`                                                 | Auto-added CORS origin on Vercel                                                      |
+| `PORT`                                                       | Server port (default 3001)                                                            |
+| `DISABLE_RATE_LIMIT`                                         | `true` disables all rate limiters (dev)                                               |
+| `LOG_LEVEL`                                                  | pino log level (default `info`)                                                       |
+| `AI_API_KEY`                                                 | xAI/Grok key — enables the AI chatbot, writing helper, and spam scoring (server-only) |
+| `AI_BASE_URL` / `AI_MODEL`                                   | OpenAI-compatible endpoint (default `https://api.x.ai/v1`) and model (`grok-4.6`)     |
+| `AI_SPAM_MODEL`                                              | Model used for spam classification (default `grok-4.6`)                               |
+| `AI_CHAT_ENABLED` / `AI_WRITING_ENABLED` / `AI_SPAM_ENABLED` | Feature toggles (spam defaults to `false`)                                            |
+| `AI_SPAM_THRESHOLD`                                          | Score at/above which a message is quarantined as spam (default 75)                    |
 
 The server `process.exit(1)` at boot if any required var is missing in
 non-test environments. Tests can override values via `_setOverride()`.
@@ -97,8 +102,34 @@ src/
     images.ts         # Image upload + metadata
     v1/index.ts       # v1 router (mounts admin, public, health, etc.)
     admin/            # All /admin/* routes (require auth)
+    public/chat.ts    # POST /chat + GET /chat/config (public, rate limited)
     public/contact.ts # POST /contact (public, rate limited, honeypot)
+    admin/ai.ts       # POST /admin/ai/generate + /improve (real LLM writing helper)
+
+  lib/ai/
+    client.ts         # Provider-agnostic chat-completions client (plain fetch)
+    prompts.ts        # Chat / writing / spam prompt templates
+    context.ts        # "About the owner" site-content builder (cached)
+    spam.ts           # Spam classification + quarantine of flagged messages
 ```
+
+## AI
+
+All AI calls proxy through this server (the provider key never reaches the
+browser). Backed by any OpenAI-compatible endpoint — xAI/Grok by default
+(`AI_BASE_URL`, `AI_API_KEY`, `AI_MODEL`).
+
+- **Chatbot** — `POST /api/v1/chat` answers visitors **only about the site
+  owner**, grounded in the live site content (`lib/ai/context.ts`).
+  `GET /api/v1/chat/config` reports whether it is enabled.
+- **Writing helper** — `POST /api/v1/admin/ai/generate` and `/improve` power
+  the admin "✨ Improve" buttons on text fields.
+- **Spam scoring** — when `AI_SPAM_ENABLED=true`, accepted contact messages
+  are classified fire-and-forget; high scores set `is_spam` (quarantined in the
+  admin "Spam" tab), never deleted.
+
+When `AI_API_KEY` is unset all features no-op (`/chat/config` returns
+`enabled: false`, chat/admin AI return 503, spam is skipped).
 
 ## API conventions
 
@@ -129,6 +160,7 @@ those instead of constructing `res.status(500).json(...)` inline.
 | ------------------------ | ------- | ------ | ----------------------------------------- |
 | `/api/v1/*`              | 100 req | 15 min | `DISABLE_RATE_LIMIT=true`                 |
 | `/contact`               | 5 req   | 1 hour | `DISABLE_RATE_LIMIT=true`                 |
+| `/chat`                  | 20 req  | 15 min | `DISABLE_RATE_LIMIT=true`                 |
 | `/admin/*`               | 200 req | 15 min | `DISABLE_RATE_LIMIT=true`                 |
 | `/images`                | 60 req  | 1 min  | `DISABLE_RATE_LIMIT=true`                 |
 | `/admin/*` (x-admin-key) | 50 req  | 15 min | only when `x-admin-key` header is present |

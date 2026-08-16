@@ -34,17 +34,20 @@ supabase db push
 ```
 
 Or run SQL files manually via the Supabase SQL Editor:
+
 - Run files in order: `001_init.sql` through `030_add_soft_delete.sql`
 
 ### 1.3 Configure Storage Buckets
 
 In Supabase Dashboard → Storage, create these buckets:
+
 - `images` (public)
 - `cv` (public)
 
 ### 1.4 Set Environment Variables
 
 From Settings → API, collect:
+
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY` (keep secret!)
@@ -65,15 +68,19 @@ From Settings → API, collect:
 
 ### 2.2 Environment Variables on Render
 
-| Variable | Value |
-|---|---|
-| `SUPABASE_URL` | Your Supabase project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | Your service role key |
-| `CSRF_SECRET` | Generate a random string (`openssl rand -hex 32`) |
-| `NODE_ENV` | `production` |
-| `PORT` | `3001` (Render sets this automatically) |
-| `VITE_SITE_URL` | Your portfolio URL (e.g., `https://yourportfolio.vercel.app`) |
-| `VITE_ADMIN_URL` | Your admin URL (e.g., `https://youradmin.vercel.app`) |
+| Variable                    | Value                                                                                                   |
+| --------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `SUPABASE_URL`              | Your Supabase project URL                                                                               |
+| `SUPABASE_SERVICE_ROLE_KEY` | Your service role key                                                                                   |
+| `CSRF_SECRET`               | Generate a random string (`openssl rand -hex 32`)                                                       |
+| `NODE_ENV`                  | `production`                                                                                            |
+| `PORT`                      | `3001` (Render sets this automatically)                                                                 |
+| `VITE_SITE_URL`             | Your portfolio URL (e.g., `https://yourportfolio.vercel.app`)                                           |
+| `VITE_ADMIN_URL`            | Your admin URL (e.g., `https://youradmin.vercel.app`)                                                   |
+| `AI_API_KEY`                | Your xAI/Grok API key from https://console.x.ai — enables the chatbot, writing helper, and spam scoring |
+| `AI_BASE_URL`               | `https://api.x.ai/v1` (default if unset)                                                                |
+| `AI_MODEL`                  | `grok-4.6` (default if unset)                                                                           |
+| `AI_SPAM_ENABLED`           | `true` to opt into AI spam scoring (default `false`)                                                    |
 
 ### 2.3 Deploy
 
@@ -96,12 +103,12 @@ Push to your main branch or manually trigger a deploy. Render will build and sta
 
 ### 3.2 Environment Variables on Vercel
 
-| Variable | Value |
-|---|---|
-| `VITE_SUPABASE_URL` | Your Supabase project URL |
-| `VITE_SUPABASE_ANON_KEY` | Your Supabase anon key |
-| `VITE_API_URL` | Your Render API URL (e.g., `https://portfolio-api.onrender.com`) |
-| `VITE_SITE_URL` | Your Vercel deployment URL |
+| Variable                 | Value                                                            |
+| ------------------------ | ---------------------------------------------------------------- |
+| `VITE_SUPABASE_URL`      | Your Supabase project URL                                        |
+| `VITE_SUPABASE_ANON_KEY` | Your Supabase anon key                                           |
+| `VITE_API_URL`           | Your Render API URL (e.g., `https://portfolio-api.onrender.com`) |
+| `VITE_SITE_URL`          | Your Vercel deployment URL                                       |
 
 ### 3.3 Deploy
 
@@ -123,15 +130,15 @@ Push to main branch. Vercel will auto-deploy.
 
 ### 4.2 Environment Variables on Vercel
 
-| Variable | Value |
-|---|---|
-| `VITE_SUPABASE_URL` | Your Supabase project URL |
-| `VITE_SUPABASE_ANON_KEY` | Your Supabase anon key |
-| `VITE_SUPABASE_SERVICE_ROLE_KEY` | Your service role key |
-| `VITE_CLERK_PUBLISHABLE_KEY` | Your Clerk publishable key |
-| `VITE_API_URL` | Your Render API URL |
-| `VITE_SITE_URL` | Your admin Vercel URL |
-| `APP_ADMIN_EMAILS` | Comma-separated admin emails |
+| Variable                         | Value                        |
+| -------------------------------- | ---------------------------- |
+| `VITE_SUPABASE_URL`              | Your Supabase project URL    |
+| `VITE_SUPABASE_ANON_KEY`         | Your Supabase anon key       |
+| `VITE_SUPABASE_SERVICE_ROLE_KEY` | Your service role key        |
+| `VITE_CLERK_PUBLISHABLE_KEY`     | Your Clerk publishable key   |
+| `VITE_API_URL`                   | Your Render API URL          |
+| `VITE_SITE_URL`                  | Your admin Vercel URL        |
+| `APP_ADMIN_EMAILS`               | Comma-separated admin emails |
 
 ### 4.3 Clerk Setup
 
@@ -148,7 +155,7 @@ Push to main branch. Vercel will auto-deploy.
 
 ## 5. Post-Deployment Checklist
 
-- [ ] All migrations applied to Supabase
+- [ ] All migrations applied to Supabase (including `056_ai_spam_scoring.sql` — adds `spam_score`/`spam_reason`/`is_spam` to `messages`)
 - [ ] Storage buckets created with correct RLS policies
 - [ ] API server responding at `/api/healthz`
 - [ ] Portfolio loads and fetches data from Supabase
@@ -164,11 +171,13 @@ Push to main branch. Vercel will auto-deploy.
 ## 6. Custom Domains
 
 ### Vercel
+
 1. Go to your project settings → Domains
 2. Add your custom domain (e.g., `yourname.com`)
 3. Configure DNS records as instructed by Vercel
 
 ### Render
+
 1. Go to your service settings → Custom Domain
 2. Add your API domain (e.g., `api.yourname.com`)
 3. Update `VITE_API_URL` in both Vercel projects
@@ -187,13 +196,17 @@ Push to main branch. Vercel will auto-deploy.
 ## 8. Troubleshooting
 
 ### CORS Errors
+
 Ensure `VITE_SITE_URL` and `VITE_ADMIN_URL` on Render match your actual deployed URLs exactly (including `https://`).
 
 ### Contact Form Not Submitting
+
 Check that `VITE_API_URL` is set correctly in the portfolio's Vercel env vars and points to your Render API.
 
 ### Admin Auth Failing
+
 Verify `APP_ADMIN_EMAILS` includes your email and Clerk keys are correct.
 
 ### Database Errors
+
 Run `supabase db push` to ensure all migrations are applied.
