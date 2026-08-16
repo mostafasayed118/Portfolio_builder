@@ -4,6 +4,7 @@ import imagesRouter from "../images";
 import adminRouter from "../admin";
 import publicContactRouter from "../public/contact";
 import publicPostsRouter from "../public/posts";
+import publicChatRouter from "../public/chat";
 import cspReportRouter from "../csp-report";
 import { adminAuth } from "../../middleware/adminAuth";
 
@@ -20,6 +21,7 @@ router.use(imagesRouter);
 router.use("/admin", adminAuth, adminRouter);
 router.use("/contact", publicContactRouter);
 router.use("/posts", publicPostsRouter);
+router.use("/chat", publicChatRouter);
 router.use(cspReportRouter);
 
 export default router;
