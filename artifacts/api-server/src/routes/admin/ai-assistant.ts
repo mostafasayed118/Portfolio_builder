@@ -10,8 +10,31 @@ import {
 } from "@workspace/api-zod";
 import { badRequest, ok, serverError } from "../../lib/api-response";
 import { generateContent, parseListResponse } from "../../lib/gemini";
+import { logger } from "../../lib/logger";
 
 const router: IRouter = Router();
+
+// Per-call request log (method, path, status, duration) so both successes and
+// Gemini failures show up in Vercel runtime logs / log drains — the API has no
+// request-level logging elsewhere, and these are the four endpoints the AI
+// assistant admin tools hit.
+router.use((req, res, next) => {
+  const startedAt = Date.now();
+  res.on("finish", () => {
+    const durationMs = Date.now() - startedAt;
+    const log = res.statusCode >= 500 ? logger.warn.bind(logger) : logger.info.bind(logger);
+    log(
+      {
+        path: req.originalUrl,
+        method: req.method,
+        status: res.statusCode,
+        durationMs,
+      },
+      "ai-assistant request",
+    );
+  });
+  next();
+});
 
 const generateDescriptionSchema = aiGenerateDescriptionSchema;
 const suggestTagsSchema = aiSuggestTagsSchema;
