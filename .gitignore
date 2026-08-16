@@ -63,6 +63,7 @@ testsprite_tests/.env
 
 # Local scratch / tooling artifacts
 .freebuff/
+.worktrees/
 section-check.tmp.mjs
 
 # Test artifacts (should never be tracked)
