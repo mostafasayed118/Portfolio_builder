@@ -27,6 +27,7 @@ export const BLANK_PROJECT = {
   github_url: "",
   live_url: "",
   metrics: [] as string[],
+  tags: [] as string[],
   sort_order: 999,
   is_published: true,
 };

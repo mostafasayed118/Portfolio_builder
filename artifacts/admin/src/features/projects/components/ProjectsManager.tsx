@@ -118,8 +118,8 @@ export default function ProjectsManager() {
                   editLabel="Edit project"
                   deleteLabel="Delete project"
                   onEdit={() => {
-                    const { slug, image_url, tags, created_at, updated_at, ...rest } = p;
-                    openEdit({ ...rest, category: p.category ?? "", featured: p.featured ?? false, is_published: p.is_published ?? false, github_url: p.github_url ?? "", live_url: p.live_url ?? undefined, metrics: p.metrics ?? [], sort_order: p.sort_order ?? 0 });
+                    const { slug, image_url, created_at, updated_at, ...rest } = p;
+                    openEdit({ ...rest, tags: p.tags ?? [], category: p.category ?? "", featured: p.featured ?? false, is_published: p.is_published ?? false, github_url: p.github_url ?? "", live_url: p.live_url ?? undefined, metrics: p.metrics ?? [], sort_order: p.sort_order ?? 0 });
                   }}
                   onDelete={() => setDeleteId(p.id)}
                 />
