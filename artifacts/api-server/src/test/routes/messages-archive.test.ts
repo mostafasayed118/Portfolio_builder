@@ -50,11 +50,14 @@ beforeEach(() => {
   vi.clearAllMocks();
   // Default: a successful update — the row matched and was returned. The
   // chain serves both terminal patterns: `.eq().select()` for the per-row
-  // archive/unarchive routes and `.in()` for the bulk-archive route.
+  // archive/unarchive routes and `.in()` for the bulk-archive route. The
+  // `range` spy exists so the no-truncation guard can assert bulk cleanup
+  // never paginates (a reintroduced `.range()` would silently cap it).
   const updateChain = {
     eq: vi.fn().mockReturnThis(),
     in: vi.fn().mockResolvedValue({ error: null }),
     select: vi.fn().mockResolvedValue({ data: [{ id: UUID }], count: null, error: null }),
+    range: vi.fn().mockReturnThis(),
   };
   mockSupabase.update.mockReturnValue(updateChain);
   mockSupabase.from.mockReturnValue(mockSupabase);
@@ -130,6 +133,32 @@ describe("POST /api/v1/admin/messages/bulk-archive", () => {
       UUID,
       "22222222-2222-2222-2222-222222222222",
     ]);
+  });
+
+  it("archives every batch id in ONE statement — no range() page cap", async () => {
+    // A deliberately large batch: if a future change sliced the ids into
+    // 50-row pages (or fetched-then-loop), rows past the cap would be left
+    // unarchived and the response would silently claim success.
+    const ids = Array.from({ length: 120 }, (_, i) =>
+      `00000000-0000-4000-8000-${String(i + 1).padStart(12, "0")}`,
+    );
+
+    const res = await request(app)
+      .post("/api/v1/admin/messages/bulk-archive")
+      .set("x-admin-key", mockAdminKey)
+      .send({ ids });
+
+    expect(res.status).toBe(200);
+    const chain = mockSupabase.update.mock.results[0].value as {
+      in: ReturnType<typeof vi.fn>;
+      range: ReturnType<typeof vi.fn>;
+    };
+    // All 120 ids in a single `.in()` — exactly one statement, no partial set.
+    expect(chain.in).toHaveBeenCalledTimes(1);
+    expect(chain.in).toHaveBeenCalledWith("id", ids);
+    // No pagination on the update chain — a reintroduced `.range(0, 49)`
+    // would cap the batch at the first page and fail this guard.
+    expect(chain.range).not.toHaveBeenCalled();
   });
 
   it("rejects an empty ids array", async () => {

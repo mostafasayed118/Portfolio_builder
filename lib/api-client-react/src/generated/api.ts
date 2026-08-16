@@ -102,6 +102,7 @@ import type {
   ReorderInput,
   ReorderSectionSettings200,
   ReplyMessage200,
+  RestoreAllArchivedMessages200,
   SectionSettingInput,
   SeedDataParams,
   SeedResult,
@@ -3814,6 +3815,78 @@ export const useArchiveTestSubmissions = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getArchiveTestSubmissionsMutationOptions(options));
+    }
+
+export const getRestoreAllArchivedMessagesUrl = () => {
+
+
+
+
+  return `/api/v1/admin/messages/restore-all-archived`
+}
+
+/**
+ * One-click restore: brings every soft-deleted (archived) message back to the inbox in one server-side statement, so the whole Archived tab can be emptied in one call. The inverse of archive-test-submissions. Superadmin only; idempotent.
+ * @summary Restore every archived message to the inbox (superadmin)
+ */
+export const restoreAllArchivedMessages = async ( options?: Parameters<typeof customFetch>[1]): Promise<RestoreAllArchivedMessages200> => {
+
+  return customFetch<RestoreAllArchivedMessages200>(getRestoreAllArchivedMessagesUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRestoreAllArchivedMessagesMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreAllArchivedMessages>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof restoreAllArchivedMessages>>, TError,void, TContext> => {
+
+const mutationKey = ['restoreAllArchivedMessages'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof restoreAllArchivedMessages>>, void> = () => {
+
+
+          return  restoreAllArchivedMessages(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RestoreAllArchivedMessagesMutationResult = NonNullable<Awaited<ReturnType<typeof restoreAllArchivedMessages>>>
+
+    export type RestoreAllArchivedMessagesMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Restore every archived message to the inbox (superadmin)
+ */
+export const useRestoreAllArchivedMessages = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreAllArchivedMessages>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof restoreAllArchivedMessages>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getRestoreAllArchivedMessagesMutationOptions(options));
     }
 
 export const getMarkAllMessagesReadUrl = () => {
