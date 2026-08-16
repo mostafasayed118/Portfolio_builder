@@ -155,7 +155,7 @@ Push to main branch. Vercel will auto-deploy.
 
 ## 5. Post-Deployment Checklist
 
-- [ ] All migrations applied to Supabase (including `049_ai_spam_scoring.sql` — adds `spam_score`/`spam_reason`/`is_spam` to `messages`)
+- [ ] All migrations applied to Supabase (including `056_ai_spam_scoring.sql` — adds `spam_score`/`spam_reason`/`is_spam` to `messages`)
 - [ ] Storage buckets created with correct RLS policies
 - [ ] API server responding at `/api/healthz`
 - [ ] Portfolio loads and fetches data from Supabase

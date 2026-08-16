@@ -10,7 +10,7 @@ export interface Message {
   /** Present on rows returned by the `?status=archived` server filter. */
   deleted_at?: string | null;
   created_at: string;
-  /** AI spam scoring (migration 049): quarantined rows have is_spam=true. */
+  /** AI spam scoring (migration 056): quarantined rows have is_spam=true. */
   is_spam?: boolean;
   spam_score?: number | null;
   spam_reason?: string | null;
