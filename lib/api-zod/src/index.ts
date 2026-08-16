@@ -26,6 +26,9 @@ export {
   aiSuggestCategoriesSchema,
   aiSuggestTagsSchema,
   aiAnalyzeContentSchema,
+  aiContentTypeSchema,
+  aiGenerateSchema,
+  aiImproveSchema,
 } from "./admin";
 export type {
   HeroInput,

@@ -249,6 +249,20 @@ export const aiSuggestCategoriesSchema = z.object({
   skillName: z.string().min(1),
 });
 
+export const aiContentTypeSchema = z.enum(["hero", "about", "project", "skill", "experience", "general"]);
+
+export const aiGenerateSchema = z.object({
+  contentType: aiContentTypeSchema,
+  instructions: z.string().trim().max(500).optional(),
+  context: z.string().trim().max(2000).optional(),
+});
+
+export const aiImproveSchema = z.object({
+  contentType: aiContentTypeSchema,
+  text: z.string().trim().min(1, "Text is required").max(4000, "Text is too long"),
+  instructions: z.string().trim().max(500).optional(),
+});
+
 export type HeroInput = z.infer<typeof heroSchema>;
 export type AboutInput = z.infer<typeof aboutSchema>;
 export type SkillInput = z.infer<typeof skillSchema>;
