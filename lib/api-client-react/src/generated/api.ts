@@ -29,6 +29,7 @@ import type {
   ApiError,
   ArchiveMessage200,
   ArchiveTestSubmissions200,
+  BulkArchiveInput,
   BulkArchiveMessages200,
   BulkDeleteInput,
   BulkDeleteMessages200,
@@ -3612,16 +3613,16 @@ export const getBulkArchiveMessagesUrl = () => {
 }
 
 /**
- * @summary Bulk-archive messages (soft-delete, hides from inbox)
+ * @summary Bulk-archive messages (soft-delete, hides from inbox) — by explicit id list or by the active view filter, in one server-side statement
  */
-export const bulkArchiveMessages = async (bulkDeleteInput: BulkDeleteInput, options?: Parameters<typeof customFetch>[1]): Promise<BulkArchiveMessages200> => {
+export const bulkArchiveMessages = async (bulkArchiveInput: BulkArchiveInput, options?: Parameters<typeof customFetch>[1]): Promise<BulkArchiveMessages200> => {
 
   return customFetch<BulkArchiveMessages200>(getBulkArchiveMessagesUrl(),
   {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(bulkDeleteInput)
+    body: JSON.stringify(bulkArchiveInput)
   }
 );}
 
@@ -3630,8 +3631,8 @@ export const bulkArchiveMessages = async (bulkDeleteInput: BulkDeleteInput, opti
 
 
 export const getBulkArchiveMessagesMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkArchiveMessages>>, TError,{data: BodyType<BulkDeleteInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof bulkArchiveMessages>>, TError,{data: BodyType<BulkDeleteInput>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkArchiveMessages>>, TError,{data: BodyType<BulkArchiveInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof bulkArchiveMessages>>, TError,{data: BodyType<BulkArchiveInput>}, TContext> => {
 
 const mutationKey = ['bulkArchiveMessages'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -3643,7 +3644,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bulkArchiveMessages>>, {data: BodyType<BulkDeleteInput>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bulkArchiveMessages>>, {data: BodyType<BulkArchiveInput>}> = (props) => {
           const {data} = props ?? {};
 
           return  bulkArchiveMessages(data,requestOptions)
@@ -3657,18 +3658,18 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type BulkArchiveMessagesMutationResult = NonNullable<Awaited<ReturnType<typeof bulkArchiveMessages>>>
-    export type BulkArchiveMessagesMutationBody = BodyType<BulkDeleteInput>
+    export type BulkArchiveMessagesMutationBody = BodyType<BulkArchiveInput>
     export type BulkArchiveMessagesMutationError = ErrorType<unknown>
 
     /**
- * @summary Bulk-archive messages (soft-delete, hides from inbox)
+ * @summary Bulk-archive messages (soft-delete, hides from inbox) — by explicit id list or by the active view filter, in one server-side statement
  */
 export const useBulkArchiveMessages = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkArchiveMessages>>, TError,{data: BodyType<BulkDeleteInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkArchiveMessages>>, TError,{data: BodyType<BulkArchiveInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof bulkArchiveMessages>>,
         TError,
-        {data: BodyType<BulkDeleteInput>},
+        {data: BodyType<BulkArchiveInput>},
         TContext
       > => {
       return useMutation(getBulkArchiveMessagesMutationOptions(options));

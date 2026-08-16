@@ -46,6 +46,29 @@ vi.mocked(getSupabaseClient).mockReturnValue(mockSupabase as never);
 
 const UUID = "11111111-1111-1111-1111-111111111111";
 
+/**
+ * A thenable filter chain for the filter-based bulk-archive path: every
+ * predicate returns the chain (so `.is().eq()` chains in any order) and
+ * awaiting the chain resolves the success terminal — matching the real
+ * PostgrestBuilder, where the last filter method carries the result.
+ */
+function bulkFilterChain(): Record<string, unknown> & PromiseLike<Record<string, unknown>> {
+  const then = (onFulfilled: (v: Record<string, unknown>) => unknown) =>
+    Promise.resolve({ error: null }).then(onFulfilled);
+  const self: Record<string, unknown> & PromiseLike<Record<string, unknown>> = {
+    eq: vi.fn(() => self),
+    is: vi.fn(() => self),
+    not: vi.fn(() => self),
+    or: vi.fn(() => self),
+    gte: vi.fn(() => self),
+    in: vi.fn(() => self),
+    select: vi.fn(() => self),
+    range: vi.fn(() => self),
+    then,
+  };
+  return self;
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   // Default: a successful update — the row matched and was returned. The
@@ -179,6 +202,24 @@ describe("POST /api/v1/admin/messages/bulk-archive", () => {
     expect(res.status).toBe(400);
   });
 
+  it("rejects ids combined with a filter", async () => {
+    const res = await request(app)
+      .post("/api/v1/admin/messages/bulk-archive")
+      .set("x-admin-key", mockAdminKey)
+      .send({ ids: [UUID], filter: { status: "unread" } });
+
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects a body with neither ids nor a filter", async () => {
+    const res = await request(app)
+      .post("/api/v1/admin/messages/bulk-archive")
+      .set("x-admin-key", mockAdminKey)
+      .send({});
+
+    expect(res.status).toBe(400);
+  });
+
   it("surfaces a Supabase error as a 500", async () => {
     mockSupabase.update.mockReturnValue({
       in: vi.fn().mockResolvedValue({ error: { message: "boom" } }),
@@ -190,6 +231,83 @@ describe("POST /api/v1/admin/messages/bulk-archive", () => {
 
     expect(res.status).toBe(500);
     expect(res.body).toHaveProperty("success", false);
+  });
+
+  it("archives every row matching a status filter in one statement", async () => {
+    const chain = bulkFilterChain();
+    mockSupabase.update.mockReturnValue(chain as never);
+
+    const res = await request(app)
+      .post("/api/v1/admin/messages/bulk-archive")
+      .set("x-admin-key", mockAdminKey)
+      .send({ filter: { status: "unread" } });
+
+    expect(res.status).toBe(200);
+    // The SAME view predicates the list endpoint applies — active unread rows
+    // only — and NO id-list `.in()`: one statement over the whole set.
+    const f = chain as unknown as {
+      is: ReturnType<typeof vi.fn>;
+      eq: ReturnType<typeof vi.fn>;
+      in: ReturnType<typeof vi.fn>;
+    };
+    expect(f.is).toHaveBeenCalledWith("deleted_at", null);
+    expect(f.eq).toHaveBeenCalledWith("status", "unread");
+    expect(f.in).not.toHaveBeenCalled();
+  });
+
+  it("archives every row matching the unread_today preset", async () => {
+    const chain = bulkFilterChain();
+    mockSupabase.update.mockReturnValue(chain as never);
+
+    const res = await request(app)
+      .post("/api/v1/admin/messages/bulk-archive")
+      .set("x-admin-key", mockAdminKey)
+      .send({ filter: { preset: "unread_today" } });
+
+    expect(res.status).toBe(200);
+    const f = chain as unknown as {
+      eq: ReturnType<typeof vi.fn>;
+      gte: ReturnType<typeof vi.fn>;
+      is: ReturnType<typeof vi.fn>;
+    };
+    expect(f.eq).toHaveBeenCalledWith("status", "unread");
+    expect(f.gte).toHaveBeenCalledWith("created_at", expect.stringMatching(/^\d{4}-\d{2}-\d{2}T00:00:00.000Z$/));
+    expect(f.is).toHaveBeenCalledWith("deleted_at", null);
+  });
+
+  it("archives every unread-or-archived row via the shared or() disjunction", async () => {
+    const chain = bulkFilterChain();
+    mockSupabase.update.mockReturnValue(chain as never);
+
+    const res = await request(app)
+      .post("/api/v1/admin/messages/bulk-archive")
+      .set("x-admin-key", mockAdminKey)
+      .send({ filter: { preset: "unread_or_archived" } });
+
+    expect(res.status).toBe(200);
+    const f = chain as unknown as {
+      or: ReturnType<typeof vi.fn>;
+      is: ReturnType<typeof vi.fn>;
+    };
+    expect(f.or).toHaveBeenCalledWith("status.eq.unread,deleted_at.not.is.null");
+    // No soft-delete filter — the disjunction already covers deleted rows.
+    expect(f.is).not.toHaveBeenCalledWith("deleted_at", null);
+  });
+
+  it("archives the archived set via the inverted soft-delete filter", async () => {
+    const chain = bulkFilterChain();
+    mockSupabase.update.mockReturnValue(chain as never);
+
+    const res = await request(app)
+      .post("/api/v1/admin/messages/bulk-archive")
+      .set("x-admin-key", mockAdminKey)
+      .send({ filter: { status: "archived" } });
+
+    expect(res.status).toBe(200);
+    const f = chain as unknown as {
+      not: ReturnType<typeof vi.fn>;
+    };
+    expect(f.not).toHaveBeenCalledWith("deleted_at", "is", null);
   });
 });
 

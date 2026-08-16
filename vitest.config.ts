@@ -98,6 +98,16 @@ export default defineConfig({
       },
       {
         test: {
+          name: "api-zod",
+          root: path.resolve(dirname, "lib/api-zod"),
+          environment: "node",
+          include: ["src/**/*.test.ts"],
+          globals: true,
+          testTimeout: 15_000,
+        },
+      },
+      {
+        test: {
           name: "db",
           root: path.resolve(dirname, "lib/db"),
           environment: "node",

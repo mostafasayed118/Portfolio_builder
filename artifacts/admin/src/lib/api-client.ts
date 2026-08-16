@@ -170,7 +170,13 @@ export const api = {
     unarchive: (id: string) => unarchiveMessage(id),
     delete: (id: string) => deleteMessage(id),
     bulkDelete: (ids: string[]) => bulkDeleteMessages({ ids }),
-    bulkArchive: (ids: string[]) => bulkArchiveMessages({ ids }),
+    /**
+     * Archive by explicit id list or by the active view filter. When every
+     * row matching the current view is selected, pass `{ filter }` so the
+     * whole set is archived server-side in one statement — no giant id
+     * payload (the contract: exactly one of `ids` / `filter`).
+     */
+    bulkArchive: (opts: Parameters<typeof bulkArchiveMessages>[0]) => bulkArchiveMessages(opts),
     bulkUnarchive: (ids: string[]) => bulkUnarchiveMessages({ ids }),
     archiveTestSubmissions: () => archiveTestSubmissions(),
     restoreAllArchived: () => restoreAllArchivedMessages(),

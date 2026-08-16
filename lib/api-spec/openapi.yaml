@@ -1232,13 +1232,15 @@ paths:
     post:
       operationId: bulkArchiveMessages
       tags: [admin.messages]
-      summary: Bulk-archive messages (soft-delete, hides from inbox)
+      summary: >-
+        Bulk-archive messages (soft-delete, hides from inbox) — by explicit
+        id list or by the active view filter, in one server-side statement
       security: [{ adminAuth: [] }]
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/BulkDeleteInput" }
+            schema: { $ref: "#/components/schemas/BulkArchiveInput" }
       responses:
         "200":
           description: Archived
@@ -2966,6 +2968,23 @@ components:
       type: object
       properties:
         ids: { type: array, items: { type: string } }
+
+    BulkArchiveInput:
+      type: object
+      description: >-
+        Provide exactly one of `ids` (archive a specific batch) or `filter`
+        (archive every row matching the view — the same server-side status /
+        preset predicates the list endpoint applies, in one statement).
+      properties:
+        ids: { type: array, items: { type: string } }
+        filter:
+          type: object
+          description: The view to archive, mirroring the list endpoint's `status` / `preset`.
+          properties:
+            status: { type: string, enum: [unread, read, archived] }
+            preset:
+              type: string
+              enum: [unread_today, unread_or_archived, needs_reply]
 
     ContactSubmissionInput:
       type: object

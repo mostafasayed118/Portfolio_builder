@@ -184,6 +184,29 @@ export const bulkDeleteMessagesSchema = z.object({
   ids: z.array(z.string().uuid()).min(1, "At least one ID required"),
 });
 
+/**
+ * Body for bulk-archive: exactly one of an explicit `ids` batch or a `filter`
+ * describing the view to archive (status/preset — the same server-side
+ * predicates the list endpoint applies). A filter-based archive touches every
+ * matching row in ONE statement, so "archive all matching" scales past any
+ * id-list payload.
+ */
+export const bulkArchiveMessagesSchema = z
+  .object({
+    ids: z.array(z.string().uuid()).min(1, "At least one ID required").optional(),
+    filter: z
+      .object({
+        status: z.enum(["unread", "read", "archived"]).optional(),
+        preset: z.enum(["unread_today", "unread_or_archived", "needs_reply"]).optional(),
+      })
+      .optional(),
+  })
+  .refine((b) => !(b.ids && b.filter), "Provide either ids or a filter, not both")
+  .refine(
+    (b) => (b.ids?.length ?? 0) > 0 || !!b.filter?.status || !!b.filter?.preset,
+    "Provide at least one id or a status/preset filter",
+  );
+
 export const postSchema = z.object({
   title: z.string().trim().min(1, "Title is required").max(180, "Title must be under 180 characters"),
   slug: z
