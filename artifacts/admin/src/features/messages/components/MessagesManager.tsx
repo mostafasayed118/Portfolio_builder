@@ -382,13 +382,21 @@ export default function MessagesManager() {
     const ids = [...selectedIds];
     if (ids.length === 0) return;
     try {
-      const res = await api.messages.bulkUnarchive(ids);
+      // When every row matching the Archived view is selected, restore via
+      // the server-side filter in ONE statement — no giant id payload, so it
+      // scales to thousands of archived rows. A partial selection sends ids.
+      const allMatchingSelected = totalMatching > 0 && selectedIds.size >= totalMatching;
+      const res = allMatchingSelected
+        ? await api.messages.bulkUnarchive({ filter: { status: "archived" } })
+        : await api.messages.bulkUnarchive({ ids });
       if (!res.success) throw new Error(res.message);
       await queryClient.invalidateQueries({ queryKey: ["messages"] });
       await queryClient.invalidateQueries({ queryKey: ["unreadCount"] });
       setSelectedIds(new Set());
       toast({
-        title: `Restored ${ids.length} message${ids.length === 1 ? "" : "s"}`,
+        title: allMatchingSelected
+          ? `Restored all ${totalMatching} matching message${totalMatching === 1 ? "" : "s"}`
+          : `Restored ${ids.length} message${ids.length === 1 ? "" : "s"}`,
       });
     } catch (err) {
       toast({
@@ -397,7 +405,7 @@ export default function MessagesManager() {
         variant: "destructive",
       });
     }
-  }, [selectedIds, queryClient, toast]);
+  }, [selectedIds, totalMatching, queryClient, toast]);
 
   // Gmail-style bulk shortcuts: `e` archives the selection, `u` restores it
   // from the Archived view — mirroring whichever bulk action the toolbar shows

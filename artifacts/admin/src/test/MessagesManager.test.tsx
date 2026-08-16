@@ -392,8 +392,12 @@ describe("MessagesViewer", () => {
 
     fireEvent.keyDown(document, { key: "u" });
 
+    // Charlie is the only archived row, so the whole view is selected — the
+    // shortcut routes through the same filter path as the toolbar button.
     await waitFor(() => {
-      expect(mockBulkUnarchiveMessage).toHaveBeenCalledWith(["3"]);
+      expect(mockBulkUnarchiveMessage).toHaveBeenCalledWith({
+        filter: { status: "archived" },
+      });
     });
   });
 
@@ -636,8 +640,68 @@ describe("MessagesViewer", () => {
     await userEvent.click(screen.getByRole("checkbox", { name: "Select all on page" }));
     await userEvent.click(screen.getByRole("button", { name: "Restore selected" }));
 
+    // Selecting the ONLY archived row means the whole Archived view is
+    // selected — the restore sends the server-side filter, not a one-row id
+    // payload, so it scales to thousands of archived rows.
     await waitFor(() => {
-      expect(mockBulkUnarchiveMessage).toHaveBeenCalledWith(["3"]);
+      expect(mockBulkUnarchiveMessage).toHaveBeenCalledWith({
+        filter: { status: "archived" },
+      });
+    });
+  });
+
+  it("restores a PARTIAL selection by id list in the Archived tab", async () => {
+    // Two archived rows: selecting just one is a partial selection, so the
+    // restore must carry the explicit ids — never the whole-archived filter.
+    const archived = [
+      {
+        id: "a1",
+        name: "Dana",
+        email: "dana@test.com",
+        message: "Old message one",
+        status: "archived",
+        created_at: "2024-01-01T00:00:00Z",
+      },
+      {
+        id: "a2",
+        name: "Evan",
+        email: "evan@test.com",
+        message: "Old message two",
+        status: "archived",
+        created_at: "2024-01-02T00:00:00Z",
+      },
+    ];
+    mockListMessages.mockImplementation(async (_userId, status, limit = 200, offset = 0) => {
+      // The All view keeps the standard fixture (chip counts); only the
+      // Archived fetch switches to the two-row set.
+      const list = status === "archived" ? archived : mockMessages;
+      const page = list.slice(offset, offset + limit);
+      return {
+        success: true,
+        data: {
+          data: page,
+          pagination: {
+            total: list.length,
+            limit,
+            offset,
+            hasMore: offset + page.length < list.length,
+          },
+        },
+      };
+    });
+
+    renderAdmin(<MessagesManager />);
+    await screen.findByText("Alice");
+
+    await userEvent.click(screen.getByText(/Archived \(1\)/));
+    await screen.findByText("Dana");
+    expect(screen.getByText("Evan")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("checkbox", { name: "Select message from Dana" }));
+    await userEvent.click(screen.getByRole("button", { name: "Restore selected" }));
+
+    await waitFor(() => {
+      expect(mockBulkUnarchiveMessage).toHaveBeenCalledWith({ ids: ["a1"] });
     });
   });
 

@@ -33,6 +33,7 @@ import type {
   BulkArchiveMessages200,
   BulkDeleteInput,
   BulkDeleteMessages200,
+  BulkUnarchiveInput,
   BulkUnarchiveMessages200,
   CertificationInput,
   ContactInfoInput,
@@ -3684,16 +3685,16 @@ export const getBulkUnarchiveMessagesUrl = () => {
 }
 
 /**
- * @summary Bulk-unarchive messages (restore to inbox)
+ * @summary Bulk-unarchive messages (restore to inbox) — by explicit id list or by the active view filter, in one server-side statement
  */
-export const bulkUnarchiveMessages = async (bulkDeleteInput: BulkDeleteInput, options?: Parameters<typeof customFetch>[1]): Promise<BulkUnarchiveMessages200> => {
+export const bulkUnarchiveMessages = async (bulkUnarchiveInput: BulkUnarchiveInput, options?: Parameters<typeof customFetch>[1]): Promise<BulkUnarchiveMessages200> => {
 
   return customFetch<BulkUnarchiveMessages200>(getBulkUnarchiveMessagesUrl(),
   {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(bulkDeleteInput)
+    body: JSON.stringify(bulkUnarchiveInput)
   }
 );}
 
@@ -3702,8 +3703,8 @@ export const bulkUnarchiveMessages = async (bulkDeleteInput: BulkDeleteInput, op
 
 
 export const getBulkUnarchiveMessagesMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkUnarchiveMessages>>, TError,{data: BodyType<BulkDeleteInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof bulkUnarchiveMessages>>, TError,{data: BodyType<BulkDeleteInput>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkUnarchiveMessages>>, TError,{data: BodyType<BulkUnarchiveInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof bulkUnarchiveMessages>>, TError,{data: BodyType<BulkUnarchiveInput>}, TContext> => {
 
 const mutationKey = ['bulkUnarchiveMessages'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -3715,7 +3716,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bulkUnarchiveMessages>>, {data: BodyType<BulkDeleteInput>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bulkUnarchiveMessages>>, {data: BodyType<BulkUnarchiveInput>}> = (props) => {
           const {data} = props ?? {};
 
           return  bulkUnarchiveMessages(data,requestOptions)
@@ -3729,18 +3730,18 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type BulkUnarchiveMessagesMutationResult = NonNullable<Awaited<ReturnType<typeof bulkUnarchiveMessages>>>
-    export type BulkUnarchiveMessagesMutationBody = BodyType<BulkDeleteInput>
+    export type BulkUnarchiveMessagesMutationBody = BodyType<BulkUnarchiveInput>
     export type BulkUnarchiveMessagesMutationError = ErrorType<unknown>
 
     /**
- * @summary Bulk-unarchive messages (restore to inbox)
+ * @summary Bulk-unarchive messages (restore to inbox) — by explicit id list or by the active view filter, in one server-side statement
  */
 export const useBulkUnarchiveMessages = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkUnarchiveMessages>>, TError,{data: BodyType<BulkDeleteInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkUnarchiveMessages>>, TError,{data: BodyType<BulkUnarchiveInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof bulkUnarchiveMessages>>,
         TError,
-        {data: BodyType<BulkDeleteInput>},
+        {data: BodyType<BulkUnarchiveInput>},
         TContext
       > => {
       return useMutation(getBulkUnarchiveMessagesMutationOptions(options));

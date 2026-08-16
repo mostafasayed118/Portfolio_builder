@@ -11,6 +11,7 @@ import {
   contactSubmissionSchema,
   bulkDeleteMessagesSchema,
   bulkArchiveMessagesSchema,
+  bulkUnarchiveMessagesSchema,
   aiGenerateDescriptionSchema,
   aiSuggestCategoriesSchema,
   aiSuggestTagsSchema,
@@ -217,6 +218,41 @@ describe("admin schemas", () => {
     it("rejects empty ids and empty filter", () => {
       expect(bulkArchiveMessagesSchema.safeParse({ ids: [] }).success).toBe(false);
       expect(bulkArchiveMessagesSchema.safeParse({ filter: {} }).success).toBe(false);
+    });
+  });
+
+  describe("bulkUnarchiveMessagesSchema", () => {
+    it("accepts an explicit ids batch", () => {
+      const r = bulkUnarchiveMessagesSchema.safeParse({
+        ids: ["11111111-1111-1111-1111-111111111111"],
+      });
+      expect(r.success).toBe(true);
+    });
+
+    it("accepts a filter instead of ids (status or preset)", () => {
+      expect(
+        bulkUnarchiveMessagesSchema.safeParse({ filter: { status: "archived" } }).success,
+      ).toBe(true);
+      expect(
+        bulkUnarchiveMessagesSchema.safeParse({ filter: { preset: "unread_or_archived" } }).success,
+      ).toBe(true);
+    });
+
+    it("rejects ids AND filter together", () => {
+      const r = bulkUnarchiveMessagesSchema.safeParse({
+        ids: ["11111111-1111-1111-1111-111111111111"],
+        filter: { status: "archived" },
+      });
+      expect(r.success).toBe(false);
+    });
+
+    it("rejects neither ids nor filter", () => {
+      expect(bulkUnarchiveMessagesSchema.safeParse({}).success).toBe(false);
+    });
+
+    it("rejects empty ids and empty filter", () => {
+      expect(bulkUnarchiveMessagesSchema.safeParse({ ids: [] }).success).toBe(false);
+      expect(bulkUnarchiveMessagesSchema.safeParse({ filter: {} }).success).toBe(false);
     });
   });
 

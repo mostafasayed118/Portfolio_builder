@@ -907,6 +907,41 @@ export interface BulkArchiveInput {
   filter?: BulkArchiveInputFilter;
 }
 
+export type BulkUnarchiveInputFilterStatus = typeof BulkUnarchiveInputFilterStatus[keyof typeof BulkUnarchiveInputFilterStatus];
+
+
+export const BulkUnarchiveInputFilterStatus = {
+  unread: 'unread',
+  read: 'read',
+  archived: 'archived',
+} as const;
+
+export type BulkUnarchiveInputFilterPreset = typeof BulkUnarchiveInputFilterPreset[keyof typeof BulkUnarchiveInputFilterPreset];
+
+
+export const BulkUnarchiveInputFilterPreset = {
+  unread_today: 'unread_today',
+  unread_or_archived: 'unread_or_archived',
+  needs_reply: 'needs_reply',
+} as const;
+
+/**
+ * The view to restore, mirroring the list endpoint's `status` / `preset`.
+ */
+export type BulkUnarchiveInputFilter = {
+  status?: BulkUnarchiveInputFilterStatus;
+  preset?: BulkUnarchiveInputFilterPreset;
+};
+
+/**
+ * Provide exactly one of `ids` (restore a specific batch) or `filter` (restore every row matching the view — the same server-side status / preset predicates the list endpoint applies, in one statement).
+ */
+export interface BulkUnarchiveInput {
+  ids?: string[];
+  /** The view to restore, mirroring the list endpoint's `status` / `preset`. */
+  filter?: BulkUnarchiveInputFilter;
+}
+
 export interface ContactSubmissionInput {
   name: string;
   email: string;

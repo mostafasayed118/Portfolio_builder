@@ -19,6 +19,7 @@ export {
   contactSubmissionSchema,
   bulkDeleteMessagesSchema,
   bulkArchiveMessagesSchema,
+  bulkUnarchiveMessagesSchema,
   aiGenerateDescriptionSchema,
   aiSuggestCategoriesSchema,
   aiSuggestTagsSchema,

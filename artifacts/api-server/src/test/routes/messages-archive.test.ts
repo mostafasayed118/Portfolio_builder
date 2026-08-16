@@ -356,6 +356,67 @@ describe("POST /api/v1/admin/messages/bulk-unarchive", () => {
     expect(res.status).toBe(400);
   });
 
+  it("rejects ids combined with a filter", async () => {
+    const res = await request(app)
+      .post("/api/v1/admin/messages/bulk-unarchive")
+      .set("x-admin-key", mockAdminKey)
+      .send({ ids: [UUID], filter: { status: "archived" } });
+
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects a body with neither ids nor a filter", async () => {
+    const res = await request(app)
+      .post("/api/v1/admin/messages/bulk-unarchive")
+      .set("x-admin-key", mockAdminKey)
+      .send({});
+
+    expect(res.status).toBe(400);
+  });
+
+  it("restores every archived row via the status filter in one statement", async () => {
+    const chain = bulkFilterChain();
+    mockSupabase.update.mockReturnValue(chain as never);
+
+    const res = await request(app)
+      .post("/api/v1/admin/messages/bulk-unarchive")
+      .set("x-admin-key", mockAdminKey)
+      .send({ filter: { status: "archived" } });
+
+    expect(res.status).toBe(200);
+    // The SAME inverted soft-delete predicate the list endpoint applies for
+    // the Archived view — and NO id-list `.in()`: one statement over the
+    // whole archived set, so "restore all matching" scales past thousands.
+    const patch = mockSupabase.update.mock.calls[0][0] as Record<string, unknown>;
+    expect(patch).toHaveProperty("deleted_at", null);
+    const f = chain as unknown as {
+      not: ReturnType<typeof vi.fn>;
+      in: ReturnType<typeof vi.fn>;
+    };
+    expect(f.not).toHaveBeenCalledWith("deleted_at", "is", null);
+    expect(f.in).not.toHaveBeenCalled();
+  });
+
+  it("restores rows matching a preset via the shared view predicates", async () => {
+    const chain = bulkFilterChain();
+    mockSupabase.update.mockReturnValue(chain as never);
+
+    const res = await request(app)
+      .post("/api/v1/admin/messages/bulk-unarchive")
+      .set("x-admin-key", mockAdminKey)
+      .send({ filter: { preset: "unread_today" } });
+
+    expect(res.status).toBe(200);
+    const f = chain as unknown as {
+      eq: ReturnType<typeof vi.fn>;
+      gte: ReturnType<typeof vi.fn>;
+      is: ReturnType<typeof vi.fn>;
+    };
+    expect(f.eq).toHaveBeenCalledWith("status", "unread");
+    expect(f.gte).toHaveBeenCalledWith("created_at", expect.stringMatching(/^\d{4}-\d{2}-\d{2}T00:00:00.000Z$/));
+    expect(f.is).toHaveBeenCalledWith("deleted_at", null);
+  });
+
   it("surfaces a Supabase error as a 500", async () => {
     mockSupabase.update.mockReturnValue({
       in: vi.fn().mockResolvedValue({ error: { message: "boom" } }),
