@@ -524,7 +524,7 @@ ON CONFLICT DO NOTHING;
 
 -- Hero content
 INSERT INTO hero_content (heading, name, roles, description, github_url, linkedin_url, email, available, cv_file_name, is_published) VALUES
-('Hi, I''m', 'Your Name', ARRAY['Data Engineer', 'ETL Developer', 'Pipeline Architect', 'BI Developer'], 'Passionate about building scalable data pipelines, transforming raw data into actionable insights, and architecting robust ETL solutions.', 'https://github.com/yourusername', 'https://linkedin.com/in/yourusername', 'admin@example.com', true, 'Your_Name_Resume.pdf', true)
+('Hi, I''m', 'Your Name', ARRAY['Data Engineer', 'ETL Developer', 'Pipeline Architect', 'BI Developer'], 'Passionate about building scalable data pipelines, transforming raw data into actionable insights, and architecting robust ETL solutions.', 'https://github.com/mostafasayed118', 'https://www.linkedin.com/in/mustafa-sayed11', 'mustafasayed20002@gmail.com', true, 'Your_Name_Resume.pdf', true)
 ON CONFLICT DO NOTHING;
 
 -- About content
@@ -534,7 +534,7 @@ ON CONFLICT DO NOTHING;
 
 -- Contact info
 INSERT INTO contact_info (email, phone, location, github, linkedin, availability_status) VALUES
-('admin@example.com', '+1 000 000 0000', 'Your City, Country', 'https://github.com/yourusername', 'https://linkedin.com/in/yourusername', 'Open to opportunities')
+('mustafasayed20002@gmail.com', '+1 000 000 0000', 'Your City, Country', 'https://github.com/mostafasayed118', 'https://www.linkedin.com/in/mustafa-sayed11', 'Open to opportunities')
 ON CONFLICT DO NOTHING;
 
 -- Section settings
