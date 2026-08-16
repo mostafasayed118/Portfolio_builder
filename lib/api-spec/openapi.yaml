@@ -1010,12 +1010,13 @@ paths:
           in: query
           description: >-
             Server-side status filter. `unread`/`read` page over exactly those
-            rows; `archived` pages over the soft-deleted set (normally hidden).
+            rows; `archived` pages over the soft-deleted set (normally hidden);
+            `spam` filters messages the AI classifier quarantined (is_spam).
             Omit or pass `all` for every visible message. Mutually exclusive
             with `preset`.
           schema:
             type: string
-            enum: [unread, read, archived, all]
+            enum: [unread, read, archived, spam, all]
         - name: preset
           in: query
           description: >-
@@ -3149,7 +3150,7 @@ components:
           type: object
           description: The view to archive, mirroring the list endpoint's `status` / `preset`.
           properties:
-            status: { type: string, enum: [unread, read, archived] }
+            status: { type: string, enum: [unread, read, archived, spam] }
             preset:
               type: string
               enum: [unread_today, unread_or_archived, needs_reply]
@@ -3166,7 +3167,7 @@ components:
           type: object
           description: The view to restore, mirroring the list endpoint's `status` / `preset`.
           properties:
-            status: { type: string, enum: [unread, read, archived] }
+            status: { type: string, enum: [unread, read, archived, spam] }
             preset:
               type: string
               enum: [unread_today, unread_or_archived, needs_reply]

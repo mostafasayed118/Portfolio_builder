@@ -152,7 +152,7 @@ export const api = {
      */
     list: (
       userId?: string,
-      status?: "unread" | "read" | "archived" | "all",
+      status?: "unread" | "read" | "archived" | "spam" | "all",
       limit?: number,
       offset?: number,
       preset?: "unread_today" | "unread_or_archived" | "needs_reply",

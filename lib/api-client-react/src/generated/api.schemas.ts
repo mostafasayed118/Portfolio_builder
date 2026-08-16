@@ -944,6 +944,7 @@ export const BulkArchiveInputFilterStatus = {
   unread: 'unread',
   read: 'read',
   archived: 'archived',
+  spam: 'spam',
 } as const;
 
 export type BulkArchiveInputFilterPreset = typeof BulkArchiveInputFilterPreset[keyof typeof BulkArchiveInputFilterPreset];
@@ -979,6 +980,7 @@ export const BulkUnarchiveInputFilterStatus = {
   unread: 'unread',
   read: 'read',
   archived: 'archived',
+  spam: 'spam',
 } as const;
 
 export type BulkUnarchiveInputFilterPreset = typeof BulkUnarchiveInputFilterPreset[keyof typeof BulkUnarchiveInputFilterPreset];
@@ -1229,7 +1231,7 @@ export type DeletePost200 = SuccessEnvelope & ({
 export type ListMessagesParams = {
 userId?: string;
 /**
- * Server-side status filter. `unread`/`read` page over exactly those rows; `archived` pages over the soft-deleted set (normally hidden). Omit or pass `all` for every visible message. Mutually exclusive with `preset`.
+ * Server-side status filter. `unread`/`read` page over exactly those rows; `archived` pages over the soft-deleted set (normally hidden); `spam` filters messages the AI classifier quarantined (is_spam). Omit or pass `all` for every visible message. Mutually exclusive with `preset`.
  */
 status?: ListMessagesStatus;
 /**
@@ -1253,6 +1255,7 @@ export const ListMessagesStatus = {
   unread: 'unread',
   read: 'read',
   archived: 'archived',
+  spam: 'spam',
   all: 'all',
 } as const;
 
