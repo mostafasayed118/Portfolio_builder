@@ -1,4 +1,4 @@
-import { Github, Linkedin, Twitter, Mail, Download } from "lucide-react";
+import { Github, Linkedin, Twitter, Youtube, Facebook, Mail, Download } from "lucide-react";
 import { Button } from "@workspace/ui";
 
 /** Only allow http/https URLs to prevent javascript: injection */
@@ -23,6 +23,8 @@ export type HeroFormData = {
     github?: string;
     linkedin?: string;
     twitter?: string;
+    youtube?: string;
+    facebook?: string;
     email?: string;
     [key: string]: string | undefined;
   };
@@ -77,6 +79,16 @@ export function HeroLivePreview({ data }: { data: Partial<HeroFormData> }) {
         {data.social_links?.twitter && safeHref(data.social_links.twitter) && (
           <a href={safeHref(data.social_links.twitter)} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary">
             <Twitter className="h-5 w-5" />
+          </a>
+        )}
+        {data.social_links?.youtube && safeHref(data.social_links.youtube) && (
+          <a href={safeHref(data.social_links.youtube)} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary">
+            <Youtube className="h-5 w-5" />
+          </a>
+        )}
+        {data.social_links?.facebook && safeHref(data.social_links.facebook) && (
+          <a href={safeHref(data.social_links.facebook)} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary">
+            <Facebook className="h-5 w-5" />
           </a>
         )}
         {data.social_links?.email && (

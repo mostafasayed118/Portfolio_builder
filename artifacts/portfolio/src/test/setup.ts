@@ -12,6 +12,8 @@ const mockHeroContent = {
   github_url: "https://github.com/test",
   linkedin_url: "https://linkedin.com/in/test",
   twitter_url: null,
+  youtube_url: null,
+  facebook_url: null,
   email: "test@test.com",
   avatar_url: null,
   cv_url: "https://test.com/cv.pdf",

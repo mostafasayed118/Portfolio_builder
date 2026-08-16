@@ -2158,7 +2158,7 @@ components:
     # ── Entity (response) schemas ─────────────────────────────────────
     HeroContent:
       type: object
-      required: [id, heading, name, roles, description, heading_ar, name_ar, description_ar, github_url, linkedin_url, twitter_url, email, avatar_url, cv_url, stats, available, site_name, logo_url, favicon_url, tagline, cv_file_name, is_published, updated_at, created_at]
+      required: [id, heading, name, roles, description, heading_ar, name_ar, description_ar, github_url, linkedin_url, twitter_url, youtube_url, facebook_url, email, avatar_url, cv_url, stats, available, site_name, logo_url, favicon_url, tagline, cv_file_name, is_published, updated_at, created_at]
       properties:
         id: { type: string }
         heading: { type: string }
@@ -2171,6 +2171,8 @@ components:
         github_url: { type: string }
         linkedin_url: { type: string }
         twitter_url: { type: string, nullable: true }
+        youtube_url: { type: string, nullable: true }
+        facebook_url: { type: string, nullable: true }
         email: { type: string }
         avatar_url: { type: string, nullable: true }
         cv_url: { type: string, nullable: true }
@@ -2409,7 +2411,7 @@ components:
 
     ContactInfo:
       type: object
-      required: [id, email, phone, location, address, github, linkedin, whatsapp, map_embed_url, availability_status, working_hours, social_links, updated_at, created_at]
+      required: [id, email, phone, location, address, github, linkedin, youtube, facebook, whatsapp, map_embed_url, availability_status, working_hours, social_links, updated_at, created_at]
       properties:
         id: { type: string }
         email: { type: string, nullable: true }
@@ -2418,6 +2420,8 @@ components:
         address: { type: string, nullable: true }
         github: { type: string, nullable: true }
         linkedin: { type: string, nullable: true }
+        youtube: { type: string, nullable: true }
+        facebook: { type: string, nullable: true }
         whatsapp: { type: string, nullable: true }
         map_embed_url: { type: string, nullable: true }
         availability_status: { type: string, nullable: true }
@@ -2708,6 +2712,8 @@ components:
         github_url: { type: string, nullable: true }
         linkedin_url: { type: string, nullable: true }
         twitter_url: { type: string, nullable: true }
+        youtube_url: { type: string, nullable: true }
+        facebook_url: { type: string, nullable: true }
         email: { type: string, nullable: true }
         avatar_url: { type: string, nullable: true }
         cv_url: { type: string, nullable: true }
@@ -2855,6 +2861,8 @@ components:
         address: { type: string, nullable: true }
         github: { type: string, nullable: true }
         linkedin: { type: string, nullable: true }
+        youtube: { type: string, nullable: true }
+        facebook: { type: string, nullable: true }
         whatsapp: { type: string, nullable: true }
         map_embed_url: { type: string, nullable: true }
         availability_status: { type: string, nullable: true }

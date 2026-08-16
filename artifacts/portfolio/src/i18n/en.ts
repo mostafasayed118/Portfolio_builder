@@ -92,6 +92,8 @@ export interface TranslationKeys {
       location: string;
       github: string;
       linkedin: string;
+      youtube: string;
+      facebook: string;
       whatsapp: string;
     };
   };
@@ -210,6 +212,8 @@ export const en: TranslationKeys = {
       location: "Location",
       github: "GitHub",
       linkedin: "LinkedIn",
+      youtube: "YouTube",
+      facebook: "Facebook",
       whatsapp: "WhatsApp",
     },
   },

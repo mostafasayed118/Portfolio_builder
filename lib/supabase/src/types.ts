@@ -243,6 +243,8 @@ export interface Database {
           github_url: string;
           linkedin_url: string;
           twitter_url: string | null;
+          youtube_url: string | null;
+          facebook_url: string | null;
           email: string;
           avatar_url: string | null;
           cv_url: string | null;
@@ -269,6 +271,8 @@ export interface Database {
           github_url?: string;
           linkedin_url?: string;
           twitter_url?: string | null;
+          youtube_url?: string | null;
+          facebook_url?: string | null;
           email?: string;
           avatar_url?: string | null;
           cv_url?: string | null;
@@ -295,6 +299,8 @@ export interface Database {
           github_url?: string;
           linkedin_url?: string;
           twitter_url?: string | null;
+          youtube_url?: string | null;
+          facebook_url?: string | null;
           email?: string;
           avatar_url?: string | null;
           cv_url?: string | null;
@@ -527,6 +533,8 @@ export interface Database {
           address: string | null;
           github: string | null;
           linkedin: string | null;
+          youtube: string | null;
+          facebook: string | null;
           whatsapp: string | null;
           map_embed_url: string | null;
           availability_status: string | null;
@@ -543,6 +551,8 @@ export interface Database {
           address?: string | null;
           github?: string | null;
           linkedin?: string | null;
+          youtube?: string | null;
+          facebook?: string | null;
           whatsapp?: string | null;
           map_embed_url?: string | null;
           availability_status?: string | null;
@@ -559,6 +569,8 @@ export interface Database {
           address?: string | null;
           github?: string | null;
           linkedin?: string | null;
+          youtube?: string | null;
+          facebook?: string | null;
           whatsapp?: string | null;
           map_embed_url?: string | null;
           availability_status?: string | null;

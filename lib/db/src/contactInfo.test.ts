@@ -56,8 +56,8 @@ describe("contactInfo", () => {
       expect(insertCall.email).toBe("mustafasayedsaeed@outlook.com");
       expect(insertCall.phone).toBe("+20 100 000 0000");
       expect(insertCall.location).toBe("Cairo, Egypt");
-      expect(insertCall.github).toBe("https://github.com/mustafasayed");
-      expect(insertCall.linkedin).toBe("https://linkedin.com/in/mustafasayed");
+      expect(insertCall.github).toBe("https://github.com/mostafasayed118");
+      expect(insertCall.linkedin).toBe("https://www.linkedin.com/in/mustafa-sayed11");
     });
 
     it("inserts with provided args and sanitizes URLs", async () => {

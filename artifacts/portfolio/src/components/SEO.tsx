@@ -133,7 +133,7 @@ function SEOContent({
           addressLocality: "Cairo",
           addressCountry: "EG",
         },
-        sameAs: [CONTACT.github, CONTACT.linkedin],
+        sameAs: [CONTACT.github, CONTACT.linkedin, CONTACT.youtube, CONTACT.facebook],
         knowsAbout: HERO.roles,
       },
       {

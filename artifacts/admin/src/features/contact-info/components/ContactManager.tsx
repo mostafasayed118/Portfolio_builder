@@ -8,8 +8,8 @@ import { AdminErrorState } from "@/components/AdminErrorState";
 import { AdminLoadingState } from "@/components/AdminLoadingState";
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, Label, Textarea } from "@workspace/ui";
 
-type ContactData = { email: string; phone: string; location: string; github: string; linkedin: string; whatsapp: string; mapEmbedUrl: string; availabilityStatus: string };
-const DEFAULTS: ContactData = { email: "", phone: "", location: "", github: "", linkedin: "", whatsapp: "", mapEmbedUrl: "", availabilityStatus: "Open to opportunities" };
+type ContactData = { email: string; phone: string; location: string; github: string; linkedin: string; youtube: string; facebook: string; whatsapp: string; mapEmbedUrl: string; availabilityStatus: string };
+const DEFAULTS: ContactData = { email: "", phone: "", location: "", github: "", linkedin: "", youtube: "", facebook: "", whatsapp: "", mapEmbedUrl: "", availabilityStatus: "Open to opportunities" };
 
 export default function ContactManager() {
   const { toast } = useToast();
@@ -32,6 +32,8 @@ export default function ContactManager() {
       location: data.location ?? "",
       github: data.github ?? "",
       linkedin: data.linkedin ?? "",
+      youtube: data.youtube ?? "",
+      facebook: data.facebook ?? "",
       whatsapp: data.whatsapp ?? "",
       mapEmbedUrl: data.map_embed_url ?? "",
       availabilityStatus: data.availability_status ?? "",
@@ -49,6 +51,8 @@ export default function ContactManager() {
         location: form.location || null,
         github: form.github || null,
         linkedin: form.linkedin || null,
+        youtube: form.youtube || null,
+        facebook: form.facebook || null,
         whatsapp: form.whatsapp || null,
         map_embed_url: form.mapEmbedUrl || null,
         availability_status: form.availabilityStatus || null,
@@ -66,6 +70,8 @@ export default function ContactManager() {
     ["location", "Location", "Cairo, Egypt"],
     ["github", "GitHub URL", "https://github.com/…"],
     ["linkedin", "LinkedIn URL", "https://linkedin.com/in/…"],
+    ["youtube", "YouTube URL", "https://youtube.com/@…"],
+    ["facebook", "Facebook URL", "https://facebook.com/…"],
     ["whatsapp", "WhatsApp Number (optional)", "+201000000000"],
     ["availabilityStatus", "Availability Status", "Open to opportunities"],
   ];
