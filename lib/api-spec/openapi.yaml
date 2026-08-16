@@ -34,6 +34,7 @@ tags:
   - name: admin.preview
   - name: admin.analytics
   - name: admin.ai
+  - name: chat
 
 paths:
   # ─────────────────────────────────────────────────────────────────────
@@ -2114,6 +2115,130 @@ paths:
                           data: { $ref: "#/components/schemas/AiAnalysis" }
                   - $ref: "#/components/schemas/ApiError"
 
+  /v1/chat/config:
+    get:
+      operationId: chatConfig
+      tags: [chat]
+      summary: Whether the public AI chat is enabled
+      responses:
+        "200":
+          description: Chat enabled flag
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data:
+                            type: object
+                            required: [enabled]
+                            properties:
+                              enabled: { type: boolean }
+                  - $ref: "#/components/schemas/ApiError"
+
+  /v1/chat:
+    post:
+      operationId: chatSend
+      tags: [chat]
+      summary: Send a message to the public AI assistant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ChatMessagesInput" }
+      responses:
+        "200":
+          description: Assistant reply
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data:
+                            type: object
+                            required: [reply]
+                            properties:
+                              reply: { type: string }
+                  - $ref: "#/components/schemas/ApiError"
+        "503":
+          description: AI not configured
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+
+  /v1/admin/ai/generate:
+    post:
+      operationId: adminAiGenerate
+      tags: [admin.ai]
+      summary: Generate new site content with AI (admin)
+      security: [{ adminAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AiGenerateInput" }
+      responses:
+        "200":
+          description: Generated text
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data:
+                            type: object
+                            required: [text]
+                            properties:
+                              text: { type: string }
+                  - $ref: "#/components/schemas/ApiError"
+        "503":
+          description: AI not configured
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+
+  /v1/admin/ai/improve:
+    post:
+      operationId: adminAiImprove
+      tags: [admin.ai]
+      summary: Rewrite/improve existing site content with AI (admin)
+      security: [{ adminAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AiImproveInput" }
+      responses:
+        "200":
+          description: Improved text
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data:
+                            type: object
+                            required: [text]
+                            properties:
+                              text: { type: string }
+                  - $ref: "#/components/schemas/ApiError"
+        "503":
+          description: AI not configured
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+
 components:
   schemas:
     SuccessEnvelope:
@@ -2130,6 +2255,36 @@ components:
         message: { type: string }
         code: { type: string }
         existingId: { type: string }
+
+    ChatMessagesInput:
+      type: object
+      required: [messages]
+      properties:
+        messages:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            required: [role, content]
+            properties:
+              role: { type: string, enum: [user, assistant] }
+              content: { type: string }
+
+    AiGenerateInput:
+      type: object
+      required: [contentType]
+      properties:
+        contentType: { type: string, enum: [hero, about, project, skill, experience, general] }
+        instructions: { type: string }
+        context: { type: string }
+
+    AiImproveInput:
+      type: object
+      required: [contentType, text]
+      properties:
+        contentType: { type: string, enum: [hero, about, project, skill, experience, general] }
+        text: { type: string }
+        instructions: { type: string }
 
     Pagination:
       type: object

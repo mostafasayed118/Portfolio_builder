@@ -21,8 +21,12 @@ import type {
 
 import type {
   AboutInput,
+  AdminAiGenerate200,
+  AdminAiImprove200,
   AiAnalyzeContentInput,
   AiGenerateDescriptionInput,
+  AiGenerateInput,
+  AiImproveInput,
   AiSuggestCategoriesInput,
   AiSuggestTagsInput,
   AnalyzeContent200,
@@ -36,6 +40,9 @@ import type {
   BulkUnarchiveInput,
   BulkUnarchiveMessages200,
   CertificationInput,
+  ChatConfig200,
+  ChatMessagesInput,
+  ChatSend200,
   ContactInfoInput,
   ContactSubmissionInput,
   CreateCertification201,
@@ -6120,5 +6127,295 @@ export const useAnalyzeContent = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getAnalyzeContentMutationOptions(options));
+    }
+
+export const getChatConfigUrl = () => {
+
+
+
+
+  return `/api/v1/chat/config`
+}
+
+/**
+ * @summary Whether the public AI chat is enabled
+ */
+export const chatConfig = async ( options?: Parameters<typeof customFetch>[1]): Promise<ChatConfig200> => {
+
+  return customFetch<ChatConfig200>(getChatConfigUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getChatConfigQueryKey = () => {
+    return [
+    `/api/v1/chat/config`
+    ] as const;
+    }
+
+
+export const getChatConfigQueryOptions = <TData = Awaited<ReturnType<typeof chatConfig>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof chatConfig>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getChatConfigQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof chatConfig>>> = ({ signal }) => chatConfig({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof chatConfig>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ChatConfigQueryResult = NonNullable<Awaited<ReturnType<typeof chatConfig>>>
+export type ChatConfigQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Whether the public AI chat is enabled
+ */
+
+export function useChatConfig<TData = Awaited<ReturnType<typeof chatConfig>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof chatConfig>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getChatConfigQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getChatSendUrl = () => {
+
+
+
+
+  return `/api/v1/chat`
+}
+
+/**
+ * @summary Send a message to the public AI assistant
+ */
+export const chatSend = async (chatMessagesInput: ChatMessagesInput, options?: Parameters<typeof customFetch>[1]): Promise<ChatSend200> => {
+
+  return customFetch<ChatSend200>(getChatSendUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(chatMessagesInput)
+  }
+);}
+
+
+
+
+
+export const getChatSendMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chatSend>>, TError,{data: BodyType<ChatMessagesInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof chatSend>>, TError,{data: BodyType<ChatMessagesInput>}, TContext> => {
+
+const mutationKey = ['chatSend'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof chatSend>>, {data: BodyType<ChatMessagesInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  chatSend(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChatSendMutationResult = NonNullable<Awaited<ReturnType<typeof chatSend>>>
+    export type ChatSendMutationBody = BodyType<ChatMessagesInput>
+    export type ChatSendMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Send a message to the public AI assistant
+ */
+export const useChatSend = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof chatSend>>, TError,{data: BodyType<ChatMessagesInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof chatSend>>,
+        TError,
+        {data: BodyType<ChatMessagesInput>},
+        TContext
+      > => {
+      return useMutation(getChatSendMutationOptions(options));
+    }
+
+export const getAdminAiGenerateUrl = () => {
+
+
+
+
+  return `/api/v1/admin/ai/generate`
+}
+
+/**
+ * @summary Generate new site content with AI (admin)
+ */
+export const adminAiGenerate = async (aiGenerateInput: AiGenerateInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminAiGenerate200> => {
+
+  return customFetch<AdminAiGenerate200>(getAdminAiGenerateUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(aiGenerateInput)
+  }
+);}
+
+
+
+
+
+export const getAdminAiGenerateMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminAiGenerate>>, TError,{data: BodyType<AiGenerateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminAiGenerate>>, TError,{data: BodyType<AiGenerateInput>}, TContext> => {
+
+const mutationKey = ['adminAiGenerate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminAiGenerate>>, {data: BodyType<AiGenerateInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminAiGenerate(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminAiGenerateMutationResult = NonNullable<Awaited<ReturnType<typeof adminAiGenerate>>>
+    export type AdminAiGenerateMutationBody = BodyType<AiGenerateInput>
+    export type AdminAiGenerateMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Generate new site content with AI (admin)
+ */
+export const useAdminAiGenerate = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminAiGenerate>>, TError,{data: BodyType<AiGenerateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminAiGenerate>>,
+        TError,
+        {data: BodyType<AiGenerateInput>},
+        TContext
+      > => {
+      return useMutation(getAdminAiGenerateMutationOptions(options));
+    }
+
+export const getAdminAiImproveUrl = () => {
+
+
+
+
+  return `/api/v1/admin/ai/improve`
+}
+
+/**
+ * @summary Rewrite/improve existing site content with AI (admin)
+ */
+export const adminAiImprove = async (aiImproveInput: AiImproveInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminAiImprove200> => {
+
+  return customFetch<AdminAiImprove200>(getAdminAiImproveUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(aiImproveInput)
+  }
+);}
+
+
+
+
+
+export const getAdminAiImproveMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminAiImprove>>, TError,{data: BodyType<AiImproveInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof adminAiImprove>>, TError,{data: BodyType<AiImproveInput>}, TContext> => {
+
+const mutationKey = ['adminAiImprove'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof adminAiImprove>>, {data: BodyType<AiImproveInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  adminAiImprove(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdminAiImproveMutationResult = NonNullable<Awaited<ReturnType<typeof adminAiImprove>>>
+    export type AdminAiImproveMutationBody = BodyType<AiImproveInput>
+    export type AdminAiImproveMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Rewrite/improve existing site content with AI (admin)
+ */
+export const useAdminAiImprove = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof adminAiImprove>>, TError,{data: BodyType<AiImproveInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof adminAiImprove>>,
+        TError,
+        {data: BodyType<AiImproveInput>},
+        TContext
+      > => {
+      return useMutation(getAdminAiImproveMutationOptions(options));
     }
 
