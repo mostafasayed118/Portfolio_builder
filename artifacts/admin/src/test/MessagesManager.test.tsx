@@ -419,21 +419,6 @@ describe("MessagesViewer", () => {
     expect(mockBulkArchiveMessage).not.toHaveBeenCalled();
   });
 
-  it("opens the keyboard-shortcuts help popover", async () => {
-    renderAdmin(<MessagesManager />);
-
-    await screen.findByText("Alice");
-
-    await userEvent.click(screen.getByRole("button", { name: "Keyboard shortcuts" }));
-
-    // The heading is unique to the popover; the two shortcut labels also
-    // exist as toolbar text/buttons, so assert them as the second occurrence.
-    expect(screen.getByText("Keyboard shortcuts")).toBeInTheDocument();
-    expect(screen.getAllByText("Select all on page").length).toBeGreaterThan(1);
-    expect(screen.getAllByText("Archive selected").length).toBeGreaterThan(1);
-    expect(screen.getByText("Restore selected (Archived)")).toBeInTheDocument();
-  });
-
   it("gates the E/U shortcuts while a dialog is open", async () => {
     renderAdmin(<MessagesManager />);
 
@@ -774,44 +759,86 @@ describe("MessagesViewer", () => {
     });
   });
 
-  it("shows the one-time Ctrl+A hint in the empty selection toolbar on first visit", async () => {
-    renderAdmin(<MessagesManager />);
+  // The shortcuts dialog lists rows whose labels also exist in the toolbar,
+  // so assertions scope inside the dialog; the one-time tip renders with
+  // <Kbd> chips (text spans nodes), so its presence is checked via the
+  // role="status" element inside the dialog.
 
+  it("opens the keyboard-shortcuts dialog via the ? key", async () => {
+    renderAdmin(<MessagesManager />);
     await screen.findByText("Alice");
-    expect(screen.getByText(/select all on this page/i)).toBeInTheDocument();
-    expect(localStorage.getItem("messages-shortcut-hint-dismissed")).toBeNull();
+
+    fireEvent.keyDown(document, { key: "?" });
+
+    const dialog = await screen.findByRole("dialog", { name: "Keyboard shortcuts" });
+    expect(within(dialog).getByText("Select all on page")).toBeInTheDocument();
+    expect(within(dialog).getByText("Archive selected")).toBeInTheDocument();
+    expect(within(dialog).getByText("Restore selected (Archived)")).toBeInTheDocument();
+    expect(within(dialog).getByText("Open keyboard shortcuts")).toBeInTheDocument();
   });
 
-  it("hides the hint forever once a selection is made", async () => {
+  it("opens the keyboard-shortcuts dialog via Shift+/", async () => {
+    renderAdmin(<MessagesManager />);
+    await screen.findByText("Alice");
+
+    fireEvent.keyDown(document, { key: "/", shiftKey: true });
+
+    expect(
+      await screen.findByRole("dialog", { name: "Keyboard shortcuts" }),
+    ).toBeInTheDocument();
+  });
+
+  it("opens the keyboard-shortcuts dialog via the header icon", async () => {
+    renderAdmin(<MessagesManager />);
+    await screen.findByText("Alice");
+
+    await userEvent.click(screen.getByRole("button", { name: "Keyboard shortcuts" }));
+
+    expect(
+      await screen.findByRole("dialog", { name: "Keyboard shortcuts" }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the first-visit tip inside the shortcuts dialog once, then never again", async () => {
     const first = renderAdmin(<MessagesManager />);
     await screen.findByText("Alice");
 
-    await userEvent.click(screen.getByRole("checkbox", { name: "Select message from Alice" }));
+    fireEvent.keyDown(document, { key: "?" });
+    const dialog = await screen.findByRole("dialog", { name: "Keyboard shortcuts" });
+    // The one-time tip explaining E/U/Ctrl+A appears on the first open.
+    expect(within(dialog).getByRole("status")).toHaveTextContent(/archives the selected messages/i);
 
-    // Gone from the now-populated toolbar, and the dismissal is persisted.
-    expect(screen.queryByText(/select all on this page/i)).not.toBeInTheDocument();
-    expect(localStorage.getItem("messages-shortcut-hint-dismissed")).toBe("1");
+    // Closing persists the dismissal.
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "Keyboard shortcuts" })).not.toBeInTheDocument();
+    });
+    expect(localStorage.getItem("messages-shortcuts-tip-dismissed")).toBe("1");
     first.unmount();
 
-    // A fresh visit never shows it again.
+    // A fresh visit: the dialog still opens, but the tip never returns.
     renderAdmin(<MessagesManager />);
     await screen.findByText("Alice");
-    expect(screen.queryByText(/select all on this page/i)).not.toBeInTheDocument();
+    fireEvent.keyDown(document, { key: "?" });
+    const again = await screen.findByRole("dialog", { name: "Keyboard shortcuts" });
+    expect(within(again).queryByRole("status")).not.toBeInTheDocument();
   });
 
-  it("dismisses the hint via its close button and never shows it again", async () => {
-    const first = renderAdmin(<MessagesManager />);
-    await screen.findByText("Alice");
-
-    await userEvent.click(screen.getByRole("button", { name: "Dismiss shortcut hint" }));
-
-    expect(screen.queryByText(/select all on this page/i)).not.toBeInTheDocument();
-    expect(localStorage.getItem("messages-shortcut-hint-dismissed")).toBe("1");
-    first.unmount();
-
+  it("ignores the ? shortcut while another dialog is open", async () => {
     renderAdmin(<MessagesManager />);
     await screen.findByText("Alice");
-    expect(screen.queryByText(/select all on this page/i)).not.toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Archive test submissions" }),
+    );
+    await screen.findByRole("alertdialog");
+
+    fireEvent.keyDown(document, { key: "?" });
+
+    // The cleanup dialog stays the only open dialog — no stacking.
+    expect(
+      screen.queryByRole("dialog", { name: "Keyboard shortcuts" }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows empty state when no messages", async () => {
