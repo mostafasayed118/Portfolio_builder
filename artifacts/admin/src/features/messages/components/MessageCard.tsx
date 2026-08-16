@@ -26,6 +26,8 @@ export function isUnread(msg: Message): boolean {
 interface MessageCardProps {
   message: Message;
   selected?: boolean;
+  /** The row under the keyboard cursor (arrow keys) — visually ringed. */
+  focused?: boolean;
   onToggleSelect?: (msg: Message) => void;
   onReply: (msg: Message) => void;
   onMarkRead: (msg: Message) => void;
@@ -37,6 +39,7 @@ interface MessageCardProps {
 export function MessageCard({
   message: msg,
   selected = false,
+  focused = false,
   onToggleSelect,
   onReply,
   onMarkRead,
@@ -46,13 +49,15 @@ export function MessageCard({
 }: MessageCardProps) {
   return (
     <Card
-      className={
+      aria-current={focused ? "true" : undefined}
+      className={[
         isUnread(msg)
           ? "border-primary/30 bg-primary/5"
           : isArchived(msg)
             ? "opacity-50"
-            : "opacity-80"
-      }
+            : "opacity-80",
+        focused ? "ring-2 ring-primary/70" : "",
+      ].join(" ")}
     >
       <CardContent className="pt-4 pb-4">
         <div className="flex items-start gap-3">

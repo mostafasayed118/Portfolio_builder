@@ -21,8 +21,9 @@ describe("ShortcutsHelp — global ? shortcut from any page", () => {
     expect(within(dialog).getByText("Restore selected (Archived)")).toBeInTheDocument();
     // The Gmail-style keys group documents R (reply) and X (select).
     expect(within(dialog).getByText("Gmail-style keys")).toBeInTheDocument();
-    expect(within(dialog).getByText("Reply to selected")).toBeInTheDocument();
+    expect(within(dialog).getByText("Reply to focused message")).toBeInTheDocument();
     expect(within(dialog).getByText("Select message")).toBeInTheDocument();
+    expect(within(dialog).getByText("Navigate messages")).toBeInTheDocument();
     expect(within(dialog).getByText("Open search")).toBeInTheDocument();
     expect(within(dialog).getByText("Open keyboard shortcuts")).toBeInTheDocument();
   });
@@ -54,8 +55,11 @@ describe("ShortcutsHelp — global ? shortcut from any page", () => {
 
     fireEvent.keyDown(document, { key: "?" });
     const dialog = await screen.findByRole("dialog", { name: "Keyboard shortcuts" });
-    // The one-time tip explaining E/U/Ctrl+A appears on the first open.
-    expect(within(dialog).getByRole("status")).toHaveTextContent(/archives the selected messages/i);
+    // The one-time tip explaining E/U/Ctrl+A/R/X appears on the first open.
+    const tip = within(dialog).getByRole("status");
+    expect(tip).toHaveTextContent(/archives the selected messages/i);
+    expect(tip).toHaveTextContent(/replies to the focused message/i);
+    expect(tip).toHaveTextContent(/selects the whole page/i);
 
     // Closing persists the dismissal.
     fireEvent.keyDown(document, { key: "Escape" });

@@ -15,9 +15,10 @@ export interface ShortcutDoc {
 
 export const ADMIN_SHORTCUTS: ShortcutDoc[] = [
   { group: "Inbox", label: "Select all on page", keys: "Ctrl/Cmd+A" },
+  { group: "Inbox", label: "Navigate messages", keys: "↑ / ↓" },
   { group: "Inbox", label: "Archive selected", keys: "E" },
   { group: "Inbox", label: "Restore selected (Archived)", keys: "U" },
-  { group: "Gmail-style keys", label: "Reply to selected", keys: "R" },
+  { group: "Gmail-style keys", label: "Reply to focused message", keys: "R" },
   { group: "Gmail-style keys", label: "Select message", keys: "X" },
   { group: "General", label: "Open search", keys: "Ctrl/Cmd+K" },
   { group: "General", label: "Open keyboard shortcuts", keys: "?" },
