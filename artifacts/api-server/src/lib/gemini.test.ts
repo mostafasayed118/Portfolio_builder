@@ -100,6 +100,80 @@ describe("generateContent retry behavior", () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
+  it("caps total time at the budget even when retries remain", async () => {
+    // Every attempt fails fast with 503; with maxRetries 5 the retry-count
+    // limit alone would allow 6 calls — the budget must cut it off earlier.
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ error: { message: "high demand" } }, 503));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const promise = generateContent("hello", {
+      timeoutMs: 5_000,
+      maxRetries: 5,
+      totalTimeoutMs: 2_000,
+    });
+    const assertion = expect(promise).rejects.toMatchObject({
+      name: "GeminiApiError",
+      status: 503,
+    });
+
+    // Measure how much FAKED time elapsed by ticking the clock forward in
+    // small steps until the promise settles (fetch resolves instantly, so
+    // all consumed time is backoff the loop chose to wait).
+    let settled = false;
+    promise.then(
+      () => {
+        settled = true;
+      },
+      () => {
+        settled = true;
+      },
+    );
+    let fakedElapsed = 0;
+    for (let i = 0; i < 400 && !settled; i++) {
+      await vi.advanceTimersByTimeAsync(50);
+      fakedElapsed += 50;
+    }
+    await assertion;
+
+    // The loop stopped because the budget ran out, not the retry cap.
+    expect(fetchMock.mock.calls.length).toBeLessThan(6);
+    // Total faked time never exceeded the hard budget (+ one tick tolerance).
+    expect(fakedElapsed).toBeLessThanOrEqual(2_000 + 50);
+  });
+
+  it("succeeds on a retry inside the budget", async () => {
+    const fetchMock = mockFetchSequence(
+      jsonResponse({ error: { message: "high demand" } }, 503),
+      jsonResponse(OK_BODY),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const promise = generateContent("hello", {
+      timeoutMs: 5_000,
+      maxRetries: 2,
+      totalTimeoutMs: 2_000,
+    });
+
+    let settled = false;
+    promise.then(
+      () => {
+        settled = true;
+      },
+      () => {
+        settled = true;
+      },
+    );
+    let fakedElapsed = 0;
+    for (let i = 0; i < 400 && !settled; i++) {
+      await vi.advanceTimersByTimeAsync(50);
+      fakedElapsed += 50;
+    }
+
+    await expect(promise).resolves.toBe("OK");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fakedElapsed).toBeLessThanOrEqual(2_000 + 50);
+  });
+
   it("does not retry an invalid-key 400 and fails fast", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ error: { message: "API key not valid" } }, 400));
     vi.stubGlobal("fetch", fetchMock);

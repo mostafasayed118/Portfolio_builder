@@ -11,6 +11,12 @@
  * hiccup doesn't surface as a 500 to the admin UI. Deterministic errors
  * (invalid key / bad model 4xx, missing key) fail fast.
  *
+ * A HARD TOTAL BUDGET caps how long a request may take across every attempt
+ * and backoff (default 30s, configurable via totalTimeoutMs). Each attempt's
+ * timeout is capped to whatever budget remains, so a request never exceeds
+ * the deadline — during overload it retries while budget remains, then
+ * surfaces the last provider error instead of hanging the admin UI.
+ *
  * Env:
  *   GEMINI_API_KEY  — required; Google AI Studio / Gemini API key
  *   GEMINI_BASE_URL — optional override (default https://generativelanguage.googleapis.com)
@@ -23,7 +29,9 @@ const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-flash-latest";
 
 /** Per-attempt ceiling. Slow model generations get room, but a Vercel function
  *  still has a hard execution budget, so keep the total well under it. */
-const DEFAULT_TIMEOUT_MS = 45_000;
+const DEFAULT_TIMEOUT_MS = 30_000;
+/** Hard cap on total time across all attempts + backoff (admin clicks stay snappy). */
+const DEFAULT_TOTAL_TIMEOUT_MS = 30_000;
 /** Extra attempts after the first (3 total calls worst case). */
 const DEFAULT_MAX_RETRIES = 2;
 const BASE_RETRY_DELAY_MS = 500;
@@ -51,6 +59,8 @@ export interface GenerateContentOptions {
   timeoutMs?: number;
   /** Override the retry count (used by tests). */
   maxRetries?: number;
+  /** Hard cap on total time across attempts + backoff (used by tests). */
+  totalTimeoutMs?: number;
 }
 
 interface AttemptConfig {
@@ -124,19 +134,39 @@ export async function generateContent(
     timeoutMs: opts?.timeoutMs ?? DEFAULT_TIMEOUT_MS,
   };
   const maxRetries = opts?.maxRetries ?? DEFAULT_MAX_RETRIES;
+  const totalTimeoutMs = opts?.totalTimeoutMs ?? DEFAULT_TOTAL_TIMEOUT_MS;
+  const startedAt = Date.now();
 
   let attempt = 0;
+  let lastError: unknown;
   for (;;) {
+    const remaining = totalTimeoutMs - (Date.now() - startedAt);
+    if (remaining <= 0 && attempt > 0) {
+      // Budget exhausted — surface the most recent provider failure rather
+      // than starting an attempt that can't finish in time.
+      throw lastError;
+    }
     try {
-      return await callOnce(apiKey, prompt, cfg);
+      // Cap the attempt timeout to the remaining budget so a single slow
+      // attempt can't push the request past the total deadline.
+      return await callOnce(apiKey, prompt, {
+        ...cfg,
+        timeoutMs: Math.min(cfg.timeoutMs, Math.max(remaining, 1)),
+      });
     } catch (err) {
+      lastError = err;
       if (attempt >= maxRetries || !isRetryable(err)) {
         throw err;
       }
       attempt += 1;
       const backoff = Math.min(BASE_RETRY_DELAY_MS * 2 ** (attempt - 1), MAX_RETRY_DELAY_MS);
-      // Full jitter (0…backoff added) spreads concurrent retries.
-      await delay(backoff + Math.random() * backoff);
+      // Full jitter (0…backoff added) spreads concurrent retries; don't wait
+      // past the deadline either.
+      const remainingAfterFailure = totalTimeoutMs - (Date.now() - startedAt);
+      if (remainingAfterFailure <= 0) {
+        throw err;
+      }
+      await delay(Math.min(backoff + Math.random() * backoff, remainingAfterFailure));
     }
   }
 }
