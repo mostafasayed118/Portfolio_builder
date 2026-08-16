@@ -51,6 +51,8 @@ export interface HeroContent {
   github_url: string;
   linkedin_url: string;
   twitter_url: string | null;
+  youtube_url: string | null;
+  facebook_url: string | null;
   email: string;
   avatar_url: string | null;
   cv_url: string | null;
@@ -288,6 +290,8 @@ export interface ContactInfo {
   address: string | null;
   github: string | null;
   linkedin: string | null;
+  youtube: string | null;
+  facebook: string | null;
   whatsapp: string | null;
   map_embed_url: string | null;
   availability_status: string | null;
@@ -576,6 +580,8 @@ export interface HeroInput {
   github_url?: string | null;
   linkedin_url?: string | null;
   twitter_url?: string | null;
+  youtube_url?: string | null;
+  facebook_url?: string | null;
   email?: string | null;
   avatar_url?: string | null;
   cv_url?: string | null;
@@ -723,6 +729,8 @@ export interface ContactInfoInput {
   address?: string | null;
   github?: string | null;
   linkedin?: string | null;
+  youtube?: string | null;
+  facebook?: string | null;
   whatsapp?: string | null;
   map_embed_url?: string | null;
   availability_status?: string | null;

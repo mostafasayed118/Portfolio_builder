@@ -61,6 +61,8 @@ export default function HeroEditor() {
           github: heroData.github_url || "",
           linkedin: heroData.linkedin_url || "",
           twitter: heroData.twitter_url || "",
+          youtube: heroData.youtube_url || "",
+          facebook: heroData.facebook_url || "",
           email: heroData.email || "",
         },
         stats: heroData.stats || [],
@@ -80,6 +82,8 @@ export default function HeroEditor() {
         github_url: data.social_links.github || undefined,
         linkedin_url: data.social_links.linkedin || undefined,
         twitter_url: data.social_links.twitter || null,
+        youtube_url: data.social_links.youtube || null,
+        facebook_url: data.social_links.facebook || null,
         email: data.social_links.email || undefined,
         stats: data.stats,
       });
@@ -227,6 +231,12 @@ export default function HeroEditor() {
               </EditorField>
               <EditorField label="Twitter URL">
                 <Input {...register("social_links.twitter")} placeholder="https://twitter.com/..." />
+              </EditorField>
+              <EditorField label="YouTube URL">
+                <Input {...register("social_links.youtube")} placeholder="https://youtube.com/@..." />
+              </EditorField>
+              <EditorField label="Facebook URL">
+                <Input {...register("social_links.facebook")} placeholder="https://facebook.com/..." />
               </EditorField>
               <EditorField label="Email">
                 <Input {...register("social_links.email")} placeholder="you@example.com" />

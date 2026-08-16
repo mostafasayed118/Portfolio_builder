@@ -94,6 +94,8 @@ export const ar: TranslationKeys = {
       location: "\u0627\u0644\u0645\u0648\u0642\u0639",
       github: "GitHub",
       linkedin: "LinkedIn",
+      youtube: "\u064a\u0648\u062a\u064a\u0648\u0628",
+      facebook: "\u0641\u064a\u0633\u0628\u0648\u0643",
       whatsapp: "\u0648\u0627\u062a\u0633\u0627\u0628",
     },
   },

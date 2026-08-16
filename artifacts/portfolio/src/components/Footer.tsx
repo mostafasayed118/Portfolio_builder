@@ -1,4 +1,4 @@
-import { Github, Linkedin, Mail, Heart, Newspaper } from "lucide-react";
+import { Github, Linkedin, Mail, Youtube, Facebook, Heart, Newspaper } from "lucide-react";
 import { Link } from "wouter";
 import { HERO, CONTACT } from "@/data/portfolio";
 import { useBranding } from "@/lib/branding";
@@ -36,6 +36,8 @@ export default function Footer() {
           {[
             { href: HERO.github, icon: Github, label: "GitHub" },
             { href: HERO.linkedin, icon: Linkedin, label: "LinkedIn" },
+            { href: HERO.youtube, icon: Youtube, label: "YouTube" },
+            { href: HERO.facebook, icon: Facebook, label: "Facebook" },
             { href: `mailto:${HERO.email}`, icon: Mail, label: "Email" },
           ].map(({ href, icon: Icon, label }) => (
             <a

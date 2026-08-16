@@ -8,6 +8,8 @@ describe("Portfolio static data", () => {
       expect(HERO.description).toBeTruthy();
       expect(HERO.github).toContain("github.com");
       expect(HERO.linkedin).toContain("linkedin.com");
+      expect(HERO.youtube).toContain("youtube.com");
+      expect(HERO.facebook).toContain("facebook.com");
       expect(HERO.email).toContain("@");
     });
 
@@ -115,6 +117,8 @@ describe("Portfolio static data", () => {
       expect(CONTACT.email).toContain("@");
       expect(CONTACT.github).toContain("github.com");
       expect(CONTACT.linkedin).toContain("linkedin.com");
+      expect(CONTACT.youtube).toContain("youtube.com");
+      expect(CONTACT.facebook).toContain("facebook.com");
       expect(CONTACT.location).toBeTruthy();
     });
   });

@@ -26,6 +26,8 @@ export const heroSchema = z.object({
   github_url: nullableUrl,
   linkedin_url: nullableUrl,
   twitter_url: nullableUrl,
+  youtube_url: nullableUrl,
+  facebook_url: nullableUrl,
   email: z.string().email().optional().or(z.literal("")).or(z.null()),
   avatar_url: nullableUrl,
   cv_url: nullableUrl,

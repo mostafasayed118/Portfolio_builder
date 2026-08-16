@@ -24,6 +24,8 @@ export function useContact() {
         location: contactData.location ?? CONTACT.location,
         github: contactData.github ?? CONTACT.github,
         linkedin: contactData.linkedin ?? CONTACT.linkedin,
+        youtube: contactData.youtube ?? CONTACT.youtube,
+        facebook: contactData.facebook ?? CONTACT.facebook,
         whatsapp: contactData.whatsapp ?? CONTACT.whatsapp,
       }
     : CONTACT;

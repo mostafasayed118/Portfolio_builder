@@ -1,4 +1,4 @@
-import { Mail, Phone, MapPin, Github, Linkedin, MessageCircle } from "lucide-react";
+import { Mail, Phone, MapPin, Github, Linkedin, Youtube, Facebook, MessageCircle } from "lucide-react";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
 import { trackEvent } from "@workspace/db/analytics";
 import { logWarn } from "@/lib/logger";
@@ -11,6 +11,8 @@ interface Contact {
   location: string;
   github: string;
   linkedin: string;
+  youtube: string;
+  facebook: string;
   whatsapp: string;
 }
 
@@ -20,15 +22,19 @@ const ICONS: Record<string, typeof Mail> = {
   Location: MapPin,
   GitHub: Github,
   LinkedIn: Linkedin,
+  YouTube: Youtube,
+  Facebook: Facebook,
 };
 
-function buildItems(c: Contact, labels: { email: string; phone: string; location: string; github: string; linkedin: string }) {
+function buildItems(c: Contact, labels: { email: string; phone: string; location: string; github: string; linkedin: string; youtube: string; facebook: string }) {
   return [
     { key: "email", Icon: ICONS.Email, label: labels.email, value: c.email, href: `mailto:${c.email}` },
     { key: "phone", Icon: ICONS.Phone, label: labels.phone, value: c.phone, href: `tel:${(c.phone ?? "").replace(/\s/g, "")}` },
     { key: "location", Icon: ICONS.Location, label: labels.location, value: c.location, href: null as string | null },
     { key: "github", Icon: ICONS.GitHub, label: labels.github, value: c.github?.replace("https://", ""), href: c.github },
     { key: "linkedin", Icon: ICONS.LinkedIn, label: labels.linkedin, value: c.linkedin?.replace("https://", ""), href: c.linkedin },
+    { key: "youtube", Icon: ICONS.YouTube, label: labels.youtube, value: c.youtube?.replace("https://", ""), href: c.youtube },
+    { key: "facebook", Icon: ICONS.Facebook, label: labels.facebook, value: c.facebook?.replace("https://", ""), href: c.facebook },
   ];
 }
 
@@ -57,7 +63,7 @@ export default function ContactInfoPanel({ contact }: { contact: Contact }) {
                   className="text-sm font-medium text-foreground hover:text-primary transition-colors truncate block"
                   data-testid={`link-contact-${key}`}
                   onClick={() => {
-                    if (isSupabaseConfigured && (key === "email" || key === "github" || key === "linkedin")) {
+                    if (isSupabaseConfigured && (key === "email" || key === "github" || key === "linkedin" || key === "youtube" || key === "facebook")) {
                       const sb = getSupabase();
                       if (sb) trackEvent(sb, "contact_click", "/", { type: key }).catch((err) => logWarn("trackEvent failed", err));
                     }
