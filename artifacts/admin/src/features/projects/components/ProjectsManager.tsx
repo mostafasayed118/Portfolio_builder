@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { logError } from "@/lib/logger";
@@ -38,6 +38,38 @@ export default function ProjectsManager() {
     setIsNew(false);
     setEditing({ ...p, live_url: p.live_url ?? "", metrics: p.metrics ?? [] });
   };
+
+  // Deep-link support: the command palette's quick actions navigate here
+  // with a URL hash — #new opens the create dialog, #edit-<id> opens the
+  // editor for that project. The hash is stripped after opening so
+  // refetches don't re-open the dialog.
+  useEffect(() => {
+    const handleDeepLink = () => {
+      const hash = window.location.hash.replace(/^#/, "");
+      if (hash === "new") {
+        setIsNew(true);
+        setEditing({ ...BLANK_PROJECT });
+        clearDeepLinkHash();
+        return;
+      }
+      if (hash.startsWith("edit-")) {
+        const p = projects?.find((item) => item.id === hash.slice("edit-".length));
+        if (p) {
+          // Mirror the list row's onEdit mapping (raw row → project form).
+          const { slug, image_url, created_at, updated_at, ...rest } = p;
+          setIsNew(false);
+          setEditing({ ...rest, tags: p.tags ?? [], category: p.category ?? "", featured: p.featured ?? false, is_published: p.is_published ?? false, github_url: p.github_url ?? "", live_url: p.live_url ?? undefined, metrics: p.metrics ?? [], sort_order: p.sort_order ?? 0 });
+          clearDeepLinkHash();
+        }
+      }
+    };
+    const clearDeepLinkHash = () => {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    };
+    handleDeepLink();
+    window.addEventListener("hashchange", handleDeepLink);
+    return () => window.removeEventListener("hashchange", handleDeepLink);
+  }, [projects]);
 
   const handleSave = async () => {
     if (!editing) return;
