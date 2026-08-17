@@ -51,22 +51,22 @@ All env access goes through `src/lib/env.ts`. Required at startup:
 
 Optional but commonly used:
 
-| Var                                                          | Purpose                                                                               |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
-| `CLERK_SECRET_KEY`                                           | Enables Clerk JWT verification                                                        |
-| `CLERK_ISSUER`                                               | Clerk issuer (optional)                                                               |
-| `ADMIN_API_KEY`                                              | X-Admin-Key bypass for non-browser auth                                               |
-| `ADMIN_EMAILS`                                               | Comma-separated allowlist of admin emails (server-only; do not use a `VITE_` prefix)  |
-| `VITE_SITE_URL` / `VITE_ADMIN_URL`                           | CORS allowed origins                                                                  |
-| `VERCEL_URL`                                                 | Auto-added CORS origin on Vercel                                                      |
-| `PORT`                                                       | Server port (default 3001)                                                            |
-| `DISABLE_RATE_LIMIT`                                         | `true` disables all rate limiters (dev)                                               |
-| `LOG_LEVEL`                                                  | pino log level (default `info`)                                                       |
-| `AI_API_KEY`                                                 | xAI/Grok key — enables the AI chatbot, writing helper, and spam scoring (server-only) |
-| `AI_BASE_URL` / `AI_MODEL`                                   | OpenAI-compatible endpoint (default `https://api.x.ai/v1`) and model (`grok-4.6`)     |
-| `AI_SPAM_MODEL`                                              | Model used for spam classification (default `grok-4.6`)                               |
-| `AI_CHAT_ENABLED` / `AI_WRITING_ENABLED` / `AI_SPAM_ENABLED` | Feature toggles (spam defaults to `false`)                                            |
-| `AI_SPAM_THRESHOLD`                                          | Score at/above which a message is quarantined as spam (default 75)                    |
+| Var                                                          | Purpose                                                                                                          |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| `CLERK_SECRET_KEY`                                           | Enables Clerk JWT verification                                                                                   |
+| `CLERK_ISSUER`                                               | Clerk issuer (optional)                                                                                          |
+| `ADMIN_API_KEY`                                              | X-Admin-Key bypass for non-browser auth                                                                          |
+| `ADMIN_EMAILS`                                               | Comma-separated allowlist of admin emails (server-only; do not use a `VITE_` prefix)                             |
+| `VITE_SITE_URL` / `VITE_ADMIN_URL`                           | CORS allowed origins                                                                                             |
+| `VERCEL_URL`                                                 | Auto-added CORS origin on Vercel                                                                                 |
+| `PORT`                                                       | Server port (default 3001)                                                                                       |
+| `DISABLE_RATE_LIMIT`                                         | `true` disables all rate limiters (dev)                                                                          |
+| `LOG_LEVEL`                                                  | pino log level (default `info`)                                                                                  |
+| `AI_API_KEY`                                                 | Groq API key (free at console.groq.com) — enables the AI chatbot, writing helper, and spam scoring (server-only) |
+| `AI_BASE_URL` / `AI_MODEL`                                   | OpenAI-compatible endpoint (default `https://api.groq.com/openai/v1`) and model (`llama-3.3-70b-versatile`)      |
+| `AI_SPAM_MODEL`                                              | Model used for spam classification (default `llama-3.3-70b-versatile`)                                           |
+| `AI_CHAT_ENABLED` / `AI_WRITING_ENABLED` / `AI_SPAM_ENABLED` | Feature toggles (spam defaults to `false`)                                                                       |
+| `AI_SPAM_THRESHOLD`                                          | Score at/above which a message is quarantined as spam (default 75)                                               |
 
 The server `process.exit(1)` at boot if any required var is missing in
 non-test environments. Tests can override values via `_setOverride()`.
@@ -116,8 +116,8 @@ src/
 ## AI
 
 All AI calls proxy through this server (the provider key never reaches the
-browser). Backed by any OpenAI-compatible endpoint — xAI/Grok by default
-(`AI_BASE_URL`, `AI_API_KEY`, `AI_MODEL`).
+browser). Backed by any OpenAI-compatible endpoint — Groq (free tier) by
+default (`AI_BASE_URL`, `AI_API_KEY`, `AI_MODEL`).
 
 - **Chatbot** — `POST /api/v1/chat` answers visitors **only about the site
   owner**, grounded in the live site content (`lib/ai/context.ts`).
