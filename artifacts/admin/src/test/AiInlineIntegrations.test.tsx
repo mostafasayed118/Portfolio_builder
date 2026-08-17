@@ -10,10 +10,10 @@ import {
 import { ProjectEditor } from "@/features/projects/components/ProjectEditor";
 import { SkillsManager } from "@/features/skills";
 
-const { mockGenerateDescription, mockSuggestCategories, mockSuggestTags, mockSkillsList, mockSkillsCreate, mockToast } =
+const { mockAiGenerate, mockAiImprove, mockSuggestTags, mockSkillsList, mockSkillsCreate, mockToast } =
   vi.hoisted(() => ({
-    mockGenerateDescription: vi.fn(),
-    mockSuggestCategories: vi.fn(),
+    mockAiGenerate: vi.fn(),
+    mockAiImprove: vi.fn(),
     mockSuggestTags: vi.fn(),
     mockSkillsList: vi.fn(),
     mockSkillsCreate: vi.fn(),
@@ -22,7 +22,7 @@ const { mockGenerateDescription, mockSuggestCategories, mockSuggestTags, mockSki
 
 vi.mock("@/lib/api-client", () => ({
   api: {
-    ai: { generateDescription: mockGenerateDescription, suggestCategories: mockSuggestCategories, suggestTags: mockSuggestTags },
+    ai: { generate: mockAiGenerate, improve: mockAiImprove, suggestTags: mockSuggestTags },
     skills: { list: mockSkillsList, create: mockSkillsCreate, update: vi.fn(), delete: vi.fn() },
     images: { delete: vi.fn(), reorder: vi.fn() },
   },
@@ -45,7 +45,7 @@ describe("Inline AI integrations", () => {
     vi.clearAllMocks();
   });
 
-  describe("ProjectEditor · Generate with AI", () => {
+  describe("ProjectEditor · ✨ AI text button", () => {
     const editing = {
       id: "p1",
       title: "Data Pipeline",
@@ -61,10 +61,10 @@ describe("Inline AI integrations", () => {
       slug: "data-pipeline",
     };
 
-    it("calls generate-description with the project title + tech stack and applies the result", async () => {
-      mockGenerateDescription.mockResolvedValue({
+    it("generates a description using the tech stack as context", async () => {
+      mockAiGenerate.mockResolvedValue({
         success: true,
-        data: { description: "An ETL pipeline built with Python and SQL." },
+        data: { text: "An ETL pipeline built with Python and SQL." },
       });
       const onEdit = vi.fn();
 
@@ -72,35 +72,47 @@ describe("Inline AI integrations", () => {
         <ProjectEditor editing={editing} isNew={false} saving={false} onEdit={onEdit} onSaved={vi.fn()} />,
       );
 
-      await userEvent.click(screen.getByRole("button", { name: "Generate with AI" }));
+      await userEvent.click(screen.getByRole("button", { name: "✨ Improve" }));
 
       await waitFor(() => {
-        expect(mockGenerateDescription).toHaveBeenCalledWith(["Python", "SQL"], "Data Pipeline");
+        expect(mockAiGenerate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            contentType: "project",
+            context: expect.stringContaining("Python, SQL"),
+          }),
+        );
       });
       await waitFor(() => {
         expect(onEdit).toHaveBeenCalled();
       });
       const setter = onEdit.mock.calls[0][0] as (prev: typeof editing) => typeof editing;
       expect(setter(editing).description).toBe("An ETL pipeline built with Python and SQL.");
-      expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({ title: "Description generated" }));
     });
 
-    it("disables the button until a tech stack is added", async () => {
+    it("improves an existing description instead of generating from scratch", async () => {
+      mockAiImprove.mockResolvedValue({
+        success: true,
+        data: { text: "A polished description." },
+      });
+      const onEdit = vi.fn();
+
       renderWithProviders(
         <ProjectEditor
-          editing={{ ...editing, tech_stack: [] }}
+          editing={{ ...editing, description: "rough draft" }}
           isNew={false}
           saving={false}
-          onEdit={vi.fn()}
+          onEdit={onEdit}
           onSaved={vi.fn()}
         />,
       );
 
-      const button = screen.getByRole("button", { name: "Generate with AI" });
-      expect(button).toBeDisabled();
+      await userEvent.click(screen.getByRole("button", { name: "✨ Improve" }));
 
-      await userEvent.click(button);
-      expect(mockGenerateDescription).not.toHaveBeenCalled();
+      await waitFor(() => {
+        expect(mockAiImprove).toHaveBeenCalledWith(
+          expect.objectContaining({ contentType: "project", text: "rough draft" }),
+        );
+      });
     });
   });
 
@@ -169,12 +181,12 @@ describe("Inline AI integrations", () => {
     });
   });
 
-  describe("SkillsManager · Suggest category", () => {
-    it("suggests categories for the skill name and applies a clicked chip", async () => {
+  describe("SkillsManager · ✨ Generate category", () => {
+    it("generates a category for the skill and writes it into the form", async () => {
       mockSkillsList.mockResolvedValue({ success: true, data: [] });
-      mockSuggestCategories.mockResolvedValue({
+      mockAiGenerate.mockResolvedValue({
         success: true,
-        data: { categories: ["Frontend", "Mobile"] },
+        data: { text: "Frontend" },
       });
 
       renderWithProviders(<SkillsManager />);
@@ -187,15 +199,16 @@ describe("Inline AI integrations", () => {
 
       const nameInput = screen.getAllByRole("textbox")[0];
       await userEvent.type(nameInput, "React Native");
-      await userEvent.click(screen.getByRole("button", { name: "Suggest" }));
+      await userEvent.click(screen.getByRole("button", { name: "✨ Generate category" }));
 
-      const chips = await screen.findByTestId("category-suggestions");
-      expect(mockSuggestCategories).toHaveBeenCalledWith("React Native");
-      expect(chips).toHaveTextContent("Frontend");
-      expect(chips).toHaveTextContent("Mobile");
-
-      await userEvent.click(screen.getByText("Frontend"));
-      expect(screen.getAllByRole("textbox")[1]).toHaveValue("Frontend");
+      await waitFor(() => {
+        expect(mockAiGenerate).toHaveBeenCalledWith(
+          expect.objectContaining({ contentType: "skill" }),
+        );
+      });
+      await waitFor(() => {
+        expect(screen.getAllByRole("textbox")[1]).toHaveValue("Frontend");
+      });
 
       await userEvent.click(screen.getByText("Save"));
       await waitFor(() => {
