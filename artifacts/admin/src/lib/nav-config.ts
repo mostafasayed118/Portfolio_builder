@@ -2,7 +2,7 @@ import type { ElementType } from "react";
 import {
   LayoutDashboard, Palette, Type, User, Briefcase, Code2,
   FolderKanban, Award, MessageSquare, Search, Layers,
-  Settings, Zap, FileText, ExternalLink, Plus, Clock, NotebookPen, BarChart3, Sparkles
+  Settings, Zap, FileText, ExternalLink, Plus, Clock, NotebookPen, BarChart3
 } from "lucide-react";
 
 export interface NavItem {
@@ -19,7 +19,6 @@ export const NAV_ITEMS: NavItem[] = [
   { path: "/hero", label: "Hero", icon: Zap, group: "Content", keywords: ["hero", "banner", "header", "image"] },
   { path: "/about", label: "About", icon: User, group: "Content", keywords: ["about", "bio", "education", "languages"] },
   { path: "/projects", label: "Projects", icon: FolderKanban, group: "Content", keywords: ["projects", "portfolio", "work", "showcase"] },
-  { path: "/ai", label: "AI Assistant", icon: Sparkles, group: "Content", keywords: ["ai", "assistant", "generate", "description", "tags", "categories", "analyze", "content", "gemini", "writer"] },
   { path: "/skills", label: "Skills", icon: Code2, group: "Content", keywords: ["skills", "abilities", "technologies", "tech"] },
   { path: "/experience", label: "Experience", icon: Briefcase, group: "Content", keywords: ["experience", "work", "jobs", "career"] },
   { path: "/certifications", label: "Certifications", icon: Award, group: "Content", keywords: ["certifications", "certificates", "credentials", "badges"] },
@@ -52,8 +51,5 @@ export const QUICK_ACTIONS = [
   { label: "Add New Post", icon: Plus, action: "add-post", keywords: ["add", "new", "create", "post", "blog", "article", "write", "editor"] },
   { label: "Add New Certification", icon: Plus, action: "add-certification", keywords: ["add", "new", "create", "certification", "cert", "credential", "badge", "editor"] },
   { label: "Edit Latest Draft", icon: NotebookPen, action: "edit-latest-draft", keywords: ["edit", "draft", "unpublished", "latest", "newest", "post", "blog", "continue", "resume"] },
-  { label: "Generate Project Description", icon: Sparkles, action: "ai-generate-description", keywords: ["ai", "generate", "description", "write", "draft", "project"] },
-  { label: "Suggest Categories for Skill", icon: Sparkles, action: "ai-suggest-categories", keywords: ["ai", "suggest", "categories", "category", "skill"] },
-  { label: "Suggest Tags for Project", icon: Sparkles, action: "ai-suggest-tags", keywords: ["ai", "suggest", "tags", "tag", "project"] },
-  { label: "Analyze Content", icon: Sparkles, action: "ai-analyze-content", keywords: ["ai", "analyze", "content", "score", "review", "improve"] },
+
 ];

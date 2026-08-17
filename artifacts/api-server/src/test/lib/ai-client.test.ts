@@ -12,7 +12,7 @@ function stubFetch(body: unknown, status = 200): ReturnType<typeof vi.fn> {
 describe("lib/ai/client", () => {
   beforeEach(() => {
     vi.stubEnv("AI_API_KEY", "test-key");
-    vi.stubEnv("AI_BASE_URL", "https://api.x.ai/v1");
+    vi.stubEnv("AI_BASE_URL", "https://api.groq.com/openai/v1");
     vi.stubEnv("AI_MODEL", "grok-test");
   });
   afterEach(() => {

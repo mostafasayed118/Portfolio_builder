@@ -192,10 +192,10 @@ export const env = {
 
   // AI (xAI / any OpenAI-compatible provider) — all optional; AI features
   // no-op when AI_API_KEY is absent.
-  get AI_BASE_URL() { return optional("AI_BASE_URL") ?? "https://api.x.ai/v1"; },
+  get AI_BASE_URL() { return optional("AI_BASE_URL") ?? "https://api.groq.com/openai/v1"; },
   get AI_API_KEY() { return optional("AI_API_KEY"); },
-  get AI_MODEL() { return optional("AI_MODEL") ?? "grok-4.6"; },
-  get AI_SPAM_MODEL() { return optional("AI_SPAM_MODEL") ?? "grok-4.6"; },
+  get AI_MODEL() { return optional("AI_MODEL") ?? "llama-3.3-70b-versatile"; },
+  get AI_SPAM_MODEL() { return optional("AI_SPAM_MODEL") ?? "llama-3.3-70b-versatile"; },
   get AI_CHAT_ENABLED() { return bool("AI_CHAT_ENABLED", true); },
   get AI_WRITING_ENABLED() { return bool("AI_WRITING_ENABLED", true); },
   get AI_SPAM_ENABLED() { return bool("AI_SPAM_ENABLED", false); },
