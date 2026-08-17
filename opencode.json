@@ -2,6 +2,12 @@
   "$schema": "https://opencode.ai/config.json",
   "plugin": ["superpowers@git+https://github.com/obra/superpowers.git"],
   "mcp": {
+    "figma": {
+      "type": "local",
+      "command": ["node", "C:/Users/ASUS/figma-mcp-free/packages/mcp-server/dist/index.js"],
+      "enabled": true,
+      "description": "figma-mcp-free community server (read-only, free Figma PAT, no OAuth)"
+    },
     "testsprite": {
       "type": "local",
       "command": ["npx", "-y", "@testsprite/testsprite-mcp@latest"],
