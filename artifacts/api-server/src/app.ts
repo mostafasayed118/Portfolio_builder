@@ -116,13 +116,16 @@ const csrfHandler = (req: Request, res: Response) => {
 
 app.get("/api/v1/csrf-token", csrfHandler);
 
-// Health check (GET + HEAD) — mounted at the top-level /api prefix
-// BEFORE the v1 rate limiter and BEFORE the v1 router. The route
-// itself is unauthenticated, uncached, and does no I/O; it only
-// reports process.uptime() and the current timestamp. This is the
-// canonical liveness endpoint used by Docker / k8s / load
-// balancers.
+// Health check (GET + HEAD) — mounted at BOTH the top-level /api
+// prefix and /api/v1, BEFORE the v1 rate limiter and BEFORE the v1
+// router. Serving both paths keeps liveness probes stable across
+// v1 → v2 migrations (/api/healthz) while matching the documented
+// deployment health check (/api/v1/healthz). The route itself is
+// unauthenticated, uncached, and does no I/O; it only reports
+// process.uptime() and the current timestamp. This is the canonical
+// liveness endpoint used by Docker / k8s / load balancers.
 app.use("/api", healthRouter);
+app.use("/api/v1", healthRouter);
 
 app.use("/api/v1", generalLimiter);
 app.use("/api/v1", v1Router);

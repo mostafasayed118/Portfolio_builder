@@ -97,7 +97,7 @@ src/
     requireSuperadmin.ts
 
   routes/
-    health.ts         # GET /healthz with 5s cache
+    health.ts         # GET/HEAD /healthz (mounted at /api and /api/v1, uncached liveness)
     cv.ts             # CV download (PDF)
     images.ts         # Image upload + metadata
     v1/index.ts       # v1 router (mounts admin, public, health, etc.)
@@ -146,7 +146,7 @@ those instead of constructing `res.status(500).json(...)` inline.
 
 ### Auth
 
-- **Public routes** (`/healthz`, `/contact`, `/cv`, `/images`): no auth
+- **Public routes** (`/api/healthz` and `/api/v1/healthz`, `/contact`, `/cv`, `/images`): no auth
 - **Admin routes** (everything under `/api/v1/admin/*`): require
   - `Authorization: Bearer <clerk_jwt>` (verified against `CLERK_SECRET_KEY`) AND
     email in `ADMIN_EMAILS`, **or**
@@ -173,7 +173,7 @@ double-submit cookie. The CSRF token is fetched from
 
 ## Testing
 
-236 tests across 31 files. Key test categories:
+407 tests across 48 files. Key test categories:
 
 - `test/middleware/` — auth, rate limit, CSRF, error handling
 - `test/routes/` — one file per route module
@@ -192,7 +192,9 @@ pnpm --filter @workspace/api-server test -- src/test/routes/skills.test.ts
 - Build: `pnpm --filter @workspace/api-server build`
 - Output: `dist/index.mjs` (ESM bundle, source-mapped)
 - Start: `node --enable-source-maps ./dist/index.mjs`
-- Health check: `GET /api/v1/healthz` (returns 200 ok / 503 degraded)
+- Health check: `GET /api/v1/healthz` (also served at `/api/healthz`; returns 200 with
+  `{ status: "ok", timestamp, uptime, environment }` while the process is alive — it is a pure
+  liveness check and never returns 503)
 
 Deploy to Vercel via the workspace `vercel.json` (the API server runs
 as a serverless function).

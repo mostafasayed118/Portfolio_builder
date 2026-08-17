@@ -98,6 +98,12 @@ describe("Health endpoint", () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({});
   });
+
+  it("GET /api/v1/healthz (documented deployment path) returns 200 with status ok", async () => {
+    const res = await request(app).get("/api/v1/healthz");
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe("ok");
+  });
 });
 
 describe("CV settings", () => {
