@@ -80,10 +80,6 @@ import {
   getAnalytics,
   previewEntity,
   seedData,
-  generateDescription,
-  suggestCategories,
-  suggestTags,
-  analyzeContent,
   submitContactForm,
   deleteImage,
   reorderImages,
@@ -248,12 +244,6 @@ export const api = {
     stats: (days?: number) => getAnalytics(days ? { days } : undefined),
   },
   ai: {
-    generateDescription: (techStack: string[], title?: string) =>
-      generateDescription({ techStack, title }),
-    suggestCategories: (skillName: string) => suggestCategories({ skillName }),
-    suggestTags: (techStack: string[], category?: string) => suggestTags({ techStack, category }),
-    analyzeContent: (content: string, contentType: "hero" | "about" | "project") =>
-      analyzeContent({ content, contentType }),
     generate: (data: Parameters<typeof adminAiGenerate>[0]) => adminAiGenerate(data),
     improve: (data: Parameters<typeof adminAiImprove>[0]) => adminAiImprove(data),
   },

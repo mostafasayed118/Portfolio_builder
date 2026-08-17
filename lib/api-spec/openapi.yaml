@@ -2000,142 +2000,6 @@ paths:
                           data: { $ref: "#/components/schemas/AnalyticsStats" }
                   - $ref: "#/components/schemas/ApiError"
 
-  # ─────────────────────────────────────────────────────────────────────
-  # Admin: AI assistant
-  # ─────────────────────────────────────────────────────────────────────
-  /v1/admin/ai-assistant/generate-description:
-    post:
-      operationId: generateDescription
-      tags: [admin.ai]
-      summary: Generate a project description
-      security: [{ adminAuth: [] }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/AiGenerateDescriptionInput" }
-      responses:
-        "200":
-          description: Generated description
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - allOf:
-                      - $ref: "#/components/schemas/SuccessEnvelope"
-                      - type: object
-                        properties:
-                          data:
-                            type: object
-                            properties:
-                              description: { type: string }
-                              attempts:
-                                type: integer
-                                minimum: 1
-                                description: Number of Gemini API calls before success (1 = no retries)
-                  - $ref: "#/components/schemas/ApiError"
-
-  /v1/admin/ai-assistant/suggest-categories:
-    post:
-      operationId: suggestCategories
-      tags: [admin.ai]
-      summary: Suggest skill categories
-      security: [{ adminAuth: [] }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/AiSuggestCategoriesInput" }
-      responses:
-        "200":
-          description: Suggested categories
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - allOf:
-                      - $ref: "#/components/schemas/SuccessEnvelope"
-                      - type: object
-                        properties:
-                          data:
-                            type: object
-                            properties:
-                              categories:
-                                type: array
-                                items: { type: string }
-                              attempts:
-                                type: integer
-                                minimum: 1
-                                description: Number of Gemini API calls before success (1 = no retries)
-                  - $ref: "#/components/schemas/ApiError"
-
-  /v1/admin/ai-assistant/suggest-tags:
-    post:
-      operationId: suggestTags
-      tags: [admin.ai]
-      summary: Suggest project tags
-      security: [{ adminAuth: [] }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/AiSuggestTagsInput" }
-      responses:
-        "200":
-          description: Suggested tags
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - allOf:
-                      - $ref: "#/components/schemas/SuccessEnvelope"
-                      - type: object
-                        properties:
-                          data:
-                            type: object
-                            properties:
-                              tags:
-                                type: array
-                                items: { type: string }
-                              attempts:
-                                type: integer
-                                minimum: 1
-                                description: Number of Gemini API calls before success (1 = no retries)
-                  - $ref: "#/components/schemas/ApiError"
-
-  /v1/admin/ai-assistant/analyze-content:
-    post:
-      operationId: analyzeContent
-      tags: [admin.ai]
-      summary: Analyze content quality
-      security: [{ adminAuth: [] }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/AiAnalyzeContentInput" }
-      responses:
-        "200":
-          description: Content analysis
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - allOf:
-                      - $ref: "#/components/schemas/SuccessEnvelope"
-                      - type: object
-                        properties:
-                          data:
-                            allOf:
-                              - $ref: "#/components/schemas/AiAnalysis"
-                              - type: object
-                                properties:
-                                  attempts:
-                                    type: integer
-                                    minimum: 1
-                                    description: Number of Gemini API calls before success (1 = no retries)
-                  - $ref: "#/components/schemas/ApiError"
-
   /v1/chat/config:
     get:
       operationId: chatConfig
@@ -2781,13 +2645,6 @@ components:
               total: { type: integer }
               unread: { type: integer }
 
-    AiAnalysis:
-      type: object
-      properties:
-        score: { type: integer }
-        suggestions: { type: array, items: { type: string } }
-        strengths: { type: array, items: { type: string } }
-
     SeedResult:
       type: object
       required: [success, summary, errors]
@@ -3209,33 +3066,6 @@ components:
       properties:
         objectPath: { type: string }
         fileName: { type: string }
-
-    AiGenerateDescriptionInput:
-      type: object
-      required: [techStack]
-      properties:
-        techStack: { type: array, items: { type: string } }
-        title: { type: string }
-
-    AiSuggestCategoriesInput:
-      type: object
-      required: [skillName]
-      properties:
-        skillName: { type: string }
-
-    AiSuggestTagsInput:
-      type: object
-      required: [techStack]
-      properties:
-        techStack: { type: array, items: { type: string } }
-        category: { type: string }
-
-    AiAnalyzeContentInput:
-      type: object
-      required: [content, contentType]
-      properties:
-        content: { type: string }
-        contentType: { type: string, enum: [hero, about, project] }
 
   securitySchemes:
     adminAuth:
