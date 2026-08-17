@@ -68,19 +68,19 @@ From Settings → API, collect:
 
 ### 2.2 Environment Variables on Render
 
-| Variable                    | Value                                                                                                   |
-| --------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `SUPABASE_URL`              | Your Supabase project URL                                                                               |
-| `SUPABASE_SERVICE_ROLE_KEY` | Your service role key                                                                                   |
-| `CSRF_SECRET`               | Generate a random string (`openssl rand -hex 32`)                                                       |
-| `NODE_ENV`                  | `production`                                                                                            |
-| `PORT`                      | `3001` (Render sets this automatically)                                                                 |
-| `VITE_SITE_URL`             | Your portfolio URL (e.g., `https://yourportfolio.vercel.app`)                                           |
-| `VITE_ADMIN_URL`            | Your admin URL (e.g., `https://youradmin.vercel.app`)                                                   |
-| `AI_API_KEY`                | Your xAI/Grok API key from https://console.x.ai — enables the chatbot, writing helper, and spam scoring |
-| `AI_BASE_URL`               | `https://api.x.ai/v1` (default if unset)                                                                |
-| `AI_MODEL`                  | `grok-4.6` (default if unset)                                                                           |
-| `AI_SPAM_ENABLED`           | `true` to opt into AI spam scoring (default `false`)                                                    |
+| Variable                    | Value                                                                                                                               |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `SUPABASE_URL`              | Your Supabase project URL                                                                                                           |
+| `SUPABASE_SERVICE_ROLE_KEY` | Your service role key                                                                                                               |
+| `CSRF_SECRET`               | Generate a random string (`openssl rand -hex 32`)                                                                                   |
+| `NODE_ENV`                  | `production`                                                                                                                        |
+| `PORT`                      | `3001` (Render sets this automatically)                                                                                             |
+| `VITE_SITE_URL`             | Your portfolio URL (e.g., `https://yourportfolio.vercel.app`)                                                                       |
+| `VITE_ADMIN_URL`            | Your admin URL (e.g., `https://youradmin.vercel.app`)                                                                               |
+| `AI_API_KEY`                | Your Groq API key from https://console.groq.com (free tier, no credit card) — enables the chatbot, writing helper, and spam scoring |
+| `AI_BASE_URL`               | `https://api.groq.com/openai/v1` (default if unset)                                                                                 |
+| `AI_MODEL`                  | `llama-3.3-70b-versatile` (default if unset)                                                                                        |
+| `AI_SPAM_ENABLED`           | `true` to opt into AI spam scoring (default `false`)                                                                                |
 
 ### 2.3 Deploy
 
