@@ -75,24 +75,24 @@ Portfolio-Fixer/
 
 ## Tech Stack
 
-| Category         | Technology                                        |
-| ---------------- | ------------------------------------------------- |
-| Framework        | React 19                                          |
-| Build Tool       | Vite 7                                            |
-| CSS              | TailwindCSS v4                                    |
-| Database         | Supabase (PostgreSQL)                             |
-| API Server       | Express 5                                         |
-| Auth             | Clerk                                             |
-| State            | TanStack Query                                    |
-| Forms            | react-hook-form                                   |
-| Validation       | Zod                                               |
-| AI (LLM)         | xAI Grok (OpenAI-compatible, proxied server-side) |
-| Routing          | wouter                                            |
-| Animations       | framer-motion                                     |
-| Icons            | lucide-react                                      |
-| Testing          | Vitest + Testing Library                          |
-| Logging (server) | pino                                              |
-| Security         | helmet, csrf-csrf, express-rate-limit             |
+| Category         | Technology                                               |
+| ---------------- | -------------------------------------------------------- |
+| Framework        | React 19                                                 |
+| Build Tool       | Vite 7                                                   |
+| CSS              | TailwindCSS v4                                           |
+| Database         | Supabase (PostgreSQL)                                    |
+| API Server       | Express 5                                                |
+| Auth             | Clerk                                                    |
+| State            | TanStack Query                                           |
+| Forms            | react-hook-form                                          |
+| Validation       | Zod                                                      |
+| AI (LLM)         | Groq (free tier, OpenAI-compatible, proxied server-side) |
+| Routing          | wouter                                                   |
+| Animations       | framer-motion                                            |
+| Icons            | lucide-react                                             |
+| Testing          | Vitest + Testing Library                                 |
+| Logging (server) | pino                                                     |
+| Security         | helmet, csrf-csrf, express-rate-limit                    |
 
 ## Documentation
 

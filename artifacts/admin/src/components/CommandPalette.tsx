@@ -182,14 +182,6 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
         // Resolve the newest unpublished post, then deep-link to its editor.
         void openLatestDraft();
         break;
-      case "ai-generate-description":
-      case "ai-suggest-categories":
-      case "ai-suggest-tags":
-      case "ai-analyze-content":
-        // Deep-link to the tool on the AI Assistant page — the page scrolls
-        // the matching tool card into view from the URL hash.
-        setLocation(`/ai#${action.replace(/^ai-/, "")}`);
-        break;
     }
   };
 

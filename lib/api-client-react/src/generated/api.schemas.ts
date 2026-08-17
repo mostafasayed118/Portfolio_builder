@@ -541,12 +541,6 @@ export interface AnalyticsStats {
   messages?: AnalyticsStatsMessagesItem[];
 }
 
-export interface AiAnalysis {
-  score?: number;
-  suggestions?: string[];
-  strengths?: string[];
-}
-
 export type SeedResultSummary = {[key: string]: number};
 
 export interface SeedResult {
@@ -1023,34 +1017,6 @@ export interface CvSettingsInput {
   fileName: string;
 }
 
-export interface AiGenerateDescriptionInput {
-  techStack: string[];
-  title?: string;
-}
-
-export interface AiSuggestCategoriesInput {
-  skillName: string;
-}
-
-export interface AiSuggestTagsInput {
-  techStack: string[];
-  category?: string;
-}
-
-export type AiAnalyzeContentInputContentType = typeof AiAnalyzeContentInputContentType[keyof typeof AiAnalyzeContentInputContentType];
-
-
-export const AiAnalyzeContentInputContentType = {
-  hero: 'hero',
-  about: 'about',
-  project: 'project',
-} as const;
-
-export interface AiAnalyzeContentInput {
-  content: string;
-  contentType: AiAnalyzeContentInputContentType;
-}
-
 export type GetPublicPosts200 = SuccessEnvelope & {
   data?: {
   data?: BlogPostSummary[];
@@ -1444,49 +1410,6 @@ days?: number;
 
 export type GetAnalytics200 = SuccessEnvelope & {
   data?: AnalyticsStats;
-} | ApiError;
-
-export type GenerateDescription200 = SuccessEnvelope & {
-  data?: {
-  description?: string;
-  /**
-     * Number of Gemini API calls before success (1 = no retries)
-     * @minimum 1
-     */
-  attempts?: number;
-};
-} | ApiError;
-
-export type SuggestCategories200 = SuccessEnvelope & {
-  data?: {
-  categories?: string[];
-  /**
-     * Number of Gemini API calls before success (1 = no retries)
-     * @minimum 1
-     */
-  attempts?: number;
-};
-} | ApiError;
-
-export type SuggestTags200 = SuccessEnvelope & {
-  data?: {
-  tags?: string[];
-  /**
-     * Number of Gemini API calls before success (1 = no retries)
-     * @minimum 1
-     */
-  attempts?: number;
-};
-} | ApiError;
-
-export type AnalyzeContent200 = SuccessEnvelope & {
-  data?: AiAnalysis & {
-  /**
-     * Number of Gemini API calls before success (1 = no retries)
-     * @minimum 1
-     */
-  attempts?: number;
-};
 } | ApiError;
 
 export type ChatConfig200 = SuccessEnvelope & {
