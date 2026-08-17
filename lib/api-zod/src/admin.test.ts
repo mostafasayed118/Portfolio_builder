@@ -12,10 +12,6 @@ import {
   bulkDeleteMessagesSchema,
   bulkArchiveMessagesSchema,
   bulkUnarchiveMessagesSchema,
-  aiGenerateDescriptionSchema,
-  aiSuggestCategoriesSchema,
-  aiSuggestTagsSchema,
-  aiAnalyzeContentSchema,
 } from "./admin";
 
 describe("admin schemas", () => {
@@ -256,23 +252,4 @@ describe("admin schemas", () => {
     });
   });
 
-  describe("AI schemas", () => {
-    it("aiGenerateDescriptionSchema requires techStack >= 1", () => {
-      expect(aiGenerateDescriptionSchema.safeParse({ techStack: [] }).success).toBe(false);
-      expect(
-        aiGenerateDescriptionSchema.safeParse({ techStack: ["TS"] }).success,
-      ).toBe(true);
-    });
-    it("aiSuggestCategoriesSchema requires skillName", () => {
-      expect(aiSuggestCategoriesSchema.safeParse({ skillName: "" }).success).toBe(false);
-    });
-    it("aiSuggestTagsSchema requires techStack", () => {
-      expect(aiSuggestTagsSchema.safeParse({ techStack: [] }).success).toBe(false);
-    });
-    it("aiAnalyzeContentSchema requires valid contentType", () => {
-      expect(
-        aiAnalyzeContentSchema.safeParse({ content: "x", contentType: "wrong" }).success,
-      ).toBe(false);
-    });
-  });
 });

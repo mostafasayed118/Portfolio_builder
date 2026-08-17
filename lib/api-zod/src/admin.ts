@@ -230,25 +230,6 @@ export const postSchema = z.object({
   is_published: z.boolean().optional(),
 });
 
-export const aiGenerateDescriptionSchema = z.object({
-  techStack: z.array(z.string()).min(1),
-  title: z.string().optional(),
-});
-
-export const aiSuggestTagsSchema = z.object({
-  techStack: z.array(z.string()).min(1),
-  category: z.string().optional(),
-});
-
-export const aiAnalyzeContentSchema = z.object({
-  content: z.string().min(1),
-  contentType: z.enum(["hero", "about", "project"]),
-});
-
-export const aiSuggestCategoriesSchema = z.object({
-  skillName: z.string().min(1),
-});
-
 export const aiContentTypeSchema = z.enum(["hero", "about", "project", "skill", "experience", "general"]);
 
 export const aiGenerateSchema = z.object({

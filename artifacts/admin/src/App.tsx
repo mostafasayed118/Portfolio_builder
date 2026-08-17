@@ -27,7 +27,6 @@ const SiteSettingsManager = lazy(() => import("@/features/settings").then(m => (
 const CvManager = lazy(() => import("@/features/cv").then(m => ({ default: m.CvManager })));
 const AuditLog = lazy(() => import("@/features/audit").then(m => ({ default: m.default })));
 const Analytics = lazy(() => import("@/features/analytics").then(m => ({ default: m.default })));
-const AiAssistantPage = lazy(() => import("@/features/ai").then(m => ({ default: m.AiAssistantPage })));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
 function PageFallback() {
@@ -94,7 +93,6 @@ function App() {
                         <Route path="/hero"><Suspense fallback={<PageFallback />}><HeroEditor /></Suspense></Route>
                         <Route path="/about"><Suspense fallback={<PageFallback />}><AboutEditor /></Suspense></Route>
                         <Route path="/projects"><Suspense fallback={<PageFallback />}><ProjectsManager /></Suspense></Route>
-                        <Route path="/ai"><Suspense fallback={<PageFallback />}><AiAssistantPage /></Suspense></Route>
                         <Route path="/skills"><Suspense fallback={<PageFallback />}><SkillsManager /></Suspense></Route>
                         <Route path="/experience"><Suspense fallback={<PageFallback />}><ExperienceManager /></Suspense></Route>
                         <Route path="/certifications"><Suspense fallback={<PageFallback />}><CertificationsManager /></Suspense></Route>
