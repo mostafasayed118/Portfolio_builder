@@ -81,7 +81,7 @@ export function ProjectDescriptionTool() {
         )}
         {!result && (
           <div className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap">
-            Tip: also available inside <Badge variant="outline">Projects → Edit → Generate with AI</Badge>
+            Tip: also available inside <Badge variant="outline">Projects → Edit → ✨ Improve</Badge>
           </div>
         )}
       </CardContent>

@@ -24,7 +24,6 @@ export function ProjectEditor({ editing, isNew, saving, onEdit, onSaved }: Proje
   const [techInput, setTechInput] = useState("");
   const [metricInput, setMetricInput] = useState("");
   const [tagInput, setTagInput] = useState("");
-  const [aiGenerating, setAiGenerating] = useState(false);
   const [aiSuggestingTags, setAiSuggestingTags] = useState(false);
   const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
   const [projectImages, setProjectImages] = useState<{ id: string; url: string }[]>([]);
@@ -65,28 +64,6 @@ export function ProjectEditor({ editing, isNew, saving, onEdit, onSaved }: Proje
 
   const removeTag = (field: "tech_stack" | "metrics" | "tags", val: string) =>
     onEdit(e => e ? ({ ...e, [field]: ((e[field] as string[] | undefined) ?? []).filter(x => x !== val) }) : e);
-
-  /** Ask Gemini to draft a description from the current title + tech stack. */
-  const generateDescription = async () => {
-    if (!editing) return;
-    const stack = editing.tech_stack ?? [];
-    if (stack.length === 0) {
-      toast({ title: "Add a tech stack first", variant: "destructive" });
-      return;
-    }
-    setAiGenerating(true);
-    try {
-      const res = await api.ai.generateDescription(stack, editing.title || undefined);
-      if (!res.success) throw new Error(res.message);
-      onEdit(x => x ? ({ ...x, description: res.data?.description ?? "" }) : x);
-      toast({ title: "Description generated" });
-    } catch (err) {
-      logError("Failed to generate description", err, "ProjectEditor");
-      toast({ title: "Generation failed", variant: "destructive" });
-    } finally {
-      setAiGenerating(false);
-    }
-  };
 
   /** Ask Gemini for short lowercase tags for the current stack + category. */
   const suggestTags = async () => {
@@ -163,17 +140,13 @@ export function ProjectEditor({ editing, isNew, saving, onEdit, onSaved }: Proje
             <div className="space-y-1.5"><Label className="text-xs">Title</Label>
               <Input value={editing.title} onChange={e => onEdit(x => x ? ({ ...x, title: e.target.value }) : x)} className="h-9" /></div>
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs">Description</Label>
-                <Button type="button" size="sm" variant="outline" onClick={generateDescription} disabled={aiGenerating || !editing.tech_stack?.length} className="min-h-[44px] h-7 px-2">
-                  <Sparkles className="h-3.5 w-3.5 mr-1.5" />{aiGenerating ? "Generating…" : "Generate with AI"}
-                </Button>
-              </div>
+              <Label className="text-xs">Description</Label>
               <Textarea value={editing.description} onChange={e => onEdit(x => x ? ({ ...x, description: e.target.value }) : x)} rows={3} />
               <div className="pt-1">
                 <AiTextButton
                   contentType="project"
                   text={editing.description ?? ""}
+                  context={[editing.title ? `Project title: ${editing.title}` : null, editing.tech_stack?.length ? `Tech stack: ${editing.tech_stack.join(", ")}` : null].filter(Boolean).join("\n") || undefined}
                   onResult={(t) => onEdit((x) => (x ? { ...x, description: t } : x))}
                 />
               </div>
