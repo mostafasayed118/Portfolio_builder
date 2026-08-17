@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { env } from "../lib/env";
 
 /**
- * GET / HEAD /api/healthz
+ * GET / HEAD /api/healthz and /api/v1/healthz
  *
  * Liveness check used by Docker, Kubernetes, load balancers, and
  * uptime monitors. Intentionally MINIMAL:

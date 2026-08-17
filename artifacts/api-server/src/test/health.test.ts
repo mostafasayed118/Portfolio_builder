@@ -108,10 +108,31 @@ describe("HEAD /api/healthz — liveness check (used by Docker / k8s / load bala
   });
 });
 
-describe("/api/v1/healthz — the legacy mount was removed in favor of /api/healthz", () => {
-  it("returns 404 for the old v1 path", async () => {
+describe("/api/v1/healthz — documented deployment health check (alias of /api/healthz)", () => {
+  it("returns 200 with the same spec response shape", async () => {
     const res = await request(app).get("/api/v1/healthz");
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        status: "ok",
+        timestamp: expect.any(String),
+        uptime: expect.any(Number),
+        environment: expect.any(String),
+      }),
+    );
+  });
+
+  it("supports HEAD with no body (Docker / k8s / load balancers)", async () => {
+    const res = await request(app).head("/api/v1/healthz");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({});
+  });
+
+  it("is served before the v1 rate limiter, so it is not throttled", async () => {
+    for (let i = 0; i < 105; i++) {
+      const res = await request(app).get("/api/v1/healthz");
+      expect(res.status).toBe(200);
+    }
   });
 });
 

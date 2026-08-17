@@ -10,9 +10,9 @@ import { adminAuth } from "../../middleware/adminAuth";
 
 const router: IRouter = Router();
 
-// Note: the /healthz endpoint is mounted at the top-level /api
-// prefix in app.ts (not under /api/v1). See routes/health.ts. It
-// intentionally sits outside the v1 router so that:
+// Note: the /healthz endpoint is NOT mounted here. See routes/health.ts:
+// app.ts mounts it at both the top-level /api prefix and /api/v1,
+// BEFORE the general rate limiter, so that:
 //   - monitoring probes don't go through the general rate limiter
 //   - the path is stable across v1 → v2 migrations
 //   - the response shape is owned by the health route, not by v1
