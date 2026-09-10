@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { z } from "zod";
+import { badRequest } from "../lib/api-response";
 
 const uuidSchema = z.string().uuid();
 
@@ -12,7 +13,7 @@ export function validateQueryUserId(req: Request, res: Response, next: NextFunct
   if (userId !== undefined) {
     const result = uuidSchema.safeParse(userId);
     if (!result.success) {
-      res.status(400).json({ success: false, message: "Invalid userId format — must be a valid UUID" });
+      badRequest(res, { userId: ["Invalid userId format — must be a valid UUID"] });
       return;
     }
   }
@@ -26,7 +27,7 @@ export function validateQueryUserId(req: Request, res: Response, next: NextFunct
 export function validateParamId(req: Request, res: Response, next: NextFunction): void {
   const result = uuidSchema.safeParse(req.params.id);
   if (!result.success) {
-    res.status(400).json({ success: false, message: "Invalid id format — must be a valid UUID" });
+    badRequest(res, { id: ["Invalid id format — must be a valid UUID"] });
     return;
   }
   next();

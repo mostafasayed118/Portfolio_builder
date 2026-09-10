@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@workspace/supabase/types";
 import type { AuthenticatedRequest } from "../middleware/adminAuth";
-import { ok, serverError, notFound, badRequest } from "./api-response";
+import { ok, serverError, notFound, badRequest, paginated } from "./api-response";
 import { getSupabaseClient } from "./supabase-client";
 import { logger } from "./logger";
 
@@ -198,15 +198,7 @@ export async function runCollectionQuery<T = unknown>(
     return serverError(res, error.message);
   }
 
-  return ok(res, {
-    data: data ?? [],
-    pagination: {
-      total: count ?? 0,
-      limit,
-      offset,
-      hasMore: (count ?? 0) > offset + limit,
-    },
-  }) as Response;
+  return paginated(res, data ?? [], count ?? 0, limit, offset);
 }
 
 /**

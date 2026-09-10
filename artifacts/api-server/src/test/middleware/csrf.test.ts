@@ -6,7 +6,7 @@ describe("CSRF Protection", () => {
   it("GET /api/v1/csrf-token returns 200 with token", async () => {
     const res = await request(app).get("/api/v1/csrf-token");
     expect(res.status).toBe(200);
-    expect(res.body.csrfToken).toBeDefined();
+    expect(res.body.data.csrfToken).toBeDefined();
   });
 
   it("GET requests bypass CSRF check", async () => {
@@ -47,14 +47,14 @@ describe("CSRF Token Generation", () => {
 
     // In the mock, tokens are always "test-csrf-token"
     // This test verifies the mock behavior is consistent
-    expect(res1.body.csrfToken).toBe("test-csrf-token");
-    expect(res2.body.csrfToken).toBe("test-csrf-token");
+    expect(res1.body.data.csrfToken).toBe("test-csrf-token");
+    expect(res2.body.data.csrfToken).toBe("test-csrf-token");
   });
 
   it("GET /api/v1/csrf-token returns token", async () => {
     const res = await request(app).get("/api/v1/csrf-token");
     expect(res.status).toBe(200);
-    expect(res.body.csrfToken).toBeDefined();
+    expect(res.body.data.csrfToken).toBeDefined();
   });
 
   it("CSRF token endpoint returns JSON content type", async () => {

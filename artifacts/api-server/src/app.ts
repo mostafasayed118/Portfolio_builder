@@ -9,6 +9,7 @@ import v1Router from "./routes/v1";
 import healthRouter from "./routes/health";
 import { logger } from "./lib/logger";
 import { env } from "./lib/env";
+import { ok, notFound } from "./lib/api-response";
 import { errorHandler } from "./middleware/errorHandler";
 import { generateCsrfToken } from "./middleware/csrf";
 import { generalLimiter } from "./middleware/rateLimiter";
@@ -94,7 +95,7 @@ app.use((req, res, next) => {
 });
 
 const csrfHandler = (req: Request, res: Response) => {
-  res.json({ csrfToken: generateCsrfToken(req, res) });
+  ok(res, { csrfToken: generateCsrfToken(req, res) });
 };
 
 app.get("/api/v1/csrf-token", csrfHandler);
@@ -111,10 +112,7 @@ app.use("/api/v1", generalLimiter);
 app.use("/api/v1", v1Router);
 
 app.use((req: Request, res: Response) => {
-  res.status(404).json({
-    success: false,
-    message: "Not found",
-  });
+  notFound(res);
 });
 
 app.use(errorHandler);

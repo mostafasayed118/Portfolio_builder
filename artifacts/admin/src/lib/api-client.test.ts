@@ -81,8 +81,17 @@ describe("api-client", () => {
     });
   });
 
-  it("does NOT include CSRF token for GET requests", async () => {
-    const { getClerkToken } = await import("./auth-token");
+  it("reads the CSRF token from the enveloped shape", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ success: true, data: { csrfToken: "csrf-env" } }),
+    }));
+
+    const { getCsrfToken } = await import("./api-client");
+    await expect(getCsrfToken()).resolves.toBe("csrf-env");
+  });
+
+  it("does NOT include CSRF token for GET requests", async () => {    const { getClerkToken } = await import("./auth-token");
     vi.mocked(getClerkToken).mockResolvedValue(VALID_TOKEN);
 
     const mockFetch = vi.fn().mockResolvedValue({

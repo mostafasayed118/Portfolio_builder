@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { invalidCsrfTokenError } from "./csrf";
+import { forbidden, badRequest, serverError } from "../lib/api-response";
 import { logger } from "../lib/logger";
 
 /**
@@ -20,18 +21,18 @@ export function errorHandler(
   // Rejected explicitly so the client sees a clear 403 instead of an
   // opaque 500 "Internal server error".
   if (err === invalidCsrfTokenError) {
-    res.status(403).json({ success: false, message: "Invalid or missing CSRF token" });
+    forbidden(res, "Invalid or missing CSRF token");
     return;
   }
 
   if (err.name === "ValidationError") {
-    res.status(400).json({ success: false, message: err.message });
+    badRequest(res, { _form: [err.message] });
     return;
   }
 
   // Handle malformed JSON body from express.json()
   if (err.name === "SyntaxError" && "body" in err) {
-    res.status(400).json({ success: false, message: "Invalid JSON in request body" });
+    badRequest(res, { _form: ["Invalid JSON in request body"] });
     return;
   }
 
@@ -51,5 +52,5 @@ export function errorHandler(
     },
     "Unhandled error",
   );
-  res.status(500).json({ success: false, message: "Internal server error" });
+  serverError(res);
 }
