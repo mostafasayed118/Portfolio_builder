@@ -27,7 +27,7 @@ describe("listProjects", () => {
 
     expect(supabase.from).toHaveBeenCalledWith("projects");
     expect(supabase.select).toHaveBeenCalledWith(
-      "id,slug,title,description,category,tech_stack,tags,featured,image_url,sort_order,is_published",
+      "id,slug,title,description,category,tech_stack,tags,featured,image_url,github_url,live_url,metrics,completed_at,created_at,sort_order,is_published",
     );
     expect(supabase.is).toHaveBeenCalledWith("deleted_at", null);
     expect(supabase.order).toHaveBeenCalledWith("sort_order", { ascending: true });

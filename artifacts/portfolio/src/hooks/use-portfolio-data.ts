@@ -3,12 +3,12 @@ import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
 import { getHeroContent } from "@workspace/db/hero-content";
 import { getAboutContent } from "@workspace/db/about-content";
 import { listSkills } from "@workspace/db/skills";
+import type { SkillListItem } from "@workspace/db/skills";
 import { listPublishedProjects } from "@workspace/db/projects";
 import { listExperience } from "@workspace/db/experience";
 import { listCertifications } from "@workspace/db/certifications";
 import { fetchProjectBySlug } from "@workspace/db/projects";
 import { listPublishedPosts, getPublishedPostBySlug } from "@workspace/db/posts";
-import type { Skill as DbSkill } from "@workspace/supabase/types";
 import { SKILL_CATEGORIES } from "@/data/skills";
 
 // Realtime sync (use-realtime-sync.ts) handles live updates for the
@@ -140,7 +140,7 @@ const categoryColorMap = new Map(
   SKILL_CATEGORIES.map((c) => [c.label.toLowerCase(), c.color]),
 );
 
-export function groupSkillsByCategory(skills: DbSkill[]) {
+export function groupSkillsByCategory(skills: SkillListItem[]) {
   const grouped: Record<string, { name: string; proficiency: number; level: "Expert" | "Advanced" | "Intermediate" | "Familiar" }[]> = {};
   for (const s of skills) {
     if (s.is_visible === false) continue;

@@ -1,13 +1,13 @@
 import { useSkills as useDbSkills, groupSkillsByCategory as groupByCategory } from "@/hooks/use-portfolio-data";
 import { SKILL_CATEGORIES } from "@/data/portfolio";
 import type { SkillCategory } from "@/features/skills/types";
-import type { Skill as DbSkill } from "@workspace/supabase/types";
+import type { SkillListItem } from "@workspace/db/skills";
 
 export function useSkills() {
   return useDbSkills();
 }
 
-export function groupSkillsByCategory(supabaseSkills: DbSkill[]): SkillCategory[] {
+export function groupSkillsByCategory(supabaseSkills: SkillListItem[]): SkillCategory[] {
   return groupByCategory(supabaseSkills);
 }
 

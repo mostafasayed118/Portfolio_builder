@@ -8,12 +8,13 @@ export type Project = DbProject;
 const PROJECT_TABLE = "projects" as const;
 
 /**
- * Card-scope columns for list views — keeps long-form fields
- * (full_description, challenges, outcome, metrics) out of list payloads.
- * Detail fetcher `fetchProjectBySlug` still loads the full row.
+ * Card-scope columns for list views — keeps long-form prose fields
+ * (full_description, challenges, outcome) out of list payloads.
+ * `github_url/live_url/metrics/completed_at` stay: mapDbProject renders
+ * them on cards. Detail fetcher `fetchProjectBySlug` still loads the full row.
  */
 const PROJECT_LIST_COLUMNS =
-  "id,slug,title,description,category,tech_stack,tags,featured,image_url,sort_order,is_published";
+  "id,slug,title,description,category,tech_stack,tags,featured,image_url,github_url,live_url,metrics,completed_at,created_at,sort_order,is_published";
 
 export type ProjectListItem = Pick<
   Project,
@@ -26,6 +27,11 @@ export type ProjectListItem = Pick<
   | "tags"
   | "featured"
   | "image_url"
+  | "github_url"
+  | "live_url"
+  | "metrics"
+  | "completed_at"
+  | "created_at"
   | "sort_order"
   | "is_published"
 >;

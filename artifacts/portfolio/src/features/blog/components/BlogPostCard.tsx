@@ -1,9 +1,15 @@
 import { Link } from "wouter";
 import { ArrowRight, Calendar } from "lucide-react";
-import type { BlogPost } from "../types";
+import type { BlogPost as DbBlogPost } from "@workspace/supabase/types";
 import { formatPostDate } from "../types";
 
-export default function BlogPostCard({ post }: { post: BlogPost }) {
+/** Card-scope post: everything the card renders — no heavy markdown body. */
+export type BlogPostCardPost = Pick<
+  DbBlogPost,
+  "id" | "title" | "slug" | "excerpt" | "cover_image_url" | "tags" | "published_at"
+>;
+
+export default function BlogPostCard({ post }: { post: BlogPostCardPost }) {
   return (
     <Link
       href={`/blog/${post.slug}`}
