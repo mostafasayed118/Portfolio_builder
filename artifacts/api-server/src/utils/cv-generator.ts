@@ -37,23 +37,47 @@ interface CvData {
   }>;
 }
 
+/** Bounds for one PDF render — CVs are single-visitor artifacts, not bulk exports. */
+const CV_ROWS_LIMIT = 100;
+
 async function fetchCvData(supabase: SupabaseClient): Promise<CvData> {
   const [heroResult, aboutResult, expResult, skillsResult, certsResult] =
     await Promise.allSettled([
-      supabase.from("hero_content").select("*").limit(1).maybeSingle(),
-      supabase.from("about_content").select("*").limit(1).maybeSingle(),
+      supabase
+        .from("hero_content")
+        .select(
+          "name,roles,heading,description,email,github_url,linkedin_url",
+        )
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("about_content")
+        .select(
+          "location,years_of_experience,bio1,bio2,degree,school,grade,education_years",
+        )
+        .limit(1)
+        .maybeSingle(),
       supabase
         .from("experience")
-        .select("*")
-        .order("sort_order", { ascending: true }),
+        .select("title,company,period,description,technologies")
+        .is("deleted_at", null)
+        .eq("is_published", true)
+        .order("sort_order", { ascending: true })
+        .limit(CV_ROWS_LIMIT),
       supabase
         .from("skills")
-        .select("*")
-        .order("sort_order", { ascending: true }),
+        .select("name,proficiency,category")
+        .is("deleted_at", null)
+        .eq("is_visible", true)
+        .order("sort_order", { ascending: true })
+        .limit(CV_ROWS_LIMIT),
       supabase
         .from("certifications")
-        .select("*")
-        .order("sort_order", { ascending: true }),
+        .select("title,issuer,date")
+        .is("deleted_at", null)
+        .eq("is_published", true)
+        .order("sort_order", { ascending: true })
+        .limit(CV_ROWS_LIMIT),
     ]);
 
   const hero =

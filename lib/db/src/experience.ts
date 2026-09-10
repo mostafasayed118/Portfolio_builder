@@ -4,13 +4,31 @@ import { queryOrThrow } from "./query";
 
 export type Experience = DbExperience;
 
+const EXPERIENCE_LIST_COLUMNS =
+  "id,title,company,location,period,description,technologies,type,current,sort_order,is_published";
+
+export type ExperienceListItem = Pick<
+  Experience,
+  | "id"
+  | "title"
+  | "company"
+  | "location"
+  | "period"
+  | "description"
+  | "technologies"
+  | "type"
+  | "current"
+  | "sort_order"
+  | "is_published"
+>;
+
 export async function listExperience(
   supabase: SupabaseClient,
-): Promise<Experience[]> {
-  return queryOrThrow<Experience[]>(
+): Promise<ExperienceListItem[]> {
+  return queryOrThrow<ExperienceListItem[]>(
     supabase
       .from("experience")
-      .select("*")
+      .select(EXPERIENCE_LIST_COLUMNS)
       .is("deleted_at", null)
       .eq("is_published", true)
       .order("sort_order", { ascending: true }),
