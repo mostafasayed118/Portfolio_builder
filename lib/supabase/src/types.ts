@@ -1051,6 +1051,7 @@ export interface Database {
           alt_text: string | null;
           entity_type: string;
           entity_id: string | null;
+          user_id: string | null;
           sort_order: number;
           created_at: string;
           updated_at: string;
@@ -1068,6 +1069,7 @@ export interface Database {
           alt_text?: string | null;
           entity_type: string;
           entity_id?: string | null;
+          user_id?: string | null;
           sort_order?: number;
           created_at?: string;
           updated_at?: string;
@@ -1085,6 +1087,7 @@ export interface Database {
           alt_text?: string | null;
           entity_type?: string;
           entity_id?: string | null;
+          user_id?: string | null;
           sort_order?: number;
           created_at?: string;
           updated_at?: string;
