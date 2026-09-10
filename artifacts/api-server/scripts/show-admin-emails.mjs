@@ -5,9 +5,7 @@
  * Only ever logs `admin count=<n> domains=***@<domain>,...` — full addresses
  * must never appear in stdout/stderr (logs get shipped to aggregators).
  *
- * Reads the server-only `ADMIN_EMAILS` variable. Falls back to the legacy
- * `VITE_ADMIN_EMAILS` with a deprecation warning until the server env rename
- * lands; the fallback never changes what is printed (masked domains only).
+ * Reads only the server-only `ADMIN_EMAILS` variable — no `VITE_` fallback.
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -41,16 +39,7 @@ for (const envPath of [resolve(scriptDir, "../.env"), resolve(scriptDir, "../../
 }
 
 function readAllowlist() {
-  const direct = process.env.ADMIN_EMAILS;
-  if (direct !== undefined && direct !== "") return direct;
-  const legacy = process.env.VITE_ADMIN_EMAILS;
-  if (legacy !== undefined && legacy !== "") {
-    process.stderr.write(
-      "[show-admin-emails] VITE_ADMIN_EMAILS is deprecated; use server-only ADMIN_EMAILS.\n",
-    );
-    return legacy;
-  }
-  return "";
+  return process.env.ADMIN_EMAILS ?? "";
 }
 
 const list = readAllowlist()

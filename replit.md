@@ -25,14 +25,14 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 
 ## Environment Variables
 
-| Variable                     | Used By                                             | Description                                   |
-| ---------------------------- | --------------------------------------------------- | --------------------------------------------- |
-| `VITE_SUPABASE_URL`          | portfolio, admin                                    | Supabase project URL                          |
-| `VITE_SUPABASE_ANON_KEY`     | portfolio, admin                                    | Anon/publishable key for client-side queries  |
-| `SUPABASE_SERVICE_ROLE_KEY`  | server-only, api-server env, never `VITE_` prefixed |
-| `SUPABASE_URL`               | api-server                                          | Supabase project URL                          |
-| `VITE_CLERK_PUBLISHABLE_KEY` | admin                                               | Clerk publishable key for admin auth          |
-| `VITE_ADMIN_EMAILS`          | admin                                               | Comma-separated list of admin email addresses |
+| Variable                     | Used By                  | Description                                   |
+| ---------------------------- | ------------------------ | --------------------------------------------- |
+| `VITE_SUPABASE_URL`          | portfolio, admin         | Supabase project URL                          |
+| `VITE_SUPABASE_ANON_KEY`     | portfolio, admin         | Anon/publishable key for client-side queries  |
+| SUPABASE_SERVICE_ROLE_KEY    | api-server (server-only) | Server-only, never VITE\_ prefixed            |
+| `SUPABASE_URL`               | api-server               | Supabase project URL                          |
+| `VITE_CLERK_PUBLISHABLE_KEY` | admin                    | Clerk publishable key for admin auth          |
+| `VITE_ADMIN_EMAILS`          | admin                    | Comma-separated list of admin email addresses |
 
 ## Artifacts
 

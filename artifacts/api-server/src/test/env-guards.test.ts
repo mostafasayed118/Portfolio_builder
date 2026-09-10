@@ -28,6 +28,10 @@ describe("env guards", () => {
     const src = readRoot("artifacts/portfolio/src/lib/env.ts");
     expect(src).toContain('throw new Error("Missing VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY")');
   });
+  it("show-admin-emails reads only server-only ADMIN_EMAILS", () => {
+    const src = readRoot("artifacts/api-server/scripts/show-admin-emails.mjs");
+    expect(src).not.toContain("VITE_ADMIN_EMAILS");
+  });
   it("show-admin-emails masks addresses to count + ***@domain", () => {
     const src = readRoot("artifacts/api-server/scripts/show-admin-emails.mjs");
     expect(src).toContain('"***@"');
