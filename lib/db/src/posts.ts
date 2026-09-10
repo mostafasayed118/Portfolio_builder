@@ -16,12 +16,36 @@ export interface NewPostInput {
   is_published?: boolean;
 }
 
+/**
+ * List-view columns. `content` stays included: the blog cards render a
+ * reading-time estimate (getReadingTime) and the table is personal-blog
+ * scale, so the payload cost is negligible and this keeps list and
+ * detail shapes identical for consumers.
+ */
+const LIST_COLUMNS =
+  "id,slug,title,excerpt,content,cover_image_url,tags,is_published,published_at,created_at,updated_at";
+
+export type PostListItem = Pick<
+  Post,
+  | "id"
+  | "slug"
+  | "title"
+  | "excerpt"
+  | "content"
+  | "cover_image_url"
+  | "tags"
+  | "is_published"
+  | "published_at"
+  | "created_at"
+  | "updated_at"
+>;
+
 /** Public: list published posts, newest first. */
-export async function listPublishedPosts(supabase: SupabaseClient): Promise<Post[]> {
-  return queryOrThrow<Post[]>(
+export async function listPublishedPosts(supabase: SupabaseClient): Promise<PostListItem[]> {
+  return queryOrThrow<PostListItem[]>(
     supabase
       .from(TABLE)
-      .select("*")
+      .select(LIST_COLUMNS)
       .eq("is_published", true)
       .is("deleted_at", null)
       .order("published_at", { ascending: false, nullsFirst: false })
@@ -31,11 +55,11 @@ export async function listPublishedPosts(supabase: SupabaseClient): Promise<Post
 }
 
 /** Admin: list all non-deleted posts regardless of publish state. */
-export async function listAllPosts(supabase: SupabaseClient): Promise<Post[]> {
-  return queryOrThrow<Post[]>(
+export async function listAllPosts(supabase: SupabaseClient): Promise<PostListItem[]> {
+  return queryOrThrow<PostListItem[]>(
     supabase
       .from(TABLE)
-      .select("*")
+      .select(LIST_COLUMNS)
       .is("deleted_at", null)
       .order("updated_at", { ascending: false }),
     { table: TABLE, operation: "listAllPosts" },

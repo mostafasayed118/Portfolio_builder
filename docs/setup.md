@@ -34,8 +34,7 @@ cp artifacts/api-server/.env.example artifacts/api-server/.env
 | Variable                         | App(s)                | Required | Description                                | Example                          |
 | -------------------------------- | --------------------- | -------- | ------------------------------------------ | -------------------------------- |
 | `VITE_SUPABASE_URL`              | portfolio, admin      | Yes      | Supabase project URL                       | `https://xxx.supabase.co`        |
-| `VITE_SUPABASE_ANON_KEY`         | portfolio, admin      | Yes      | Supabase anon/public key                   | `eyJ...`                         |
-| `VITE_SUPABASE_SERVICE_ROLE_KEY` | admin                 | Yes      | Supabase service role key (bypasses RLS)   | `eyJ...`                         |
+| `VITE_SUPABASE_ANON_KEY`         | portfolio, admin      | Yes      | Supabase anon/public key                       | `eyJ...`                         |
 | `VITE_API_URL`                   | portfolio, admin      | Yes      | API server base URL                        | `http://localhost:3001`          |
 | `VITE_SITE_URL`                  | portfolio, api-server | Yes      | Portfolio site URL (for CORS)              | `http://localhost:5173`          |
 | `VITE_ADMIN_URL`                 | admin, api-server     | Yes      | Admin site URL (for CORS)                  | `http://localhost:5174`          |

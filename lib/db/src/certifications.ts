@@ -17,7 +17,24 @@ export type Certification = {
 
 export type CertificationRow = DbCertification;
 
-function mapDbToCertification(row: DbCertification): Certification {
+/** Columns consumed by mapDbToCertification — keeps admin-only fields out of public lists. */
+const CERT_LIST_COLUMNS =
+  "id,title,issuer,category,date,credential_url,issuer_logo,credential_id,created_at";
+
+export type CertificationListRow = Pick<
+  DbCertification,
+  | "id"
+  | "title"
+  | "issuer"
+  | "category"
+  | "date"
+  | "credential_url"
+  | "issuer_logo"
+  | "credential_id"
+  | "created_at"
+>;
+
+function mapDbToCertification(row: CertificationListRow): Certification {
   return {
     id: row.id,
     title: row.title,
@@ -39,11 +56,11 @@ export async function listCertifications(
 
 export async function listCertificationRows(
   supabase: SupabaseClient,
-): Promise<DbCertification[]> {
-  return queryOrThrow<DbCertification[]>(
+): Promise<CertificationListRow[]> {
+  return queryOrThrow<CertificationListRow[]>(
     supabase
       .from("certifications")
-      .select("*")
+      .select(CERT_LIST_COLUMNS)
       .is("deleted_at", null)
       .eq("is_published", true)
       .order("sort_order", { ascending: true }),
@@ -54,10 +71,10 @@ export async function listCertificationRows(
 export async function fetchCertifications(
   supabase: SupabaseClient,
 ): Promise<Certification[]> {
-  const data = await queryOrThrow<DbCertification[]>(
+  const data = await queryOrThrow<CertificationListRow[]>(
     supabase
       .from("certifications")
-      .select("*")
+      .select(CERT_LIST_COLUMNS)
       .is("deleted_at", null)
       .eq("is_published", true)
       .order("sort_order", { ascending: true }),

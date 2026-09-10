@@ -7,20 +7,49 @@ export type Project = DbProject;
 
 const PROJECT_TABLE = "projects" as const;
 
+/**
+ * Card-scope columns for list views — keeps long-form prose fields
+ * (full_description, challenges, outcome) out of list payloads.
+ * `github_url/live_url/metrics/completed_at` stay: mapDbProject renders
+ * them on cards. Detail fetcher `fetchProjectBySlug` still loads the full row.
+ */
+const PROJECT_LIST_COLUMNS =
+  "id,slug,title,description,category,tech_stack,tags,featured,image_url,github_url,live_url,metrics,completed_at,created_at,sort_order,is_published";
+
+export type ProjectListItem = Pick<
+  Project,
+  | "id"
+  | "slug"
+  | "title"
+  | "description"
+  | "category"
+  | "tech_stack"
+  | "tags"
+  | "featured"
+  | "image_url"
+  | "github_url"
+  | "live_url"
+  | "metrics"
+  | "completed_at"
+  | "created_at"
+  | "sort_order"
+  | "is_published"
+>;
+
 export async function listProjects(
   supabase: SupabaseClient,
-): Promise<Project[]> {
-  return queryOrThrow<Project[]>(
-    supabase.from(PROJECT_TABLE).select("*").is("deleted_at", null).order("sort_order", { ascending: true }),
+): Promise<ProjectListItem[]> {
+  return queryOrThrow<ProjectListItem[]>(
+    supabase.from(PROJECT_TABLE).select(PROJECT_LIST_COLUMNS).is("deleted_at", null).order("sort_order", { ascending: true }),
     { table: PROJECT_TABLE, operation: "listProjects" },
   );
 }
 
 export async function listPublishedProjects(
   supabase: SupabaseClient,
-): Promise<Project[]> {
-  return queryOrThrow<Project[]>(
-    supabase.from(PROJECT_TABLE).select("*").eq("is_published", true).is("deleted_at", null).order("sort_order", { ascending: true }),
+): Promise<ProjectListItem[]> {
+  return queryOrThrow<ProjectListItem[]>(
+    supabase.from(PROJECT_TABLE).select(PROJECT_LIST_COLUMNS).eq("is_published", true).is("deleted_at", null).order("sort_order", { ascending: true }),
     { table: PROJECT_TABLE, operation: "listPublishedProjects" },
   );
 }

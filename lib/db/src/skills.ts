@@ -6,11 +6,25 @@ export type Skill = DbSkill;
 
 const TABLE = "skills" as const;
 
+const SKILL_LIST_COLUMNS =
+  "id,name,category,proficiency,icon,sort_order,is_visible";
+
+export type SkillListItem = Pick<
+  Skill,
+  | "id"
+  | "name"
+  | "category"
+  | "proficiency"
+  | "icon"
+  | "sort_order"
+  | "is_visible"
+>;
+
 export async function listSkills(
   supabase: SupabaseClient,
-): Promise<Skill[]> {
-  return queryOrThrow<Skill[]>(
-    supabase.from(TABLE).select("*").is("deleted_at", null).order("sort_order", { ascending: true }),
+): Promise<SkillListItem[]> {
+  return queryOrThrow<SkillListItem[]>(
+    supabase.from(TABLE).select(SKILL_LIST_COLUMNS).is("deleted_at", null).order("sort_order", { ascending: true }),
     { table: TABLE, operation: "listSkills" },
   );
 }
@@ -18,9 +32,9 @@ export async function listSkills(
 export async function listSkillsByCategory(
   supabase: SupabaseClient,
   category: string,
-): Promise<Skill[]> {
-  return queryOrThrow<Skill[]>(
-    supabase.from(TABLE).select("*").eq("category", category).is("deleted_at", null).order("sort_order", { ascending: true }),
+): Promise<SkillListItem[]> {
+  return queryOrThrow<SkillListItem[]>(
+    supabase.from(TABLE).select(SKILL_LIST_COLUMNS).eq("category", category).is("deleted_at", null).order("sort_order", { ascending: true }),
     { table: TABLE, operation: "listSkillsByCategory" },
   );
 }

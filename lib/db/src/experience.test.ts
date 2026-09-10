@@ -23,7 +23,9 @@ describe("listExperience", () => {
     const result = await listExperience(supabase as any);
 
     expect(supabase.from).toHaveBeenCalledWith("experience");
-    expect(supabase.select).toHaveBeenCalledWith("*");
+    expect(supabase.select).toHaveBeenCalledWith(
+      "id,title,company,location,period,description,technologies,type,current,sort_order,is_published",
+    );
     expect(supabase.is).toHaveBeenCalledWith("deleted_at", null);
     expect(supabase.eq).toHaveBeenCalledWith("is_published", true);
     expect(supabase.order).toHaveBeenCalledWith("sort_order", { ascending: true });

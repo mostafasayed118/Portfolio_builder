@@ -1,50 +1,52 @@
+/* global process */
 /**
- * Print the exact ADMIN_EMAILS allowlist the api-server resolves at runtime.
+ * Prints the configured admin allowlist WITHOUT leaking raw email addresses.
  *
- * The built server runs from `dist/index.mjs`, where env.ts resolves its two
- * .env paths as `<api-server>/.env` and `<repo-root>/.env` (in that order,
- * each key only set if not already in process.env). This script mirrors those
- * paths, then imports the real env.ts module so the ADMIN_EMAILS ->
- * ADMIN_EMAIL_LIST parsing is the same code the server uses.
+ * Only ever logs `admin count=<n> domains=***@<domain>,...` — full addresses
+ * must never appear in stdout/stderr (logs get shipped to aggregators).
  *
- * Usage: node scripts/show-admin-emails.mjs
+ * Reads only the server-only `ADMIN_EMAILS` variable — no `VITE_` fallback.
  */
-import { readFileSync, existsSync } from "node:fs";
-import { resolve, dirname } from "node:path";
+
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const here = dirname(fileURLToPath(import.meta.url));
-const apiServerDir = resolve(here, "..");
-const repoRoot = resolve(apiServerDir, "..", "..");
-// Same relative paths env.ts uses when bundled into dist/.
-const envPaths = [resolve(apiServerDir, ".env"), resolve(repoRoot, ".env")];
+const scriptDir = dirname(fileURLToPath(import.meta.url));
 
-const loaded = [];
-for (const envPath of envPaths) {
+for (const envPath of [resolve(scriptDir, "../.env"), resolve(scriptDir, "../../.env")]) {
   if (!existsSync(envPath)) continue;
-  loaded.push(envPath);
-  const envContent = readFileSync(envPath, "utf-8");
-  for (const line of envContent.split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const eqIdx = trimmed.indexOf("=");
-    if (eqIdx === -1) continue;
-    const key = trimmed.slice(0, eqIdx).trim();
-    let value = trimmed.slice(eqIdx + 1).trim();
-    if (
-      (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
-    ) {
-      value = value.slice(1, -1);
+  try {
+    const content = readFileSync(envPath, "utf8");
+    for (const line of content.split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const eq = trimmed.indexOf("=");
+      if (eq === -1) continue;
+      const key = trimmed.slice(0, eq).trim();
+      let value = trimmed.slice(eq + 1).trim();
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
+        value = value.slice(1, -1);
+      }
+      if (!process.env[key]) process.env[key] = value;
     }
-    if (!process.env[key]) process.env[key] = value;
+  } catch {
+    // .env unreadable — platform env may still provide the values.
   }
 }
 
-const { env } = await import("../src/lib/env.ts");
+function readAllowlist() {
+  return process.env.ADMIN_EMAILS ?? "";
+}
 
-console.log(".env files loaded:", loaded.length ? loaded.join(", ") : "(none)");
-console.log("process.env.ADMIN_EMAILS:", JSON.stringify(process.env.ADMIN_EMAILS ?? null));
-console.log("process.env.VITE_ADMIN_EMAILS:", JSON.stringify(process.env.VITE_ADMIN_EMAILS ?? null));
-console.log("env.ADMIN_EMAILS (raw):", JSON.stringify(env.ADMIN_EMAILS));
-console.log("env.ADMIN_EMAIL_LIST (allowlist):", JSON.stringify(env.ADMIN_EMAIL_LIST));
+const list = readAllowlist()
+  .split(",")
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean);
+
+process.stdout.write(
+  `admin count=${list.length} domains=${[...new Set(list.map((e) => e.split("@")[1]))].map((d) => "***@" + d).join(",")}\n`,
+);

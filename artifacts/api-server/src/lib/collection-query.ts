@@ -1,10 +1,10 @@
 import type { Request, Response } from "express";
 import type { AuthenticatedRequest } from "../middleware/adminAuth";
-import { ok, serverError } from "./api-response";
+import { serverError, paginated, badRequest } from "./api-response";
 import { getSupabaseClient } from "./supabase-client";
 import { logger } from "./logger";
 import { parsePagination } from "./pagination";
-import { resolveTargetUserId } from "./user-scope";
+import { InvalidTargetUserIdError, resolveTargetUserId } from "./user-scope";
 
 export interface LogContext {
   route: string;
@@ -108,16 +108,24 @@ export async function runCollectionQuery(
   const supabase = getSupabaseClient();
   const { limit, offset } = parsePagination(req);
   const userColumn = options.userColumn ?? "user_id";
-  const targetUserId = options.targetUserId ?? resolveTargetUserId(req, req.query.userId as string | undefined);
+
+  // Fail closed: a non-UUID ?userId from a superadmin must never reach the
+  // PostgREST .or() filter — map it to a 400 before building the query.
+  let targetUserId: string | null;
+  try {
+    targetUserId = options.targetUserId ?? resolveTargetUserId(req, req.query.userId as string | undefined);
+  } catch (error) {
+    if (error instanceof InvalidTargetUserIdError) {
+      return badRequest(res, { userId: [error.message] });
+    }
+    throw error;
+  }
 
   // Non-superadmin with no userId — return an empty paginated result so the
   // response shape matches the normal success path (consumers unwrap `data`
   // and would otherwise receive a bare array).
   if (!targetUserId && req.user?.role !== "superadmin") {
-    return ok(res, {
-      data: [],
-      pagination: { total: 0, limit, offset, hasMore: false },
-    }) as Response;
+    return paginated(res, [], 0, limit, offset);
   }
 
   let query = supabase
@@ -180,13 +188,5 @@ export async function runCollectionQuery(
     return serverError(res, error.message);
   }
 
-  return ok(res, {
-    data: data ?? [],
-    pagination: {
-      total: count ?? 0,
-      limit,
-      offset,
-      hasMore: (count ?? 0) > offset + limit,
-    },
-  }) as Response;
+  return paginated(res, data ?? [], count ?? 0, limit, offset);
 }

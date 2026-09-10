@@ -25,7 +25,9 @@ describe("listSkills", () => {
     const result = await listSkills(supabase as any);
 
     expect(supabase.from).toHaveBeenCalledWith("skills");
-    expect(supabase.select).toHaveBeenCalledWith("*");
+    expect(supabase.select).toHaveBeenCalledWith(
+      "id,name,category,proficiency,icon,sort_order,is_visible",
+    );
     expect(supabase.is).toHaveBeenCalledWith("deleted_at", null);
     expect(supabase.order).toHaveBeenCalledWith("sort_order", { ascending: true });
     expect(result).toEqual(rows);

@@ -715,7 +715,6 @@ Admin clicks "Import Static Data"
 | -------------------------------- | ---------- | ---------------- | ------------------------------------- |
 | `VITE_SUPABASE_URL`              | Yes        | portfolio, admin | Supabase project URL                  |
 | `VITE_SUPABASE_ANON_KEY`         | Yes        | portfolio, admin | Anon key for client-side queries      |
-| `VITE_SUPABASE_SERVICE_ROLE_KEY` | Admin      | admin            | Service role key (bypasses RLS)       |
 | `SUPABASE_URL`                   | API server | api-server       | Supabase project URL                  |
 | `SUPABASE_SERVICE_ROLE_KEY`      | API server | api-server       | Service role key for server ops       |
 | `VITE_CLERK_PUBLISHABLE_KEY`     | Admin      | admin            | Clerk auth publishable key            |
