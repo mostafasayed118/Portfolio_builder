@@ -3,6 +3,7 @@
 // ============================================================================
 
 import { rules } from "./rules";
+import { CV_EXT, CV_MAX_MB } from "./constants";
 
 export const contactFormSchema = {
   name:    [rules.required("Name"),    rules.minLength(1, "Name"),    rules.maxLength(100, "Name")],
@@ -28,11 +29,14 @@ export const experienceSchema = {
   title:   [rules.required("Title"),   rules.maxLength(150, "Title")],
   company: [rules.required("Company"), rules.maxLength(150, "Company")],
   period:  [rules.required("Period")],
+  location: [rules.required("Location")],
+  type:    [rules.required("Type")],
 };
 
 export const certificationSchema = {
   title:          [rules.required("Title"), rules.maxLength(200, "Title")],
   issuer:         [rules.required("Issuer")],
+  date:           [rules.required("Date")],
   credential_url: [rules.url("Credential URL", true)],
 };
 
@@ -44,8 +48,8 @@ export const heroSchema = {
 export const cvUploadSchema = {
   file: [
     rules.required("CV file"),
-    rules.fileType(["pdf"], "CV"),
-    rules.fileSize(5, "CV"),
+    rules.fileType([CV_EXT.slice(1)], "CV"),
+    rules.fileSize(CV_MAX_MB, "CV"),
   ],
 };
 
