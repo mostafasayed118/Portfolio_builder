@@ -49,15 +49,30 @@ export function parsePagination(req: Request): PaginationParams {
  *  - Non-superadmins always see their own rows.
  *  - Returns `null` when a non-superadmin has no `req.user.id` — callers
  *    should short-circuit to an empty result.
+ *  - Fail-closed: a superadmin-supplied `userId` that is not a UUID throws
+ *    `InvalidTargetUserIdError` instead of flowing into a PostgREST filter,
+ *    where a crafted value could escape the intended `eq` predicate.
  */
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export class InvalidTargetUserIdError extends Error {
+  constructor() {
+    super("Invalid userId format — must be a valid UUID");
+    this.name = "InvalidTargetUserIdError";
+  }
+}
+
 export function resolveTargetUserId(
-  req: AuthenticatedRequest,
+  req: Pick<AuthenticatedRequest, "user">,
   queryUserId?: string,
 ): string | null {
   const isSuperadmin = req.user?.role === "superadmin";
   const requesterId = req.user?.id ?? null;
 
-  if (isSuperadmin && queryUserId) return queryUserId;
+  if (isSuperadmin && queryUserId) {
+    if (!UUID_PATTERN.test(queryUserId)) throw new InvalidTargetUserIdError();
+    return queryUserId;
+  }
   return requesterId;
 }
 
@@ -151,7 +166,17 @@ export async function runCollectionQuery<T = unknown>(
   const supabase = getSupabaseClient();
   const { limit, offset } = parsePagination(req);
   const userColumn = options.userColumn ?? "user_id";
-  const targetUserId = options.targetUserId ?? resolveTargetUserId(req, req.query.userId as string | undefined);
+  // Fail-closed: an injected/non-UUID userId answers 400 here instead of
+  // reaching PostgREST. The envelope shape is unchanged (canonical 400).
+  let targetUserId: string | null;
+  try {
+    targetUserId = options.targetUserId ?? resolveTargetUserId(req, req.query.userId as string | undefined);
+  } catch (err) {
+    if (err instanceof InvalidTargetUserIdError) {
+      return badRequest(res, { userId: [err.message] });
+    }
+    throw err;
+  }
 
   // Non-superadmin with no userId — return empty result immediately
   if (!targetUserId && req.user?.role !== "superadmin") {
