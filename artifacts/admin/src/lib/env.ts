@@ -20,15 +20,14 @@ let _env: AdminEnv | null = null;
 export function getAdminEnv(): AdminEnv {
   if (_env) return _env;
   const result = adminEnvSchema.safeParse(import.meta.env);
-  if (!result.success) {
-    if (import.meta.env.DEV) {
-      logWarn("[admin] Env validation warnings:", JSON.stringify(result.error.flatten().fieldErrors));
-    }
-    _env = {} as AdminEnv;
-  } else {
-    _env = result.data;
+  const parsed: AdminEnv = result.success ? result.data : {};
+  if (import.meta.env.PROD && (!parsed.VITE_SUPABASE_URL || !parsed.VITE_SUPABASE_ANON_KEY))
+    throw new Error("Missing VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY");
+  if (!result.success && import.meta.env.DEV) {
+    logWarn("[admin] Env validation warnings:", JSON.stringify(result.error.flatten().fieldErrors));
   }
-  return _env!;
+  _env = parsed;
+  return parsed;
 }
 
 export const adminEnv = getAdminEnv();

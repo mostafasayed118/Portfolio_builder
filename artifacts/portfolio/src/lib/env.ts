@@ -18,15 +18,17 @@ let _env: PortfolioEnv | null = null;
 export function getPortfolioEnv(): PortfolioEnv {
   if (_env) return _env;
   const result = portfolioEnvSchema.safeParse(import.meta.env);
-  if (!result.success) {
-    if (import.meta.env.DEV) {
-      logWarn("[portfolio] Env validation warnings:", JSON.stringify(result.error.flatten().fieldErrors));
-    }
-    _env = {} as PortfolioEnv;
-  } else {
-    _env = result.data;
+  const parsed: PortfolioEnv = result.success ? result.data : {};
+  if (import.meta.env.PROD && (!parsed.VITE_SUPABASE_URL || !parsed.VITE_SUPABASE_ANON_KEY))
+    throw new Error("Missing VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY");
+  if (!result.success && import.meta.env.DEV) {
+    logWarn(
+      "[portfolio] Env validation warnings:",
+      JSON.stringify(result.error.flatten().fieldErrors),
+    );
   }
-  return _env!;
+  _env = parsed;
+  return parsed;
 }
 
 export const portfolioEnv = getPortfolioEnv();
@@ -49,7 +51,9 @@ export function getApiUrl(): string {
   if (import.meta.env.DEV) {
     if (!_apiUrlWarned.has("dev-fallback")) {
       _apiUrlWarned.add("dev-fallback");
-      logWarn("[portfolio] VITE_API_URL not set — falling back to http://localhost:3001 (dev only)");
+      logWarn(
+        "[portfolio] VITE_API_URL not set — falling back to http://localhost:3001 (dev only)",
+      );
     }
     return "http://localhost:3001";
   }
