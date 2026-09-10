@@ -31,30 +31,27 @@ cp artifacts/api-server/.env.example artifacts/api-server/.env
 
 ### Complete Environment Variable Reference
 
-| Variable                         | App(s)                | Required | Description                                    | Example                                     |
-| -------------------------------- | --------------------- | -------- | ---------------------------------------------- | ------------------------------------------- |
-| `VITE_SUPABASE_URL`              | portfolio, admin      | Yes      | Supabase project URL                           | `https://xxx.supabase.co`                   |
-| `VITE_SUPABASE_ANON_KEY`         | portfolio, admin      | Yes      | Supabase anon/public key                       | `eyJ...`                                    |
-| `VITE_SUPABASE_SERVICE_ROLE_KEY` | admin                 | Yes      | Supabase service role key (bypasses RLS)       | `eyJ...`                                    |
-| `VITE_API_URL`                   | portfolio, admin      | Yes      | API server base URL                            | `http://localhost:3001`                     |
-| `VITE_SITE_URL`                  | portfolio, api-server | Yes      | Portfolio site URL (for CORS)                  | `http://localhost:5173`                     |
-| `VITE_ADMIN_URL`                 | admin, api-server     | Yes      | Admin site URL (for CORS)                      | `http://localhost:5174`                     |
-| `VITE_CLERK_PUBLISHABLE_KEY`     | admin, api-server     | Yes      | Clerk publishable key                          | `pk_test_...`                               |
-| `VITE_CLERK_JWT_TEMPLATE`        | admin                 | No       | Clerk JWT template name (default: `admin`)     | `admin`                                     |
-| `ADMIN_EMAILS`              | admin, api-server     | Yes      | Comma-separated admin emails                   | `admin@example.com`                         |
-| `SUPABASE_URL`                   | api-server            | Yes      | Supabase project URL (server-side)             | `https://xxx.supabase.co`                   |
-| `SUPABASE_SERVICE_ROLE_KEY`      | api-server            | Yes      | Supabase service role key                      | `eyJ...`                                    |
-| `CSRF_SECRET`                    | api-server            | Yes      | Random hex string for CSRF tokens              | `openssl rand -hex 32`                      |
-| `CLERK_SECRET_KEY`               | api-server            | Yes\*    | Clerk secret key for JWT verification          | `sk_test_...`                               |
-| `CLERK_ISSUER`                   | api-server            | No       | Clerk JWT issuer URL                           | `https://xxx.clerk.accounts.dev`            |
-| `ADMIN_API_KEY`                  | api-server            | No       | Admin API key (alternative to Clerk JWT)       | `dev-admin-key-12345`                       |
-| `PORT`                           | api-server            | No       | Server port (default: 3001)                    | `3001`                                      |
-| `NODE_ENV`                       | api-server            | No       | Environment mode                               | `development`                               |
-| `LOG_LEVEL`                      | api-server            | No       | Pino log level (default: `info`)               | `debug`                                     |
-| `DISABLE_RATE_LIMIT`             | api-server            | No       | Disable rate limiting (dev only)               | `true`                                      |
-| `GEMINI_API_KEY`                 | api-server            | No       | Google Gemini API key for AI assistant feature | `AIzaSy...`                                 |
-| `GEMINI_BASE_URL`                | api-server            | No       | Gemini API base URL (override)                 | `https://generativelanguage.googleapis.com` |
-| `VITE_TWITTER_HANDLE`            | portfolio             | No       | Twitter/X handle for SEO meta tags             | `@username`                                 |
+| Variable                         | App(s)                | Required | Description                                | Example                          |
+| -------------------------------- | --------------------- | -------- | ------------------------------------------ | -------------------------------- |
+| `VITE_SUPABASE_URL`              | portfolio, admin      | Yes      | Supabase project URL                       | `https://xxx.supabase.co`        |
+| `VITE_SUPABASE_ANON_KEY`         | portfolio, admin      | Yes      | Supabase anon/public key                       | `eyJ...`                         |
+| `VITE_API_URL`                   | portfolio, admin      | Yes      | API server base URL                        | `http://localhost:3001`          |
+| `VITE_SITE_URL`                  | portfolio, api-server | Yes      | Portfolio site URL (for CORS)              | `http://localhost:5173`          |
+| `VITE_ADMIN_URL`                 | admin, api-server     | Yes      | Admin site URL (for CORS)                  | `http://localhost:5174`          |
+| `VITE_CLERK_PUBLISHABLE_KEY`     | admin, api-server     | Yes      | Clerk publishable key                      | `pk_test_...`                    |
+| `VITE_CLERK_JWT_TEMPLATE`        | admin                 | No       | Clerk JWT template name (default: `admin`) | `admin`                          |
+| `ADMIN_EMAILS`                   | api-server            | Yes      | Comma-separated admin emails               | `admin@example.com`              |
+| `SUPABASE_URL`                   | api-server            | Yes      | Supabase project URL (server-side)         | `https://xxx.supabase.co`        |
+| `SUPABASE_SERVICE_ROLE_KEY`      | api-server            | Yes      | Supabase service role key                  | `eyJ...`                         |
+| `CSRF_SECRET`                    | api-server            | Yes      | Random hex string for CSRF tokens          | `openssl rand -hex 32`           |
+| `CLERK_SECRET_KEY`               | api-server            | Yes\*    | Clerk secret key for JWT verification      | `sk_test_...`                    |
+| `CLERK_ISSUER`                   | api-server            | No       | Clerk JWT issuer URL                       | `https://xxx.clerk.accounts.dev` |
+| `ADMIN_API_KEY`                  | api-server            | No       | Admin API key (alternative to Clerk JWT)   | `dev-admin-key-12345`            |
+| `PORT`                           | api-server            | No       | Server port (default: 3001)                | `3001`                           |
+| `NODE_ENV`                       | api-server            | No       | Environment mode                           | `development`                    |
+| `LOG_LEVEL`                      | api-server            | No       | Pino log level (default: `info`)           | `debug`                          |
+| `DISABLE_RATE_LIMIT`             | api-server            | No       | Disable rate limiting (dev only)           | `true`                           |
+| `VITE_TWITTER_HANDLE`            | portfolio             | No       | Twitter/X handle for SEO meta tags         | `@username`                      |
 
 > `CLERK_SECRET_KEY` is required in production. The server throws on startup if `NODE_ENV=production` and this key is missing.
 
@@ -122,10 +119,13 @@ The server extracts user email from the JWT payload. Clerk's default session JWT
 4. In the **Claims** section, add:
    - **Key:** `email`
    - **Value:** `{{user.primary_email_address}}`
-5. **Save**
-6. Set `VITE_CLERK_JWT_TEMPLATE=admin` in the admin app's `.env.local`
+5. Set **lifetime to 3600 seconds (1 hour)** and **allowed clock skew to 60 seconds**
+6. **Save**
+7. Set `VITE_CLERK_JWT_TEMPLATE=admin` in the admin app's `.env.local`
 
 Without this template, ALL admin API requests return 401 because the server cannot match the JWT's email against the admin allowlist.
+
+> A short lifetime (the 60s default) plus tight clock skew makes otherwise-valid admin JWTs get rejected as expired whenever the client/server/Clerk clocks drift slightly — surfacing as "Access Denied". The 3600s lifetime + 60s skew matches the session token and gives a healthy tolerance.
 
 ## 5. Run the Apps
 

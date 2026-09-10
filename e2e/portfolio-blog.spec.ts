@@ -37,12 +37,22 @@ test.describe("Portfolio blog", () => {
     await expect(page.getByRole("heading", { name: /^Blog$/ })).toBeVisible();
   });
 
-  test("blog listing shows the empty state when no posts exist", async ({ page }) => {
+  test("blog listing shows posts or the empty state", async ({ page }) => {
     await page.goto("/blog");
-    // Database currently has no published posts — assert the empty-state UI.
+    // Live-data aware: dev/prod databases have published posts, a fresh one
+    // has none. Wait for the loading skeleton to resolve, then assert the
+    // state the real data is in — never hardcode which.
     const emptyState = page.getByText("No posts yet");
-    await expect(emptyState).toBeVisible();
-    await expect(page.getByText(/Check back soon for new articles/i)).toBeVisible();
+    const firstCard = page.locator('a[href^="/blog/"]').first();
+    await Promise.race([
+      expect(emptyState).toBeVisible({ timeout: 15_000 }),
+      expect(firstCard).toBeVisible({ timeout: 15_000 }),
+    ]);
+    if (await emptyState.isVisible()) {
+      await expect(page.getByText(/Check back soon for new articles/i)).toBeVisible();
+    } else {
+      await expect(firstCard).toBeVisible();
+    }
   });
 
   test("home button on the blog page navigates back to the home page", async ({ page }) => {

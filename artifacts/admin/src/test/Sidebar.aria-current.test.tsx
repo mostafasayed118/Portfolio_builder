@@ -35,9 +35,11 @@ vi.mock("@workspace/auth", () => ({
   useAuthUser: () => ({ signOut: vi.fn() }),
 }));
 
-function renderSidebar(currentPath: string) {
+function renderSidebar(currentPath: string, collapsed = false) {
   mockLocation = currentPath;
-  return renderAdmin(<Sidebar open={true} onClose={() => {}} />);
+  return renderAdmin(
+    <Sidebar open={true} collapsed={collapsed} onClose={() => {}} />,
+  );
 }
 
 describe("Sidebar — UX-029 regression: active link uses aria-current='page'", () => {
@@ -59,5 +61,15 @@ describe("Sidebar — UX-029 regression: active link uses aria-current='page'", 
     const overviewLink = screen.getByText("Overview").closest("a");
     expect(projectsLink).toHaveAttribute("aria-current", "page");
     expect(overviewLink).not.toHaveAttribute("aria-current");
+  });
+
+  it("keeps navigation labels accessible in the collapsed icon rail", () => {
+    renderSidebar("/overview", true);
+    const sidebar = screen.getByRole("complementary");
+    const overviewLink = screen.getByText("Overview").closest("a");
+
+    expect(sidebar).toHaveClass("lg:w-16");
+    expect(overviewLink).toHaveAttribute("title", "Overview");
+    expect(screen.getByText("Overview")).toHaveClass("lg:sr-only");
   });
 });

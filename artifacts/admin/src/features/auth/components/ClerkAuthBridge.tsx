@@ -5,7 +5,7 @@ import { useLocation } from "wouter";
 import { setAuthTokenGetter, setAuthMissingHandler, setAuthReady } from "@/lib/auth-token";
 import { api, type User } from "@/lib/api-client";
 import { diag } from "./diag";
-import { ADMIN_EMAILS, SIGN_IN_URL } from "./constants";
+import { SIGN_IN_URL } from "./constants";
 
 /**
  * Root auth bridge that sits between ClerkProvider and the rest of the
@@ -26,6 +26,12 @@ export default function ClerkAuthBridge({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const [, navigate] = useLocation();
   const [dbUser, setDbUser] = useState<Pick<User, "id" | "email" | "role"> | null>(null);
+  // Server-authoritative admin check. Replaces the previous client-side
+  // VITE_ADMIN_EMAILS allowlist lookup, which Vite inlined into the public
+  // bundle and leaked the admin email list. "/users/me" is gated by the
+  // admin allowlist server-side, so its success is the definitive signal.
+  type AdminStatus = "checking" | "admin" | "denied";
+  const [adminStatus, setAdminStatus] = useState<AdminStatus>("checking");
 
   // Refs so the auth-missing handler always sees the latest values
   // without needing to re-register (which previously caused the
@@ -34,6 +40,11 @@ export default function ClerkAuthBridge({ children }: { children: ReactNode }) {
   // where a pre-loaded API call could falsely fire the handler).
   const clerkSignOutRef = useRef(clerkSignOut);
   const navigateRef = useRef(navigate);
+  // Do not sign out during the first /users/me bootstrap request. A missing
+  // API URL, CORS rejection, or briefly unavailable API must not turn a
+  // successful Clerk login into a sign-in loop. Once the backend has verified
+  // this session, later auth failures can safely trigger a fresh login.
+  const verifiedAdminRef = useRef(false);
   useEffect(() => {
     clerkSignOutRef.current = clerkSignOut;
     navigateRef.current = navigate;
@@ -55,16 +66,30 @@ export default function ClerkAuthBridge({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (isLoaded && getToken) {
       diag(`setAuthTokenGetter called — using JWT template "${jwtTemplate}"`);
-      // Wrap so the template arg is applied on every call. The
-      // `forceRefresh` parameter is passed through from the caller
-      // (e.g. api-client's 401 retry). Clerk's `getToken()` always
-      // makes a network call to fetch the JWT, but on session expiry
-      // it returns null — the 401 retry in api-client.ts calls
-      // `getClerkToken(true)` which calls this getter again, giving
-      // Clerk a second chance to refresh its internal session.
-      setAuthTokenGetter((forceRefresh?: boolean) =>
-        getToken({ template: jwtTemplate }),
-      );
+      // Prefer the configured template because it includes the email claim
+      // used by the API allowlist. If the template is missing or rejected,
+      // fall back to Clerk's normal session token so a valid Clerk session
+      // is not trapped on the sign-in screen. `skipCache` is important for
+      // the api-client's one-time 401 refresh retry.
+      setAuthTokenGetter(async (forceRefresh = false) => {
+        const options = {
+          template: jwtTemplate,
+          ...(forceRefresh ? { skipCache: true } : {}),
+        };
+        try {
+          const templatedToken = await getToken(options);
+          if (templatedToken) return templatedToken;
+        } catch (error) {
+          diag("JWT template token request failed; trying the default Clerk token", String(error));
+        }
+
+        try {
+          return await getToken(forceRefresh ? { skipCache: true } : undefined);
+        } catch (error) {
+          diag("Default Clerk token request failed", String(error));
+          return null;
+        }
+      });
     }
   }, [isLoaded, getToken, jwtTemplate]);
 
@@ -89,6 +114,10 @@ export default function ClerkAuthBridge({ children }: { children: ReactNode }) {
   useEffect(() => {
     diag("registering auth-missing handler (once, app-lifetime)");
     setAuthMissingHandler(() => {
+      if (!verifiedAdminRef.current) {
+        diag("auth-missing handler: ignoring failure during initial admin verification");
+        return;
+      }
       diag("auth-missing handler FIRED — signing out + navigating to /sign-in");
       if (typeof window === "undefined") return;
       const path = window.location.pathname;
@@ -107,7 +136,9 @@ export default function ClerkAuthBridge({ children }: { children: ReactNode }) {
   // "admin" (missing superadmin) silently on a single failed request.
   useEffect(() => {
     if (!isSignedIn || !clerkUser) {
+      verifiedAdminRef.current = false;
       setDbUser(null);
+      setAdminStatus("checking");
       return;
     }
     let cancelled = false;
@@ -117,14 +148,18 @@ export default function ClerkAuthBridge({ children }: { children: ReactNode }) {
         if (cancelled) return;
         if (res.success && res.data) {
           diag("/users/me returned", { email: res.data.email, role: res.data.role });
+          verifiedAdminRef.current = true;
           setDbUser(res.data);
+          setAdminStatus("admin");
         } else {
           diag("/users/me returned no data", res);
           if (retries > 0) setTimeout(() => attempt(retries - 1), 2000);
+          else setAdminStatus("denied");
         }
       }).catch((err) => {
         diag("/users/me threw", String(err));
         if (retries > 0 && !cancelled) setTimeout(() => attempt(retries - 1), 2000);
+        else if (!cancelled) setAdminStatus("denied");
       });
     };
     attempt(2);
@@ -136,25 +171,37 @@ export default function ClerkAuthBridge({ children }: { children: ReactNode }) {
       return { user: null, loading: true, signOut: async () => {}, isAdmin: false, isSuperadmin: false };
     }
 
-    if (!isSignedIn || !clerkUser) {
+    if (!isSignedIn) {
       return { user: null, loading: false, signOut: async () => {}, isAdmin: false, isSuperadmin: false };
     }
 
+    // Clerk can report `isSignedIn=true` for a short interval before
+    // `useUser()` exposes the hydrated user object after the sign-in
+    // redirect. Keep the auth context loading during that interval so
+    // SignInPage does not render a fresh sign-in form and ProtectedRoute
+    // does not treat the session as expired.
+    if (!clerkUser) {
+      return { user: null, loading: true, signOut: async () => {}, isAdmin: false, isSuperadmin: false };
+    }
+
     const email = clerkUser.primaryEmailAddress?.emailAddress ?? "";
-    const isAdmin = ADMIN_EMAILS.length === 0 || ADMIN_EMAILS.includes(email.toLowerCase());
+    const isAdmin = adminStatus === "admin";
     const isSuperadmin = dbUser?.role === "superadmin";
+    // Keep `loading` true until the /users/me check resolves so a valid
+    // admin never flashes the "Access Denied" screen during the round-trip.
+    const loading = adminStatus === "checking";
 
     const built: AuthContextValue = {
       user: { id: clerkUser.id, email, role: isSuperadmin ? "superadmin" as const : isAdmin ? "admin" as const : "visitor" as const },
-      loading: false,
+      loading,
       signOut: async () => { await clerkSignOut(); },
       isAdmin,
       isSuperadmin,
     };
 
-    diag("AuthContext value recomputed", { email, isAdmin, isSuperadmin, role: built.user?.role });
+    diag("AuthContext value recomputed", { email, isAdmin, isSuperadmin, loading, role: built.user?.role });
     return built;
-  }, [isLoaded, isSignedIn, clerkUser, clerkSignOut, dbUser]);
+  }, [isLoaded, isSignedIn, clerkUser, clerkSignOut, dbUser, adminStatus]);
 
   return <AuthContextProvider value={value}>{children}</AuthContextProvider>;
 }

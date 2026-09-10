@@ -8,6 +8,8 @@ import { logger } from "../../lib/logger";
 import { env } from "../../lib/env";
 import { verifyTurnstileToken } from "../../lib/turnstile";
 import { notifyNewContact } from "../../lib/mailer";
+import { isAiConfigured } from "../../lib/ai/client";
+import { flagSpamIfNeeded } from "../../lib/ai/spam";
 
 /**
  * @public contact routes
@@ -78,8 +80,15 @@ router.post("/", contactLimiter, async (req: Request, res: Response) => {
   // 3. Honeypot: silently reject if the hidden "website" field has any value.
   // Return success to avoid tipping off the bot, but do not insert.
   const body = req.body as Record<string, unknown>;
-  if (typeof body.website === "string" && body.website.trim() !== "") {
-    logAbuse(req, "honeypot_triggered", { website_length: body.website.length });
+  // Honeypot: any non-empty value (string, array, object, number, boolean)
+  // signals a bot. A missing field or empty string is a real user.
+  const website = body.website;
+  const honeypotFilled =
+    typeof website === "string"
+      ? website.trim() !== ""
+      : website !== undefined && website !== null;
+  if (honeypotFilled) {
+    logAbuse(req, "honeypot_triggered", { website_type: typeof website });
     return ok(res, undefined); // silently drop
   }
 
@@ -116,12 +125,16 @@ router.post("/", contactLimiter, async (req: Request, res: Response) => {
   // Strip honeypot + time-trap fields before insert
   const { name, email, message } = result.data;
   const supabase = getSupabaseClient();
-  const { error } = await supabase.from("messages").insert({
-    name,
-    email,
-    message,
-    status: "unread",
-  });
+  const { data: inserted, error } = await supabase
+    .from("messages")
+    .insert({
+      name,
+      email,
+      message,
+      status: "unread",
+    })
+    .select("id")
+    .single();
 
   if (error) {
     // Distinguish the DB-level per-email spam guard (migration
@@ -169,6 +182,12 @@ router.post("/", contactLimiter, async (req: Request, res: Response) => {
   // Fire-and-forget email notification to the site owner (opt-in).
   // Never awaited/blocked-on; failures are logged by the mailer.
   notifyNewContact({ name, email, message }).catch(() => {});
+
+  // Fire-and-forget AI spam scoring (opt-in via AI_SPAM_ENABLED). Never
+  // awaited on the request path; on any error the message stays unread.
+  if (isAiConfigured() && env.AI_SPAM_ENABLED && inserted?.id) {
+    flagSpamIfNeeded({ id: inserted.id, name, email, message }).catch(() => {});
+  }
 
   return ok(res, undefined);
 });

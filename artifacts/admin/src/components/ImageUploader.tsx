@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Upload, X, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { Upload, X, CheckCircle, AlertCircle, Loader2, ArrowUp, ArrowDown } from "lucide-react";
 import { useToast } from "@workspace/ui";
 
 
@@ -7,20 +7,31 @@ import { getCsrfToken } from "@/lib/api-client";
 import { getClerkToken } from "@/lib/auth-token";
 import { getApiUrl } from "@/lib/env";
 
-interface UploadedImage {
+export interface UploadedImage {
   id: string;
   url: string;
   variants: { type: string; url: string }[];
 }
 
+interface UploadResponse {
+  success?: boolean;
+  data?: UploadedImage;
+  message?: string;
+  error?: string;
+}
+
 interface ImageUploaderProps {
-  entityType: "project" | "hero" | "about" | "certification" | "avatar";
+  entityType: "project" | "projects" | "hero" | "about" | "certification" | "certifications" | "avatar" | "content";
   entityId?: string;
   maxFiles?: number;
   maxFileSizeMB?: number;
   acceptedTypes?: string[];
   onUploadComplete?: (images: UploadedImage[]) => void;
   existingImages?: { id: string; url: string }[];
+  /** Called with the image id when an existing image's delete button is used. */
+  onDeleteExisting?: (id: string) => void;
+  /** Called with the full new order (ids) when an existing image is moved. */
+  onReorderExisting?: (orderedIds: string[]) => void;
 }
 
 const API_BASE = getApiUrl();
@@ -33,6 +44,8 @@ export default function ImageUploader({
   acceptedTypes = ["image/jpeg", "image/png", "image/webp"],
   onUploadComplete,
   existingImages,
+  onDeleteExisting,
+  onReorderExisting,
 }: ImageUploaderProps) {
   const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -48,6 +61,9 @@ export default function ImageUploader({
 
   useEffect(() => {
     return () => {
+      // Refs are reassigned per upload, so cleanup must abort the *latest*
+      // requests rather than a snapshot captured at effect setup.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       xhrsRef.current.forEach(xhr => xhr.abort());
       xhrRef.current?.abort();
     };
@@ -94,15 +110,19 @@ export default function ImageUploader({
 
       const result = await new Promise<UploadedImage>((resolve, reject) => {
         request.onload = () => {
-          if (request.status >= 200 && request.status < 300) {
-            resolve(JSON.parse(request.responseText));
-          } else {
-            try {
-              const err = JSON.parse(request.responseText);
-              reject(new Error(err.error || "Upload failed"));
-            } catch {
-              reject(new Error(`Upload failed (${request.status})`));
+          try {
+            const response = JSON.parse(request.responseText) as UploadResponse | UploadedImage;
+            if (request.status >= 200 && request.status < 300) {
+              const image: UploadedImage | undefined =
+                "data" in response ? response.data : "url" in response ? response : undefined;
+              if (!image?.url) throw new Error("Upload response did not include an image URL");
+              resolve(image);
+            } else {
+              const message = "message" in response ? response.message : "error" in response ? response.error : undefined;
+              reject(new Error(message || `Upload failed (${request.status})`));
             }
+          } catch (err) {
+            reject(err instanceof Error ? err : new Error(`Upload failed (${request.status})`));
           }
         };
         request.onerror = () => reject(new Error("Network error"));
@@ -176,6 +196,16 @@ export default function ImageUploader({
     onUploadComplete?.(newUploaded);
   };
 
+  /** Move an existing image one step up/down and report the new order. */
+  const moveExisting = (index: number, dir: -1 | 1) => {
+    if (!existingImages || !onReorderExisting) return;
+    const next = [...existingImages];
+    const j = index + dir;
+    if (j < 0 || j >= next.length) return;
+    [next[index], next[j]] = [next[j], next[index]];
+    onReorderExisting(next.map((img) => img.id));
+  };
+
   const atLimit = currentCount >= maxFiles;
 
   return (
@@ -237,19 +267,51 @@ export default function ImageUploader({
                 <X size={14} />
               </button>
               <div className="absolute bottom-1 left-1">
-                <CheckCircle size={14} className="text-emerald-500" />
+                <CheckCircle size={14} className="text-success" />
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Existing images */}
+      {/* Existing images — deletable and reorderable (up/down) */}
       {existingImages && existingImages.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-          {existingImages.map((img) => (
-            <div key={img.id} className="aspect-square rounded-lg overflow-hidden border bg-muted">
+          {existingImages.map((img, idx) => (
+            <div key={img.id} className="relative group aspect-square rounded-lg overflow-hidden border bg-muted">
               <img src={img.url} alt="" className="w-full h-full object-cover" />
+              <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                {onReorderExisting && idx > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => moveExisting(idx, -1)}
+                    aria-label="Move image up"
+                    className="h-7 w-7 rounded-md bg-background/90 border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <ArrowUp size={13} />
+                  </button>
+                )}
+                {onReorderExisting && idx < existingImages.length - 1 && (
+                  <button
+                    type="button"
+                    onClick={() => moveExisting(idx, 1)}
+                    aria-label="Move image down"
+                    className="h-7 w-7 rounded-md bg-background/90 border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <ArrowDown size={13} />
+                  </button>
+                )}
+                {onDeleteExisting && (
+                  <button
+                    type="button"
+                    onClick={() => onDeleteExisting(img.id)}
+                    aria-label="Delete image"
+                    className="h-7 w-7 rounded-md bg-background/90 border border-border flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                  >
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>

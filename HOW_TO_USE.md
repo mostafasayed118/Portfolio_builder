@@ -55,16 +55,16 @@ artifacts/
 
 Copy `.env.example` to `.env` and fill in your Supabase credentials:
 
-| Variable | Required For | Description |
-|----------|-------------|-------------|
-| `VITE_SUPABASE_URL` | All apps | Supabase project URL |
-| `VITE_SUPABASE_ANON_KEY` | portfolio, admin | Public anon key |
+| Variable                         | Required For      | Description                       |
+| -------------------------------- | ----------------- | --------------------------------- |
+| `VITE_SUPABASE_URL`              | All apps          | Supabase project URL              |
+| `VITE_SUPABASE_ANON_KEY`         | portfolio, admin  | Public anon key                   |
 | `VITE_SUPABASE_SERVICE_ROLE_KEY` | admin, api-server | Admin key (secret — never commit) |
-| `SUPABASE_URL` | api-server | Same as VITE_SUPABASE_URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | api-server | Server-side service role key |
-| `VITE_CLERK_PUBLISHABLE_KEY` | admin | Clerk key for admin auth |
-| `VITE_ADMIN_EMAILS` | admin | Comma-separated admin emails |
-| `PORT` | dev | Dev server port (default 5173) |
+| `SUPABASE_URL`                   | api-server        | Same as VITE_SUPABASE_URL         |
+| `SUPABASE_SERVICE_ROLE_KEY`      | api-server        | Server-side service role key      |
+| `VITE_CLERK_PUBLISHABLE_KEY`     | admin             | Clerk key for admin auth          |
+| `ADMIN_EMAILS`                   | api-server        | Comma-separated admin emails      |
+| `PORT`                           | dev               | Dev server port (default 5173)    |
 
 ## Database Setup
 

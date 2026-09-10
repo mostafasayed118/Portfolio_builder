@@ -243,6 +243,8 @@ export interface Database {
           github_url: string;
           linkedin_url: string;
           twitter_url: string | null;
+          youtube_url: string | null;
+          facebook_url: string | null;
           email: string;
           avatar_url: string | null;
           cv_url: string | null;
@@ -269,6 +271,8 @@ export interface Database {
           github_url?: string;
           linkedin_url?: string;
           twitter_url?: string | null;
+          youtube_url?: string | null;
+          facebook_url?: string | null;
           email?: string;
           avatar_url?: string | null;
           cv_url?: string | null;
@@ -295,6 +299,8 @@ export interface Database {
           github_url?: string;
           linkedin_url?: string;
           twitter_url?: string | null;
+          youtube_url?: string | null;
+          facebook_url?: string | null;
           email?: string;
           avatar_url?: string | null;
           cv_url?: string | null;
@@ -482,6 +488,42 @@ export interface Database {
         };
         Relationships: [];
       };
+      theme_presets: {
+        Row: {
+          id: string;
+          name: string;
+          description: string;
+          palette: Json;
+          sort_order: number | null;
+          user_id: string | null;
+          deleted_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          description?: string;
+          palette: Json;
+          sort_order?: number | null;
+          user_id?: string | null;
+          deleted_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          description?: string;
+          palette?: Json;
+          sort_order?: number | null;
+          user_id?: string | null;
+          deleted_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       contact_info: {
         Row: {
           id: string;
@@ -491,6 +533,8 @@ export interface Database {
           address: string | null;
           github: string | null;
           linkedin: string | null;
+          youtube: string | null;
+          facebook: string | null;
           whatsapp: string | null;
           map_embed_url: string | null;
           availability_status: string | null;
@@ -507,6 +551,8 @@ export interface Database {
           address?: string | null;
           github?: string | null;
           linkedin?: string | null;
+          youtube?: string | null;
+          facebook?: string | null;
           whatsapp?: string | null;
           map_embed_url?: string | null;
           availability_status?: string | null;
@@ -523,6 +569,8 @@ export interface Database {
           address?: string | null;
           github?: string | null;
           linkedin?: string | null;
+          youtube?: string | null;
+          facebook?: string | null;
           whatsapp?: string | null;
           map_embed_url?: string | null;
           availability_status?: string | null;
@@ -838,6 +886,9 @@ export interface Database {
           deleted_at: string | null;
           created_at: string;
           updated_at: string;
+          spam_score: number | null;
+          spam_reason: string | null;
+          is_spam: boolean;
         };
         Insert: {
           id?: string;
@@ -852,6 +903,9 @@ export interface Database {
           deleted_at?: string | null;
           created_at?: string;
           updated_at?: string;
+          spam_score?: number | null;
+          spam_reason?: string | null;
+          is_spam?: boolean;
         };
         Update: {
           id?: string;
@@ -866,6 +920,9 @@ export interface Database {
           deleted_at?: string | null;
           created_at?: string;
           updated_at?: string;
+          spam_score?: number | null;
+          spam_reason?: string | null;
+          is_spam?: boolean;
         };
         Relationships: [];
       };
@@ -1210,6 +1267,9 @@ export type ImageVariant = TableRow<"image_variants">;
 export type BlogPost = TableRow<"blog_posts">;
 export type InsertBlogPost = TableInsert<"blog_posts">;
 export type UpdateBlogPost = TableUpdate<"blog_posts">;
+export type ThemePresetRow = TableRow<"theme_presets">;
+export type InsertThemePreset = TableInsert<"theme_presets">;
+export type UpdateThemePreset = TableUpdate<"theme_presets">;
 
 export type InsertThemeSettings = TableInsert<"theme_settings">;
 export type InsertTypographySettings = TableInsert<"typography_settings">;

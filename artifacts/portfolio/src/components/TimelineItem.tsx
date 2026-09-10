@@ -1,6 +1,5 @@
 import { memo } from "react";
 import { Briefcase, Award, Heart } from "lucide-react";
-import { useReveal } from "@/hooks/use-reveal";
 import { useLanguage } from "@/lib/language";
 
 interface TimelineItemProps {
@@ -40,7 +39,6 @@ const TYPE_CONFIG = {
 };
 
 const TimelineItem = memo(function TimelineItem({ title, company, location, period, description, technologies, type, index, isLast }: TimelineItemProps) {
-  const { ref, revealed } = useReveal<HTMLDivElement>(0.1);
   const { t } = useLanguage();
   const config = TYPE_CONFIG[type] || TYPE_CONFIG.internship;
   const { Icon } = config;
@@ -48,9 +46,7 @@ const TimelineItem = memo(function TimelineItem({ title, company, location, peri
 
   return (
     <div
-      ref={ref}
-      className={`flex gap-4 section-reveal ${revealed ? "revealed" : ""}`}
-      style={{ transitionDelay: `${index * 100}ms` }}
+      className="flex gap-4"
       data-testid={`timeline-item-${index}`}
     >
       <div className="flex flex-col items-center">

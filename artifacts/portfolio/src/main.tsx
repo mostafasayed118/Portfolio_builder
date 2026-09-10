@@ -18,8 +18,28 @@ if (import.meta.env.VITE_SENTRY_DSN) {
   });
 }
 
-createRoot(document.getElementById("root")!).render(
+// Google Fonts are loaded non-blocking (media="print"); apply them as soon
+// as the bundle runs. An inline `onload` swap would be blocked by the
+// nonce-based CSP enforced in production (middleware.ts).
+const fontsLink = document.getElementById("fonts-stylesheet") as HTMLLinkElement | null;
+if (fontsLink) fontsLink.media = "all";
+
+const rootEl = document.getElementById("root");
+if (!rootEl) throw new Error("Root element #root not found");
+createRoot(rootEl).render(
   <RootErrorBoundary>
     <App />
   </RootErrorBoundary>
 );
+
+// Offline support: register the app-shell service worker in production only.
+// Registration is best-effort — failures (private browsing, unsupported
+// browsers) are ignored. Dev/e2e servers never register it, so they stay
+// uncached and deterministic.
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {
+      // Ignore: SW support is an enhancement, not a requirement.
+    });
+  });
+}

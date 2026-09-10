@@ -2,13 +2,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { useState, useEffect } from "react";
 import { useToast } from "@workspace/ui";
-import { Save, AlertCircle, RefreshCw } from "lucide-react";
+import { Save } from "lucide-react";
 import { logError } from "@/lib/logger";
-import { getErrorMessage } from "@/lib/error-messages";
-import { Button, Card, CardContent, CardHeader, CardTitle, Input, Label, Skeleton, Textarea } from "@workspace/ui";
+import { AdminErrorState } from "@/components/AdminErrorState";
+import { AdminLoadingState } from "@/components/AdminLoadingState";
+import { Button, Card, CardContent, CardHeader, CardTitle, Input, Label, Textarea } from "@workspace/ui";
 
-type ContactData = { email: string; phone: string; location: string; github: string; linkedin: string; whatsapp: string; mapEmbedUrl: string; availabilityStatus: string };
-const DEFAULTS: ContactData = { email: "", phone: "", location: "", github: "", linkedin: "", whatsapp: "", mapEmbedUrl: "", availabilityStatus: "Open to opportunities" };
+type ContactData = { email: string; phone: string; location: string; github: string; linkedin: string; youtube: string; facebook: string; whatsapp: string; mapEmbedUrl: string; availabilityStatus: string };
+const DEFAULTS: ContactData = { email: "", phone: "", location: "", github: "", linkedin: "", youtube: "", facebook: "", whatsapp: "", mapEmbedUrl: "", availabilityStatus: "Open to opportunities" };
 
 export default function ContactManager() {
   const { toast } = useToast();
@@ -31,6 +32,8 @@ export default function ContactManager() {
       location: data.location ?? "",
       github: data.github ?? "",
       linkedin: data.linkedin ?? "",
+      youtube: data.youtube ?? "",
+      facebook: data.facebook ?? "",
       whatsapp: data.whatsapp ?? "",
       mapEmbedUrl: data.map_embed_url ?? "",
       availabilityStatus: data.availability_status ?? "",
@@ -48,6 +51,8 @@ export default function ContactManager() {
         location: form.location || null,
         github: form.github || null,
         linkedin: form.linkedin || null,
+        youtube: form.youtube || null,
+        facebook: form.facebook || null,
         whatsapp: form.whatsapp || null,
         map_embed_url: form.mapEmbedUrl || null,
         availability_status: form.availabilityStatus || null,
@@ -65,35 +70,16 @@ export default function ContactManager() {
     ["location", "Location", "Cairo, Egypt"],
     ["github", "GitHub URL", "https://github.com/…"],
     ["linkedin", "LinkedIn URL", "https://linkedin.com/in/…"],
+    ["youtube", "YouTube URL", "https://youtube.com/@…"],
+    ["facebook", "Facebook URL", "https://facebook.com/…"],
     ["whatsapp", "WhatsApp Number (optional)", "+201000000000"],
     ["availabilityStatus", "Availability Status", "Open to opportunities"],
   ];
 
-  if (isLoading) {
-    return (
-      <div className="p-6 space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-10 w-full" />
-        <div className="space-y-2">
-          {[1,2,3,4,5].map(i => (
-            <Skeleton key={i} className="h-16 w-full rounded-lg" />
-          ))}
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return <AdminLoadingState />;
 
   if (isError) {
-    return (
-      <div className="p-6 flex flex-col items-center justify-center min-h-64 gap-4">
-        <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-destructive font-medium">{getErrorMessage(error)}</p>
-        <Button onClick={() => refetch()} variant="outline">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Try Again
-        </Button>
-      </div>
-    );
+    return <AdminErrorState error={error} onRetry={() => refetch()} />;
   }
 
   return (

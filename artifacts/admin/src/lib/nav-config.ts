@@ -2,7 +2,7 @@ import type { ElementType } from "react";
 import {
   LayoutDashboard, Palette, Type, User, Briefcase, Code2,
   FolderKanban, Award, MessageSquare, Search, Layers,
-  Settings, Zap, FileText, ExternalLink, Plus, Clock, NotebookPen
+  Settings, Zap, FileText, ExternalLink, Plus, Clock, NotebookPen, BarChart3
 } from "lucide-react";
 
 export interface NavItem {
@@ -15,6 +15,7 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   { path: "/overview", label: "Overview", icon: LayoutDashboard, group: "Dashboard", keywords: ["dashboard", "home", "overview", "stats"] },
+  { path: "/analytics", label: "Analytics", icon: BarChart3, group: "Dashboard", keywords: ["analytics", "stats", "views", "traffic", "insights", "charts"] },
   { path: "/hero", label: "Hero", icon: Zap, group: "Content", keywords: ["hero", "banner", "header", "image"] },
   { path: "/about", label: "About", icon: User, group: "Content", keywords: ["about", "bio", "education", "languages"] },
   { path: "/projects", label: "Projects", icon: FolderKanban, group: "Content", keywords: ["projects", "portfolio", "work", "showcase"] },
@@ -38,9 +39,17 @@ export const PATH_LABELS: Record<string, string> = Object.fromEntries(
   NAV_ITEMS.map(item => [item.path, item.label])
 );
 
+// Deep-link quick actions navigate to `<path>#new` (open the create dialog)
+// or `<path>#edit-<id>` (open a specific item's editor). See the convention
+// note at the top of components/CommandPalette.tsx; the target entity pages
+// handle those hashes on arrival.
 export const QUICK_ACTIONS = [
   { label: "View Live Portfolio", icon: ExternalLink, action: "view-portfolio", keywords: ["live", "portfolio", "site", "view"] },
   { label: "Add New Project", icon: Plus, action: "add-project", keywords: ["add", "new", "create", "project"] },
   { label: "Add New Skill", icon: Plus, action: "add-skill", keywords: ["add", "new", "create", "skill"] },
   { label: "Add New Experience", icon: Plus, action: "add-experience", keywords: ["add", "new", "create", "experience"] },
+  { label: "Add New Post", icon: Plus, action: "add-post", keywords: ["add", "new", "create", "post", "blog", "article", "write", "editor"] },
+  { label: "Add New Certification", icon: Plus, action: "add-certification", keywords: ["add", "new", "create", "certification", "cert", "credential", "badge", "editor"] },
+  { label: "Edit Latest Draft", icon: NotebookPen, action: "edit-latest-draft", keywords: ["edit", "draft", "unpublished", "latest", "newest", "post", "blog", "continue", "resume"] },
+
 ];

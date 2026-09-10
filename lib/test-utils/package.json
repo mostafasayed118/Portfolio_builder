@@ -1,0 +1,15 @@
+{
+  "name": "@workspace/test-utils",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "eslint src --max-warnings=0"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./browser-mocks": "./src/browser-mocks.ts",
+    "./supabase-mock": "./src/supabase-mock.ts",
+    "./csp": "./src/csp.ts"
+  }
+}

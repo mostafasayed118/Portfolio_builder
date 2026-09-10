@@ -25,19 +25,18 @@ The public portfolio has no authentication. It uses the Supabase anon key with p
    d. Fetches `/users/me` to determine the user's role
 7. ProtectedRoute component checks:
    a. Is user signed in? (Clerk session active)
-   b. Is user's email in ADMIN_EMAILS allowlist?
-   c. Is isAdmin = true (from auth context)?
+   b. Is isAdmin = true (from auth context, derived from the server's /users/me response)?
 8. If all pass → render admin page
 9. If any fails → "Access Denied" screen or redirect to /sign-in
 ```
 
 ### JWT Expiration Handling
 
-Clerk session tokens expire after ~59 minutes (Clerk's default). The client now detects expiration proactively:
+Clerk session tokens expire after ~59 minutes (Clerk's default). The client refreshes them proactively:
 
-1. **`isTokenLikelyValid()`** calls `isJwtExpired()` which decodes the JWT payload and checks `exp` with a 30-second buffer. If expired, the token is rejected before the request is sent.
-2. **`getClerkToken(forceRefresh)`** supports a `forceRefresh` parameter. When `true`, it re-invokes the Clerk `getToken()` to bypass any stale cache. The api-client uses this for 401 auto-refresh.
-3. **401 auto-refresh in `doFetch()`**: When a server returns 401, the api-client force-refreshes the token and retries once. Only after the second 401 does it fire the auth-missing handler (sign-out + redirect).
+1. **`isTokenLikelyValid()`** calls `isJwtExpired()` which decodes the JWT payload and checks `exp` with a 30-second buffer.
+2. **`getClerkToken(forceRefresh)`** requests a fresh Clerk token when a cached token is expired or near expiry. When `forceRefresh` is `true`, it bypasses Clerk's token cache.
+3. **401 auto-refresh in `doFetch()`**: When a server returns 401, the api-client force-refreshes the token, reuses that exact token for one retry, and only fires the auth-missing handler if refresh and retry both fail.
 4. **`auth-token.ts` file structure**: `ClerkAuthBridge.tsx`, `ProtectedRoute.tsx`, `SignInPage.tsx`, `AdminProviders.tsx` — split from the former 375-line `auth.tsx`.
 
 ### JWT Template Requirement
@@ -47,7 +46,10 @@ Clerk's default session JWT does NOT include the `email` claim. The server's `ad
 1. Open Clerk Dashboard → JWT Templates
 2. Create a new template named `admin` (or match `VITE_CLERK_JWT_TEMPLATE`)
 3. Add claim: `email` = `{{user.primary_email_address}}`
-4. Save
+4. Set **lifetime to 3600 seconds (1 hour)** and **allowed clock skew to 60 seconds**
+5. Save
+
+A short lifetime (the 60s default) combined with tight clock skew causes otherwise-valid admin JWTs to be rejected as expired whenever the client/server/Clerk clocks drift slightly — surfacing as "Access Denied". The 3600s lifetime matches the session token and gives a 60s skew tolerance.
 
 The frontend now uses `getToken({ template: 'admin' })` to request a token with the email claim. If the template is missing, `getToken` returns null and the auth-token layer retries once, then falls back to the default session token (which will still 401 on the server). The template name is configurable via `VITE_CLERK_JWT_TEMPLATE` (default: `admin`).
 
@@ -98,10 +100,10 @@ The `ADMIN_EMAILS` environment variable controls who can access admin features. 
 ADMIN_EMAILS=admin@example.com,other@example.com
 ```
 
-This is checked at two layers:
+This allowlist is server-only (the `VITE_` prefix was removed so it is never inlined into the client bundle). It is enforced at the API server:
 
-- **Frontend** (`admin/src/features/auth/components/auth.tsx`): `ProtectedRoute` reads `ADMIN_EMAILS` and compares against the Clerk user's primary email
-- **Backend** (`api-server/middleware/adminAuth.ts`): The middleware parses `ADMIN_EMAILS` at startup and checks against the verified JWT email
+- **Backend** (`api-server/middleware/adminAuth.ts`): The middleware checks the verified JWT email against the allowlist
+- **Frontend** (`admin/src/features/auth/components/ClerkAuthBridge.tsx`): `isAdmin` is derived from the server (`/users/me`, which is gated by the allowlist) rather than a bundled email list
 
 If `ADMIN_EMAILS` is empty and no `ADMIN_API_KEY` is set, the API server rejects all admin requests with 401.
 
@@ -224,10 +226,9 @@ CSP is applied via three independent layers:
 ## Adding a New Admin
 
 1. Add their email to the `app.admin_emails` database GUC (via Supabase SQL: `ALTER DATABASE postgres SET app.admin_emails = '...,new@email.com'`)
-2. Add their email to `ADMIN_EMAILS` in `artifacts/admin/.env.local`
-3. Add their email to `ADMIN_EMAILS` in `artifacts/api-server/.env`
-4. Invite them to the Clerk application
-5. The admin must create a JWT template named `admin` (or match `VITE_CLERK_JWT_TEMPLATE`) with the `email` claim
-6. They sign in via Clerk
-7. The `adminAuth` middleware syncs them to the `users` table on first authenticated request
-8. They can now access all admin features
+2. Add their email to `ADMIN_EMAILS` in `artifacts/api-server/.env`
+3. Invite them to the Clerk application
+4. The admin must create a JWT template named `admin` (or match `VITE_CLERK_JWT_TEMPLATE`) with the `email` claim
+5. They sign in via Clerk
+6. The `adminAuth` middleware syncs them to the `users` table on first authenticated request
+7. They can now access all admin features

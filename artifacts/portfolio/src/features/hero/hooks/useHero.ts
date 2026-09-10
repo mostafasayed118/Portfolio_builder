@@ -37,6 +37,8 @@ export function useHero() {
         description: supabaseHero.description,
         github: supabaseHero.github_url,
         linkedin: supabaseHero.linkedin_url,
+        youtube: supabaseHero.youtube_url ?? HERO.youtube,
+        facebook: supabaseHero.facebook_url ?? HERO.facebook,
         email: supabaseHero.email,
         available: supabaseHero.available,
         cvFileName: supabaseHero.cv_file_name ?? "Mustafa_Sayed_Resume.pdf",

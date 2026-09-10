@@ -77,7 +77,7 @@ describe("Navbar — mobile menu (UX-013 regression: backdrop overlay closes men
     expect(menu).toHaveClass("max-h-[calc(100dvh-4rem)]");
     expect(menu).toHaveClass("opacity-100");
 
-    const backdrop = document.querySelector(".fixed.inset-0.bg-black\\/40");
+    const backdrop = document.querySelector(".fixed.inset-0.bg-overlay\\/40");
     expect(backdrop).toBeInTheDocument();
   });
 
@@ -88,7 +88,7 @@ describe("Navbar — mobile menu (UX-013 regression: backdrop overlay closes men
       </TestRouter>,
     );
     fireEvent.click(screen.getByTestId("btn-mobile-menu"));
-    const backdrop = document.querySelector(".fixed.inset-0.bg-black\\/40") as HTMLElement;
+    const backdrop = document.querySelector(".fixed.inset-0.bg-overlay\\/40") as HTMLElement;
     expect(backdrop).toBeTruthy();
     fireEvent.click(backdrop);
 

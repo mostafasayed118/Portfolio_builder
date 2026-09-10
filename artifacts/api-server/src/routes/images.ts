@@ -34,45 +34,45 @@ const ALLOWED_ENTITY_TYPES = [
  * `.exe` renamed to `.jpg` and have it served as `image/jpeg` from
  * the public `project_images` bucket (XSS / drive-by download risk).
  */
-const MAGIC_BYTES: { mime: string; signatures: Uint8Array[] }[] = [
+const MAGIC_BYTES: { mime: string; signatures: { bytes: Uint8Array; offset: number }[] }[] = [
   {
     mime: "image/jpeg",
     signatures: [
-      new Uint8Array([0xff, 0xd8, 0xff]), // JPEG (SOI + first APP0 marker byte)
+      { bytes: new Uint8Array([0xff, 0xd8, 0xff]), offset: 0 }, // JPEG (SOI + first APP0 marker byte)
     ],
   },
   {
     mime: "image/png",
     signatures: [
-      new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), // PNG
+      { bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), offset: 0 }, // PNG
     ],
   },
   {
     mime: "image/webp",
     signatures: [
-      // RIFF + WEBP (at offset 0 / 8)
-      new Uint8Array([0x52, 0x49, 0x46, 0x46]), // 'RIFF'
+      { bytes: new Uint8Array([0x52, 0x49, 0x46, 0x46]), offset: 0 }, // 'RIFF' container
+      { bytes: new Uint8Array([0x57, 0x45, 0x42, 0x50]), offset: 8 }, // 'WEBP' chunk at bytes 8-11
     ],
   },
 ];
 
 function verifyMagicBytes(buf: Buffer, declaredMime: string): boolean {
-  const head = new Uint8Array(buf.subarray(0, 12));
   const expected = MAGIC_BYTES.find((m) => m.mime === declaredMime);
   if (!expected) return false;
-  return expected.signatures.every((sig) => {
-    if (head.length < sig.length) return false;
-    for (let i = 0; i < sig.length; i++) {
-      if (head[i] !== sig[i]) return false;
+  return expected.signatures.every(({ bytes, offset }) => {
+    if (buf.length < offset + bytes.length) return false;
+    for (let i = 0; i < bytes.length; i++) {
+      if (buf[offset + i] !== bytes[i]) return false;
     }
     return true;
   });
 }
 const VARIANTS: { suffix: string; width: number; height?: number; fit?: string }[] = [
   { suffix: "thumbnail", width: 150, height: 150, fit: "cover" },
-  { suffix: "small", width: 400, fit: "inside" },
-  { suffix: "medium", width: 800, fit: "inside" },
-  { suffix: "large", width: 1200, fit: "inside" },
+  // Supabase's transform API supports only cover/contain ("inside" returns 400).
+  { suffix: "small", width: 400, fit: "contain" },
+  { suffix: "medium", width: 800, fit: "contain" },
+  { suffix: "large", width: 1200, fit: "contain" },
   { suffix: "social", width: 1200, height: 630, fit: "cover" },
 ];
 
@@ -167,6 +167,33 @@ router.post(
   }
 },
 );
+
+const imageReorderSchema = z.object({
+  ordered_ids: z.array(z.string().uuid()).min(1).max(30),
+});
+
+// POST /api/images/reorder — persist gallery image order (admin only)
+router.post("/images/reorder", adminAuth, doubleCsrfProtection, async (req: Request, res: Response) => {
+  const result = imageReorderSchema.safeParse(req.body);
+  if (!result.success) {
+    return badRequest(res, result.error.flatten().fieldErrors as Record<string, string[]>);
+  }
+  try {
+    const supabase = getSupabaseClient();
+    // sort_order is 0-based and matches the array position of each id.
+    const updates = await Promise.all(
+      result.data.ordered_ids.map((id, index) =>
+        supabase.from("image_metadata").update({ sort_order: index }).eq("id", id),
+      ),
+    );
+    const failed = updates.find((u) => u.error);
+    if (failed?.error) throw new Error(failed.error.message);
+    return ok(res, undefined);
+  } catch (err) {
+    req.log.error({ err }, "Image reorder failed");
+    return serverError(res, "Failed to reorder images");
+  }
+});
 
 // GET /api/images/:id/metadata — get image metadata
 router.get("/images/:id/metadata", imageMetadataLimiter, async (req: Request, res: Response) => {

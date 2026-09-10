@@ -87,7 +87,7 @@ COMMENT ON FUNCTION is_admin()
 -- 045_admin_is_admin_users_table.sql): a signed-in email is admin when
 -- a matching row exists in `users`. The `users` table is populated by
 -- the API server when it syncs Clerk users whose email is in the
--- VITE_ADMIN_EMAILS allowlist, so no database-level GUC is required.
+-- ADMIN_EMAILS allowlist, so no database-level GUC is required.
 --
 -- NOTE: Supabase managed Postgres forbids `ALTER DATABASE ... SET` for
 -- custom parameters ("permission denied to set parameter"), so the
@@ -171,7 +171,7 @@ CREATE TABLE IF NOT EXISTS seo_settings (
   og_title TEXT NOT NULL DEFAULT 'Mustafa Sayed — Data Engineer',
   og_description TEXT NOT NULL DEFAULT 'Building scalable data pipelines and full-stack solutions.',
   og_image TEXT,
-  canonical_url TEXT NOT NULL DEFAULT 'https://mustafasayed.replit.app',
+  canonical_url TEXT NOT NULL DEFAULT 'https://mustafa-sayed-portfolio.vercel.app',
   twitter_card TEXT NOT NULL DEFAULT 'summary_large_image',
   twitter_creator TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),

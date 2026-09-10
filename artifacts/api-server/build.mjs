@@ -10,6 +10,152 @@ globalThis.require = createRequire(import.meta.url);
 
 const artifactDir = path.dirname(fileURLToPath(import.meta.url));
 
+// ─── Deployment-time env guard ────────────────────────────────────────────────
+//
+// Fail the production build when the SPA origins the API must trust are
+// missing. The API uses VITE_SITE_URL (portfolio) and VITE_ADMIN_URL (admin)
+// for its CORS allowlist, contact-notification links, and the CV QR code; a
+// production deploy without them silently degrades those features and opens
+// CORS gaps. Vercel sets VERCEL_ENV=production only for production deploys;
+// NODE_ENV=production is treated as equivalent for non-Vercel hosts.
+//
+// Local/dev builds are intentionally not enforced: the server falls back to
+// localhost origins in development, so a partial local .env must not block
+// `pnpm dev` or `pnpm build` on a laptop.
+const IS_PRODUCTION_DEPLOY =
+  process.env.VERCEL_ENV === "production" || process.env.NODE_ENV === "production";
+
+if (IS_PRODUCTION_DEPLOY) {
+  const requiredVars = [
+    "VITE_SITE_URL",
+    "VITE_ADMIN_URL",
+    "CLERK_SECRET_KEY",
+    "SUPABASE_URL",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "CSRF_SECRET",
+  ];
+  const missing = requiredVars.filter((key) => !process.env[key]);
+  if (missing.length > 0) {
+    console.error(
+      `[build] Production build blocked: missing required environment variable(s): ${missing.join(", ")}`,
+    );
+    console.error(
+      "[build] Set these in the Vercel project settings (Production environment) and redeploy:",
+    );
+    for (const key of missing) {
+      console.error(`  - ${key}`);
+    }
+    process.exit(1);
+  }
+
+  // Fail-closed live/structural validation for every production-critical
+  // secret, so a deploy can never ship a dead or degenerate credential:
+  //   - CLERK_SECRET_KEY: live check against Clerk's Backend API.
+  //   - SUPABASE_SERVICE_ROLE_KEY: live check against the Supabase REST API.
+  //   - CSRF_SECRET: structural check (it is a local signing secret with no
+  //     remote service to probe).
+  await validateClerkSecretKey();
+  await validateSupabaseServiceRoleKey();
+  validateCsrfSecret();
+}
+
+/**
+ * Checks the production CLERK_SECRET_KEY against Clerk's Backend API.
+ *
+ * `GET /v1/instance` is the lightest authenticated endpoint: it returns 200
+ * for any valid secret key and 401 for a missing, stale, or forged one.
+ * Fail-closed — a production build must never ship a key we cannot verify,
+ * and Vercel build runners have reliable network access to api.clerk.com.
+ */
+async function validateClerkSecretKey() {
+  const key = process.env.CLERK_SECRET_KEY;
+  let res;
+  try {
+    res = await fetch("https://api.clerk.com/v1/instance", {
+      headers: { Authorization: `Bearer ${key}` },
+      signal: AbortSignal.timeout(10_000),
+    });
+  } catch (err) {
+    console.error(
+      `[build] Production build blocked: could not reach Clerk to validate CLERK_SECRET_KEY (${err?.message ?? err}).`,
+    );
+    console.error(
+      "[build] This is likely a transient build-network issue — retry the deploy. If it persists, verify the key's instance is reachable.",
+    );
+    process.exit(1);
+  }
+  if (!res.ok) {
+    console.error(
+      `[build] Production build blocked: CLERK_SECRET_KEY in the Vercel environment is invalid (Clerk responded ${res.status}).`,
+    );
+    console.error(
+      "[build] The deployed API would reject every admin JWT at runtime. Rotate the key in the Vercel project settings (Production environment) and redeploy.",
+    );
+    process.exit(1);
+  }
+  console.log("[build] CLERK_SECRET_KEY validated against Clerk OK");
+}
+
+/**
+ * Checks the production SUPABASE_SERVICE_ROLE_KEY against the Supabase REST
+ * API (PostgREST). `GET /rest/v1/` returns 200 with the OpenAPI document for
+ * any valid key and 401/403 for a missing, stale, or forged one — verified
+ * against the production project. Also implicitly validates SUPABASE_URL,
+ * since a wrong URL yields a network error or a non-2xx from a foreign host.
+ * Fail-closed, matching the Clerk check: Vercel build runners can reach the
+ * project's Supabase endpoint.
+ */
+async function validateSupabaseServiceRoleKey() {
+  const baseUrl = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  let res;
+  try {
+    res = await fetch(`${baseUrl}/rest/v1/`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+      signal: AbortSignal.timeout(10_000),
+    });
+  } catch (err) {
+    console.error(
+      `[build] Production build blocked: could not reach Supabase to validate SUPABASE_SERVICE_ROLE_KEY (${err?.message ?? err}).`,
+    );
+    console.error(
+      "[build] Check that SUPABASE_URL is correct and reachable. If it is, this is a transient build-network issue — retry the deploy.",
+    );
+    process.exit(1);
+  }
+  if (!res.ok) {
+    console.error(
+      `[build] Production build blocked: SUPABASE_SERVICE_ROLE_KEY in the Vercel environment is invalid (Supabase responded ${res.status}).`,
+    );
+    console.error(
+      "[build] The deployed API would fail every database call at runtime. Rotate the key in the Vercel project settings (Production environment) and redeploy.",
+    );
+    process.exit(1);
+  }
+  console.log("[build] SUPABASE_SERVICE_ROLE_KEY validated against Supabase OK");
+}
+
+/**
+ * Validates the production CSRF_SECRET structurally. It signs double-submit
+ * CSRF tokens locally, so there is no remote service to probe — the failure
+ * modes worth blocking at build time are a missing/short/placeholder value
+ * (the docs prescribe `openssl rand -hex 32`, i.e. 64 hex chars; anything
+ * under 32 chars is a placeholder or a mistake, not a real secret).
+ */
+function validateCsrfSecret() {
+  const secret = process.env.CSRF_SECRET ?? "";
+  if (secret.length < 32) {
+    console.error(
+      `[build] Production build blocked: CSRF_SECRET must be at least 32 characters (got ${secret.length}).`,
+    );
+    console.error(
+      "[build] Generate one with `openssl rand -hex 32` and set it in the Vercel project settings (Production environment), then redeploy.",
+    );
+    process.exit(1);
+  }
+  console.log(`[build] CSRF_SECRET OK (${secret.length} chars)`);
+}
+
 async function buildAll() {
   const distDir = path.resolve(artifactDir, "dist");
   await rm(distDir, { recursive: true, force: true });
@@ -49,7 +195,6 @@ async function buildAll() {
       "pg-native",
       "oracledb",
       "mongodb-client-encryption",
-      "nodemailer",
       "handlebars",
       "knex",
       "typeorm",
@@ -121,8 +266,6 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
 }
 
 buildAll().catch((err) => {
-  // eslint-disable-next-line no-undef -- build script runs in Node
   console.error(err);
-  // eslint-disable-next-line no-undef -- build script runs in Node
   process.exit(1);
 });

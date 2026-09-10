@@ -1,14 +1,19 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { Experience } from "@workspace/supabase/types";
 import { api } from "@/lib/api-client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@workspace/ui";
-import { Plus, Pencil, Trash2, X, AlertCircle, RefreshCw, Download } from "lucide-react";
+import { Plus, X, Download } from "lucide-react";
 import { logError } from "@/lib/logger";
-import { Badge, Button, Card, CardContent, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Skeleton, Switch } from "@workspace/ui";
+import { Badge, Button, Card, CardContent, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch } from "@workspace/ui";
 import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
 import { SmartEmptyState } from "@/components/SmartEmptyState";
-import { getErrorMessage } from "@/lib/error-messages";
+import { AdminErrorState } from "@/components/AdminErrorState";
+import { AdminLoadingState } from "@/components/AdminLoadingState";
+import { PageHeader } from "@/components/PageHeader";
+import { RowActions } from "@/components/RowActions";
+import { FormDialogFooter } from "@/components/FormDialogFooter";
+import AiTextButton from "@/features/ai/components/AiTextButton";
 import { useEntityQuery } from "@/lib/use-entity-query";
 import { exportToCsv } from "@/lib/export-csv";
 
@@ -30,7 +35,7 @@ export default function ExperienceManager() {
   const queryClient = useQueryClient();
   const { data: items, isLoading, isError, error, refetch } = useEntityQuery<Experience[]>(
     "experience",
-    (uid) => api.experience.list(uid ?? undefined) as unknown as Promise<{ success: true; data?: Experience[] } | { success: false; message: string }>,
+    (uid) => api.experience.list(uid ?? undefined),
   );
   const [editing, setEditing] = useState<EditForm | null>(null);
   const [isNew, setIsNew] = useState(false);
@@ -41,18 +46,60 @@ export default function ExperienceManager() {
   const openNew = () => { setIsNew(true); setEditing({ ...BLANK, description: [""], technologies: [] }); setTechInput(""); };
   const openEdit = (e: ExpRow) => { setIsNew(false); setEditing({ ...e, sort_order: e.sort_order ?? 999 }); setTechInput(""); };
 
+  // Deep-link support: the command palette's quick actions navigate here
+  // with a URL hash — #new opens the create dialog, #edit-<id> opens the
+  // editor for that experience. The hash is stripped after opening so
+  // refetches don't re-open the dialog.
+  useEffect(() => {
+    const handleDeepLink = () => {
+      const hash = window.location.hash.replace(/^#/, "");
+      if (hash === "new") {
+        setIsNew(true);
+        setEditing({ ...BLANK, description: [""], technologies: [] });
+        setTechInput("");
+        clearDeepLinkHash();
+        return;
+      }
+      if (hash.startsWith("edit-")) {
+        const item = items?.find((e) => e.id === hash.slice("edit-".length));
+        if (item) {
+          const { current, order_num, created_at, updated_at, ...rest } = item;
+          setIsNew(false);
+          setEditing({ ...rest, sort_order: item.sort_order ?? 999, is_published: item.is_published ?? false });
+          setTechInput("");
+          clearDeepLinkHash();
+        }
+      }
+    };
+    const clearDeepLinkHash = () => {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    };
+    handleDeepLink();
+    window.addEventListener("hashchange", handleDeepLink);
+    return () => window.removeEventListener("hashchange", handleDeepLink);
+  }, [items]);
+
   const updateDesc = (i: number, val: string) =>
-    setEditing(x => ({ ...x!, description: x!.description.map((d, idx) => idx === i ? val : d) }));
-  const addDesc = () => setEditing(x => ({ ...x!, description: [...x!.description, ""] }));
-  const removeDesc = (i: number) => setEditing(x => ({ ...x!, description: x!.description.filter((_, idx) => idx !== i) }));
+    setEditing(x => x ? ({ ...x, description: x.description.map((d, idx) => idx === i ? val : d) }) : x);
+  const addDesc = () => setEditing(x => x ? ({ ...x, description: [...x.description, ""] }) : x);
+  const removeDesc = (i: number) => setEditing(x => x ? ({ ...x, description: x.description.filter((_, idx) => idx !== i) }) : x);
+
+  /** Rewrite every description bullet from one AI pass — newline-separated. */
+  const handleImproveDescription = (t: string) => {
+    const bullets = t
+      .split("\n")
+      .map((s) => s.trim().replace(/^[-•]\s*/, ""))
+      .filter(Boolean);
+    setEditing(x => x ? ({ ...x, description: bullets.length ? bullets : [""] }) : x);
+  };
 
   const addTech = () => {
     const v = techInput.trim();
     if (!v || !editing) return;
-    setEditing(x => ({ ...x!, technologies: [...x!.technologies, v] }));
+    setEditing(x => x ? ({ ...x, technologies: [...x.technologies, v] }) : x);
     setTechInput("");
   };
-  const removeTech = (t: string) => setEditing(x => ({ ...x!, technologies: x!.technologies.filter(v => v !== t) }));
+  const removeTech = (t: string) => setEditing(x => x ? ({ ...x, technologies: x.technologies.filter(v => v !== t) }) : x);
 
   const handleSave = async () => {
     if (!editing) return;
@@ -64,7 +111,8 @@ export default function ExperienceManager() {
       const { id: editId, ...data } = editing;
       let res;
       if (isNew) res = await api.experience.create(data);
-      else res = await api.experience.update(editId!, data);
+      else if (editId) res = await api.experience.update(editId, data);
+      else throw new Error("Cannot update an experience without an id");
       if (!res.success) throw new Error(res.message);
       toast({ title: isNew ? "Created" : "Updated" });
       queryClient.invalidateQueries({ queryKey: ["experience"] });
@@ -73,48 +121,30 @@ export default function ExperienceManager() {
     finally { setSaving(false); }
   };
 
-  if (isLoading) {
-    return (
-      <div className="p-6 space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-10 w-full" />
-        <div className="space-y-2">
-          {[1,2,3,4,5].map(i => (
-            <Skeleton key={i} className="h-16 w-full rounded-lg" />
-          ))}
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return <AdminLoadingState />;
 
   if (isError) {
-    return (
-      <div className="p-6 flex flex-col items-center justify-center min-h-64 gap-4">
-        <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-destructive font-medium">{getErrorMessage(error)}</p>
-        <Button onClick={() => refetch()} variant="outline">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Try Again
-        </Button>
-      </div>
-    );
+    return <AdminErrorState error={error} onRetry={() => refetch()} />;
   }
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex-1 min-w-[120px]"><h1 className="text-2xl font-bold">Experience</h1><p className="text-sm text-muted-foreground mt-0.5">{items?.length ?? 0} entries</p></div>
-        <Button size="sm" variant="outline" onClick={() => items && exportToCsv(items.map(e => ({ title: e.title, company: e.company, location: e.location ?? "", period: e.period ?? "", type: e.type, technologies: (e.technologies ?? []).join("; "), is_published: e.is_published ?? true })), [
-          { key: "title", label: "Title" },
-          { key: "company", label: "Company" },
-          { key: "location", label: "Location" },
-          { key: "period", label: "Period" },
-          { key: "type", label: "Type" },
-          { key: "technologies", label: "Technologies" },
-          { key: "is_published", label: "Published" },
-        ], `experience-${Date.now()}.csv`)}><Download className="h-4 w-4 mr-1.5" />Export</Button>
-        <Button size="sm" onClick={openNew} className="min-h-[44px]"><Plus className="h-4 w-4 mr-1.5" />Add Entry</Button>
-      </div>
+      <PageHeader
+        title="Experience"
+        description={`${items?.length ?? 0} entries`}
+        actions={<>
+          <Button size="sm" variant="outline" onClick={() => items && exportToCsv(items.map(e => ({ title: e.title, company: e.company, location: e.location ?? "", period: e.period ?? "", type: e.type, technologies: (e.technologies ?? []).join("; "), is_published: e.is_published ?? true })), [
+            { key: "title", label: "Title" },
+            { key: "company", label: "Company" },
+            { key: "location", label: "Location" },
+            { key: "period", label: "Period" },
+            { key: "type", label: "Type" },
+            { key: "technologies", label: "Technologies" },
+            { key: "is_published", label: "Published" },
+          ], `experience-${Date.now()}.csv`)}><Download className="h-4 w-4 mr-1.5" />Export</Button>
+          <Button size="sm" onClick={openNew} className="min-h-[44px]"><Plus className="h-4 w-4 mr-1.5" />Add Entry</Button>
+        </>}
+      />
 
       <div className="space-y-3">
         {(!items || items.length === 0) ? (
@@ -131,10 +161,7 @@ export default function ExperienceManager() {
                 </div>
                 <div className="text-xs text-muted-foreground mt-0.5">{item.period} · {item.location}</div>
               </div>
-              <div className="flex gap-1">
-                <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]" aria-label="Edit experience" onClick={() => { const { current: _, order_num: __, created_at: ___, updated_at: ____, ...rest } = item; openEdit({ ...rest, sort_order: item.sort_order ?? 0, is_published: item.is_published ?? false }); }}><Pencil className="h-4 w-4" /></Button>
-                <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] text-destructive hover:text-destructive hover:bg-destructive/10" aria-label="Delete experience" onClick={() => setDeleteTarget(item.id)}><Trash2 className="h-4 w-4" /></Button>
-              </div>
+              <RowActions editLabel="Edit experience" deleteLabel="Delete experience"                  onEdit={() => { const { current, order_num, created_at, updated_at, ...rest } = item; openEdit({ ...rest, sort_order: item.sort_order ?? 0, is_published: item.is_published ?? false }); }} onDelete={() => setDeleteTarget(item.id)} />
             </CardContent>
           </Card>
         ))}
@@ -150,15 +177,15 @@ export default function ExperienceManager() {
           </DialogHeader>
           {editing && (
             <div className="space-y-4 py-2">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {([["title", "Title"], ["company", "Company"], ["location", "Location"], ["period", "Period"]] as [keyof typeof editing, string][]).map(([k, label]) => (
                   <div key={k} className="space-y-1"><Label htmlFor={k} className="text-xs">{label}</Label>
-                    <Input id={k} value={editing[k] as string} onChange={e => setEditing(x => ({ ...x!, [k]: e.target.value }))} className="h-8 text-sm" /></div>
+                    <Input id={k} value={editing[k] as string} onChange={e => setEditing(x => x ? ({ ...x, [k]: e.target.value }) : x)} className="h-8 text-sm" /></div>
                 ))}
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Type</Label>
-                <Select value={editing.type} onValueChange={v => setEditing(x => ({ ...x!, type: v as "internship" | "certification" | "volunteer" }))}>
+                <Select value={editing.type} onValueChange={v => setEditing(x => x ? ({ ...x, type: v as "internship" | "certification" | "volunteer" }) : x)}>
                   <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="internship">Internship</SelectItem>
@@ -169,7 +196,15 @@ export default function ExperienceManager() {
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between"><Label className="text-xs">Description Bullets</Label>
-                  <Button size="sm" variant="ghost" className="min-h-[44px] text-xs" onClick={addDesc} aria-label="Add description bullet"><Plus className="h-4 w-4 mr-1" />Add</Button></div>
+                  <div className="flex items-center gap-2">
+                    <AiTextButton
+                      contentType="experience"
+                      label="Improve all"
+                      text={editing.description.join("\n")}
+                      onResult={handleImproveDescription}
+                    />
+                    <Button size="sm" variant="ghost" className="min-h-[44px] text-xs" onClick={addDesc} aria-label="Add description bullet"><Plus className="h-4 w-4 mr-1" />Add</Button>
+                  </div></div>
                 {editing.description.map((d, i) => (
                   <div key={i} className="flex gap-2">
                     <Input value={d} onChange={e => updateDesc(i, e.target.value)} className="h-8 text-sm flex-1" placeholder={`Bullet ${i + 1}…`} />
@@ -186,18 +221,15 @@ export default function ExperienceManager() {
                   <Button size="sm" variant="outline" onClick={addTech} className="min-h-[44px]" aria-label="Add technology"><Plus className="h-4 w-4" /></Button>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1"><Label className="text-xs">Sort Order</Label>
-                  <Input type="number" value={editing.sort_order} onChange={e => setEditing(x => ({ ...x!, sort_order: Number(e.target.value) }))} className="h-8 text-sm" /></div>
+                  <Input type="number" value={editing.sort_order} onChange={e => setEditing(x => x ? ({ ...x, sort_order: Number(e.target.value) }) : x)} className="h-8 text-sm" /></div>
               </div>
               <div className="flex items-center justify-between"><Label className="text-sm">Published</Label>
-                <Switch checked={editing.is_published} onCheckedChange={v => setEditing(x => ({ ...x!, is_published: v }))} /></div>
+                <Switch checked={editing.is_published} onCheckedChange={v => setEditing(x => x ? ({ ...x, is_published: v }) : x)} /></div>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditing(null)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
-          </DialogFooter>
+          <FormDialogFooter onCancel={() => setEditing(null)} onSave={handleSave} saving={saving} />
         </DialogContent>
       </Dialog>
 
@@ -209,8 +241,9 @@ export default function ExperienceManager() {
           confirmLabel: "Delete",
           variant: "danger",
           onConfirm: async () => {
+            if (!deleteTarget) return;
             try {
-              const res = await api.experience.delete(deleteTarget!);
+              const res = await api.experience.delete(deleteTarget);
               if (!res.success) throw new Error(res.message);
               toast({ title: "Experience deleted" });
               queryClient.invalidateQueries({ queryKey: ["experience"] });

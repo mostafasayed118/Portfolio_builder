@@ -1,8 +1,9 @@
-import { Mail, Phone, MapPin, Github, Linkedin } from "lucide-react";
+import { Mail, Phone, MapPin, Github, Linkedin, Youtube, Facebook, MessageCircle } from "lucide-react";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
 import { trackEvent } from "@workspace/db/analytics";
 import { logWarn } from "@/lib/logger";
 import { useLanguage } from "@/lib/language";
+import { buildWhatsAppHref } from "@/features/contact/lib/whatsapp";
 
 interface Contact {
   email: string;
@@ -10,6 +11,9 @@ interface Contact {
   location: string;
   github: string;
   linkedin: string;
+  youtube: string;
+  facebook: string;
+  whatsapp: string;
 }
 
 const ICONS: Record<string, typeof Mail> = {
@@ -18,21 +22,28 @@ const ICONS: Record<string, typeof Mail> = {
   Location: MapPin,
   GitHub: Github,
   LinkedIn: Linkedin,
+  YouTube: Youtube,
+  Facebook: Facebook,
 };
 
-function buildItems(c: Contact, labels: { email: string; phone: string; location: string; github: string; linkedin: string }) {
+function buildItems(c: Contact, labels: { email: string; phone: string; location: string; github: string; linkedin: string; youtube: string; facebook: string }) {
   return [
     { key: "email", Icon: ICONS.Email, label: labels.email, value: c.email, href: `mailto:${c.email}` },
     { key: "phone", Icon: ICONS.Phone, label: labels.phone, value: c.phone, href: `tel:${(c.phone ?? "").replace(/\s/g, "")}` },
     { key: "location", Icon: ICONS.Location, label: labels.location, value: c.location, href: null as string | null },
     { key: "github", Icon: ICONS.GitHub, label: labels.github, value: c.github?.replace("https://", ""), href: c.github },
     { key: "linkedin", Icon: ICONS.LinkedIn, label: labels.linkedin, value: c.linkedin?.replace("https://", ""), href: c.linkedin },
+    { key: "youtube", Icon: ICONS.YouTube, label: labels.youtube, value: c.youtube?.replace("https://", ""), href: c.youtube },
+    { key: "facebook", Icon: ICONS.Facebook, label: labels.facebook, value: c.facebook?.replace("https://", ""), href: c.facebook },
   ];
 }
 
 export default function ContactInfoPanel({ contact }: { contact: Contact }) {
   const { t } = useLanguage();
   const items = buildItems(contact, t.contact.labels);
+
+  // WhatsApp click-to-chat: https://wa.me/<digits>?text=<prefilled message>
+  const waHref = buildWhatsAppHref(contact.whatsapp, t.contact.whatsappPrefill);
 
   return (
     <div className="space-y-6">
@@ -52,7 +63,7 @@ export default function ContactInfoPanel({ contact }: { contact: Contact }) {
                   className="text-sm font-medium text-foreground hover:text-primary transition-colors truncate block"
                   data-testid={`link-contact-${key}`}
                   onClick={() => {
-                    if (isSupabaseConfigured && (key === "email" || key === "github" || key === "linkedin")) {
+                    if (isSupabaseConfigured && (key === "email" || key === "github" || key === "linkedin" || key === "youtube" || key === "facebook")) {
                       const sb = getSupabase();
                       if (sb) trackEvent(sb, "contact_click", "/", { type: key }).catch((err) => logWarn("trackEvent failed", err));
                     }
@@ -66,6 +77,25 @@ export default function ContactInfoPanel({ contact }: { contact: Contact }) {
             </div>
           </div>
         ))}
+
+        {waHref && (
+          <a
+            href={waHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 rounded-lg bg-[#25D366] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#1fb958]"
+            data-testid="link-contact-whatsapp"
+            onClick={() => {
+              if (isSupabaseConfigured) {
+                const sb = getSupabase();
+                if (sb) trackEvent(sb, "contact_click", "/", { type: "whatsapp" }).catch((err) => logWarn("trackEvent failed", err));
+              }
+            }}
+          >
+            <MessageCircle className="h-4 w-4" />
+            {t.contact.chatOnWhatsApp}
+          </a>
+        )}
       </div>
 
       <div className="glass rounded-xl overflow-hidden border aspect-video min-h-36 max-h-64">

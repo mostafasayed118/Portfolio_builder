@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, Input } from "@workspace/ui";
+import { Input } from "@workspace/ui";
+import { EditorCard } from "@/components/EditorForm";
 
 interface InterestsEditorProps {
   interests: string[];
@@ -28,11 +29,7 @@ export function InterestsEditor({ interests, onChange }: InterestsEditorProps) {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Interests</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
+    <EditorCard title="Interests" contentClassName="space-y-3">
         <Input
           placeholder="Type interest and press Enter..."
           value={input}
@@ -57,7 +54,6 @@ export function InterestsEditor({ interests, onChange }: InterestsEditorProps) {
             </span>
           ))}
         </div>
-      </CardContent>
-    </Card>
+    </EditorCard>
   );
 }

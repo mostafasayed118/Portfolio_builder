@@ -2,12 +2,11 @@ import { useState } from "react";
 import { useLanguage } from "@/lib/language";
 import { Award, ScrollText } from "lucide-react";
 import EmptyState from "./EmptyState";
-import SectionLabel from "./SectionLabel";
+import SectionHeader from "./SectionHeader";
 import { CertCard } from "./CertCard";
 import CertFilters, { getFilters } from "./CertFilters";
 import CertStats from "./CertStats";
 import { CERTIFICATIONS, type Certificate } from "@/data/portfolio";
-import { useReveal } from "@/hooks/use-reveal";
 import { useCertifications } from "@/hooks/use-portfolio-data";
 
 const VALID_CATEGORIES = new Set([
@@ -63,7 +62,6 @@ function CertificationsSkeleton() {
 export default function CertificationsSection() {
   const { t, lang } = useLanguage();
   const [active, setActive] = useState("all");
-  const { ref } = useReveal();
   const { data: certsData, isLoading } = useCertifications();
   const FILTERS = getFilters(t);
 
@@ -121,20 +119,15 @@ export default function CertificationsSection() {
   return (
     <section
       id="certifications"
-      ref={ref}
       className="py-24 px-6"
     >
       <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-12">
-          <SectionLabel><Award className="h-3.5 w-3.5" />{t.certifications.title}</SectionLabel>
-          <h2 className="font-display font-bold text-3xl md:text-4xl text-foreground mb-3">
-            {t.certifications.title}
-          </h2>
-          <p className="text-muted-foreground text-sm max-w-xl mx-auto mb-8">
-            {allCerts.length} verified certifications from IBM, DataCamp,
-            Microsoft, and HackerRank.
-          </p>
-
+        <SectionHeader
+          label={<><Award className="h-3.5 w-3.5" />{t.certifications.title}</>}
+          title={t.certifications.title}
+          description={`${allCerts.length} verified certifications from IBM, DataCamp, Microsoft, and HackerRank.`}
+          descriptionClassName="mb-8"
+        >
           <CertFilters
             filters={FILTERS}
             active={active}
@@ -148,7 +141,7 @@ export default function CertificationsSection() {
               ]),
             )}
           />
-        </div>
+        </SectionHeader>
 
         {allCerts.length === 0 ? (
           <EmptyState
@@ -163,7 +156,7 @@ export default function CertificationsSection() {
             className="absolute start-4 top-0 bottom-0 w-px bg-gradient-to-b from-primary/40 via-primary/20 to-transparent md:hidden"
             aria-hidden="true"
           />
-          <div className="md:grid md:grid-cols-2 md:gap-x-12 md:gap-y-4 section-reveal">
+          <div className="md:grid md:grid-cols-2 md:gap-x-12 md:gap-y-4">
             {sortedGroups.map(([monthKey, certs]) => (
               <div key={monthKey} className="mb-4">
                 <div className="flex items-center gap-2 mb-3 md:ms-0 ms-12">
@@ -175,8 +168,8 @@ export default function CertificationsSection() {
                     {certs.length} cert{certs.length !== 1 ? "s" : ""}
                   </span>
                 </div>
-                {certs.map((cert, i) => (
-                  <CertCard key={cert.id} cert={cert} index={i} t={t} />
+                {certs.map((cert) => (
+                  <CertCard key={cert.id} cert={cert} t={t} />
                 ))}
               </div>
             ))}

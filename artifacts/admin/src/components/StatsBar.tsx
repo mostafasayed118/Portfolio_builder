@@ -1,15 +1,16 @@
-import { MessageSquare, Code2, FolderKanban, TrendingUp, AlertCircle, RefreshCw } from "lucide-react";
-import { Card, CardContent, Button, Skeleton } from "@workspace/ui";
+import { MessageSquare, Code2, FolderKanban, TrendingUp, AlertCircle } from "lucide-react";
+import { Card, CardContent, Skeleton } from "@workspace/ui";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { api } from "@/lib/api-client";
 import { useEntityQuery, useUnreadCountQuery } from "@/lib/use-entity-query";
 import { StatsCard } from "./StatsCard";
+import { AdminErrorState } from "./AdminErrorState";
 
 export function StatsBar() {
   const queries = {
     unread: useUnreadCountQuery(),
-    skills: useEntityQuery<unknown[]>("skills", (uid) => api.skills.list(uid ?? undefined) as unknown as Promise<{ success: true; data?: unknown[] } | { success: false; message: string }>, { enabled: isSupabaseConfigured }),
-    projects: useEntityQuery<unknown[]>("projects", (uid) => api.projects.list(uid ?? undefined) as unknown as Promise<{ success: true; data?: unknown[] } | { success: false; message: string }>, { enabled: isSupabaseConfigured }),
+    skills: useEntityQuery<unknown[]>("skills", (uid) => api.skills.list(uid ?? undefined), { enabled: isSupabaseConfigured }),
+    projects: useEntityQuery<unknown[]>("projects", (uid) => api.projects.list(uid ?? undefined), { enabled: isSupabaseConfigured }),
   };
 
   const { unread, skills, projects } = queries;
@@ -44,15 +45,13 @@ export function StatsBar() {
 
   if (unread.isError || skills.isError || projects.isError) {
     return (
-      <div className="mb-8 flex flex-col items-center justify-center min-h-32 gap-3 p-6">
-        <AlertCircle className="h-10 w-10 text-destructive" />
-        <p className="text-destructive font-medium">Failed to load dashboard stats</p>
-        <p className="text-muted-foreground text-sm">{errorObj?.message}</p>
-        <Button onClick={handleRetry} variant="outline">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Try Again
-        </Button>
-      </div>
+      <AdminErrorState
+        title="Failed to load dashboard stats"
+        error={errorObj}
+        onRetry={handleRetry}
+        wrapperClassName="mb-8 flex flex-col items-center justify-center min-h-32 gap-3 p-6"
+        iconClassName="h-10 w-10 text-destructive"
+      />
     );
   }
 
@@ -64,32 +63,32 @@ export function StatsBar() {
         label="Unread Messages"
         value={unread.data ?? "–"}
         icon={MessageSquare}
-        color="text-blue-500"
+        color="text-info"
       />
       <StatsCard
         label="Skills"
         value={skills.data?.length ?? "–"}
         icon={Code2}
-        color="text-emerald-500"
+        color="text-success"
       />
       <StatsCard
         label="Projects"
         value={projects.data?.length ?? "–"}
         icon={FolderKanban}
-        color="text-violet-500"
+        color="text-chart-3"
       />
       <StatsCard
         label="Status"
         value="Live"
         icon={TrendingUp}
-        color="text-green-500"
+        color="text-success"
       />
       {showSeedWarning && (
-        <Card className="col-span-full border-amber-500/30 bg-amber-500/5">
+        <Card className="col-span-full border-warning/30 bg-warning/5">
           <CardContent className="pt-4 pb-4 flex items-center gap-3">
-            <AlertCircle className="h-5 w-5 text-amber-500" />
+            <AlertCircle className="h-5 w-5 text-warning" />
             <div className="flex-1">
-              <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
+              <p className="text-sm font-medium text-warning-foreground">
                 No portfolio data found. Click "Import Static Data" to populate content.
               </p>
             </div>

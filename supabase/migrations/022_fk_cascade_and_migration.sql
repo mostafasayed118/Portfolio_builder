@@ -10,16 +10,25 @@ ALTER TABLE image_metadata ADD CONSTRAINT fk_image_metadata_entity
   NOT VALID;
 
 -- ============================================
--- 2. analytics_events: Add FK (project_id is already UUID)
+-- 2. analytics_events: Convert project_id to UUID, then add FK
 -- ============================================
+--
+-- On a fresh replay analytics_events.project_id is TEXT (migration 001)
+-- while projects.id is UUID, so a direct `project_id NOT IN (SELECT id ...)`
+-- fails with "operator does not exist: text = uuid". This section casts
+-- the comparison, promotes the column to UUID, and then adds the FK.
 
--- Clean up any orphaned rows first (where project_id doesn't exist in projects)
+-- Clean up any orphaned rows first (where project_id doesn't exist in projects).
+-- Compare as text because project_id is TEXT at this point in a fresh replay.
 DELETE FROM analytics_events
 WHERE project_id IS NOT NULL
-  AND project_id NOT IN (SELECT id FROM projects);
+  AND project_id NOT IN (SELECT id::text FROM projects);
 
--- Set remaining NULL project_ids explicitly (for safety)
--- (already handled by DELETE above, but just in case)
+-- Promote project_id TEXT -> UUID so the FK below can be added. Every
+-- surviving value is a valid project id (the DELETE above removed anything
+-- else), so the cast is safe.
+ALTER TABLE analytics_events
+  ALTER COLUMN project_id TYPE UUID USING (project_id::uuid);
 
 -- Drop old constraint if exists
 ALTER TABLE analytics_events DROP CONSTRAINT IF EXISTS fk_analytics_project;

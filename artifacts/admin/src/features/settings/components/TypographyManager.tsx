@@ -1,11 +1,12 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { useToast } from "@workspace/ui";
-import { Save, RefreshCw, AlertCircle } from "lucide-react";
+import { Save, RefreshCw } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { logError } from "@/lib/logger";
-import { getErrorMessage } from "@/lib/error-messages";
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, Skeleton, Slider } from "@workspace/ui";
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, Slider } from "@workspace/ui";
+import { AdminErrorState } from "@/components/AdminErrorState";
+import { AdminLoadingState } from "@/components/AdminLoadingState";
 import { TypographyPreview } from "@/features/settings/components/TypographyPreview";
 
 type TypoData = {
@@ -67,8 +68,8 @@ export default function TypographyManager() {
     finally { setSaving(false); }
   };
 
-  if (isLoading) return <div className="p-6 space-y-4"><Skeleton className="h-8 w-48" /><Skeleton className="h-10 w-full" /><div className="space-y-2">{[1,2,3,4,5].map(i => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}</div></div>;
-  if (isError) return <div className="p-6 flex flex-col items-center justify-center min-h-64 gap-4"><AlertCircle className="h-12 w-12 text-destructive" /><p className="text-destructive font-medium">{getErrorMessage(error)}</p><Button onClick={() => refetch()} variant="outline"><RefreshCw className="h-4 w-4 mr-2" />Try Again</Button></div>;
+  if (isLoading) return <AdminLoadingState />;
+  if (isError) return <AdminErrorState error={error} onRetry={() => refetch()} />;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -82,7 +83,7 @@ export default function TypographyManager() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="space-y-5">
           <Card><CardHeader className="pb-3"><CardTitle className="text-sm">Font Pairs</CardTitle><CardDescription className="text-xs">Click a preset to apply it instantly</CardDescription></CardHeader>
-            <CardContent className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Font pair presets">
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-2" role="radiogroup" aria-label="Font pair presets">
               {PRESET_PAIRS.map((p) => (
                 <button key={p.display} type="button" role="radio" aria-checked={typo.display_font === p.display} aria-label={`Select ${p.display} + ${p.body} font preset`} onClick={() => applyPreset(p)}
                   className={`text-left p-3 rounded-lg border-2 transition-all min-h-[44px] hover:border-primary/50 hover:bg-accent/50 ${typo.display_font === p.display ? "border-primary bg-primary/5" : "border-border"}`}>
@@ -107,7 +108,7 @@ export default function TypographyManager() {
               <div><div className="flex justify-between mb-2"><Label className="text-xs">Heading Scale</Label><span className="text-xs text-muted-foreground font-mono">{typo.heading_scale}</span></div>
                 <Slider value={[parseFloat(typo.heading_scale) * 100]} min={110} max={160} step={5} onValueChange={([v]) => set("heading_scale", (v / 100).toFixed(2))} /></div>
               <div><Label className="text-xs">Letter Spacing</Label><Input value={typo.letter_spacing} onChange={e => set("letter_spacing", e.target.value)} className="h-8 mt-1.5 text-sm font-mono" placeholder="0em" /></div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div><Label className="text-xs">Body Weight</Label><Input value={typo.font_weight_body} onChange={e => set("font_weight_body", e.target.value)} className="h-8 mt-1.5 text-sm font-mono" placeholder="400" /></div>
                 <div><Label className="text-xs">Heading Weight</Label><Input value={typo.font_weight_heading} onChange={e => set("font_weight_heading", e.target.value)} className="h-8 mt-1.5 text-sm font-mono" placeholder="700" /></div>
               </div>

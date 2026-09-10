@@ -142,7 +142,7 @@ test.describe("Portfolio — Full Manual Test Suite", () => {
       await expect(allFilter).toBeVisible();
     });
 
-    test("skill tags display with icons", async ({ page }) => {
+    test("skill tags render with level indicators", async ({ page }) => {
       await page.goto("/");
       await page.evaluate(() => document.querySelector("#skills")?.scrollIntoView());
       // Auto-retry: tags only render after the Supabase data finishes loading.
@@ -150,9 +150,13 @@ test.describe("Portfolio — Full Manual Test Suite", () => {
       await expect(skillTags.first()).toBeVisible({ timeout: 10_000 });
       const count = await skillTags.count();
       expect(count).toBeGreaterThan(0);
-      // First skill should have an icon
-      const firstIcon = skillTags.first().locator("span[aria-hidden='true']");
-      await expect(firstIcon).toBeVisible();
+      // Every tag renders an aria-hidden level indicator (a colored dot);
+      // skills that carry an icon render an additional icon span. Assert the
+      // indicator on the first tag — stable regardless of which skills have
+      // icons in the live data (currently none do).
+      await expect(
+        skillTags.first().locator("span[aria-hidden='true']").first(),
+      ).toBeVisible();
     });
 
     test("clicking category filter filters skills", async ({ page }) => {
@@ -416,7 +420,9 @@ test.describe("Portfolio — Full Manual Test Suite", () => {
       await page.waitForTimeout(500);
       const btn = page.locator('button[aria-label*="top" i], button:has-text("↑"), [data-testid="back-to-top"]');
       await btn.first().click();
-      await page.waitForTimeout(1000);
+      // Don't race the smooth-scroll animation with a fixed timeout — wait for
+      // the scroll to actually settle near the top (deterministic on any CI).
+      await page.waitForFunction(() => window.scrollY < 100, undefined, { timeout: 5000 });
       const scrollY = await page.evaluate(() => window.scrollY);
       expect(scrollY).toBeLessThan(100);
     });
@@ -466,6 +472,11 @@ test.describe("Portfolio — Full Manual Test Suite", () => {
   // ═══════════════════════════════════════════════════════════════
   test.describe("Mobile Responsive", () => {
     test("mobile hamburger menu works", async ({ page }) => {
+      // The homepage fires a one-time "welcome" toast ~1.5s after first
+      // visit; its full-width viewport sits at the top (z-100) and can
+      // intercept clicks on the mobile hamburger. Mark the session visited
+      // up-front so the toast never appears during this test.
+      await page.addInitScript(() => sessionStorage.setItem("visited", "true"));
       await page.setViewportSize({ width: 375, height: 812 });
       await page.goto("/");
       const hamburger = page.getByTestId("btn-mobile-menu");

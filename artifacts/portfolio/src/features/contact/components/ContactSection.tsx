@@ -3,7 +3,7 @@ import { useReveal } from "@/hooks/use-reveal";
 import { useContact } from "@/features/contact/hooks/useContact";
 import ContactInfoPanel from "@/features/contact/components/ContactInfoPanel";
 import ContactForm from "@/features/contact/components/ContactForm";
-import SectionLabel from "@/components/SectionLabel";
+import SectionHeader from "@/components/SectionHeader";
 
 export default function ContactSection() {
   const { ref, revealed } = useReveal();
@@ -17,11 +17,11 @@ export default function ContactSection() {
         <div className="absolute bottom-1/4 left-1/4 w-80 h-80 bg-primary/5 rounded-full blur-[120px]" />
       </div>
       <div className="max-w-5xl mx-auto relative z-10">
-        <div className="text-center mb-12">
-          <SectionLabel>{t.contact.title}</SectionLabel>
-          <h2 className="font-display font-bold text-3xl md:text-4xl text-foreground mb-3">{t.contact.title}</h2>
-          <p className="text-muted-foreground text-sm max-w-xl mx-auto">Have a project in mind or want to discuss data engineering? I'd love to hear from you.</p>
-        </div>
+        <SectionHeader
+          label={t.contact.title}
+          title={t.contact.title}
+          description="Have a project in mind or want to discuss data engineering? I'd love to hear from you."
+        />
         <div className={`grid md:grid-cols-2 gap-8 md:gap-12 section-reveal ${revealed ? "revealed" : ""}`}>
           <ContactInfoPanel contact={contact} />
           <ContactForm labels={{

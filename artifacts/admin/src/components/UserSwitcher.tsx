@@ -55,11 +55,11 @@ export default function UserSwitcher({ viewingUserId, onViewUserChange }: UserSw
       </Select>
 
       {viewingUser && (
-        <div className="flex items-center gap-1 px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 text-xs rounded-md">
+        <div className="flex items-center gap-1 px-2 py-1 bg-warning/10 text-warning-foreground text-xs rounded-md">
           <span>Viewing as: <strong>{viewingUser.name || viewingUser.email}</strong></span>
           <button
             onClick={() => onViewUserChange(null)}
-            className="ml-1 hover:text-yellow-600 dark:hover:text-yellow-100"
+            className="ml-1 hover:text-warning"
           >
             <X size={12} />
           </button>

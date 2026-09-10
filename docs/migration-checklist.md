@@ -1,61 +1,62 @@
 # Migration Checklist
 
-All 43 Supabase migrations for the portfolio project, listed in order.
+All 47 Supabase migrations for the portfolio project, listed in order.
 
-Gaps exist at 010, 016–019 — these numbers were never assigned.
+Numbering is contiguous `001`–`047` (no gaps). Earlier development had gaps at
+010 and 016–019; those were filled when the migration set was consolidated.
 
-| # | File | Purpose | Tables Affected | Corrective? |
-|---|------|---------|-----------------|-------------|
-| 001 | `001_init.sql` | Full schema: 18 tables, enums, indexes, triggers, RLS, seed data, storage buckets | All core tables (hero_content, about_content, projects, skills, experience, certifications, contact_info, messages, analytics, cv_settings, theme_settings, site_settings, seo_settings, section_settings, content_snapshots, section_variants, collections, collection_items) | No |
-| 002 | `002_fix_rls_policies.sql` | Fix RLS policies — Supabase doesn't combine FOR ALL with operation-specific policies | All tables with RLS | Yes (fix) |
-| 003 | `003_constraints.sql` | CHECK, NOT NULL, UNIQUE constraints for all 18 tables | All core tables | No |
-| 004 | `004_images.sql` | Image pipeline infrastructure — storage buckets, metadata tables, RLS | image_metadata, image_variants, storage.objects | No |
-| 005 | `005_contact_messages.sql` | Create contact_messages table | contact_messages | No |
-| 006 | `006_hero_fields.sql` | Add avatar_url, twitter_url, cv_url, stats columns | hero_content | No |
-| 007 | `007_about_fields.sql` | Add bio, education, interests columns | about_content | No |
-| 008 | `008_projects_missing_fields.sql` | Add full_description, challenges, outcome, completed_at | projects | No |
-| 009 | `009_storage_buckets.sql` | Additional storage buckets | storage.buckets | No |
-| 010 | — | *Gap: number never assigned* | — | — |
-| 011 | `011_sort_order.sql` | Initialize sort_order values | projects, skills, experience, certifications | No |
-| 012 | `012_fix_cert_url_constraint.sql` | Relax chk_cert_url to allow empty strings alongside valid URLs | certifications | Yes (fix) |
-| 013 | `013_dynamic_branding.sql` | Add site_name, logo_url, favicon_url, tagline | site_settings | No |
-| 014 | `014_updated_at_triggers.sql` | Create update_updated_at_column() trigger function | (function + triggers on multiple tables) | No |
-| 015 | `015_missing_indexes.sql` | Indexes on sort_order, category, featured columns | projects, skills, experience, certifications | No |
-| 016 | — | *Gap: number never assigned* | — | — |
-| 017 | — | *Gap: number never assigned* | — | — |
-| 018 | — | *Gap: number never assigned* | — | — |
-| 019 | — | *Gap: number never assigned* | — | — |
-| 020 | `020_bilingual_content.sql` | Add Arabic content columns (_ar suffix) to all content tables | projects, skills, experience, certifications, hero_content, about_content, contact_info, messages | No |
-| 021 | `021_language_settings.sql` | Add language_mode, default_language settings | site_settings | No |
-| 022 | `022_image_rls.sql` | RLS policies for image tables, content_snapshots, section_variants | image_metadata, image_variants, content_snapshots, section_variants | No |
-| 023 | `023_fix_duplicate_triggers.sql` | Remove duplicate trigger/function created by 014 (keep 004's version) | image_metadata | Yes (fix) |
-| 024 | `024_analytics_cleanup.sql` | Create cleanup_old_analytics() function | analytics | No |
-| 025 | `025_fk_constraints.sql` | Foreign key constraints across tables | Multiple tables | No |
-| 026 | `026_add_missing_indexes.sql` | Additional indexes for query performance | Multiple tables | No |
-| 027 | `027_fk_cascade_and_migration.sql` | CASCADE foreign keys, analytics project_id migration | analytics, projects | No |
-| 028 | `028_consolidate_messages.sql` | Merge contact_messages into messages table | messages, contact_messages | No |
-| 029 | `029_fix_critical_issues.sql` | Fix: UNIQUE slug on projects, RLS for image tables, consolidate duplicate triggers, add missing indexes | projects, image_metadata, image_variants | Yes (fix) |
-| 030 | `030_add_soft_delete.sql` | Add deleted_at columns, update RLS to exclude soft-deleted rows | projects, skills, experience, certifications, messages | No |
-| 031 | `031_messages_constraints.sql` | CHECK constraint on messages.status, composite indexes | messages | No |
-| 032 | `032_reorder_sections_rpc.sql` | Create reorder_sections() RPC function (SECURITY DEFINER) | section_settings | No |
-| 033 | `033_image_variants_index.sql` | Index on image_variants for lookup performance | image_variants | No |
-| 034 | `034_users_table.sql` | Create users table (Clerk integration), add user_id FK to collections | users, collections | No |
-| 035 | `035_drop_duplicates.sql` | Drop duplicate constraints and indexes | projects | Yes (cleanup) |
-| 036 | `036_fix_description_ar.sql` | Fix type mismatch: experience.description_ar should be TEXT[] not TEXT | experience | Yes (fix) |
-| 037 | `037_cleanup.sql` | Drop legacy contact_messages table | contact_messages | Yes (cleanup) |
-| 038 | `038_snapshot_constraints.sql` | CHECK constraint on content_snapshots.entity_type | content_snapshots | No |
-| 039 | `039_drop_duplicate_policies.sql` | Drop duplicate RLS policies that serve the same purpose | section_variants, image_metadata | Yes (cleanup) |
-| 040 | `040_backfill_project_slugs.sql` | Backfill missing slug values from titles, enforce NOT NULL + UNIQUE | projects | No |
-| 041 | `041_public_cv_settings_read.sql` | Public read access for cv_settings | cv_settings | No |
-| 042 | `042_fix_storage_rls.sql` | Fix overly permissive storage bucket policies — admin-only | storage.objects | Yes (fix) |
-| 043 | `043_fix_reorder_sections_admin_check.sql` | Add is_admin() check to SECURITY DEFINER reorder_sections function | (function: reorder_sections) | Yes (fix) |
+| #   | File                                       | Purpose                                                                           |
+| --- | ------------------------------------------ | --------------------------------------------------------------------------------- |
+| 001 | `001_init.sql`                             | Full schema: 18 tables, enums, indexes, triggers, RLS, seed data, storage buckets |
+| 002 | `002_fix_rls_policies.sql`                 | Fix RLS policies that use `FOR ALL`                                               |
+| 003 | `003_constraints.sql`                      | Database-level input validation (CHECK, NOT NULL, UNIQUE)                         |
+| 004 | `004_images.sql`                           | Image pipeline infrastructure — storage buckets, metadata tables, RLS             |
+| 005 | `005_contact_messages.sql`                 | Contact messages table with subject support                                       |
+| 006 | `006_hero_fields.sql`                      | Add avatar_url, twitter_url, cv_url, stats columns to hero_content                |
+| 007 | `007_about_fields.sql`                     | Add bio, education, languages, interests columns to about_content                 |
+| 008 | `008_projects_missing_fields.sql`          | Add full_description, challenges, outcome, completed_at to projects               |
+| 009 | `009_storage_buckets.sql`                  | Additional storage buckets for uploads                                            |
+| 010 | `010_sort_order.sql`                       | Initialize sort_order values from current row order                               |
+| 011 | `011_fix_cert_url_constraint.sql`          | Relax chk_cert_url to allow empty strings alongside valid URLs                    |
+| 012 | `012_dynamic_branding.sql`                 | Add dynamic branding fields (site_name, logo_url, favicon_url, tagline)           |
+| 013 | `013_updated_at_triggers.sql`              | `update_updated_at()` trigger function                                            |
+| 014 | `014_missing_indexes.sql`                  | Indexes for frequently queried columns                                            |
+| 015 | `015_bilingual_content.sql`                | Arabic content columns (`_ar` suffix) across content tables                       |
+| 016 | `016_language_settings.sql`                | Language control settings for the bilingual portfolio                             |
+| 017 | `017_image_rls.sql`                        | Enable RLS on image_metadata and image_variants                                   |
+| 018 | `018_fix_duplicate_triggers.sql`           | Remove duplicate trigger on image_metadata                                        |
+| 019 | `019_analytics_cleanup.sql`                | `cleanup_old_analytics()` function (90-day retention)                             |
+| 020 | `020_fk_constraints.sql`                   | Foreign key constraints + UNIQUE projects.slug                                    |
+| 021 | `021_add_missing_indexes.sql`              | Indexes on foreign key columns for query performance                              |
+| 022 | `022_fk_cascade_and_migration.sql`         | ON DELETE CASCADE for image_metadata + analytics_events.project_id FK             |
+| 023 | `023_consolidate_messages.sql`             | Consolidate contact_messages into messages (safe & idempotent)                    |
+| 024 | `024_fix_critical_issues.sql`              | UNIQUE projects.slug + RLS fixes + dedupe triggers/indexes                        |
+| 025 | `025_add_soft_delete.sql`                  | Soft-delete (`deleted_at`) on collection tables                                   |
+| 026 | `026_messages_constraints.sql`             | messages.status FK to msg_status enum + composite indexes                         |
+| 027 | `027_reorder_sections_rpc.sql`             | `reorder_sections()` SECURITY DEFINER RPC                                         |
+| 028 | `028_image_variants_index.sql`             | Index on image_variants.parent_image_id                                           |
+| 029 | `029_users_table.sql`                      | users table (Clerk integration) + user_id on collections                          |
+| 030 | `030_drop_duplicates.sql`                  | Drop duplicate constraints and indexes                                            |
+| 031 | `031_fix_description_ar.sql`               | experience.description_ar type fix (TEXT[] to match description)                  |
+| 032 | `032_cleanup.sql`                          | Drop legacy contact_messages table                                                |
+| 033 | `033_snapshot_constraints.sql`             | CHECK constraint on content_snapshots.entity_type                                 |
+| 034 | `034_drop_duplicate_policies.sql`          | Drop duplicate RLS policies                                                       |
+| 035 | `035_backfill_project_slugs.sql`           | Backfill project slugs + enforce NOT NULL/UNIQUE                                  |
+| 036 | `036_public_cv_settings_read.sql`          | Public read access for cv_settings                                                |
+| 037 | `037_fix_storage_rls.sql`                  | Fix overly permissive storage bucket policies (admin-only)                        |
+| 038 | `038_fix_reorder_sections_admin_check.sql` | is_admin() check on the reorder_sections RPC                                      |
+| 039 | `039_fix_is_admin_function.sql`            | Fix is_admin() function (email allowlist)                                         |
+| 040 | `040_add_proficiency_check.sql`            | Defense-in-depth CHECK constraints on proficiency columns                         |
+| 041 | `041_content_snapshots_unique_version.sql` | content_snapshots version uniqueness                                              |
+| 042 | `042_full_setup.sql`                       | Full setup script (is_admin function, GUC)                                        |
+| 043 | `043_fix_missing_rls_policies.sql`         | Add missing RLS policies                                                          |
+| 044 | `044_contact_spam_guard.sql`               | Contact spam guard (rate-limit helper)                                            |
+| 045 | `045_admin_is_admin_users_table.sql`       | is_admin() via users table (avoids ALTER DATABASE GUC)                            |
+| 046 | `046_blog_posts.sql`                       | blog_posts table + RLS                                                            |
+| 047 | `047_singleton_table_guard.sql`            | Singleton row guards (hero/about/site_settings)                                   |
 
 ## Summary
 
-- **Total migrations:** 43
-- **Numbered range:** 001–043
-- **Gaps:** 010, 016–019 (5 numbers never assigned)
-- **Corrective migrations:** 9
-  - Fixes (7): 002, 012, 023, 029, 036, 042, 043
-  - Cleanups (3): 035, 037, 039
-- **Unique tables affected:** ~25+ (including storage.objects and functions)
+- **Total migrations:** 47
+- **Numbered range:** 001–047 (contiguous, no gaps)
+- **Schema source of truth:** `001_init.sql` + follow-on migrations; `042_full_setup.sql` is the consolidated setup script.

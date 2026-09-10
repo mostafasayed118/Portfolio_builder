@@ -42,7 +42,6 @@ export * from "./components/primitives/sheet";
 export * from "./components/primitives/sidebar";
 export * from "./components/primitives/skeleton";
 export * from "./components/primitives/slider";
-export { Toaster as SonnerToaster } from "./components/primitives/sonner";
 export * from "./components/primitives/spinner";
 export * from "./components/primitives/switch";
 export * from "./components/primitives/table";
@@ -55,5 +54,7 @@ export * from "./components/primitives/toggle";
 export * from "./components/primitives/tooltip";
 
 export * from "./components/primitives/smart-form";
+
+export * from "./components/api-health-check";
 
 export * from "./hooks/index";

@@ -1,12 +1,13 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useRef } from "react";
 import { useToast } from "@workspace/ui";
-import { Search, Globe, AlertCircle, RefreshCw, Loader2 } from "lucide-react";
+import { Search, Globe, Loader2 } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { logError } from "@/lib/logger";
-import { getErrorMessage } from "@/lib/error-messages";
+import { AdminErrorState } from "@/components/AdminErrorState";
+import { AdminLoadingState } from "@/components/AdminLoadingState";
 import { cn } from "@/lib/utils";
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, Skeleton, Textarea } from "@workspace/ui";
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, Textarea } from "@workspace/ui";
 
 type SeoData = { title: string; description: string; keywords: string; og_title: string; og_description: string; og_image: string; canonical_url: string; twitterCard: string; twitter_creator: string };
 const DEFAULTS: SeoData = { title: "", description: "", keywords: "", og_title: "", og_description: "", og_image: "", canonical_url: "", twitterCard: "summary_large_image", twitter_creator: "" };
@@ -20,7 +21,7 @@ function CharCounter({ current, max, label }: { current: number; max: number; la
       <span className={cn(
         "text-xs",
         over ? "text-destructive font-semibold" :
-        nearLimit ? "text-amber-600 dark:text-amber-400" :
+        nearLimit ? "text-warning" :
         "text-muted-foreground"
       )}>
         {over
@@ -107,31 +108,10 @@ export default function SeoManager() {
 
   const isOverLimit = form.title.length > 60 || form.description.length > 160;
 
-  if (isLoading) {
-    return (
-      <div className="p-6 space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-10 w-full" />
-        <div className="space-y-2">
-          {[1,2,3,4,5].map(i => (
-            <Skeleton key={i} className="h-16 w-full rounded-lg" />
-          ))}
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return <AdminLoadingState />;
 
   if (isError) {
-    return (
-      <div className="p-6 flex flex-col items-center justify-center min-h-64 gap-4">
-        <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-destructive font-medium">{getErrorMessage(error)}</p>
-        <Button onClick={() => refetch()} variant="outline">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Try Again
-        </Button>
-      </div>
-    );
+    return <AdminErrorState error={error} onRetry={() => refetch()} />;
   }
 
   return (
@@ -174,7 +154,7 @@ export default function SeoManager() {
             <Textarea value={form.og_description} onChange={e => set("og_description", e.target.value)} rows={2} /></div>
           <div className="space-y-1.5"><Label className="text-xs">OG Image URL (optional)</Label>
             <Input value={form.og_image} onChange={e => set("og_image", e.target.value)} className="h-9" placeholder="https://…/og-image.png (1200×630)" /></div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1"><Label className="text-xs">Twitter Card</Label>
               <Input value={form.twitterCard} onChange={e => set("twitterCard", e.target.value)} className="h-9" /></div>
             <div className="space-y-1"><Label className="text-xs">Twitter Creator</Label>
@@ -188,8 +168,8 @@ export default function SeoManager() {
           <CardHeader className="pb-3"><CardTitle className="text-sm">Google Search Preview</CardTitle></CardHeader>
           <CardContent>
             <div className="rounded-lg border bg-background p-4 space-y-1">
-              <div className="text-blue-600 dark:text-blue-400 font-medium text-sm hover:underline cursor-pointer">{form.title || "Page Title"}</div>
-              <div className="text-emerald-700 dark:text-emerald-500 text-xs">{form.canonical_url || "https://your-site.replit.app"}</div>
+              <div className="text-info font-medium text-sm hover:underline cursor-pointer">{form.title || "Page Title"}</div>
+              <div className="text-success text-xs">{form.canonical_url || "https://your-site.replit.app"}</div>
               <div className="text-muted-foreground text-xs leading-relaxed">{form.description || "Page description…"}</div>
             </div>
           </CardContent>

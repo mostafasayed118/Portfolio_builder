@@ -5,7 +5,7 @@ import { HERO, PROJECTS, CONTACT } from "@/data/portfolio";
 import { useBranding } from "@/lib/branding";
 import { useLanguage } from "@/lib/language";
 
-const SITE_URL = import.meta.env.VITE_SITE_URL ?? "https://mustafasayed.replit.app";
+const SITE_URL = import.meta.env.VITE_SITE_URL ?? "https://mustafa-sayed-portfolio.vercel.app";
 const DEFAULT_IMAGE = `${SITE_URL}/opengraph.jpg`;
 const TWITTER_HANDLE = import.meta.env.VITE_TWITTER_HANDLE ?? "";
 
@@ -120,7 +120,7 @@ function SEOContent({
     }
     canonicalLink.href = url;
 
-    const defaultSchemas = schemas ?? [
+    const baseSchemas = [
       {
         "@context": "https://schema.org",
         "@type": "Person",
@@ -133,7 +133,7 @@ function SEOContent({
           addressLocality: "Cairo",
           addressCountry: "EG",
         },
-        sameAs: [CONTACT.github, CONTACT.linkedin],
+        sameAs: [CONTACT.github, CONTACT.linkedin, CONTACT.youtube, CONTACT.facebook],
         knowsAbout: HERO.roles,
       },
       {
@@ -151,8 +151,9 @@ function SEOContent({
         },
       },
     ];
+    const allSchemas = schemas ? [...baseSchemas, ...schemas] : baseSchemas;
 
-    defaultSchemas.forEach((schema, i) => {
+    allSchemas.forEach((schema, i) => {
       const id = `schema-org-jsonld-${i}`;
       let script = doc.getElementById(id) as HTMLScriptElement | null;
       if (!script) {
@@ -168,11 +169,11 @@ function SEOContent({
     const ownedScripts = doc.head.querySelectorAll(`script[data-seo-owner="${ownerId}"]`);
     ownedScripts.forEach((script) => {
       const match = script.id.match(/^schema-org-jsonld-(\d+)$/);
-      if (!match || Number(match[1]) >= defaultSchemas.length) {
+      if (!match || Number(match[1]) >= allSchemas.length) {
         script.remove();
       }
     });
-  }, [fullTitle, metaDescription, image, url, type, publishedTime, tags, lang, location, ownerId]);
+  }, [fullTitle, metaDescription, image, url, type, publishedTime, tags, lang, location, ownerId, siteName, schemas]);
 
   return null;
 }

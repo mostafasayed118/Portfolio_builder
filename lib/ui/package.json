@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "scripts": {
+    "lint": "eslint src --max-warnings=0"
+  },
   "exports": {
     ".": "./src/index.ts",
     "./hooks": "./src/hooks/index.ts",
@@ -51,7 +54,6 @@
     "react-hook-form": "^7.55.0",
     "react-resizable-panels": "^2.1.7",
     "recharts": "^2.15.2",
-    "sonner": "^2.0.7",
     "tailwind-merge": "catalog:",
     "vaul": "^1.1.2"
   },

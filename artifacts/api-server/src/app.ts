@@ -26,14 +26,27 @@ function isValidUrl(url: string): boolean {
 
 const app: Express = express();
 
+// The API server runs behind a reverse proxy (Vercel edge and similar PaaS
+// proxies). Without `trust proxy`, `req.ip` is the proxy's address for every
+// request, which (a) collapses IP-based rate limiting to a single shared IP
+// and (b) reduces the CSRF session identifier (`ip + user-agent`) to
+// user-agent-only. Trust exactly one proxy hop in production so `req.ip`
+// reflects the real client address.
+if (env.IS_PRODUCTION) {
+  app.set("trust proxy", 1);
+}
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      // The SPA bundles are built by Vite as external static assets, so
-      // script-src only needs 'self'. If the API server ever serves an
-      // HTML page with inline scripts, migrate to nonce-based CSP.
-      scriptSrc: ["'self'"],
+      // The API server is JSON-only (plus a PDF download for /cv): no route
+      // returns HTML or renders a <script>. script-src is therefore the
+      // strictest possible value — 'none'. A nonce-based policy would be
+      // dead config here (nonces only whitelist inline scripts, and there
+      // are none). Keep 'none' unless a future endpoint starts serving HTML
+      // with inline scripts.
+      scriptSrc: ["'none'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "blob:", "https://*.supabase.co"],
@@ -69,8 +82,12 @@ app.use(
   }),
 );
 
+// Keep the known admin deployment usable even if VITE_ADMIN_URL was omitted
+// from the API deployment. An explicit VITE_ADMIN_URL still takes priority
+// and is required for custom domains.
+const DEFAULT_ADMIN_ORIGIN = "https://portfolio-builder-admin.vercel.app";
 const allowedOrigins = [
-  ...(env.IS_PRODUCTION ? [] : ["http://localhost:5173", "http://localhost:5174"]),
+  ...(env.IS_PRODUCTION ? [DEFAULT_ADMIN_ORIGIN] : ["http://localhost:5173", "http://localhost:5174"]),
   env.VITE_SITE_URL,
   env.VITE_ADMIN_URL,
   env.VERCEL_URL ? `https://${env.VERCEL_URL}` : undefined,
@@ -107,13 +124,16 @@ const csrfHandler = (req: Request, res: Response) => {
 
 app.get("/api/v1/csrf-token", csrfHandler);
 
-// Health check (GET + HEAD) — mounted at the top-level /api prefix
-// BEFORE the v1 rate limiter and BEFORE the v1 router. The route
-// itself is unauthenticated, uncached, and does no I/O; it only
-// reports process.uptime() and the current timestamp. This is the
-// canonical liveness endpoint used by Docker / k8s / load
-// balancers.
+// Health check (GET + HEAD) — mounted at BOTH the top-level /api
+// prefix and /api/v1, BEFORE the v1 rate limiter and BEFORE the v1
+// router. Serving both paths keeps liveness probes stable across
+// v1 → v2 migrations (/api/healthz) while matching the documented
+// deployment health check (/api/v1/healthz). The route itself is
+// unauthenticated, uncached, and does no I/O; it only reports
+// process.uptime() and the current timestamp. This is the canonical
+// liveness endpoint used by Docker / k8s / load balancers.
 app.use("/api", healthRouter);
+app.use("/api/v1", healthRouter);
 
 app.use("/api/v1", generalLimiter);
 app.use("/api/v1", v1Router);

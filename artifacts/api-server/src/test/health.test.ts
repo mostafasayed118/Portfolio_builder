@@ -31,6 +31,21 @@ describe("GET /api/healthz — liveness check", () => {
     expect(res.body.uptime).toBeGreaterThanOrEqual(0);
   });
 
+  it("does NOT include the legacy db / api nested objects", async () => {
+    const res = await request(app).get("/api/healthz");
+    expect(res.body).not.toHaveProperty("db");
+    expect(res.body).not.toHaveProperty("api");
+  });
+
+  it("returns identical status for two back-to-back calls (no caching, no state)", async () => {
+    const res1 = await request(app).get("/api/healthz");
+    const res2 = await request(app).get("/api/healthz");
+    expect(res1.status).toBe(200);
+    expect(res2.status).toBe(200);
+    expect(res1.body.status).toBe("ok");
+    expect(res2.body.status).toBe("ok");
+  });
+
   it("reports the configured environment", async () => {
     _setOverride("NODE_ENV", "production");
     const res = await request(app).get("/api/healthz");
@@ -57,6 +72,20 @@ describe("GET /api/healthz — liveness check", () => {
     const res = await request(app).get("/api/healthz");
     expect(res.headers["x-content-type-options"]).toBe("nosniff");
   });
+
+  it("serves no scripts, so script-src is the strictest value 'none'", async () => {
+    const res = await request(app).get("/api/healthz");
+    const csp = res.headers["content-security-policy"] as string;
+    expect(csp).toBeDefined();
+    // Only script-src matters here — style-src legitimately keeps
+    // 'unsafe-inline' (styles cannot execute code). Match the exact
+    // directive (not script-src-attr, which also starts with "script-src").
+    const scriptSrc = csp
+      .split(";")
+      .map((directive) => directive.trim())
+      .find((directive) => directive.startsWith("script-src "));
+    expect(scriptSrc).toBe("script-src 'none'");
+  });
 });
 
 describe("HEAD /api/healthz — liveness check (used by Docker / k8s / load balancers)", () => {
@@ -79,10 +108,31 @@ describe("HEAD /api/healthz — liveness check (used by Docker / k8s / load bala
   });
 });
 
-describe("/api/v1/healthz — the legacy mount was removed in favor of /api/healthz", () => {
-  it("returns 404 for the old v1 path", async () => {
+describe("/api/v1/healthz — documented deployment health check (alias of /api/healthz)", () => {
+  it("returns 200 with the same spec response shape", async () => {
     const res = await request(app).get("/api/v1/healthz");
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        status: "ok",
+        timestamp: expect.any(String),
+        uptime: expect.any(Number),
+        environment: expect.any(String),
+      }),
+    );
+  });
+
+  it("supports HEAD with no body (Docker / k8s / load balancers)", async () => {
+    const res = await request(app).head("/api/v1/healthz");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({});
+  });
+
+  it("is served before the v1 rate limiter, so it is not throttled", async () => {
+    for (let i = 0; i < 105; i++) {
+      const res = await request(app).get("/api/v1/healthz");
+      expect(res.status).toBe(200);
+    }
   });
 });
 

@@ -1,15 +1,9 @@
 import { Link } from "wouter";
-import { ArrowRight, Calendar } from "lucide-react";
-import type { BlogPost as DbBlogPost } from "@workspace/supabase/types";
-import { formatPostDate } from "../types";
+import { ArrowRight, Calendar, Clock } from "lucide-react";
+import type { BlogPost } from "../types";
+import { formatPostDate, getReadingTime } from "../types";
 
-/** Card-scope post: everything the card renders — no heavy markdown body. */
-export type BlogPostCardPost = Pick<
-  DbBlogPost,
-  "id" | "title" | "slug" | "excerpt" | "cover_image_url" | "tags" | "published_at"
->;
-
-export default function BlogPostCard({ post }: { post: BlogPostCardPost }) {
+export default function BlogPostCard({ post }: { post: BlogPost }) {
   return (
     <Link
       href={`/blog/${post.slug}`}
@@ -25,9 +19,15 @@ export default function BlogPostCard({ post }: { post: BlogPostCardPost }) {
           />
         </div>
       )}
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <Calendar className="h-3.5 w-3.5" />
-        <time dateTime={post.published_at ?? undefined}>{formatPostDate(post.published_at)}</time>
+      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5">
+          <Calendar className="h-3.5 w-3.5" />
+          <time dateTime={post.published_at ?? undefined}>{formatPostDate(post.published_at)}</time>
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <Clock className="h-3.5 w-3.5" />
+          {getReadingTime(post.content)} min read
+        </span>
       </div>
       <h3 className="font-display font-semibold text-lg text-foreground leading-snug group-hover:text-primary transition-colors">
         {post.title}

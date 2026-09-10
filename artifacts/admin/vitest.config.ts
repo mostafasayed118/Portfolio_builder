@@ -4,7 +4,6 @@ import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const reactEntry = path.resolve(__dirname, "node_modules/react");
-const reactDomEntry = path.resolve(__dirname, "node_modules/react-dom");
 
 function reactAlias(nm: string) {
   return {
@@ -26,6 +25,9 @@ export default defineConfig({
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.test.{ts,tsx}"],
     css: true,
+    env: {
+      VITE_API_URL: "http://localhost:3001",
+    },
     // `react` is a workspace symlink into the pnpm store; Vite 7's resolver
     // can't follow it for the `react/jsx-dev-runtime` subpath. Without these
     // aliases, every test file that imports from `@workspace/ui` fails to

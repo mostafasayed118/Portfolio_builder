@@ -1,13 +1,15 @@
 import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@workspace/ui";
-import { FileText, CheckCircle, ExternalLink, Trash2, Info, AlertCircle, RefreshCw } from "lucide-react";
+import { FileText, CheckCircle, ExternalLink, Trash2, Info } from "lucide-react";
 import { getSupabase } from "@/lib/supabase";
 import { logError } from "@/lib/logger";
-import { Badge, Button, Card, CardContent, Skeleton } from "@workspace/ui";
+import { Badge, Button, Card, CardContent } from "@workspace/ui";
 import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
 import { api } from "@/lib/api-client";
 import { CvUploadZone } from "@/features/cv/components/CvUploadZone";
+import { AdminErrorState } from "@/components/AdminErrorState";
+import { AdminLoadingState } from "@/components/AdminLoadingState";
 
 export default function CvManager() {
   const { toast } = useToast();
@@ -22,7 +24,8 @@ export default function CvManager() {
     queryFn: async () => {
       const result = await api.cv.getSettings();
       if (!result.success) throw new Error(result.message);
-      return result.data!;
+      if (!result.data) throw new Error("CV settings response is missing data");
+      return result.data;
     },
     retry: 1,
   });
@@ -72,18 +75,17 @@ export default function CvManager() {
 
   const fmt = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
-  if (isLoading) return (
-    <div className="p-4 sm:p-6 max-w-2xl mx-auto space-y-4">
-      <Skeleton className="h-8 w-48" /><Skeleton className="h-40 w-full rounded-xl" /><Skeleton className="h-32 w-full rounded-xl" />
-    </div>
-  );
+  if (isLoading) return <AdminLoadingState variant="cv" />;
   if (isError) return (
-    <div className="p-4 sm:p-6 flex flex-col items-center justify-center min-h-64 gap-4">
-      <AlertCircle className="h-10 w-10 text-destructive" />
-      <div className="text-center"><p className="font-medium">Failed to load CV settings</p>
-        <p className="text-sm text-muted-foreground mt-1">{error instanceof Error ? error.message : "Unknown error"}</p></div>
-      <Button variant="outline" onClick={() => refetch()}><RefreshCw className="h-4 w-4 me-2" />Try Again</Button>
-    </div>
+    <AdminErrorState
+      title="Failed to load CV settings"
+      message={error instanceof Error ? error.message : "Unknown error"}
+      onRetry={() => refetch()}
+      wrapperClassName="p-4 sm:p-6 flex flex-col items-center justify-center min-h-64 gap-4"
+      iconClassName="h-10 w-10 text-destructive"
+      contentClassName="text-center"
+      messageClassName="text-sm text-muted-foreground mt-1"
+    />
   );
 
   return (
@@ -93,12 +95,12 @@ export default function CvManager() {
         <p className="text-sm text-muted-foreground">Upload your resume PDF. It will be served at <code className="bg-muted px-1 py-0.5 rounded text-xs">/api/v1/cv</code> and linked from the portfolio's Download CV button.</p>
       </div>
       {settings?.objectPath && (
-        <Card className="border-emerald-500/30 bg-emerald-500/5">
+        <Card className="border-success/30 bg-success/5">
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0"><FileText size={20} className="text-emerald-500" /></div>
+              <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center shrink-0"><FileText size={20} className="text-success" /></div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap"><span className="font-medium text-sm truncate">{settings.fileName}</span><Badge variant="default" className="text-xs bg-emerald-600 hover:bg-emerald-600">Live</Badge></div>
+                <div className="flex items-center gap-2 flex-wrap"><span className="font-medium text-sm truncate">{settings.fileName}</span><Badge variant="default" className="text-xs bg-success hover:bg-success/90">Live</Badge></div>
                 <p className="text-xs text-muted-foreground mt-0.5">Last updated {fmt(settings.updatedAt)}</p>
               </div>
               <div className="flex gap-2 shrink-0">
@@ -112,7 +114,7 @@ export default function CvManager() {
       <CvUploadZone uploading={uploading} progress={progress} dragging={dragging} hasExisting={!!settings?.objectPath}
         onDragOver={(e) => { e.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={handleDrop} onFileChange={handleFileChange} fileInputRef={fileInputRef} />
       <Card><CardContent className="pt-5 pb-4"><div className="flex items-start gap-3"><CheckCircle size={16} className="text-primary mt-0.5 shrink-0" /><div className="text-sm text-muted-foreground space-y-1"><p>Visitors can download your CV at <strong className="text-foreground">/api/v1/cv</strong>.</p><p>The Download CV button on the portfolio hero section already points to this endpoint.</p></div></div></CardContent></Card>
-      <Card><CardContent className="pt-5 pb-4"><div className="flex items-start gap-3"><Info size={16} className="text-primary mt-0.5 shrink-0" /><div className="text-sm text-muted-foreground space-y-1"><p>The generated CV PDF includes a QR code linking to: <code className="text-primary bg-primary/10 px-1 py-0.5 rounded text-xs">{import.meta.env.VITE_SITE_URL ?? 'https://mustafasayed.replit.app'}</code></p><p>The QR code appears in the top-right corner of the first page.</p></div></div></CardContent></Card>
+      <Card><CardContent className="pt-5 pb-4"><div className="flex items-start gap-3"><Info size={16} className="text-primary mt-0.5 shrink-0" /><div className="text-sm text-muted-foreground space-y-1"><p>The generated CV PDF includes a QR code linking to: <code className="text-primary bg-primary/10 px-1 py-0.5 rounded text-xs">{import.meta.env.VITE_SITE_URL ?? 'https://portfolio-builder-admin.vercel.app'}</code></p><p>The QR code appears in the top-right corner of the first page.</p></div></div></CardContent></Card>
       <SmartConfirmDialog state={{ isOpen: showRemoveConfirm, title: "Remove CV", message: "The Download CV button will show a 'not found' error until a new file is uploaded.", confirmLabel: "Remove", variant: "warning", onConfirm: async () => { await handleRemove(); setShowRemoveConfirm(false); } }} onCancel={() => setShowRemoveConfirm(false)} />
     </div>
   );

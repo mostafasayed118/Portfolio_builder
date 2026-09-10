@@ -41,7 +41,7 @@ export class SmartErrorBoundary extends Component<Props, State> {
         <Card className="m-4">
           <CardContent className="pt-6">
             <div className="text-center space-y-4">
-              <AlertTriangle className="h-16 w-16 text-amber-500 mx-auto" aria-hidden="true" />
+              <AlertTriangle className="h-16 w-16 text-warning mx-auto" aria-hidden="true" />
               <h2 className="text-xl font-semibold">
                 {this.props.title ?? "Something went wrong"}
               </h2>

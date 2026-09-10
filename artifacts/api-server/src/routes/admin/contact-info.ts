@@ -16,6 +16,8 @@ const contactInfoSchema = z.object({
   address: z.string().max(200).optional().or(z.null()),
   github: z.string().url().optional().or(z.literal("")).or(z.null()),
   linkedin: z.string().url().optional().or(z.literal("")).or(z.null()),
+  youtube: z.string().url().optional().or(z.literal("")).or(z.null()),
+  facebook: z.string().url().optional().or(z.literal("")).or(z.null()),
   whatsapp: z.string().max(20).optional().or(z.null()),
   map_embed_url: z.string().url().optional().or(z.literal("")).or(z.null()),
   availability_status: z.string().max(100).optional().or(z.null()),

@@ -1,15 +1,18 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, Loader2, Plus, RefreshCw, NotebookPen, CalendarCheck2 } from "lucide-react";
+import { Loader2, Plus, NotebookPen, CalendarCheck2, Image as ImageIcon } from "lucide-react";
 import { api } from "@/lib/api-client";
 import {
-  Button, Card, CardContent, Input, Textarea, Skeleton, Badge, Switch,
+  Button, Card, CardContent, Input, Textarea, Badge, Switch,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@workspace/ui";
 import { useToast } from "@workspace/ui";
 import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
 import { SmartEmptyState } from "@/components/SmartEmptyState";
-import { getErrorMessage } from "@/lib/error-messages";
+import { AdminErrorState } from "@/components/AdminErrorState";
+import { AdminLoadingState } from "@/components/AdminLoadingState";
+import ImageUploader, { type UploadedImage } from "@/components/ImageUploader";
+import MarkdownEditor from "@/features/posts/components/MarkdownEditor";
 import { useEntityQuery } from "@/lib/use-entity-query";
 import type { BlogPost } from "@workspace/supabase/types";
 
@@ -48,22 +51,61 @@ export default function PostsManager() {
   const [editing, setEditing] = useState<Partial<BlogPost> & { id?: string }>(BLANK_POST);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "published" | "draft">("all");
   const [deleteTarget, setDeleteTarget] = useState<BlogPost | null>(null);
 
   const filtered = useMemo(() => {
     if (!posts) return [];
     const q = search.trim().toLowerCase();
-    if (!q) return posts;
-    return posts.filter((p) =>
-      p.title.toLowerCase().includes(q) ||
-      p.tags?.some((t) => t.toLowerCase().includes(q)),
-    );
-  }, [posts, search]);
+    return posts.filter((p) => {
+      const matchesSearch = !q
+        || p.title.toLowerCase().includes(q)
+        || Boolean(p.tags?.some((t) => t.toLowerCase().includes(q)));
+      const matchesStatus = statusFilter === "all"
+        || (statusFilter === "published" && p.is_published === true)
+        || (statusFilter === "draft" && p.is_published !== true);
+      return matchesSearch && matchesStatus;
+    });
+  }, [posts, search, statusFilter]);
 
   const openNew = () => {
     setEditing({ ...BLANK_POST });
     setDialogOpen(true);
   };
+
+  // Deep-link support: the command palette's quick actions navigate here
+  // with a URL hash — #new opens the create dialog, #edit-<id> opens the
+  // editor for that post (used by "Edit Latest Draft"). The hash is stripped
+  // after opening so refetches don't re-open the dialog.
+  useEffect(() => {
+    const handleDeepLink = () => {
+      const hash = window.location.hash.replace(/^#/, "");
+      if (hash === "new") {
+        setEditing({ ...BLANK_POST });
+        setDialogOpen(true);
+        clearDeepLinkHash();
+        return;
+      }
+      if (hash.startsWith("edit-")) {
+        const post = posts?.find((p) => p.id === hash.slice("edit-".length));
+        if (post) {
+          setEditing({
+            id: post.id, title: post.title, slug: post.slug, excerpt: post.excerpt ?? "",
+            content: post.content, cover_image_url: post.cover_image_url,
+            tags: post.tags ?? [], is_published: post.is_published ?? false,
+          });
+          setDialogOpen(true);
+          clearDeepLinkHash();
+        }
+      }
+    };
+    const clearDeepLinkHash = () => {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    };
+    handleDeepLink();
+    window.addEventListener("hashchange", handleDeepLink);
+    return () => window.removeEventListener("hashchange", handleDeepLink);
+  }, [posts]);
 
   const openEdit = (post: BlogPost) => {
     setEditing({
@@ -96,6 +138,15 @@ export default function PostsManager() {
 
   const removeTag = (tag: string) => {
     setEditing((prev) => ({ ...prev, tags: (prev.tags ?? []).filter((t) => t !== tag) }));
+  };
+
+  const handleCoverUpload = (images: UploadedImage[]) => {
+    const image = images.at(-1);
+    const coverUrl = image?.variants.find((variant) => variant.type === "social")?.url
+      ?? image?.variants.find((variant) => variant.type === "medium")?.url
+      ?? image?.url
+      ?? null;
+    setEditing((prev) => ({ ...prev, cover_image_url: coverUrl }));
   };
 
   const handleSave = async () => {
@@ -151,28 +202,10 @@ export default function PostsManager() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="p-6 space-y-4">
-        <Skeleton className="h-8 w-40" />
-        <Skeleton className="h-10 w-full" />
-        <div className="grid md:grid-cols-2 gap-4">
-          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-40 w-full rounded-2xl" />)}
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return <AdminLoadingState variant="posts" />;
 
   if (isError) {
-    return (
-      <div className="p-6 flex flex-col items-center justify-center min-h-64 gap-4">
-        <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-destructive font-medium">{getErrorMessage(error)}</p>
-        <Button variant="outline" onClick={() => refetch()}>
-          <RefreshCw className="h-4 w-4 mr-2" /> Try Again
-        </Button>
-      </div>
-    );
+    return <AdminErrorState error={error} onRetry={() => refetch()} />;
   }
 
   return (
@@ -194,13 +227,27 @@ export default function PostsManager() {
           </Button>
         </div>
 
-        <div>
+        <div className="flex flex-wrap items-center gap-3">
           <Input
             placeholder="Search posts…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="max-w-sm"
           />
+          <div className="flex items-center gap-1" aria-label="Post status filter">
+            {(["all", "published", "draft"] as const).map((status) => (
+              <Button
+                key={status}
+                type="button"
+                size="sm"
+                variant={statusFilter === status ? "secondary" : "ghost"}
+                onClick={() => setStatusFilter(status)}
+                aria-pressed={statusFilter === status}
+              >
+                {status === "all" ? "All" : status === "published" ? "Published" : "Drafts"}
+              </Button>
+            ))}
+          </div>
         </div>
 
         {filtered.length === 0 ? (
@@ -222,7 +269,7 @@ export default function PostsManager() {
                   <CardContent className="p-5 space-y-3">
                     <div className="flex items-center gap-2 flex-wrap">
                       {published ? (
-                        <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">Published</Badge>
+                        <Badge variant="outline" className="bg-success/10 text-success border-success/30">Published</Badge>
                       ) : (
                         <Badge variant="outline" className="bg-muted text-muted-foreground">Draft</Badge>
                       )}
@@ -275,19 +322,23 @@ export default function PostsManager() {
               <Textarea value={editing.excerpt ?? ""} onChange={(e) => setEditing((p) => ({ ...p, excerpt: e.target.value }))} rows={2} maxLength={500} />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Cover image URL</label>
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                <ImageIcon className="h-3.5 w-3.5" /> Cover image
+              </label>
               <Input value={editing.cover_image_url ?? ""} onChange={(e) => setEditing((p) => ({ ...p, cover_image_url: e.target.value || null }))} placeholder="https://…" />
+              <ImageUploader
+                entityType="content"
+                maxFiles={1}
+                onUploadComplete={handleCoverUpload}
+              />
             </div>
 
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">Content (Markdown) *</label>
-              <Textarea
+              <MarkdownEditor
                 value={editing.content ?? ""}
-                onChange={(e) => setEditing((p) => ({ ...p, content: e.target.value }))}
-                rows={10}
-                placeholder={"## Heading\n\nWrite your article in Markdown…"}
-                className="font-mono text-sm"
+                onChange={(content) => setEditing((p) => ({ ...p, content }))}
               />
             </div>
 
