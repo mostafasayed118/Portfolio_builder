@@ -15,6 +15,14 @@ const nullableUrl = z
   .or(z.literal(""))
   .or(z.null());
 
+const nullableHttpsUrl = z
+  .string()
+  .url()
+  .refine((v) => v.startsWith("https://"), "Live URL must use HTTPS")
+  .optional()
+  .or(z.literal(""))
+  .or(z.null());
+
 export const heroSchema = z.object({
   heading: z.string().max(200).optional(),
   heading_ar: z.string().max(200).optional(),
@@ -97,10 +105,10 @@ export const skillSchema = z.object({
   proficiency: z.coerce
     .number()
     .int()
-    .min(0, "Proficiency must be at least 0")
-    .max(100, "Proficiency must be at most 100"),
+    .min(1, "Proficiency must be between 1 and 100")
+    .max(100, "Proficiency must be between 1 and 100"),
   icon: z.string().optional().or(z.null()),
-  sort_order: z.coerce.number().int().optional(),
+  sort_order: z.coerce.number().int().min(0).max(9999).optional(),
   is_visible: z.boolean().optional(),
 });
 
@@ -119,7 +127,7 @@ export const projectSchema = z.object({
   tags: z.array(z.string()).max(20).optional(),
   featured: z.boolean().optional(),
   github_url: nullableUrl,
-  live_url: nullableUrl,
+  live_url: nullableHttpsUrl,
   image_url: nullableUrl,
   metrics: z.array(z.string()).max(20).optional(),
   sort_order: z.coerce.number().int().optional(),

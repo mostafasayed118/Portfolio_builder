@@ -3,7 +3,7 @@ import multer from "multer";
 import { createHash } from "crypto";
 import { z } from "zod";
 import { doubleCsrfProtection } from "../middleware/csrf";
-import { adminAuth } from "../middleware/adminAuth";
+import { adminAuth, type AuthenticatedRequest } from "../middleware/adminAuth";
 import { imageMetadataLimiter, imageUploadLimiter } from "../middleware/rateLimiter";
 import { getSupabaseClient } from "../lib/supabase-client";
 import { env } from "../lib/env";
@@ -83,7 +83,7 @@ router.post(
   imageUploadLimiter,
   doubleCsrfProtection,
   upload.single("file"),
-  async (req: Request, res: Response) => {
+  async (req: AuthenticatedRequest, res: Response) => {
   try {
     const supabase = getSupabaseClient();
     const entityType = req.body.entityType as string;
@@ -132,7 +132,7 @@ router.post(
 
     if (uploadError) throw new Error(`Storage upload failed: ${uploadError.message}`);
 
-    // Save metadata
+    // Save metadata (stamped with the uploader for per-user scoping)
     const { data: meta, error: metaError } = await supabase
       .from("image_metadata")
       .insert({
@@ -142,6 +142,7 @@ router.post(
         file_size_bytes: file.size,
         entity_type: entityType,
         entity_id: entityId ?? null,
+        user_id: req.user?.id ?? null,
       })
       .select("id")
       .single();
@@ -215,8 +216,8 @@ router.get("/images/:id/metadata", imageMetadataLimiter, async (req: Request, re
   return ok(res, data);
 });
 
-// DELETE /api/images/:id — delete image (admin only)
-router.delete("/images/:id", adminAuth, doubleCsrfProtection, async (req: Request, res: Response) => {
+// DELETE /api/images/:id — delete image (admin only, scoped by owner)
+router.delete("/images/:id", adminAuth, doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
   const imageId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   if (!z.string().uuid().safeParse(imageId).success) {
     return badRequest(res, { id: ["Invalid image ID"] });
@@ -226,11 +227,21 @@ router.delete("/images/:id", adminAuth, doubleCsrfProtection, async (req: Reques
     const supabase = getSupabaseClient();
     const { data: meta, error: metaError } = await supabase
       .from("image_metadata")
-      .select("storage_path, id")
+      .select("storage_path, id, user_id")
       .eq("id", imageId)
       .single();
 
     if (metaError || !meta) {
+      return notFound(res, "Image not found");
+    }
+
+    // Per-user scoping: non-superadmins may only delete their own uploads.
+    // Rows that predate user_id ownership (user_id IS NULL) are fail-closed
+    // to non-superadmins. Identity-less requests (API-key auth where the
+    // default admin user could not be resolved) keep the historical allow
+    // behavior — the API key itself is the admin credential. Answered 404
+    // (not 403) to avoid an existence oracle.
+    if (req.user && req.user.role !== "superadmin" && meta.user_id !== req.user.id) {
       return notFound(res, "Image not found");
     }
 

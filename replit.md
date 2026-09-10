@@ -25,15 +25,14 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 
 ## Environment Variables
 
-| Variable                         | Used By          | Description                                   |
-| -------------------------------- | ---------------- | --------------------------------------------- |
-| `VITE_SUPABASE_URL`              | portfolio, admin | Supabase project URL                          |
-| `VITE_SUPABASE_ANON_KEY`         | portfolio, admin | Anon/publishable key for client-side queries  |
-| `VITE_SUPABASE_SERVICE_ROLE_KEY` | admin            | Service role key for admin operations         |
-| `SUPABASE_URL`                   | api-server       | Supabase project URL                          |
-| `SUPABASE_SERVICE_ROLE_KEY`      | api-server       | Service role key for server operations        |
-| `VITE_CLERK_PUBLISHABLE_KEY`     | admin            | Clerk publishable key for admin auth          |
-| `ADMIN_EMAILS`                   | api-server       | Comma-separated list of admin email addresses |
+| Variable                     | Used By                  | Description                                   |
+| ---------------------------- | ------------------------ | --------------------------------------------- |
+| `VITE_SUPABASE_URL`          | portfolio, admin         | Supabase project URL                          |
+| `VITE_SUPABASE_ANON_KEY`     | portfolio, admin         | Anon/publishable key for client-side queries  |
+| SUPABASE_SERVICE_ROLE_KEY    | api-server (server-only) | Server-only, never VITE\_ prefixed            |
+| `SUPABASE_URL`               | api-server               | Supabase project URL                          |
+| `VITE_CLERK_PUBLISHABLE_KEY` | admin                    | Clerk publishable key for admin auth          |
+| `ADMIN_EMAILS`          | admin                    | Comma-separated list of admin email addresses |
 
 ## Artifacts
 
@@ -67,8 +66,9 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 2. Copy the project URL and anon key to `.env` and `artifacts/*/.env.local`
 3. Run `supabase/migrations/001_init.sql` against your Supabase SQL editor
 4. (Optional) Run `supabase/migrations/002_fix_rls_policies.sql` if RLS policies need updating
-5. For admin access, add `VITE_SUPABASE_SERVICE_ROLE_KEY` and `VITE_CLERK_PUBLISHABLE_KEY`
-   to `artifacts/admin/.env.local`
+5. For admin access, add `VITE_CLERK_PUBLISHABLE_KEY`
+   to `artifacts/admin/.env.local`. The service-role key (`SUPABASE_SERVICE_ROLE_KEY`)
+   is server-only — keep it in api-server env, never `VITE_` prefixed or client-side.
 
 ## Database Schema (Supabase)
 

@@ -43,7 +43,7 @@ describe("validateQueryUserId", () => {
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({
       success: false,
-      message: "Invalid userId format — must be a valid UUID",
+      errors: { userId: ["Invalid userId format — must be a valid UUID"] },
     });
     expect(next).not.toHaveBeenCalled();
   });
@@ -58,7 +58,7 @@ describe("validateQueryUserId", () => {
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({
       success: false,
-      message: "Invalid userId format — must be a valid UUID",
+      errors: { userId: ["Invalid userId format — must be a valid UUID"] },
     });
     expect(next).not.toHaveBeenCalled();
   });
@@ -86,7 +86,7 @@ describe("validateParamId", () => {
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({
       success: false,
-      message: "Invalid id format — must be a valid UUID",
+      errors: { id: ["Invalid id format — must be a valid UUID"] },
     });
     expect(next).not.toHaveBeenCalled();
   });
@@ -101,7 +101,7 @@ describe("validateParamId", () => {
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({
       success: false,
-      message: "Invalid id format — must be a valid UUID",
+      errors: { id: ["Invalid id format — must be a valid UUID"] },
     });
     expect(next).not.toHaveBeenCalled();
   });

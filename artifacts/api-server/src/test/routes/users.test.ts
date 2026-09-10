@@ -57,6 +57,24 @@ describe("Users API", () => {
       expect([200, 500]).toContain(res.status);
     });
 
+    it("returns the paginated envelope shape for superadmin", async () => {
+      const res = await request(app)
+        .get("/api/v1/admin/users")
+        .set("x-admin-key", "test-key");
+      if (res.status === 200) {
+        expect(res.body.success).toBe(true);
+        expect(Array.isArray(res.body.data)).toBe(true);
+        expect(res.body.pagination).toMatchObject({
+          total: expect.any(Number),
+          limit: expect.any(Number),
+          offset: expect.any(Number),
+          hasMore: expect.any(Boolean),
+        });
+      } else {
+        expect(res.status).toBe(500);
+      }
+    });
+
     it("returns 403 for regular admin (not superadmin)", async () => {
       const res = await request(app)
         .get("/api/v1/admin/users")

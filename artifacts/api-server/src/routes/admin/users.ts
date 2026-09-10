@@ -5,15 +5,16 @@ import { requireSuperadmin } from "../../middleware/requireSuperadmin";
 import type { Response } from "express";
 import { updateRoleSchema } from "@workspace/api-zod";
 import { getSupabaseClient } from "../../lib/supabase-client";
+import { parsePagination } from "../../lib/route-helpers";
 import { validateParamId } from "../../middleware/validateUuid";
-import { ok, notFound, badRequest, serverError } from "../../lib/api-response";
+import { ok, notFound, badRequest, serverError, unauthorized, paginated } from "../../lib/api-response";
 
 const router: IRouter = Router();
 
 // GET /api/v1/admin/users/me — get current authenticated user (any admin)
 router.get("/me", async (req: AuthenticatedRequest, res: Response) => {
   if (!req.user) {
-    return res.status(401).json({ success: false, message: "Not authenticated" });
+    return unauthorized(res, "Not authenticated");
   }
   return ok(res, {
     id: req.user.id,
@@ -23,15 +24,17 @@ router.get("/me", async (req: AuthenticatedRequest, res: Response) => {
 });
 
 // GET /api/v1/admin/users — list all users (superadmin only)
-router.get("/", requireSuperadmin, async (_req: AuthenticatedRequest, res: Response) => {
+router.get("/", requireSuperadmin, async (req: AuthenticatedRequest, res: Response) => {
   const supabase = getSupabaseClient();
-  const { data, error } = await supabase
+  const { limit, offset } = parsePagination(req);
+  const { data, error, count } = await supabase
     .from("users")
-    .select("id, clerk_id, email, name, role, created_at")
-    .order("created_at", { ascending: false });
+    .select("id, clerk_id, email, name, role, created_at", { count: "exact" })
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit - 1);
 
   if (error) return serverError(res, error.message);
-  return ok(res, data);
+  return paginated(res, data ?? [], count ?? 0, limit, offset);
 });
 
 // PATCH /api/v1/admin/users/:id/role — change user role (superadmin only)

@@ -65,7 +65,7 @@ describe("Global Error Handler", () => {
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({
       success: false,
-      message: "Invalid input data",
+      errors: { _form: ["Invalid input data"] },
     });
   });
 
@@ -92,7 +92,7 @@ describe("Global Error Handler", () => {
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({
       success: false,
-      message: "Invalid JSON in request body",
+      errors: { _form: ["Invalid JSON in request body"] },
     });
   });
 
@@ -149,8 +149,8 @@ describe("Global Error Handler", () => {
     errorHandler(err, req as Request, res as Response, next);
 
     const jsonCall = (res.json as ReturnType<typeof vi.fn>).mock.calls[0][0];
-    // ValidationError includes the message but not the stack
-    expect(jsonCall.message).toBe("Field validation failed at /app/internal");
+    // ValidationError includes the message in _form errors but not the stack
+    expect(jsonCall.errors).toEqual({ _form: ["Field validation failed at /app/internal"] });
     expect(JSON.stringify(jsonCall)).not.toContain("validator.ts");
   });
 

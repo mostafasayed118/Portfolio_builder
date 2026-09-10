@@ -9,6 +9,7 @@ import v1Router from "./routes/v1";
 import healthRouter from "./routes/health";
 import { logger } from "./lib/logger";
 import { env } from "./lib/env";
+import { ok, notFound } from "./lib/api-response";
 import { errorHandler } from "./middleware/errorHandler";
 import { generateCsrfToken } from "./middleware/csrf";
 import { generalLimiter } from "./middleware/rateLimiter";
@@ -102,16 +103,23 @@ app.use(compression());
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
-// Request ID tracking
+// Request ID tracking. Only accept well-formed UUIDs from clients —
+// arbitrary header values would flow into logs (log injection) and
+// response headers. Anything else is replaced with a fresh UUID.
+const REQUEST_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 app.use((req, res, next) => {
-  const requestId = (req.headers["x-request-id"] as string) ?? randomUUID();
+  const incoming = req.headers["x-request-id"];
+  const requestId =
+    typeof incoming === "string" && REQUEST_ID_PATTERN.test(incoming)
+      ? incoming
+      : randomUUID();
   req.headers["x-request-id"] = requestId;
   res.setHeader("X-Request-ID", requestId);
   next();
 });
 
 const csrfHandler = (req: Request, res: Response) => {
-  res.json({ csrfToken: generateCsrfToken(req, res) });
+  ok(res, { csrfToken: generateCsrfToken(req, res) });
 };
 
 app.get("/api/v1/csrf-token", csrfHandler);
@@ -131,10 +139,7 @@ app.use("/api/v1", generalLimiter);
 app.use("/api/v1", v1Router);
 
 app.use((req: Request, res: Response) => {
-  res.status(404).json({
-    success: false,
-    message: "Not found",
-  });
+  notFound(res);
 });
 
 app.use(errorHandler);
