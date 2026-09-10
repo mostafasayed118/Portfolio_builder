@@ -34,7 +34,7 @@ describe("listPublishedPosts", () => {
     ];
     resolveOnSecondOrder(rows);
 
-    const result = await listPublishedPosts(supabase as never);
+    const result = await listPublishedPosts(supabase as any);
 
     expect(supabase.from).toHaveBeenCalledWith("blog_posts");
     expect(supabase.select).toHaveBeenCalledWith(LIST_COLUMNS);
@@ -46,7 +46,7 @@ describe("listPublishedPosts", () => {
   it("orders by published_at desc then created_at desc", async () => {
     resolveOnSecondOrder([]);
 
-    await listPublishedPosts(supabase as never);
+    await listPublishedPosts(supabase as any);
 
     expect(supabase.order).toHaveBeenNthCalledWith(1, "published_at", {
       ascending: false,
@@ -60,7 +60,7 @@ describe("listPublishedPosts", () => {
   it("throws on error", async () => {
     resolveOnSecondOrder(null, new Error("db error"));
 
-    await expect(listPublishedPosts(supabase as never)).rejects.toThrow("db error");
+    await expect(listPublishedPosts(supabase as any)).rejects.toThrow("db error");
   });
 });
 
@@ -69,7 +69,7 @@ describe("listAllPosts", () => {
     const rows = [{ id: "1", title: "Draft", is_published: false }];
     supabase.order.mockResolvedValue({ data: rows, error: null });
 
-    const result = await listAllPosts(supabase as never);
+    const result = await listAllPosts(supabase as any);
 
     expect(supabase.select).toHaveBeenCalledWith(LIST_COLUMNS);
     expect(supabase.is).toHaveBeenCalledWith("deleted_at", null);
@@ -79,7 +79,7 @@ describe("listAllPosts", () => {
   it("throws on error", async () => {
     supabase.order.mockResolvedValue({ data: null, error: new Error("fail") });
 
-    await expect(listAllPosts(supabase as never)).rejects.toThrow("fail");
+    await expect(listAllPosts(supabase as any)).rejects.toThrow("fail");
   });
 });
 
@@ -88,7 +88,7 @@ describe("getPublishedPostBySlug", () => {
     const row = { id: "1", slug: "a", content: "full markdown" };
     supabase.maybeSingle.mockResolvedValue({ data: row, error: null });
 
-    const result = await getPublishedPostBySlug(supabase as never, "a");
+    const result = await getPublishedPostBySlug(supabase as any, "a");
 
     expect(supabase.select).toHaveBeenCalledWith("*");
     expect(supabase.eq).toHaveBeenCalledWith("slug", "a");
@@ -100,7 +100,7 @@ describe("createPost", () => {
   it("inserts with defaults and stamps published_at when published", async () => {
     supabase.single.mockResolvedValue({ data: { id: "p1" }, error: null });
 
-    const id = await createPost(supabase as never, {
+    const id = await createPost(supabase as any, {
       slug: "hello",
       title: "Hello",
       is_published: true,
@@ -124,7 +124,7 @@ describe("createPost", () => {
   it("leaves published_at null for drafts", async () => {
     supabase.single.mockResolvedValue({ data: { id: "p2" }, error: null });
 
-    await createPost(supabase as never, { slug: "draft", title: "Draft" });
+    await createPost(supabase as any, { slug: "draft", title: "Draft" });
 
     expect(supabase.insert).toHaveBeenCalledWith(
       expect.objectContaining({ is_published: false, published_at: null }),
@@ -139,7 +139,7 @@ describe("updatePost", () => {
       error: null,
     });
 
-    await updatePost(supabase as never, "1", { is_published: true });
+    await updatePost(supabase as any, "1", { is_published: true });
 
     expect(supabase.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -156,7 +156,7 @@ describe("updatePost", () => {
       error: null,
     });
 
-    await updatePost(supabase as never, "1", { is_published: true });
+    await updatePost(supabase as any, "1", { is_published: true });
 
     expect(supabase.update).toHaveBeenCalledWith(
       expect.objectContaining({ is_published: true, updated_at: expect.any(String) }),
@@ -168,7 +168,7 @@ describe("updatePost", () => {
 
 describe("deletePost", () => {
   it("soft-deletes by stamping deleted_at", async () => {
-    await deletePost(supabase as never, "1");
+    await deletePost(supabase as any, "1");
 
     expect(supabase.update).toHaveBeenCalledWith(
       expect.objectContaining({ deleted_at: expect.any(String) }),
