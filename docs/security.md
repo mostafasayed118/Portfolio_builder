@@ -91,7 +91,7 @@ That is a follow-up task — see `TECHNICAL_DEBT_REPORT.md`.
 | Public portfolio    | None (intentional)                                                     | —                                                             |
 | Public contact POST | Honeypot + time-trap + rate limit + origin check                       | `public/contact.ts`                                           |
 | Admin sign-in       | Clerk JWT template (includes email claim)                              | `lib/auth/src/index.tsx` + `admin/src/features/auth/auth.tsx` |
-| Admin API           | Clerk JWT verified server-side + email allowlist (`VITE_ADMIN_EMAILS`) | `middleware/adminAuth.ts`                                     |
+| Admin API           | Clerk JWT verified server-side + email allowlist (`ADMIN_EMAILS`) | `middleware/adminAuth.ts`                                     |
 | API key             | `timingSafeEqual` constant-time compare                                | `middleware/adminAuth.ts`                                     |
 | CV download         | Public (anon)                                                          | `routes/cv.ts` (with `is_published` gate on settings)         |
 

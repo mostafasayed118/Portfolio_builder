@@ -279,7 +279,7 @@ Provide a centralized platform to:
 | Feature | Details |
 |---------|---------|
 | Provider | Clerk (email + social OAuth) |
-| Access control | Email whitelist (`VITE_ADMIN_EMAILS`) |
+| Access control | Email whitelist (`ADMIN_EMAILS`) |
 | Protected routes | All admin pages behind `<ProtectedRoute>` |
 | Login redirect | `/admin/login` → Clerk hosted UI → redirect back |
 
@@ -718,7 +718,7 @@ Admin clicks "Import Static Data"
 | `SUPABASE_URL` | API server | api-server | Supabase project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | API server | api-server | Service role key for server ops |
 | `VITE_CLERK_PUBLISHABLE_KEY` | Admin | admin | Clerk auth publishable key |
-| `VITE_ADMIN_EMAILS` | Admin | admin | Comma-separated admin email addresses |
+| `ADMIN_EMAILS` | Admin | admin | Comma-separated admin email addresses |
 
 ---
 
