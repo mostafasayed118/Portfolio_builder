@@ -35,6 +35,8 @@ vi.mock("../../utils/qrcode", () => ({
 const mockSupabaseClient = {
   from: vi.fn().mockReturnThis(),
   select: vi.fn().mockReturnThis(),
+  is: vi.fn().mockReturnThis(),
+  eq: vi.fn().mockReturnThis(),
   limit: vi.fn().mockReturnThis(),
   order: vi.fn().mockReturnThis(),
   maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
@@ -85,16 +87,6 @@ const certificationsData = [
   { title: "AWS Solutions Architect", issuer: "Amazon", date: "2023" },
 ];
 
-function setupSupabaseMockWithData() {
-  mockSupabaseClient.maybeSingle
-    .mockResolvedValueOnce({ data: heroData, error: null })    // hero
-    .mockResolvedValueOnce({ data: aboutData, error: null });  // about
-  mockSupabaseClient.order
-    .mockResolvedValueOnce({ data: experienceData, error: null, status: "fulfilled" })  // experience
-    .mockResolvedValueOnce({ data: skillsData, error: null, status: "fulfilled" })      // skills
-    .mockResolvedValueOnce({ data: certificationsData, error: null, status: "fulfilled" }); // certifications
-}
-
 describe("CV Generator", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -107,6 +99,8 @@ describe("CV Generator", () => {
     mockSupabaseClient.from.mockImplementation((table: string) => {
       const chain = {
         select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         maybeSingle: vi.fn(),
@@ -120,13 +114,13 @@ describe("CV Generator", () => {
           chain.maybeSingle.mockResolvedValue({ data: aboutData, error: null });
           break;
         case "experience":
-          chain.order.mockResolvedValue({ data: experienceData, error: null });
+          chain.limit.mockResolvedValue({ data: experienceData, error: null });
           break;
         case "skills":
-          chain.order.mockResolvedValue({ data: skillsData, error: null });
+          chain.limit.mockResolvedValue({ data: skillsData, error: null });
           break;
         case "certifications":
-          chain.order.mockResolvedValue({ data: certificationsData, error: null });
+          chain.limit.mockResolvedValue({ data: certificationsData, error: null });
           break;
         default:
           chain.maybeSingle.mockResolvedValue({ data: null, error: null });
@@ -145,17 +139,22 @@ describe("CV Generator", () => {
   });
 
   it("handles missing hero data gracefully with defaults", async () => {
-    mockSupabaseClient.from.mockImplementation((table: string) => {
+    mockSupabaseClient.from.mockImplementation(() => {
       const chain = {
         select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         maybeSingle: vi.fn(),
       };
 
-      // All queries return null
+      // All queries return null. Singletons chain .limit(1).maybeSingle();
+      // collections terminate at .limit(N) — distinguish by the limit arg.
       chain.maybeSingle.mockResolvedValue({ data: null, error: null });
-      chain.order.mockResolvedValue({ data: [], error: null });
+      chain.limit.mockImplementation((n: number) =>
+        n === 1 ? chain : Promise.resolve({ data: [], error: null }),
+      );
       return chain;
     });
 
@@ -171,6 +170,8 @@ describe("CV Generator", () => {
 
     mockSupabaseClient.from.mockImplementation(() => ({
       select: vi.fn().mockReturnThis(),
+      is: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       order: vi.fn().mockReturnThis(),
       maybeSingle: vi.fn().mockResolvedValue({ data: heroData, error: null }),
@@ -193,6 +194,8 @@ describe("CV Generator", () => {
 
     mockSupabaseClient.from.mockImplementation(() => ({
       select: vi.fn().mockReturnThis(),
+      is: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       order: vi.fn().mockReturnThis(),
       maybeSingle: vi.fn().mockResolvedValue({ data: heroData, error: null }),
@@ -212,6 +215,8 @@ describe("CV Generator", () => {
     mockSupabaseClient.from.mockImplementation((table: string) => {
       const chain = {
         select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         maybeSingle: vi.fn(),
@@ -225,13 +230,13 @@ describe("CV Generator", () => {
           chain.maybeSingle.mockResolvedValue({ data: aboutData, error: null });
           break;
         case "experience":
-          chain.order.mockResolvedValue({ data: experienceData, error: null });
+          chain.limit.mockResolvedValue({ data: experienceData, error: null });
           break;
         case "skills":
-          chain.order.mockResolvedValue({ data: skillsData, error: null });
+          chain.limit.mockResolvedValue({ data: skillsData, error: null });
           break;
         case "certifications":
-          chain.order.mockResolvedValue({ data: certificationsData, error: null });
+          chain.limit.mockResolvedValue({ data: certificationsData, error: null });
           break;
         default:
           chain.maybeSingle.mockResolvedValue({ data: null, error: null });
@@ -253,6 +258,8 @@ describe("CV Generator", () => {
     mockSupabaseClient.from.mockImplementation((table: string) => {
       const chain = {
         select: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
         limit: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         maybeSingle: vi.fn(),
@@ -266,13 +273,13 @@ describe("CV Generator", () => {
           chain.maybeSingle.mockResolvedValue({ data: aboutData, error: null });
           break;
         case "experience":
-          chain.order.mockResolvedValue({ data: [], error: null });
+          chain.limit.mockResolvedValue({ data: [], error: null });
           break;
         case "skills":
-          chain.order.mockResolvedValue({ data: [], error: null });
+          chain.limit.mockResolvedValue({ data: [], error: null });
           break;
         case "certifications":
-          chain.order.mockResolvedValue({ data: certificationsData, error: null });
+          chain.limit.mockResolvedValue({ data: certificationsData, error: null });
           break;
         default:
           chain.maybeSingle.mockResolvedValue({ data: null, error: null });
@@ -295,6 +302,8 @@ describe("CV Generator", () => {
 
     mockSupabaseClient.from.mockImplementation(() => ({
       select: vi.fn().mockReturnThis(),
+      is: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       order: vi.fn().mockReturnThis(),
       maybeSingle: vi.fn().mockResolvedValue({ data: heroData, error: null }),

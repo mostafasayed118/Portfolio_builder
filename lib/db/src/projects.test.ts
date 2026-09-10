@@ -26,7 +26,9 @@ describe("listProjects", () => {
     const result = await listProjects(supabase as any);
 
     expect(supabase.from).toHaveBeenCalledWith("projects");
-    expect(supabase.select).toHaveBeenCalledWith("*");
+    expect(supabase.select).toHaveBeenCalledWith(
+      "id,slug,title,description,category,tech_stack,tags,featured,image_url,sort_order,is_published",
+    );
     expect(supabase.is).toHaveBeenCalledWith("deleted_at", null);
     expect(supabase.order).toHaveBeenCalledWith("sort_order", { ascending: true });
     expect(result).toEqual(rows);

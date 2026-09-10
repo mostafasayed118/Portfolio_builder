@@ -16,12 +16,31 @@ export interface NewPostInput {
   is_published?: boolean;
 }
 
-/** Public: list published posts, newest first. */
-export async function listPublishedPosts(supabase: SupabaseClient): Promise<Post[]> {
-  return queryOrThrow<Post[]>(
+/**
+ * Card-scope columns for list views — keeps the large markdown `content`
+ * field out of list payloads (loaded only by detail fetchers).
+ */
+const LIST_COLUMNS =
+  "id,slug,title,excerpt,cover_image_url,tags,is_published,published_at";
+
+export type PostListItem = Pick<
+  Post,
+  | "id"
+  | "slug"
+  | "title"
+  | "excerpt"
+  | "cover_image_url"
+  | "tags"
+  | "is_published"
+  | "published_at"
+>;
+
+/** Public: list published posts, newest first (card columns only). */
+export async function listPublishedPosts(supabase: SupabaseClient): Promise<PostListItem[]> {
+  return queryOrThrow<PostListItem[]>(
     supabase
       .from(TABLE)
-      .select("*")
+      .select(LIST_COLUMNS)
       .eq("is_published", true)
       .is("deleted_at", null)
       .order("published_at", { ascending: false, nullsFirst: false })
@@ -30,12 +49,12 @@ export async function listPublishedPosts(supabase: SupabaseClient): Promise<Post
   );
 }
 
-/** Admin: list all non-deleted posts regardless of publish state. */
-export async function listAllPosts(supabase: SupabaseClient): Promise<Post[]> {
-  return queryOrThrow<Post[]>(
+/** Admin: list all non-deleted posts regardless of publish state (card columns only). */
+export async function listAllPosts(supabase: SupabaseClient): Promise<PostListItem[]> {
+  return queryOrThrow<PostListItem[]>(
     supabase
       .from(TABLE)
-      .select("*")
+      .select(LIST_COLUMNS)
       .is("deleted_at", null)
       .order("updated_at", { ascending: false }),
     { table: TABLE, operation: "listAllPosts" },
