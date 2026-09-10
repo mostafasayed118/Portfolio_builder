@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import type { AuthenticatedRequest } from "../middleware/adminAuth";
-import { ok, serverError, paginated, badRequest } from "./api-response";
+import { serverError, paginated, badRequest } from "./api-response";
 import { getSupabaseClient } from "./supabase-client";
 import { logger } from "./logger";
 import { parsePagination } from "./pagination";

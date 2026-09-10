@@ -17,11 +17,13 @@ export interface NewPostInput {
 }
 
 /**
- * Card-scope columns for list views — keeps the large markdown `content`
- * field out of list payloads (loaded only by detail fetchers).
+ * List-view columns. `content` stays included: the blog cards render a
+ * reading-time estimate (getReadingTime) and the table is personal-blog
+ * scale, so the payload cost is negligible and this keeps list and
+ * detail shapes identical for consumers.
  */
 const LIST_COLUMNS =
-  "id,slug,title,excerpt,cover_image_url,tags,is_published,published_at";
+  "id,slug,title,excerpt,content,cover_image_url,tags,is_published,published_at,created_at,updated_at";
 
 export type PostListItem = Pick<
   Post,
@@ -29,13 +31,16 @@ export type PostListItem = Pick<
   | "slug"
   | "title"
   | "excerpt"
+  | "content"
   | "cover_image_url"
   | "tags"
   | "is_published"
   | "published_at"
+  | "created_at"
+  | "updated_at"
 >;
 
-/** Public: list published posts, newest first (card columns only). */
+/** Public: list published posts, newest first. */
 export async function listPublishedPosts(supabase: SupabaseClient): Promise<PostListItem[]> {
   return queryOrThrow<PostListItem[]>(
     supabase
@@ -49,7 +54,7 @@ export async function listPublishedPosts(supabase: SupabaseClient): Promise<Post
   );
 }
 
-/** Admin: list all non-deleted posts regardless of publish state (card columns only). */
+/** Admin: list all non-deleted posts regardless of publish state. */
 export async function listAllPosts(supabase: SupabaseClient): Promise<PostListItem[]> {
   return queryOrThrow<PostListItem[]>(
     supabase
