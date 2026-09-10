@@ -102,11 +102,20 @@ function bool(key: string, fallback: boolean): boolean {
   return /^(1|true|yes|on)$/i.test(raw);
 }
 
-function int(key: string, fallback: number): number {
+function int(
+  key: string,
+  fallback: number,
+  opts?: { min?: number; max?: number },
+): number {
   const raw = get(key);
   if (raw === undefined || raw === "") return fallback;
   const parsed = Number.parseInt(raw, 10);
-  return Number.isFinite(parsed) ? parsed : fallback;
+  if (!Number.isFinite(parsed)) return fallback;
+  const min = opts?.min;
+  const max = opts?.max;
+  if (min !== undefined && parsed < min) return min;
+  if (max !== undefined && parsed > max) return max;
+  return parsed;
 }
 
 function port(key: string, fallback: number): number {
@@ -152,13 +161,17 @@ export const env = {
   get CLERK_SECRET_KEY() { return optional("CLERK_SECRET_KEY"); },
   get CLERK_ISSUER() { return optional("CLERK_ISSUER"); },
   get ADMIN_API_KEY() { return optional("ADMIN_API_KEY"); },
-  get VITE_ADMIN_EMAILS() { return optional("VITE_ADMIN_EMAILS") ?? ""; },
+  /** Server-only admin allowlist (comma-separated). Never read VITE_* here. */
+  get ADMIN_EMAILS() { return optional("ADMIN_EMAILS") ?? ""; },
 
   // CSRF / sessions
   get CSRF_SECRET() { return require_("CSRF_SECRET"); },
 
   // Cloudflare Turnstile (optional CAPTCHA for the public contact form)
   get TURNSTILE_SECRET_KEY() { return optional("TURNSTILE_SECRET_KEY"); },
+
+  // Shared rate-limit store (optional). Without it, limits are per-instance.
+  get REDIS_URL() { return optional("REDIS_URL"); },
 
   // Email (Gmail SMTP via nodemailer, app password) — contact notifications + replies
   get SMTP_HOST() { return optional("SMTP_HOST") ?? "smtp.gmail.com"; },
@@ -177,9 +190,11 @@ export const env = {
   get VITE_ADMIN_URL() { return optional("VITE_ADMIN_URL"); },
   get VERCEL_URL() { return optional("VERCEL_URL"); },
 
-  // Public-facing rate limit overrides (optional)
-  get CONTACT_RATE_LIMIT_MAX() { return int("CONTACT_RATE_LIMIT_MAX", 5); },
-  get CONTACT_RATE_LIMIT_WINDOW_MS() { return int("CONTACT_RATE_LIMIT_WINDOW_MS", 60 * 60 * 1000); },
+  // Public-facing rate limit overrides (optional, clamped to sane ranges)
+  get CONTACT_RATE_LIMIT_MAX() { return int("CONTACT_RATE_LIMIT_MAX", 5, { min: 1, max: 1000 }); },
+  get CONTACT_RATE_LIMIT_WINDOW_MS() {
+    return int("CONTACT_RATE_LIMIT_WINDOW_MS", 60 * 60 * 1000, { min: 1_000, max: 86_400_000 });
+  },
 
   // Dev / debug
   get NODE_ENV() { return oneOf("NODE_ENV", ["development", "test", "production"] as const, "development"); },
@@ -188,9 +203,12 @@ export const env = {
   get LOG_LEVEL() { return oneOf("LOG_LEVEL", ["fatal", "error", "warn", "info", "debug", "trace", "silent"] as const, "info"); },
   get VISUALIZER_OPEN() { return bool("VISUALIZER_OPEN", false); },
 
-  // Convenience flags
-  get IS_PRODUCTION() { return process.env.NODE_ENV === "production"; },
-  get IS_TEST() { return process.env.NODE_ENV === "test" || process.env.VITEST === "true"; },
+  // Convenience flags — read NODE_ENV through get() so test overrides
+  // (_setOverride / vi.stubEnv) are honored, not just import-time state.
+  get IS_PRODUCTION() { return get("NODE_ENV") === "production"; },
+  get IS_TEST() {
+    return get("NODE_ENV") === "test" || process.env.VITEST === "true";
+  },
 
   /** Verify all required env vars are present. Call at startup. */
   validate(): { ok: true; missing: string[] } {
