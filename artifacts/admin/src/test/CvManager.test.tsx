@@ -1,7 +1,10 @@
 import { vi, describe, it, expect, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { screen } from "@testing-library/react";
+import {
+  renderWithProviders,
+  smartConfirmDialogMock,
+  stubUseToast,
+} from "./helpers";
 import { CvManager } from "@/features/cv";
 
 const { mockToastSuccess, mockGetSupabase, mockCvGetSettings, mockCvUpdateSettings } = vi.hoisted(
@@ -28,29 +31,9 @@ vi.mock("@/lib/api-client", () => ({
   getCsrfToken: vi.fn().mockResolvedValue("mock-csrf-token"),
 }));
 
-vi.mock("@workspace/ui", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@workspace/ui")>();
-  return {
-    ...actual,
-    useToast: () => ({ toast: mockToastSuccess }),
-  };
-});
+vi.mock("@workspace/ui", (importOriginal) => stubUseToast(importOriginal, mockToastSuccess));
 
-vi.mock("@/components/SmartConfirmDialog", () => ({
-  SmartConfirmDialog: ({ state, onCancel }: any) =>
-    state.isOpen ? (
-      <div data-testid="confirm-dialog">
-        <p>{state.title}</p>
-        <button onClick={state.onConfirm}>{state.confirmLabel}</button>
-        <button onClick={onCancel}>Cancel</button>
-      </div>
-    ) : null,
-}));
-
-function renderWithProviders(ui: React.ReactElement) {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
-}
+vi.mock("@/components/SmartConfirmDialog", () => smartConfirmDialogMock());
 
 describe("CvManager", () => {
   beforeEach(() => {

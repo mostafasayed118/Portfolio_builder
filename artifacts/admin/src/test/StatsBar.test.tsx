@@ -60,14 +60,15 @@ describe("StatsBar", () => {
   it("renders error state with retry button", () => {
     mockUseQuery
       .mockReset()
-      .mockReturnValueOnce(makeQueryResult({ isError: true, error: new Error("Network error") }))
-      .mockReturnValueOnce(makeQueryResult({ isError: true, error: new Error("Network error") }))
-      .mockReturnValueOnce(makeQueryResult({ isError: true, error: new Error("Network error") }));
+      .mockReturnValueOnce(makeQueryResult({ isError: true, error: new Error("fetch failed") }))
+      .mockReturnValueOnce(makeQueryResult({ isError: true, error: new Error("fetch failed") }))
+      .mockReturnValueOnce(makeQueryResult({ isError: true, error: new Error("fetch failed") }));
 
     render(<StatsBar />);
 
     expect(screen.getByText("Failed to load dashboard stats")).toBeInTheDocument();
-    expect(screen.getByText("Network error")).toBeInTheDocument();
+    // Raw error is mapped to a friendly message via getErrorMessage.
+    expect(screen.getByText("Connection error — check your internet connection")).toBeInTheDocument();
     expect(screen.getByText("Try Again")).toBeInTheDocument();
   });
 

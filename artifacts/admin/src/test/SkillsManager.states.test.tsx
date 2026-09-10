@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { setAuthTokenGetter } from "@workspace/api-client-react";
 import { SkillsManager } from "@/features/skills";
 
 // ============================================================================
@@ -19,8 +20,6 @@ import { SkillsManager } from "@/features/skills";
 // runs end-to-end. The fetch mock only provides a canned Response object;
 // the rest of the real client code must work or the test fails.
 // ============================================================================
-
-type ApiResponse = { success: true; data: unknown[]; count?: number } | { success: false; message: string };
 
 function buildFetchMock(handler: (url: string, init?: RequestInit) => Promise<Response> | Response) {
   return vi.fn().mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -78,19 +77,17 @@ function renderWithProviders() {
 }
 
 describe("SkillsManager — React Query state coverage (loading / error / empty) — real api-client", () => {
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.unstubAllGlobals();
-    // Pre-warm the Clerk token getter so api-client's getClerkToken()
-    // doesn't hit its 750ms race-timeout path during the test. Each test
-    // overrides fetch below; this just removes the auth wait.
-    const { setAuthTokenGetter } = await import("@/lib/auth-token");
+    // Pre-warm the generated client's auth getter so admin requests attach
+    // a bearer token instead of short-circuiting with "authentication
+    // required". Each test overrides fetch below.
     setAuthTokenGetter(async () => "test-clerk-token");
   });
 
-  afterEach(async () => {
+  afterEach(() => {
     vi.unstubAllGlobals();
-    const { _resetAuthTokenGetter } = await import("@/lib/auth-token");
-    _resetAuthTokenGetter();
+    setAuthTokenGetter(null);
   });
 
   it("isLoading → renders the skeleton placeholder (no heading, no skills)", async () => {

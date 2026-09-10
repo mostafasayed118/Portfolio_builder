@@ -3,6 +3,11 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "codegen": "echo 'orval config removed'"
+    "codegen": "orval --config ./orval.config.ts",
+    "codegen:check": "node ./scripts/check-codegen.mjs",
+    "lint": "eslint orval.config.ts scripts --max-warnings=0"
+  },
+  "devDependencies": {
+    "orval": "^8.5.2"
   }
 }

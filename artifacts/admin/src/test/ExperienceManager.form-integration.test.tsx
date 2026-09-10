@@ -1,7 +1,12 @@
 import { vi, describe, it, expect, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  renderWithProviders,
+  smartConfirmDialogMock,
+  smartEmptyStateMock,
+  stubUseToast,
+} from "./helpers";
 import { ExperienceManager } from "@/features/experience";
 
 const { mockExperienceList, mockExperienceCreate, mockToast } = vi.hoisted(() => ({
@@ -14,35 +19,11 @@ vi.mock("@/lib/api-client", () => ({
   api: { experience: { list: mockExperienceList, create: mockExperienceCreate, update: vi.fn(), delete: vi.fn() } },
 }));
 
-vi.mock("@workspace/ui", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@workspace/ui")>();
-  return { ...actual, useToast: () => ({ toast: mockToast }) };
-});
+vi.mock("@workspace/ui", (importOriginal) => stubUseToast(importOriginal, mockToast));
 
-vi.mock("@/components/SmartConfirmDialog", () => ({
-  SmartConfirmDialog: ({ state, onCancel }: any) =>
-    state.isOpen ? (
-      <div data-testid="confirm-dialog">
-        <p>{state.title}</p>
-        <button onClick={state.onConfirm}>{state.confirmLabel}</button>
-        <button onClick={onCancel}>Cancel</button>
-      </div>
-    ) : null,
-}));
+vi.mock("@/components/SmartConfirmDialog", () => smartConfirmDialogMock());
 
-vi.mock("@/components/SmartEmptyState", () => ({
-  SmartEmptyState: ({ onAction }: any) => (
-    <div data-testid="empty-state">
-      <p>No experience entries</p>
-      <button onClick={onAction}>Add Entry</button>
-    </div>
-  ),
-}));
-
-function renderWithProviders(ui: React.ReactElement) {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  return { ...render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>) };
-}
+vi.mock("@/components/SmartEmptyState", () => smartEmptyStateMock("No experience entries", "Add Entry"));
 
 const mockExperience = [
   { id: "1", title: "Data Engineer", company: "Microsoft", location: "Cairo", period: "2024 – Present", description: ["Built pipelines"], technologies: ["Python", "SQL"], type: "internship", sort_order: 1, is_published: true },

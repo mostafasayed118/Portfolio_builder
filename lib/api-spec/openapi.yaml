@@ -3,46 +3,284 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Portfolio-Fixer API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-    description: Health operations
   - name: cv
-    description: CV/resume download and management
-  - name: storage
-    description: Object storage operations
+  - name: images
+  - name: blog
+  - name: contact
   - name: admin.hero
-    description: Hero section (singleton)
   - name: admin.about
-    description: About section (singleton)
   - name: admin.skills
-    description: Skills CRUD
   - name: admin.projects
-    description: Projects CRUD
   - name: admin.experience
-    description: Experience CRUD
   - name: admin.certifications
-    description: Certifications CRUD
+  - name: admin.theme-presets
+  - name: admin.posts
   - name: admin.messages
-    description: Contact messages
   - name: admin.contact-info
-    description: Contact info (singleton)
   - name: admin.theme
-    description: Theme settings (singleton)
   - name: admin.typography
-    description: Typography settings (singleton)
   - name: admin.seo
-    description: SEO settings (singleton)
   - name: admin.section
-    description: Section order settings
   - name: admin.site
-    description: Site settings (singleton)
   - name: admin.users
-    description: User management (superadmin)
+  - name: admin.seed
+  - name: admin.audit
+  - name: admin.preview
+  - name: admin.analytics
+  - name: admin.ai
+  - name: chat
+
 paths:
+  # ─────────────────────────────────────────────────────────────────────
+  # Health / misc (unauthenticated, non-enveloped)
+  # ─────────────────────────────────────────────────────────────────────
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /v1/csrf-token:
+    get:
+      operationId: getCsrfToken
+      tags: [health]
+      summary: Fetch a double-submit CSRF token
+      responses:
+        "200":
+          description: CSRF token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CsrfTokenResponse"
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Public CV download
+  # ─────────────────────────────────────────────────────────────────────
+  /v1/cv:
+    get:
+      operationId: downloadCv
+      tags: [cv]
+      summary: Download the current CV/resume PDF
+      responses:
+        "200":
+          description: PDF file stream
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Public blog posts
+  # ─────────────────────────────────────────────────────────────────────
+  /v1/posts:
+    get:
+      operationId: getPublicPosts
+      tags: [blog]
+      summary: List published blog posts
+      responses:
+        "200":
+          description: Published posts
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data:
+                            type: object
+                            properties:
+                              data:
+                                type: array
+                                items: { $ref: "#/components/schemas/BlogPostSummary" }
+                              total: { type: integer }
+                  - $ref: "#/components/schemas/ApiError"
+
+  /v1/posts/{slug}:
+    get:
+      operationId: getPublicPost
+      tags: [blog]
+      summary: Get a published blog post by slug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Published post
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { $ref: "#/components/schemas/BlogPost" }
+                  - $ref: "#/components/schemas/ApiError"
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Public contact form
+  # ─────────────────────────────────────────────────────────────────────
+  /v1/contact:
+    post:
+      operationId: submitContactForm
+      tags: [contact]
+      summary: Submit contact form (public)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ContactSubmissionInput" }
+      responses:
+        "200":
+          description: Message submitted
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Rate limited
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Image upload / metadata (admin)
+  # ─────────────────────────────────────────────────────────────────────
+  /v1/images/upload:
+    post:
+      operationId: uploadImage
+      tags: [images]
+      summary: Upload an image (admin only)
+      security: [{ adminAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file: { type: string, format: binary }
+                entityType: { type: string }
+                entityId: { type: string }
+      responses:
+        "200":
+          description: Uploaded
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { $ref: "#/components/schemas/ImageUploadResult" }
+                  - $ref: "#/components/schemas/ApiError"
+
+  /v1/images/{id}/metadata:
+    get:
+      operationId: getImageMetadata
+      tags: [images]
+      summary: Get image metadata
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Image metadata
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { $ref: "#/components/schemas/ImageMetadata" }
+                  - $ref: "#/components/schemas/ApiError"
+
+  /v1/images/{id}:
+    delete:
+      operationId: deleteImage
+      tags: [images]
+      summary: Delete an image (admin only)
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
+
+  /v1/images/reorder:
+    post:
+      operationId: reorderImages
+      tags: [images]
+      summary: Reorder images (admin only)
+      security: [{ adminAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ordered_ids]
+              properties:
+                ordered_ids: { type: array, items: { type: string } }
+      responses:
+        "200":
+          description: Reordered
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Admin: hero (singleton)
+  # ─────────────────────────────────────────────────────────────────────
   /v1/admin/hero:
     get:
       operationId: getHero
@@ -55,10 +293,13 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success: { type: boolean }
-                  data: { $ref: "#/components/schemas/HeroContent" }
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { $ref: "#/components/schemas/HeroContent" }
+                  - $ref: "#/components/schemas/ApiError"
     put:
       operationId: updateHero
       tags: [admin.hero]
@@ -72,7 +313,20 @@ paths:
       responses:
         "200":
           description: Updated
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
 
+  # ─────────────────────────────────────────────────────────────────────
+  # Admin: about (singleton)
+  # ─────────────────────────────────────────────────────────────────────
   /v1/admin/about:
     get:
       operationId: getAbout
@@ -82,6 +336,16 @@ paths:
       responses:
         "200":
           description: About content
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { $ref: "#/components/schemas/AboutContent" }
+                  - $ref: "#/components/schemas/ApiError"
     put:
       operationId: updateAbout
       tags: [admin.about]
@@ -95,7 +359,20 @@ paths:
       responses:
         "200":
           description: Updated
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
 
+  # ─────────────────────────────────────────────────────────────────────
+  # Admin: skills CRUD
+  # ─────────────────────────────────────────────────────────────────────
   /v1/admin/skills:
     get:
       operationId: listSkills
@@ -109,6 +386,16 @@ paths:
       responses:
         "200":
           description: List of skills
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { $ref: "#/components/schemas/PaginatedSkills" }
+                  - $ref: "#/components/schemas/ApiError"
     post:
       operationId: createSkill
       tags: [admin.skills]
@@ -122,6 +409,16 @@ paths:
       responses:
         "201":
           description: Created
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
 
   /v1/admin/skills/{id}:
     put:
@@ -142,6 +439,16 @@ paths:
       responses:
         "200":
           description: Updated
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
     delete:
       operationId: deleteSkill
       tags: [admin.skills]
@@ -153,18 +460,153 @@ paths:
           required: true
           schema: { type: string }
       responses:
-        "204":
+        "200":
           description: Deleted
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
 
+  # ─────────────────────────────────────────────────────────────────────
+  # Admin: theme presets CRUD
+  # ─────────────────────────────────────────────────────────────────────
+  /v1/admin/theme-presets:
+    get:
+      operationId: listThemePresets
+      tags: [admin.theme-presets]
+      summary: List theme presets
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: userId
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: List of theme presets
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { $ref: "#/components/schemas/PaginatedThemePresets" }
+                  - $ref: "#/components/schemas/ApiError"
+    post:
+      operationId: createThemePreset
+      tags: [admin.theme-presets]
+      summary: Create a theme preset
+      security: [{ adminAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ThemePresetInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Duplicate name
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+
+  /v1/admin/theme-presets/{id}:
+    put:
+      operationId: updateThemePreset
+      tags: [admin.theme-presets]
+      summary: Update a theme preset
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ThemePresetUpdateInput" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
+    delete:
+      operationId: deleteThemePreset
+      tags: [admin.theme-presets]
+      summary: Delete a theme preset
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Admin: projects CRUD
+  # ─────────────────────────────────────────────────────────────────────
   /v1/admin/projects:
     get:
       operationId: listProjects
       tags: [admin.projects]
       summary: List all projects
       security: [{ adminAuth: [] }]
+      parameters:
+        - name: userId
+          in: query
+          schema: { type: string }
       responses:
         "200":
           description: List of projects
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { $ref: "#/components/schemas/PaginatedProjects" }
+                  - $ref: "#/components/schemas/ApiError"
     post:
       operationId: createProject
       tags: [admin.projects]
@@ -178,6 +620,16 @@ paths:
       responses:
         "201":
           description: Created
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
 
   /v1/admin/projects/{id}:
     put:
@@ -198,6 +650,16 @@ paths:
       responses:
         "200":
           description: Updated
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
     delete:
       operationId: deleteProject
       tags: [admin.projects]
@@ -209,18 +671,45 @@ paths:
           required: true
           schema: { type: string }
       responses:
-        "204":
+        "200":
           description: Deleted
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
 
+  # ─────────────────────────────────────────────────────────────────────
+  # Admin: experience CRUD
+  # ─────────────────────────────────────────────────────────────────────
   /v1/admin/experience:
     get:
       operationId: listExperience
       tags: [admin.experience]
       summary: List all experience entries
       security: [{ adminAuth: [] }]
+      parameters:
+        - name: userId
+          in: query
+          schema: { type: string }
       responses:
         "200":
           description: List of experience entries
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { $ref: "#/components/schemas/PaginatedExperience" }
+                  - $ref: "#/components/schemas/ApiError"
     post:
       operationId: createExperience
       tags: [admin.experience]
@@ -234,6 +723,16 @@ paths:
       responses:
         "201":
           description: Created
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
 
   /v1/admin/experience/{id}:
     put:
@@ -254,6 +753,16 @@ paths:
       responses:
         "200":
           description: Updated
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
     delete:
       operationId: deleteExperience
       tags: [admin.experience]
@@ -265,18 +774,45 @@ paths:
           required: true
           schema: { type: string }
       responses:
-        "204":
+        "200":
           description: Deleted
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
 
+  # ─────────────────────────────────────────────────────────────────────
+  # Admin: certifications CRUD
+  # ─────────────────────────────────────────────────────────────────────
   /v1/admin/certifications:
     get:
       operationId: listCertifications
       tags: [admin.certifications]
       summary: List all certifications
       security: [{ adminAuth: [] }]
+      parameters:
+        - name: userId
+          in: query
+          schema: { type: string }
       responses:
         "200":
           description: List of certifications
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { $ref: "#/components/schemas/PaginatedCertifications" }
+                  - $ref: "#/components/schemas/ApiError"
     post:
       operationId: createCertification
       tags: [admin.certifications]
@@ -290,7 +826,176 @@ paths:
       responses:
         "201":
           description: Created
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
 
+  /v1/admin/certifications/{id}:
+    put:
+      operationId: updateCertification
+      tags: [admin.certifications]
+      summary: Update a certification
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CertificationInput" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
+    delete:
+      operationId: deleteCertification
+      tags: [admin.certifications]
+      summary: Delete a certification
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Admin: posts CRUD
+  # ─────────────────────────────────────────────────────────────────────
+  /v1/admin/posts:
+    get:
+      operationId: listPosts
+      tags: [admin.posts]
+      summary: List all posts
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: userId
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: List of posts
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { $ref: "#/components/schemas/PaginatedPosts" }
+                  - $ref: "#/components/schemas/ApiError"
+    post:
+      operationId: createPost
+      tags: [admin.posts]
+      summary: Create a post
+      security: [{ adminAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PostInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
+
+  /v1/admin/posts/{id}:
+    put:
+      operationId: updatePost
+      tags: [admin.posts]
+      summary: Update a post
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PostInput" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
+    delete:
+      operationId: deletePost
+      tags: [admin.posts]
+      summary: Delete a post
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Admin: messages
+  # ─────────────────────────────────────────────────────────────────────
   /v1/admin/messages:
     get:
       operationId: listMessages
@@ -301,9 +1006,50 @@ paths:
         - name: userId
           in: query
           schema: { type: string }
+        - name: status
+          in: query
+          description: >-
+            Server-side status filter. `unread`/`read` page over exactly those
+            rows; `archived` pages over the soft-deleted set (normally hidden);
+            `spam` filters messages the AI classifier quarantined (is_spam).
+            Omit or pass `all` for every visible message. Mutually exclusive
+            with `preset`.
+          schema:
+            type: string
+            enum: [unread, read, archived, spam, all]
+        - name: preset
+          in: query
+          description: >-
+            Saved compound view. `unread_today` — unread messages created
+            since UTC midnight; `unread_or_archived` — every unread or
+            archived row (excludes read, visible messages); `needs_reply` —
+            read but never replied to. Mutually exclusive with `status`.
+          schema:
+            type: string
+            enum: [unread_today, unread_or_archived, needs_reply]
+        - name: limit
+          in: query
+          description: >-
+            Page size (1-200, default 50). The admin fetches every matching row
+            in batches of the maximum to page past the first 50.
+          schema: { type: integer }
+        - name: offset
+          in: query
+          description: Row offset into the filtered set (default 0).
+          schema: { type: integer }
       responses:
         "200":
           description: List of messages
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { $ref: "#/components/schemas/PaginatedMessages" }
+                  - $ref: "#/components/schemas/ApiError"
 
   /v1/admin/messages/unread-count:
     get:
@@ -311,15 +1057,23 @@ paths:
       tags: [admin.messages]
       summary: Get unread message count
       security: [{ adminAuth: [] }]
+      parameters:
+        - name: userId
+          in: query
+          schema: { type: string }
       responses:
         "200":
           description: Unread count
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  count: { type: integer }
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: integer }
+                  - $ref: "#/components/schemas/ApiError"
 
   /v1/admin/messages/{id}/read:
     patch:
@@ -335,7 +1089,314 @@ paths:
       responses:
         "200":
           description: Marked as read
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
 
+  /v1/admin/messages/{id}/unread:
+    patch:
+      operationId: markMessageUnread
+      tags: [admin.messages]
+      summary: Mark a message as unread
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Marked as unread
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
+
+  /v1/admin/messages/{id}/archive:
+    post:
+      operationId: archiveMessage
+      tags: [admin.messages]
+      summary: Archive a message (soft-delete, hides from inbox)
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Archived
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
+
+  /v1/admin/messages/{id}/unarchive:
+    post:
+      operationId: unarchiveMessage
+      tags: [admin.messages]
+      summary: Unarchive a message (restore to inbox)
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Unarchived
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
+
+  /v1/admin/messages/{id}/reply:
+    post:
+      operationId: replyMessage
+      tags: [admin.messages]
+      summary: Reply to a message
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MessageReplyInput" }
+      responses:
+        "200":
+          description: Reply sent
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { $ref: "#/components/schemas/MessageReplyResult" }
+                  - $ref: "#/components/schemas/ApiError"
+
+  /v1/admin/messages/bulk-delete:
+    post:
+      operationId: bulkDeleteMessages
+      tags: [admin.messages]
+      summary: Bulk-delete messages
+      security: [{ adminAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BulkDeleteInput" }
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
+
+  /v1/admin/messages/bulk-archive:
+    post:
+      operationId: bulkArchiveMessages
+      tags: [admin.messages]
+      summary: >-
+        Bulk-archive messages (soft-delete, hides from inbox) — by explicit
+        id list or by the active view filter, in one server-side statement
+      security: [{ adminAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BulkArchiveInput" }
+      responses:
+        "200":
+          description: Archived
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
+
+  /v1/admin/messages/bulk-unarchive:
+    post:
+      operationId: bulkUnarchiveMessages
+      tags: [admin.messages]
+      summary: >-
+        Bulk-unarchive messages (restore to inbox) — by explicit id list or
+        by the active view filter, in one server-side statement
+      security: [{ adminAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BulkUnarchiveInput" }
+      responses:
+        "200":
+          description: Restored
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
+
+  /v1/admin/messages/archive-test-submissions:
+    post:
+      operationId: archiveTestSubmissions
+      tags: [admin.messages]
+      summary: Archive every automated E2E test submission (superadmin)
+      description: >-
+        One-click cleanup for test data: archives all still-visible messages
+        whose email matches `e2e-%` (the prefix Playwright contact specs use),
+        returning how many were archived. Superadmin only; idempotent.
+      security: [{ adminAuth: [] }]
+      responses:
+        "200":
+          description: Archived count
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data:
+                            type: object
+                            required: [archived]
+                            properties:
+                              archived: { type: integer }
+                  - $ref: "#/components/schemas/ApiError"
+
+  /v1/admin/messages/restore-all-archived:
+    post:
+      operationId: restoreAllArchivedMessages
+      tags: [admin.messages]
+      summary: Restore every archived message to the inbox (superadmin)
+      description: >-
+        One-click restore: brings every soft-deleted (archived) message back
+        to the inbox in one server-side statement, so the whole Archived tab
+        can be emptied in one call. The inverse of archive-test-submissions.
+        Superadmin only; idempotent.
+      security: [{ adminAuth: [] }]
+      responses:
+        "200":
+          description: Restored count
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data:
+                            type: object
+                            required: [restored]
+                            properties:
+                              restored: { type: integer }
+                  - $ref: "#/components/schemas/ApiError"
+
+  /v1/admin/messages/mark-all-read:
+    post:
+      operationId: markAllMessagesRead
+      tags: [admin.messages]
+      summary: Mark every unread message as read (server-side)
+      description: >-
+        Marks all unread, non-deleted messages as read in one statement
+        (user-scoped for non-superadmins), so the action is not truncated to
+        the paginated list page. Returns how many were marked.
+      security: [{ adminAuth: [] }]
+      responses:
+        "200":
+          description: Marked count
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data:
+                            type: object
+                            required: [marked]
+                            properties:
+                              marked: { type: integer }
+                  - $ref: "#/components/schemas/ApiError"
+
+  /v1/admin/messages/{id}:
+    delete:
+      operationId: deleteMessage
+      tags: [admin.messages]
+      summary: Delete a message
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Admin: contact info (singleton)
+  # ─────────────────────────────────────────────────────────────────────
   /v1/admin/contact-info:
     get:
       operationId: getContactInfo
@@ -345,6 +1406,16 @@ paths:
       responses:
         "200":
           description: Contact info
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { $ref: "#/components/schemas/ContactInfo" }
+                  - $ref: "#/components/schemas/ApiError"
     put:
       operationId: updateContactInfo
       tags: [admin.contact-info]
@@ -354,11 +1425,24 @@ paths:
         required: true
         content:
           application/json:
-            schema: { type: object }
+            schema: { $ref: "#/components/schemas/ContactInfoInput" }
       responses:
         "200":
           description: Updated
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
 
+  # ─────────────────────────────────────────────────────────────────────
+  # Admin: theme settings (singleton)
+  # ─────────────────────────────────────────────────────────────────────
   /v1/admin/theme-settings:
     get:
       operationId: getThemeSettings
@@ -368,6 +1452,16 @@ paths:
       responses:
         "200":
           description: Theme settings
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { $ref: "#/components/schemas/ThemeSettings" }
+                  - $ref: "#/components/schemas/ApiError"
     put:
       operationId: updateThemeSettings
       tags: [admin.theme]
@@ -381,7 +1475,20 @@ paths:
       responses:
         "200":
           description: Updated
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
 
+  # ─────────────────────────────────────────────────────────────────────
+  # Admin: typography settings (singleton)
+  # ─────────────────────────────────────────────────────────────────────
   /v1/admin/typography-settings:
     get:
       operationId: getTypographySettings
@@ -391,6 +1498,16 @@ paths:
       responses:
         "200":
           description: Typography settings
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { $ref: "#/components/schemas/TypographySettings" }
+                  - $ref: "#/components/schemas/ApiError"
     put:
       operationId: updateTypographySettings
       tags: [admin.typography]
@@ -404,7 +1521,20 @@ paths:
       responses:
         "200":
           description: Updated
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
 
+  # ─────────────────────────────────────────────────────────────────────
+  # Admin: SEO settings (singleton)
+  # ─────────────────────────────────────────────────────────────────────
   /v1/admin/seo-settings:
     get:
       operationId: getSeoSettings
@@ -414,6 +1544,16 @@ paths:
       responses:
         "200":
           description: SEO settings
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { $ref: "#/components/schemas/SeoSettings" }
+                  - $ref: "#/components/schemas/ApiError"
     put:
       operationId: updateSeoSettings
       tags: [admin.seo]
@@ -427,7 +1567,100 @@ paths:
       responses:
         "200":
           description: Updated
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
 
+  # ─────────────────────────────────────────────────────────────────────
+  # Admin: section settings
+  # ─────────────────────────────────────────────────────────────────────
+  /v1/admin/section-settings:
+    get:
+      operationId: listSectionSettings
+      tags: [admin.section]
+      summary: List section settings
+      security: [{ adminAuth: [] }]
+      responses:
+        "200":
+          description: Section settings
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data:
+                            type: array
+                            items: { $ref: "#/components/schemas/SectionSetting" }
+                  - $ref: "#/components/schemas/ApiError"
+
+  /v1/admin/section-settings/reorder:
+    post:
+      operationId: reorderSectionSettings
+      tags: [admin.section]
+      summary: Reorder section settings
+      security: [{ adminAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReorderInput" }
+      responses:
+        "200":
+          description: Reordered
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
+
+  /v1/admin/section-settings/{id}:
+    put:
+      operationId: updateSectionSetting
+      tags: [admin.section]
+      summary: Update a section setting
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SectionSettingInput" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Admin: site settings (singleton)
+  # ─────────────────────────────────────────────────────────────────────
   /v1/admin/site-settings:
     get:
       operationId: getSiteSettings
@@ -437,6 +1670,16 @@ paths:
       responses:
         "200":
           description: Site settings
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { $ref: "#/components/schemas/SiteSettings" }
+                  - $ref: "#/components/schemas/ApiError"
     put:
       operationId: updateSiteSettings
       tags: [admin.site]
@@ -446,10 +1689,68 @@ paths:
         required: true
         content:
           application/json:
-            schema: { type: object }
+            schema: { $ref: "#/components/schemas/SiteSettingsInput" }
       responses:
         "200":
           description: Updated
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
+
+  /v1/admin/site-settings/language:
+    patch:
+      operationId: updateSiteLanguage
+      tags: [admin.site]
+      summary: Update site default language
+      security: [{ adminAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LanguageInput" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object, nullable: true }
+                  - $ref: "#/components/schemas/ApiError"
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Admin: users
+  # ─────────────────────────────────────────────────────────────────────
+  /v1/admin/users/me:
+    get:
+      operationId: getCurrentUser
+      tags: [admin.users]
+      summary: Get current authenticated user
+      security: [{ adminAuth: [] }]
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { $ref: "#/components/schemas/UserMe" }
+                  - $ref: "#/components/schemas/ApiError"
 
   /v1/admin/users:
     get:
@@ -460,64 +1761,84 @@ paths:
       responses:
         "200":
           description: List of users
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data:
+                            type: array
+                            items: { $ref: "#/components/schemas/User" }
+                  - $ref: "#/components/schemas/ApiError"
         "403":
           description: Not a superadmin
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
 
-  /contact:
-    post:
-      operationId: submitContactForm
-      tags: [admin.messages]
-      summary: Submit contact form (public)
+  /v1/admin/users/{id}/role:
+    patch:
+      operationId: updateUserRole
+      tags: [admin.users]
+      summary: Change user role (superadmin only)
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              properties:
-                name: { type: string }
-                email: { type: string, format: email }
-                message: { type: string }
-                _formLoadedAt: { type: integer }
-              required: [name, email, message]
+            schema: { $ref: "#/components/schemas/UpdateRoleInput" }
       responses:
         "200":
-          description: Message submitted
-        "429":
-          description: Rate limited
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { $ref: "#/components/schemas/User" }
+                  - $ref: "#/components/schemas/ApiError"
 
-  /healthz:
-    get:
-      operationId: healthCheck
-      tags: [health]
-      summary: Health check
+  # ─────────────────────────────────────────────────────────────────────
+  # Admin: seed
+  # ─────────────────────────────────────────────────────────────────────
+  /v1/admin/seed:
+    post:
+      operationId: seedData
+      tags: [admin.seed]
+      summary: Seed starter content (superadmin only)
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: force
+          in: query
+          schema: { type: string }
+        - name: confirm
+          in: query
+          schema: { type: string }
       responses:
         "200":
-          description: Healthy
+          description: Seeded
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/HealthStatus"
-  /cv:
-    get:
-      operationId: downloadCv
-      tags: [cv]
-      summary: Download the current CV/resume PDF
-      responses:
-        "200":
-          description: PDF file stream
-          content:
-            application/pdf:
-              schema:
-                type: string
-                format: binary
-        "404":
-          description: No CV uploaded yet
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /cv/settings:
+                oneOf:
+                  - $ref: "#/components/schemas/SeedResult"
+                  - $ref: "#/components/schemas/ApiError"
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Admin: CV settings
+  # ─────────────────────────────────────────────────────────────────────
+  /v1/admin/cv/settings:
     get:
       operationId: getCvSettings
       tags: [cv]
@@ -529,203 +1850,1004 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CvSettings"
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { $ref: "#/components/schemas/CvSettings" }
+                  - $ref: "#/components/schemas/ApiError"
     put:
       operationId: updateCvSettings
       tags: [cv]
       summary: Save the object path of the uploaded CV
+      security: [{ adminAuth: [] }]
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: "#/components/schemas/CvSettingsInput"
+            schema: { $ref: "#/components/schemas/CvSettingsInput" }
       responses:
         "200":
           description: Settings saved
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CvSettings"
-        "400":
-          description: Validation error
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data:
+                            type: object
+                            properties:
+                              id: { type: string }
+                  - $ref: "#/components/schemas/ApiError"
+    delete:
+      operationId: deleteCvSettings
+      tags: [cv]
+      summary: Delete CV settings and uploaded file
+      security: [{ adminAuth: [] }]
+      responses:
+        "200":
+          description: Deleted
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /storage/uploads/request-url:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data:
+                            type: object
+                            properties:
+                              message: { type: string }
+                  - $ref: "#/components/schemas/ApiError"
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Admin: preview
+  # ─────────────────────────────────────────────────────────────────────
+  /v1/admin/preview/{entityType}/{entityId}:
+    get:
+      operationId: previewEntity
+      tags: [admin.preview]
+      summary: Preview raw entity data (superadmin only)
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: entityType
+          in: path
+          required: true
+          schema: { type: string }
+        - name: entityId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Entity data
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { type: object }
+                  - $ref: "#/components/schemas/ApiError"
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Admin: audit log
+  # ─────────────────────────────────────────────────────────────────────
+  /v1/admin/audit:
+    get:
+      operationId: listAudit
+      tags: [admin.audit]
+      summary: List audit log entries (superadmin only)
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: entityType
+          in: query
+          schema: { type: string }
+        - name: entityId
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer }
+        - name: offset
+          in: query
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Audit entries
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { $ref: "#/components/schemas/PaginatedAudit" }
+                  - $ref: "#/components/schemas/ApiError"
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Admin: analytics
+  # ─────────────────────────────────────────────────────────────────────
+  /v1/admin/analytics:
+    get:
+      operationId: getAnalytics
+      tags: [admin.analytics]
+      summary: Aggregate visitor + message stats
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: days
+          in: query
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Analytics
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { $ref: "#/components/schemas/AnalyticsStats" }
+                  - $ref: "#/components/schemas/ApiError"
+
+  /v1/chat/config:
+    get:
+      operationId: chatConfig
+      tags: [chat]
+      summary: Whether the public AI chat is enabled
+      responses:
+        "200":
+          description: Chat enabled flag
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data:
+                            type: object
+                            required: [enabled]
+                            properties:
+                              enabled: { type: boolean }
+                  - $ref: "#/components/schemas/ApiError"
+
+  /v1/chat:
     post:
-      operationId: requestUploadUrl
-      tags: [storage]
-      summary: Request a presigned upload URL
+      operationId: chatSend
+      tags: [chat]
+      summary: Send a message to the public AI assistant
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: "#/components/schemas/StorageUploadRequest"
+            schema: { $ref: "#/components/schemas/ChatMessagesInput" }
       responses:
         "200":
-          description: Presigned URL
+          description: Assistant reply
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/StorageUploadResponse"
-        "400":
-          description: Validation error
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data:
+                            type: object
+                            required: [reply]
+                            properties:
+                              reply: { type: string }
+                  - $ref: "#/components/schemas/ApiError"
+        "503":
+          description: AI not configured
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-  /storage/objects/{objectPath}:
-    get:
-      operationId: getStorageObject
-      tags: [storage]
-      summary: Serve a stored object
-      parameters:
-        - name: objectPath
-          in: path
-          required: true
-          schema:
-            type: string
+              schema: { $ref: "#/components/schemas/ApiError" }
+
+  /v1/admin/ai/generate:
+    post:
+      operationId: adminAiGenerate
+      tags: [admin.ai]
+      summary: Generate new site content with AI (admin)
+      security: [{ adminAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AiGenerateInput" }
       responses:
         "200":
-          description: Object content
-          content:
-            application/octet-stream:
-              schema:
-                type: string
-                format: binary
-        "404":
-          description: Not found
+          description: Generated text
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data:
+                            type: object
+                            required: [text]
+                            properties:
+                              text: { type: string }
+                  - $ref: "#/components/schemas/ApiError"
+        "503":
+          description: AI not configured
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+
+  /v1/admin/ai/improve:
+    post:
+      operationId: adminAiImprove
+      tags: [admin.ai]
+      summary: Rewrite/improve existing site content with AI (admin)
+      security: [{ adminAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AiImproveInput" }
+      responses:
+        "200":
+          description: Improved text
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data:
+                            type: object
+                            required: [text]
+                            properties:
+                              text: { type: string }
+                  - $ref: "#/components/schemas/ApiError"
+        "503":
+          description: AI not configured
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+
 components:
   schemas:
+    SuccessEnvelope:
+      type: object
+      required: [success]
+      properties:
+        success: { type: boolean, enum: [true] }
+
+    ApiError:
+      type: object
+      required: [success, message]
+      properties:
+        success: { type: boolean, enum: [false] }
+        message: { type: string }
+        code: { type: string }
+        existingId: { type: string }
+
+    ChatMessagesInput:
+      type: object
+      required: [messages]
+      properties:
+        messages:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            required: [role, content]
+            properties:
+              role: { type: string, enum: [user, assistant] }
+              content: { type: string }
+
+    AiGenerateInput:
+      type: object
+      required: [contentType]
+      properties:
+        contentType: { type: string, enum: [hero, about, project, skill, experience, general] }
+        instructions: { type: string }
+        context: { type: string }
+
+    AiImproveInput:
+      type: object
+      required: [contentType, text]
+      properties:
+        contentType: { type: string, enum: [hero, about, project, skill, experience, general] }
+        text: { type: string }
+        instructions: { type: string }
+
+    Pagination:
+      type: object
+      required: [total, limit, offset, hasMore]
+      properties:
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
+        hasMore: { type: boolean }
+
     HealthStatus:
       type: object
+      required: [status, timestamp, uptime, environment]
       properties:
-        status:
-          type: string
-      required:
-        - status
-    CvSettings:
+        status: { type: string }
+        timestamp: { type: string, format: date-time }
+        uptime: { type: number }
+        environment: { type: string }
+
+    CsrfTokenResponse:
       type: object
+      required: [csrfToken]
       properties:
-        objectPath:
-          type: string
-          nullable: true
-        fileName:
-          type: string
-          nullable: true
-        updatedAt:
-          type: string
-          format: date-time
-      required:
-        - updatedAt
-    CvSettingsInput:
-      type: object
-      properties:
-        objectPath:
-          type: string
-        fileName:
-          type: string
-      required:
-        - objectPath
-        - fileName
-    StorageUploadRequest:
-      type: object
-      properties:
-        name:
-          type: string
-        size:
-          type: integer
-        contentType:
-          type: string
-      required:
-        - name
-        - size
-        - contentType
-    StorageUploadResponse:
-      type: object
-      properties:
-        uploadURL:
-          type: string
-        objectPath:
-          type: string
-        metadata:
-          type: object
-          properties:
-            name:
-              type: string
-            size:
-              type: integer
-            contentType:
-              type: string
-          required:
-            - name
-            - size
-            - contentType
-      required:
-        - uploadURL
-        - objectPath
-        - metadata
-    ErrorResponse:
-      type: object
-      properties:
-        error:
-          type: string
-        success:
-          type: boolean
-        message:
-          type: string
+        csrfToken: { type: string }
+
+    # ── Entity (response) schemas ─────────────────────────────────────
     HeroContent:
       type: object
+      required: [id, heading, name, roles, description, heading_ar, name_ar, description_ar, github_url, linkedin_url, twitter_url, youtube_url, facebook_url, email, avatar_url, cv_url, stats, available, site_name, logo_url, favicon_url, tagline, cv_file_name, is_published, updated_at, created_at]
       properties:
+        id: { type: string }
         heading: { type: string }
         name: { type: string }
         roles: { type: array, items: { type: string } }
         description: { type: string }
+        heading_ar: { type: string, nullable: true }
+        name_ar: { type: string, nullable: true }
+        description_ar: { type: string, nullable: true }
         github_url: { type: string }
         linkedin_url: { type: string }
+        twitter_url: { type: string, nullable: true }
+        youtube_url: { type: string, nullable: true }
+        facebook_url: { type: string, nullable: true }
         email: { type: string }
-        available: { type: boolean }
         avatar_url: { type: string, nullable: true }
-        stats: { type: array, items: { type: object, properties: { label: { type: string }, value: { type: string } } } }
+        cv_url: { type: string, nullable: true }
+        stats:
+          type: array
+          nullable: true
+          items:
+            type: object
+            properties:
+              label: { type: string }
+              value: { type: string }
+        available: { type: boolean }
+        site_name: { type: string, nullable: true }
+        logo_url: { type: string, nullable: true }
+        favicon_url: { type: string, nullable: true }
+        tagline: { type: string, nullable: true }
+        cv_file_name: { type: string, nullable: true }
+        is_published: { type: boolean }
+        updated_at: { type: string }
+        created_at: { type: string }
+
+    AboutContent:
+      type: object
+      required: [id, bio1, bio2, bio, location, years_of_experience, degree, school, grade, education_years, education, languages, interests, bio1_ar, bio2_ar, bio_ar, education_ar, languages_ar, interests_ar, is_published, updated_at, created_at]
+      properties:
+        id: { type: string }
+        bio1: { type: string }
+        bio2: { type: string }
+        bio: { type: string, nullable: true }
+        location: { type: string }
+        years_of_experience: { type: number }
+        degree: { type: string }
+        school: { type: string }
+        grade: { type: string }
+        education_years: { type: string }
+        education:
+          type: array
+          items:
+            type: object
+            properties:
+              degree: { type: string }
+              institution: { type: string }
+              year: { type: string }
+              description: { type: string }
+        languages:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              level: { type: number }
+        interests: { type: array, items: { type: string } }
+        bio1_ar: { type: string, nullable: true }
+        bio2_ar: { type: string, nullable: true }
+        bio_ar: { type: string, nullable: true }
+        interests_ar: { type: array, nullable: true, items: { type: string } }
+        education_ar:
+          type: array
+          nullable: true
+          items:
+            type: object
+            properties:
+              degree: { type: string }
+              institution: { type: string }
+              year: { type: string }
+              description: { type: string }
+        languages_ar:
+          type: array
+          nullable: true
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              level: { type: number }
+        is_published: { type: boolean }
+        updated_at: { type: string }
+        created_at: { type: string }
+
+    Skill:
+      type: object
+      required: [id, name, category, category_ar, proficiency, icon, sort_order, is_visible, user_id, deleted_at, created_at, updated_at]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        category: { type: string }
+        category_ar: { type: string, nullable: true }
+        proficiency: { type: integer }
+        icon: { type: string, nullable: true }
+        sort_order: { type: integer, nullable: true }
+        is_visible: { type: boolean, nullable: true }
+        user_id: { type: string, nullable: true }
+        deleted_at: { type: string, nullable: true }
+        created_at: { type: string }
+        updated_at: { type: string }
+
+    ThemePreset:
+      type: object
+      required: [id, name, description, palette, sort_order, user_id, deleted_at, created_at, updated_at]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        palette: { type: object }
+        sort_order: { type: integer, nullable: true }
+        user_id: { type: string, nullable: true }
+        deleted_at: { type: string, nullable: true }
+        created_at: { type: string }
+        updated_at: { type: string }
+
+    Project:
+      type: object
+      required: [id, title, description, full_description, challenges, outcome, title_ar, description_ar, full_description_ar, challenges_ar, outcome_ar, completed_at, tech_stack, category, featured, github_url, live_url, slug, metrics, sort_order, is_published, image_url, tags, user_id, deleted_at, created_at, updated_at]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        description: { type: string }
+        full_description: { type: string, nullable: true }
+        challenges: { type: string, nullable: true }
+        outcome: { type: string, nullable: true }
+        title_ar: { type: string, nullable: true }
+        description_ar: { type: string, nullable: true }
+        full_description_ar: { type: string, nullable: true }
+        challenges_ar: { type: string, nullable: true }
+        outcome_ar: { type: string, nullable: true }
+        completed_at: { type: string, nullable: true }
+        tech_stack: { type: array, items: { type: string } }
+        category: { type: string, nullable: true }
+        featured: { type: boolean, nullable: true }
+        github_url: { type: string, nullable: true }
+        live_url: { type: string, nullable: true }
+        slug: { type: string, nullable: true }
+        metrics: { type: array, items: { type: string } }
+        sort_order: { type: integer, nullable: true }
+        is_published: { type: boolean, nullable: true }
+        image_url: { type: string, nullable: true }
+        tags: { type: array, items: { type: string } }
+        user_id: { type: string, nullable: true }
+        deleted_at: { type: string, nullable: true }
+        created_at: { type: string }
+        updated_at: { type: string }
+
+    Experience:
+      type: object
+      required: [id, title, company, location, period, description, technologies, title_ar, company_ar, location_ar, description_ar, type, sort_order, is_published, current, order_num, user_id, deleted_at, created_at, updated_at]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        company: { type: string }
+        location: { type: string }
+        period: { type: string }
+        description: { type: array, items: { type: string } }
+        technologies: { type: array, items: { type: string } }
+        title_ar: { type: string, nullable: true }
+        company_ar: { type: string, nullable: true }
+        location_ar: { type: string, nullable: true }
+        description_ar: { type: array, nullable: true, items: { type: string } }
+        type: { type: string, enum: [internship, certification, volunteer] }
+        sort_order: { type: integer, nullable: true }
+        is_published: { type: boolean, nullable: true }
+        current: { type: boolean, nullable: true }
+        order_num: { type: integer, nullable: true }
+        user_id: { type: string, nullable: true }
+        deleted_at: { type: string, nullable: true }
+        created_at: { type: string }
+        updated_at: { type: string }
+
+    Certification:
+      type: object
+      required: [id, title, issuer, title_ar, issuer_ar, issuer_logo, date, date_sort, category, credential_url, credential_id, sort_order, is_published, skills, user_id, deleted_at, created_at, updated_at]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        issuer: { type: string }
+        title_ar: { type: string, nullable: true }
+        issuer_ar: { type: string, nullable: true }
+        issuer_logo: { type: string, nullable: true }
+        date: { type: string }
+        date_sort: { type: string, nullable: true }
+        category: { type: string, nullable: true }
+        credential_url: { type: string, nullable: true }
+        credential_id: { type: string, nullable: true }
+        sort_order: { type: integer, nullable: true }
+        is_published: { type: boolean, nullable: true }
+        skills: { type: array, items: { type: string } }
+        user_id: { type: string, nullable: true }
+        deleted_at: { type: string, nullable: true }
+        created_at: { type: string }
+        updated_at: { type: string }
+
+    BlogPost:
+      type: object
+      required: [id, title, slug, excerpt, content, cover_image_url, tags, is_published, published_at, user_id, deleted_at, created_at, updated_at]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        slug: { type: string }
+        excerpt: { type: string, nullable: true }
+        content: { type: string }
+        cover_image_url: { type: string, nullable: true }
+        tags: { type: array, items: { type: string } }
+        is_published: { type: boolean, nullable: true }
+        published_at: { type: string, nullable: true }
+        user_id: { type: string, nullable: true }
+        deleted_at: { type: string, nullable: true }
+        created_at: { type: string }
+        updated_at: { type: string }
+
+    BlogPostSummary:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        slug: { type: string }
+        excerpt: { type: string, nullable: true }
+        cover_image_url: { type: string, nullable: true }
+        tags: { type: array, items: { type: string } }
+        published_at: { type: string, nullable: true }
+        created_at: { type: string }
+
+    Message:
+      type: object
+      required: [id, name, email, subject, message, status, reply_email_draft, replied_at, user_id, deleted_at, created_at, updated_at, spam_score, spam_reason, is_spam]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        email: { type: string }
+        subject: { type: string, nullable: true }
+        message: { type: string }
+        status: { type: string, enum: [unread, read, archived] }
+        reply_email_draft: { type: string, nullable: true }
+        replied_at: { type: string, nullable: true }
+        user_id: { type: string, nullable: true }
+        deleted_at: { type: string, nullable: true }
+        created_at: { type: string }
+        updated_at: { type: string }
+        spam_score: { type: integer, nullable: true }
+        spam_reason: { type: string, nullable: true }
+        is_spam: { type: boolean }
+
+    ContactInfo:
+      type: object
+      required: [id, email, phone, location, address, github, linkedin, youtube, facebook, whatsapp, map_embed_url, availability_status, working_hours, social_links, updated_at, created_at]
+      properties:
+        id: { type: string }
+        email: { type: string, nullable: true }
+        phone: { type: string, nullable: true }
+        location: { type: string, nullable: true }
+        address: { type: string, nullable: true }
+        github: { type: string, nullable: true }
+        linkedin: { type: string, nullable: true }
+        youtube: { type: string, nullable: true }
+        facebook: { type: string, nullable: true }
+        whatsapp: { type: string, nullable: true }
+        map_embed_url: { type: string, nullable: true }
+        availability_status: { type: string, nullable: true }
+        working_hours: { type: string, nullable: true }
+        social_links: { type: object, nullable: true }
+        updated_at: { type: string }
+        created_at: { type: string }
+
+    ThemeSettings:
+      type: object
+      required: [id, mode, light_primary, light_accent, light_background, light_foreground, light_card, light_border, light_muted, light_muted_foreground, light_ring, dark_primary, dark_accent, dark_background, dark_foreground, dark_card, dark_border, dark_muted, dark_muted_foreground, dark_ring, radius, updated_at, created_at]
+      properties:
+        id: { type: string }
+        mode: { type: string, enum: [light, dark] }
+        light_primary: { type: string }
+        light_accent: { type: string }
+        light_background: { type: string }
+        light_foreground: { type: string }
+        light_card: { type: string }
+        light_border: { type: string }
+        light_muted: { type: string }
+        light_muted_foreground: { type: string }
+        light_ring: { type: string }
+        dark_primary: { type: string }
+        dark_accent: { type: string }
+        dark_background: { type: string }
+        dark_foreground: { type: string }
+        dark_card: { type: string }
+        dark_border: { type: string }
+        dark_muted: { type: string }
+        dark_muted_foreground: { type: string }
+        dark_ring: { type: string }
+        radius: { type: string }
+        updated_at: { type: string }
+        created_at: { type: string }
+
+    TypographySettings:
+      type: object
+      required: [id, body_font, display_font, body_font_url, display_font_url, base_font_size, line_height, letter_spacing, heading_scale, font_weight_body, font_weight_heading, updated_at, created_at]
+      properties:
+        id: { type: string }
+        body_font: { type: string }
+        display_font: { type: string }
+        body_font_url: { type: string, nullable: true }
+        display_font_url: { type: string, nullable: true }
+        base_font_size: { type: string }
+        line_height: { type: string }
+        letter_spacing: { type: string }
+        heading_scale: { type: string }
+        font_weight_body: { type: string }
+        font_weight_heading: { type: string }
+        updated_at: { type: string }
+        created_at: { type: string }
+
+    SeoSettings:
+      type: object
+      required: [id, title, description, keywords, og_title, og_description, og_image, canonical_url, twitter_card, twitter_creator, updated_at, created_at]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        description: { type: string }
+        keywords: { type: string }
+        og_title: { type: string }
+        og_description: { type: string }
+        og_image: { type: string, nullable: true }
+        canonical_url: { type: string }
+        twitter_card: { type: string }
+        twitter_creator: { type: string, nullable: true }
+        updated_at: { type: string }
+        created_at: { type: string }
+
+    SectionSetting:
+      type: object
+      required: [id, key, label, is_visible, sort_order, updated_at, created_at]
+      properties:
+        id: { type: string }
+        key: { type: string }
+        label: { type: string }
+        is_visible: { type: boolean }
+        sort_order: { type: integer }
+        updated_at: { type: string }
+        created_at: { type: string }
+
+    SiteSettings:
+      type: object
+      required: [id, site_name, site_tagline, footer_text, copyright_text, logo_text, default_theme, language_mode, default_language, show_language_toggle, rtl_enabled, updated_at, created_at]
+      properties:
+        id: { type: string }
+        site_name: { type: string }
+        site_tagline: { type: string }
+        footer_text: { type: string }
+        copyright_text: { type: string }
+        logo_text: { type: string }
+        default_theme: { type: string, enum: [light, dark] }
+        language_mode: { type: string }
+        default_language: { type: string }
+        show_language_toggle: { type: boolean }
+        rtl_enabled: { type: boolean }
+        updated_at: { type: string }
+        created_at: { type: string }
+
+    User:
+      type: object
+      required: [id, clerk_id, email, name, role, created_at, updated_at]
+      properties:
+        id: { type: string }
+        clerk_id: { type: string }
+        email: { type: string }
+        name: { type: string, nullable: true }
+        role: { type: string, enum: [user, superadmin] }
+        created_at: { type: string }
+        updated_at: { type: string }
+
+    UserMe:
+      type: object
+      required: [id, email, role]
+      properties:
+        id: { type: string }
+        email: { type: string }
+        role: { type: string, enum: [user, superadmin] }
+
+    CvSettings:
+      type: object
+      required: [objectPath, fileName, updatedAt]
+      properties:
+        objectPath: { type: string, nullable: true }
+        fileName: { type: string, nullable: true }
+        updatedAt: { type: string, format: date-time }
+
+    AuditEntry:
+      type: object
+      required: [id, entity_type, entity_id, version, data, changed_by, created_at]
+      properties:
+        id: { type: string }
+        entity_type: { type: string }
+        entity_id: { type: string }
+        version: { type: integer }
+        data: { type: object }
+        changed_by: { type: string, nullable: true }
+        created_at: { type: string }
+
+    AnalyticsStats:
+      type: object
+      properties:
+        days: { type: integer }
+        pageViews:
+          type: array
+          items:
+            type: object
+            properties:
+              date: { type: string }
+              count: { type: integer }
+        topProjects:
+          type: array
+          items:
+            type: object
+            properties:
+              slug: { type: string }
+              title: { type: string }
+              views: { type: integer }
+        topPosts:
+          type: array
+          items:
+            type: object
+            properties:
+              slug: { type: string }
+              title: { type: string }
+              views: { type: integer }
+        cvDownloads: { type: integer }
+        contactClicks: { type: integer }
+        totalViews: { type: integer }
+        messages:
+          type: array
+          items:
+            type: object
+            properties:
+              date: { type: string }
+              total: { type: integer }
+              unread: { type: integer }
+
+    SeedResult:
+      type: object
+      required: [success, summary, errors]
+      properties:
+        success: { type: boolean, enum: [true] }
+        summary:
+          type: object
+          additionalProperties: { type: integer }
+        errors: { type: array, items: { type: string } }
+
+    MessageReplyResult:
+      type: object
+      properties:
+        id: { type: string }
+        sent: { type: boolean }
+
+    ImageUploadResult:
+      type: object
+      properties:
+        id: { type: string }
+        url: { type: string }
+        variants:
+          type: array
+          items:
+            type: object
+            properties:
+              type: { type: string }
+              url: { type: string }
+
+    ImageMetadata:
+      type: object
+      properties:
+        id: { type: string }
+        original_filename: { type: string }
+        mime_type: { type: string }
+        file_size_bytes: { type: integer }
+        entity_type: { type: string }
+        entity_id: { type: string, nullable: true }
+        created_at: { type: string }
+
+    # ── Paginated response wrappers ────────────────────────────────────
+    PaginatedSkills:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/Skill" } }
+        pagination: { $ref: "#/components/schemas/Pagination" }
+
+    PaginatedThemePresets:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/ThemePreset" } }
+        pagination: { $ref: "#/components/schemas/Pagination" }
+
+    PaginatedProjects:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/Project" } }
+        pagination: { $ref: "#/components/schemas/Pagination" }
+
+    PaginatedExperience:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/Experience" } }
+        pagination: { $ref: "#/components/schemas/Pagination" }
+
+    PaginatedCertifications:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/Certification" } }
+        pagination: { $ref: "#/components/schemas/Pagination" }
+
+    PaginatedPosts:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/BlogPost" } }
+        pagination: { $ref: "#/components/schemas/Pagination" }
+
+    PaginatedMessages:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/Message" } }
+        pagination: { $ref: "#/components/schemas/Pagination" }
+
+    PaginatedAudit:
+      type: object
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/AuditEntry" } }
+        pagination: { $ref: "#/components/schemas/Pagination" }
+
+    # ── Request (input) schemas ────────────────────────────────────────
     HeroInput:
       type: object
       properties:
         heading: { type: string }
+        heading_ar: { type: string }
         name: { type: string }
+        name_ar: { type: string }
         roles: { type: array, items: { type: string } }
         description: { type: string }
-        github_url: { type: string }
-        linkedin_url: { type: string }
-        email: { type: string }
+        description_ar: { type: string }
+        github_url: { type: string, nullable: true }
+        linkedin_url: { type: string, nullable: true }
+        twitter_url: { type: string, nullable: true }
+        youtube_url: { type: string, nullable: true }
+        facebook_url: { type: string, nullable: true }
+        email: { type: string, nullable: true }
+        avatar_url: { type: string, nullable: true }
+        cv_url: { type: string, nullable: true }
+        site_name: { type: string }
+        logo_url: { type: string, nullable: true }
+        favicon_url: { type: string, nullable: true }
+        tagline: { type: string }
         available: { type: boolean }
+        is_published: { type: boolean }
+        stats:
+          type: array
+          items:
+            type: object
+            properties:
+              label: { type: string }
+              value: { type: string }
+
+    AboutInput:
+      type: object
+      properties:
+        bio1: { type: string }
+        bio2: { type: string }
+        bio: { type: string }
+        bio1_ar: { type: string }
+        bio2_ar: { type: string }
+        bio_ar: { type: string }
+        location: { type: string }
+        years_of_experience: { type: integer }
+        degree: { type: string }
+        school: { type: string }
+        grade: { type: string }
+        education_years: { type: string }
+        education:
+          type: array
+          items:
+            type: object
+            properties:
+              degree: { type: string }
+              institution: { type: string }
+              year: { type: string }
+              description: { type: string }
+        languages:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              level: { type: integer }
+        interests: { type: array, items: { type: string } }
+        interests_ar: { type: array, items: { type: string } }
+        is_published: { type: boolean }
+
     SkillInput:
       type: object
       properties:
         name: { type: string }
         category: { type: string }
-        proficiency: { type: integer, minimum: 0, maximum: 100 }
-        is_visible: { type: boolean }
+        category_ar: { type: string, nullable: true }
+        proficiency: { type: integer }
+        icon: { type: string, nullable: true }
         sort_order: { type: integer }
+        is_visible: { type: boolean }
+
+    ThemePresetInput:
+      type: object
+      required: [name, palette]
+      properties:
+        name: { type: string }
+        description: { type: string }
+        palette: { type: object }
+
+    ThemePresetUpdateInput:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string }
+        palette: { type: object }
+
     ProjectInput:
       type: object
       properties:
         title: { type: string }
         slug: { type: string }
         description: { type: string }
+        full_description: { type: string }
+        challenges: { type: string }
+        outcome: { type: string }
         category: { type: string }
         tech_stack: { type: array, items: { type: string } }
         tags: { type: array, items: { type: string } }
         featured: { type: boolean }
-        github_url: { type: string }
-        live_url: { type: string }
+        github_url: { type: string, nullable: true }
+        live_url: { type: string, nullable: true }
+        image_url: { type: string, nullable: true }
+        metrics: { type: array, items: { type: string } }
+        sort_order: { type: integer }
         is_published: { type: boolean }
+
     ExperienceInput:
       type: object
       properties:
@@ -736,44 +2858,215 @@ components:
         description: { type: array, items: { type: string } }
         technologies: { type: array, items: { type: string } }
         type: { type: string, enum: [internship, certification, volunteer] }
+        sort_order: { type: integer }
+        is_published: { type: boolean }
+        current: { type: boolean }
+
     CertificationInput:
       type: object
       properties:
         title: { type: string }
         issuer: { type: string }
+        issuer_logo: { type: string, nullable: true }
         date: { type: string }
-        category: { type: string }
-        credential_url: { type: string }
-    AboutInput:
+        date_sort: { type: string, nullable: true }
+        category: { type: string, nullable: true }
+        credential_url: { type: string, nullable: true }
+        credential_id: { type: string, nullable: true }
+        sort_order: { type: integer }
+        is_published: { type: boolean }
+        skills: { type: array, items: { type: string } }
+
+    PostInput:
       type: object
       properties:
-        bio1: { type: string }
-        bio2: { type: string }
-        location: { type: string }
-        years_of_experience: { type: integer }
-        education: { type: object }
-        languages: { type: array }
+        title: { type: string }
+        slug: { type: string }
+        excerpt: { type: string, nullable: true }
+        content: { type: string }
+        cover_image_url: { type: string, nullable: true }
+        tags: { type: array, items: { type: string } }
+        is_published: { type: boolean }
+
+    ContactInfoInput:
+      type: object
+      properties:
+        email: { type: string, nullable: true }
+        phone: { type: string, nullable: true }
+        location: { type: string, nullable: true }
+        address: { type: string, nullable: true }
+        github: { type: string, nullable: true }
+        linkedin: { type: string, nullable: true }
+        youtube: { type: string, nullable: true }
+        facebook: { type: string, nullable: true }
+        whatsapp: { type: string, nullable: true }
+        map_embed_url: { type: string, nullable: true }
+        availability_status: { type: string, nullable: true }
+        working_hours: { type: string, nullable: true }
+        social_links:
+          type: array
+          items:
+            type: object
+            properties:
+              platform: { type: string }
+              url: { type: string }
+
     ThemeInput:
       type: object
       properties:
         mode: { type: string, enum: [light, dark] }
         light_primary: { type: string }
+        light_accent: { type: string }
+        light_background: { type: string }
+        light_foreground: { type: string }
+        light_card: { type: string }
+        light_border: { type: string }
+        light_muted: { type: string }
+        light_muted_foreground: { type: string }
+        light_ring: { type: string }
         dark_primary: { type: string }
+        dark_accent: { type: string }
+        dark_background: { type: string }
+        dark_foreground: { type: string }
+        dark_card: { type: string }
+        dark_border: { type: string }
+        dark_muted: { type: string }
+        dark_muted_foreground: { type: string }
+        dark_ring: { type: string }
         radius: { type: string }
+
     TypographyInput:
       type: object
       properties:
         body_font: { type: string }
         display_font: { type: string }
+        body_font_url: { type: string, nullable: true }
+        display_font_url: { type: string, nullable: true }
         base_font_size: { type: string }
         line_height: { type: string }
+        letter_spacing: { type: string }
+        heading_scale: { type: string }
+        font_weight_body: { type: string }
+        font_weight_heading: { type: string }
+
     SeoInput:
       type: object
       properties:
         title: { type: string }
         description: { type: string }
         keywords: { type: string }
-        canonical_url: { type: string }
+        og_title: { type: string }
+        og_description: { type: string }
+        og_image: { type: string, nullable: true }
+        canonical_url: { type: string, nullable: true }
+        twitter_card: { type: string }
+        twitter_creator: { type: string, nullable: true }
+
+    SectionSettingInput:
+      type: object
+      properties:
+        key: { type: string }
+        label: { type: string }
+        is_visible: { type: boolean }
+        sort_order: { type: integer }
+
+    ReorderInput:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              sort_order: { type: integer }
+
+    SiteSettingsInput:
+      type: object
+      properties:
+        site_name: { type: string }
+        site_tagline: { type: string }
+        footer_text: { type: string }
+        copyright_text: { type: string }
+        logo_text: { type: string }
+        default_theme: { type: string, enum: [light, dark] }
+        language_mode: { type: string, enum: [en_only, ar_only, both] }
+        default_language: { type: string, enum: [en, ar] }
+        show_language_toggle: { type: boolean }
+        rtl_enabled: { type: boolean }
+
+    LanguageInput:
+      type: object
+      properties:
+        default_language: { type: string, enum: [en, ar] }
+
+    UpdateRoleInput:
+      type: object
+      properties:
+        role: { type: string, enum: [user, superadmin] }
+
+    MessageReplyInput:
+      type: object
+      properties:
+        reply: { type: string }
+
+    BulkDeleteInput:
+      type: object
+      properties:
+        ids: { type: array, items: { type: string } }
+
+    BulkArchiveInput:
+      type: object
+      description: >-
+        Provide exactly one of `ids` (archive a specific batch) or `filter`
+        (archive every row matching the view — the same server-side status /
+        preset predicates the list endpoint applies, in one statement).
+      properties:
+        ids: { type: array, items: { type: string } }
+        filter:
+          type: object
+          description: The view to archive, mirroring the list endpoint's `status` / `preset`.
+          properties:
+            status: { type: string, enum: [unread, read, archived, spam] }
+            preset:
+              type: string
+              enum: [unread_today, unread_or_archived, needs_reply]
+
+    BulkUnarchiveInput:
+      type: object
+      description: >-
+        Provide exactly one of `ids` (restore a specific batch) or `filter`
+        (restore every row matching the view — the same server-side status /
+        preset predicates the list endpoint applies, in one statement).
+      properties:
+        ids: { type: array, items: { type: string } }
+        filter:
+          type: object
+          description: The view to restore, mirroring the list endpoint's `status` / `preset`.
+          properties:
+            status: { type: string, enum: [unread, read, archived, spam] }
+            preset:
+              type: string
+              enum: [unread_today, unread_or_archived, needs_reply]
+
+    ContactSubmissionInput:
+      type: object
+      required: [name, email, message]
+      properties:
+        name: { type: string }
+        email: { type: string, format: email }
+        message: { type: string }
+        website: { type: string }
+        _formLoadedAt: { type: integer }
+        cfTurnstileToken: { type: string }
+
+    CvSettingsInput:
+      type: object
+      required: [objectPath, fileName]
+      properties:
+        objectPath: { type: string }
+        fileName: { type: string }
+
   securitySchemes:
     adminAuth:
       type: apiKey

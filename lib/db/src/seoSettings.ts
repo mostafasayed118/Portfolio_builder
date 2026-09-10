@@ -33,7 +33,7 @@ export async function upsertSeoSettings(
       keywords: args.keywords ?? "data engineer, ETL, Apache Spark, Kafka, Snowflake, BigQuery, Python, SQL",
       og_title: args.og_title ?? "Mustafa Sayed — Data Engineer",
       og_description: args.og_description ?? "Building scalable data pipelines and transforming raw data into actionable insights.",
-      canonical_url: args.canonical_url ?? "https://mustafasayed.replit.app",
+      canonical_url: args.canonical_url ?? "https://mustafa-sayed-portfolio.vercel.app",
       twitter_card: args.twitter_card ?? "summary_large_image",
       twitter_creator: args.twitter_creator ?? null,
       updated_at: now,

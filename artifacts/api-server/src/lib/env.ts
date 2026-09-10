@@ -163,6 +163,11 @@ export const env = {
   get ADMIN_API_KEY() { return optional("ADMIN_API_KEY"); },
   /** Server-only admin allowlist (comma-separated). Never read VITE_* here. */
   get ADMIN_EMAILS() { return optional("ADMIN_EMAILS") ?? ""; },
+  // Parsed allowlist (trimmed, lowercased, empty entries dropped). Shared by
+  // adminAuth and user-sync so the parse logic lives in one place.
+  get ADMIN_EMAIL_LIST(): string[] {
+    return this.ADMIN_EMAILS.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
+  },
 
   // CSRF / sessions
   get CSRF_SECRET() { return require_("CSRF_SECRET"); },
@@ -195,6 +200,23 @@ export const env = {
   get CONTACT_RATE_LIMIT_WINDOW_MS() {
     return int("CONTACT_RATE_LIMIT_WINDOW_MS", 60 * 60 * 1000, { min: 1_000, max: 86_400_000 });
   },
+
+  // AI (xAI / any OpenAI-compatible provider) — all optional; AI features
+  // no-op when AI_API_KEY is absent.
+  get AI_BASE_URL() { return optional("AI_BASE_URL") ?? "https://api.groq.com/openai/v1"; },
+  get AI_API_KEY() { return optional("AI_API_KEY"); },
+  get AI_MODEL() { return optional("AI_MODEL") ?? "llama-3.3-70b-versatile"; },
+  get AI_SPAM_MODEL() { return optional("AI_SPAM_MODEL") ?? "llama-3.3-70b-versatile"; },
+  get AI_CHAT_ENABLED() { return bool("AI_CHAT_ENABLED", true); },
+  get AI_WRITING_ENABLED() { return bool("AI_WRITING_ENABLED", true); },
+  get AI_SPAM_ENABLED() { return bool("AI_SPAM_ENABLED", false); },
+  get AI_SPAM_THRESHOLD() { return int("AI_SPAM_THRESHOLD", 75); },
+  get AI_CHAT_RATE_LIMIT_MAX() { return int("AI_CHAT_RATE_LIMIT_MAX", 20); },
+  get AI_CHAT_RATE_LIMIT_WINDOW_MS() { return int("AI_CHAT_RATE_LIMIT_WINDOW_MS", 15 * 60 * 1000); },
+  get AI_CONTEXT_TTL_MS() { return int("AI_CONTEXT_TTL_MS", 60_000); },
+  get AI_TIMEOUT_MS() { return int("AI_TIMEOUT_MS", 20_000); },
+  get AI_SPAM_TIMEOUT_MS() { return int("AI_SPAM_TIMEOUT_MS", 3_000); },
+  get AI_CHAT_MAX_TURNS() { return int("AI_CHAT_MAX_TURNS", 10); },
 
   // Dev / debug
   get NODE_ENV() { return oneOf("NODE_ENV", ["development", "test", "production"] as const, "development"); },

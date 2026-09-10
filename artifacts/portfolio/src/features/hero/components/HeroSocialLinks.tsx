@@ -1,4 +1,4 @@
-import { Github, Linkedin, Mail } from "lucide-react";
+import { Github, Linkedin, Mail, Youtube, Facebook } from "lucide-react";
 import type { HeroData } from "@/features/hero/types";
 
 interface HeroSocialLinksProps {
@@ -9,6 +9,8 @@ export function HeroSocialLinks({ hero }: HeroSocialLinksProps) {
   const links = [
     { href: hero.github, icon: Github, label: "GitHub", testid: "link-github" },
     { href: hero.linkedin, icon: Linkedin, label: "LinkedIn", testid: "link-linkedin" },
+    { href: hero.youtube, icon: Youtube, label: "YouTube", testid: "link-youtube" },
+    { href: hero.facebook, icon: Facebook, label: "Facebook", testid: "link-facebook" },
     { href: `mailto:${hero.email}`, icon: Mail, label: "Email", testid: "link-email" },
   ];
 

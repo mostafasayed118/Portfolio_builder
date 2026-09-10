@@ -1,7 +1,6 @@
 import type { Certificate } from "@/data/portfolio";
 import type { TranslationKeys } from "@/i18n";
 import { ExternalLink } from "lucide-react";
-import { useReveal } from "@/hooks/use-reveal";
 
 export const CATEGORY_COLORS: Record<Certificate["category"], string> = {
   python: "bg-primary/10 text-primary border-primary/20",
@@ -30,14 +29,11 @@ const ISSUER_COLORS: Record<string, string> = {
   Maharatech: "bg-muted text-muted-foreground border-border",
 };
 
-export function CertCard({ cert, index, t }: { cert: Certificate; index: number; t: TranslationKeys }) {
-  const { ref, revealed } = useReveal<HTMLDivElement>(0.05);
+export function CertCard({ cert, t }: { cert: Certificate; t: TranslationKeys }) {
 
   return (
     <div
-      ref={ref}
-      className={`group relative section-reveal ${revealed ? "revealed" : ""}`}
-      style={{ transitionDelay: `${index * 60}ms` }}
+      className="group relative"
       data-testid={`cert-card-${cert.id}`}
     >
       <div className="flex gap-4 items-start pb-6">

@@ -5,11 +5,11 @@ import OptimizedImage from "@/components/OptimizedImage";
 import type { Project } from "@/features/projects/types";
 
 const CATEGORY_CONFIG: Record<string, { icon: typeof Globe; label: string; color: string }> = {
-  web: { icon: Globe, label: "Web App", color: "text-blue-500 bg-blue-500/10 border-blue-500/20" },
-  mobile: { icon: Smartphone, label: "Mobile", color: "text-green-500 bg-green-500/10 border-green-500/20" },
-  cloud: { icon: Cloud, label: "Cloud", color: "text-indigo-500 bg-indigo-500/10 border-indigo-500/20" },
-  scraping: { icon: Code2, label: "Data/Scraping", color: "text-orange-500 bg-orange-500/10 border-orange-500/20" },
-  data: { icon: Database, label: "Data Eng", color: "text-violet-500 bg-violet-500/10 border-violet-500/20" },
+  web: { icon: Globe, label: "Web App", color: "text-category-web bg-category-web/10 border-category-web/20" },
+  mobile: { icon: Smartphone, label: "Mobile", color: "text-category-mobile bg-category-mobile/10 border-category-mobile/20" },
+  cloud: { icon: Cloud, label: "Cloud", color: "text-category-cloud bg-category-cloud/10 border-category-cloud/20" },
+  scraping: { icon: Code2, label: "Data/Scraping", color: "text-category-scraping bg-category-scraping/10 border-category-scraping/20" },
+  data: { icon: Database, label: "Data Eng", color: "text-category-data bg-category-data/10 border-category-data/20" },
 };
 
 const ProjectCard = memo(function ProjectCard({ project }: { project: Project }) {
@@ -41,7 +41,7 @@ const ProjectCard = memo(function ProjectCard({ project }: { project: Project })
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.04] to-accent/[0.04] opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-        <div className="p-5 relative">
+        <div className={`p-5 relative ${project.imageId ? "" : "pt-14"}`}>
           <div className="flex items-start justify-between mb-3">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1.5 flex-wrap">

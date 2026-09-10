@@ -78,7 +78,7 @@ export function SmartInput({
           <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
         )}
         {status === "valid" && showSuccess && (
-          <CheckCircle2 className="h-4 w-4 text-green-500" />
+          <CheckCircle2 className="h-4 w-4 text-success" />
         )}
         {status === "invalid" && (
           <AlertCircle className="h-4 w-4 text-destructive" />
@@ -160,7 +160,7 @@ export function SmartTextarea({
       />
       {status === "valid" && showSuccess && (
         <div className="absolute right-3 top-3">
-          <CheckCircle2 className="h-4 w-4 text-green-500" />
+          <CheckCircle2 className="h-4 w-4 text-success" />
         </div>
       )}
       {status === "invalid" && error && (

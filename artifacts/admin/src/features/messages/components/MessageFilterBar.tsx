@@ -1,4 +1,4 @@
-import { Inbox, Mail, MailOpen, Archive, type LucideIcon } from "lucide-react";
+import { Inbox, Mail, MailOpen, Archive, ShieldAlert, type LucideIcon } from "lucide-react";
 
 const STATUS_FILTERS: {
   key: string;
@@ -9,6 +9,7 @@ const STATUS_FILTERS: {
   { key: "unread", label: "Unread", icon: Mail },
   { key: "read", label: "Read", icon: MailOpen },
   { key: "archived", label: "Archived", icon: Archive },
+  { key: "spam", label: "Spam", icon: ShieldAlert },
 ];
 
 interface MessageFilterBarProps {
@@ -18,6 +19,7 @@ interface MessageFilterBarProps {
   unreadCount: number;
   readCount: number;
   archivedCount: number;
+  spamCount: number;
 }
 
 export function MessageFilterBar({
@@ -27,12 +29,14 @@ export function MessageFilterBar({
   unreadCount,
   readCount,
   archivedCount,
+  spamCount,
 }: MessageFilterBarProps) {
   const countMap: Record<string, number> = {
     all: totalCount,
     unread: unreadCount,
     read: readCount,
     archived: archivedCount,
+    spam: spamCount,
   };
 
   return (

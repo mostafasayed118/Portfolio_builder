@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "license": "MIT",
   "packageManager": "pnpm@9.15.0",
+  "type": "module",
   "scripts": {
     "preinstall": "node -e \"process.exit(process.env.npm_config_user_agent?.startsWith('pnpm') ? 0 : (console.error('Use pnpm instead') || 1))\"",
     "dev": "pnpm -r --parallel --filter @workspace/portfolio --filter @workspace/admin --filter @workspace/api-server run dev",
@@ -10,12 +11,12 @@
     "dev:admin": "pnpm --filter @workspace/admin run dev",
     "dev:api": "pnpm --filter @workspace/api-server run dev",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
-    "typecheck:libs": "tsc --build --force && tsc -p lib/db --noEmit && tsc -p lib/logging --noEmit && tsc -p lib/supabase --noEmit && tsc -p lib/auth --noEmit && tsc -p lib/ui --noEmit",
+    "typecheck:libs": "tsc --build --force && tsc -p lib/db --noEmit && tsc -p lib/logging --noEmit && tsc -p lib/supabase --noEmit && tsc -p lib/auth --noEmit && tsc -p lib/ui --noEmit && tsc -p lib/test-utils --noEmit",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "lint": "eslint artifacts/ lib/ scripts/ --max-warnings=300",
+    "lint": "eslint artifacts/ lib/ scripts/ --max-warnings=0",
     "staged-typecheck": "node scripts/staged-typecheck.mjs",
     "prepare": "husky",
     "turbo": "turbo",
@@ -31,7 +32,26 @@
   "pnpm": {
     "overrides": {
       "react": "19.1.0",
-      "react-dom": "19.1.0"
+      "react-dom": "19.1.0",
+      "path-to-regexp": "8.4.2",
+      "qs": "6.15.3",
+      "body-parser": "2.3.0",
+      "ip-address": "10.5.0",
+      "lodash": "4.18.1",
+      "js-cookie": "3.0.8",
+      "dompurify": "3.4.13",
+      "brace-expansion@^1": "1.1.18",
+      "brace-expansion@^2": "2.1.4",
+      "brace-expansion@^5": "5.0.9",
+      "picomatch@^2": "2.3.2",
+      "picomatch@^4": "4.0.4",
+      "js-yaml": "4.3.1",
+      "fast-uri": "3.1.5",
+      "ws": "8.21.0",
+      "form-data": "4.0.6",
+      "postcss": "8.5.26",
+      "vite@^7": "7.3.6",
+      "@babel/core": "7.29.6"
     }
   },
   "lint-staged": {
@@ -45,7 +65,8 @@
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.0",
-    "@commitlint/cli": "^21.0.2",
+    "@clerk/testing": "^2.2.24",
+    "@commitlint/cli": "^21.2.2",
     "@commitlint/config-conventional": "^21.0.2",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.60.0",
@@ -54,9 +75,10 @@
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/supertest": "^6.0.3",
-    "@vitest/coverage-v8": "^3.2.4",
+    "@vitest/coverage-v8": "^3.2.7",
     "eslint": "^9",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.11.0",
     "husky": "^9.1.7",
     "jsdom": "^26.1.0",
     "lint-staged": "^17.0.7",
@@ -65,6 +87,6 @@
     "turbo": "^2.10.9",
     "typescript": "~5.9.2",
     "typescript-eslint": "^8.60.0",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.7"
   }
 }

@@ -47,6 +47,11 @@ describe("ProjectCard", () => {
     expect(screen.getByText("Featured")).toBeInTheDocument();
   });
 
+  it("reserves space for the category badge when no image is present", () => {
+    const { container } = render(<ProjectCard project={project} />);
+    expect(container.querySelector(".pt-14")).not.toBeNull();
+  });
+
   it("renders category badge as 'Web App' for web projects", () => {
     render(<ProjectCard project={project} />);
     expect(screen.getByText("Web App")).toBeInTheDocument();

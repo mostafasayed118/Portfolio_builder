@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { resolve } from "path";
+import { hasRealAdminSession } from "./lib/session-mode";
 
 // Consume the session captured by the `setup` project (real Clerk sign-in
 // when CLERK_TEST_EMAIL/CLERK_TEST_PASSWORD are set, documented stub
@@ -7,6 +8,12 @@ import { resolve } from "path";
 const STORAGE_STATE = resolve(process.cwd(), "playwright/.auth/admin.json");
 
 test.use({ storageState: STORAGE_STATE });
+
+// The whole suite below asserts on the authenticated admin shell. CI has no
+// credentials (and the dev Clerk instance needs a 2FA mailbox), so the stub
+// lands on the sign-in screen — skip rather than fail. Run locally with
+// CLERK_TEST_EMAIL / CLERK_TEST_PASSWORD set for the full suite.
+test.skip(!hasRealAdminSession(), "Admin UI suite needs a real Clerk session (set CLERK_TEST_EMAIL / CLERK_TEST_PASSWORD)");
 
 test.describe("Admin Panel — Full Manual Test Suite", () => {
 

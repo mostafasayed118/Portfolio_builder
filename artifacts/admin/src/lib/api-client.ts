@@ -1,278 +1,254 @@
-import type { User } from "@workspace/supabase/types";
-import { logDebug, logInfo, logError } from "@workspace/logging";
-import { getClerkToken, isTokenLikelyValid } from "./auth-token";
-import { getApiUrl } from "./env";
-
-export type { User };
-
-// Re-export the API resource definitions so consumers can import
-// `api` from a single location without breaking existing imports.
-export { api } from "./api-resources";
-
-const apiBase = getApiUrl();
-
 /**
- * Canonical Authorization header name. HTTP headers are technically
- * case-insensitive, but the backend's `adminAuth.ts` reads the header
- * with a specific casing, and many proxies / loggers are case-sensitive
- * in their output. Keeping the name as a single source of truth here
- * prevents the kind of "looks correct in DevTools but rejected by the
- * server" drift that motivated this whole fix.
- */
-const AUTHORIZATION_HEADER = "Authorization" as const;
-const CSRF_HEADER = "x-csrf-token" as const;
-
-/** Wire-level failure marker returned when auth is required but missing. */
-const AUTH_MISSING_MESSAGE = "Authentication required — please sign in again.";
-
-/**
- * Per-navigation AbortController. When the admin SPA navigates to a
- * different route, `abortAllRequests()` is invoked from
- * `usePrefetchRoutes` so any in-flight mutation is cancelled.
+ * Admin API surface — a thin namespace adapter over the generated
+ * `@workspace/api-client-react` client.
  *
- * Without this, the user clicks "Save", navigates away mid-flight,
- * and React fires `setState` on an unmounted component (or worse,
- * the mutation completes and clobbers state the user just edited on
- * a different page).
- */
-let _activeController: AbortController | null = null;
-
-function getActiveSignal(): AbortSignal | undefined {
-  return _activeController?.signal;
-}
-
-export function beginRequestGroup(): void {
-  // Abort any in-flight group first
-  if (_activeController) _activeController.abort();
-  _activeController = new AbortController();
-}
-
-export function abortAllRequests(): void {
-  _activeController?.abort();
-  _activeController = null;
-}
-
-/**
- * Extract the CSRF token from the /csrf-token response body.
+ * Endpoint definitions, URL construction, and request/response types are all
+ * generated from `lib/api-spec/openapi.yaml` (see `pnpm --filter
+ * @workspace/api-spec codegen`). This file only maps those generated functions
+ * onto the `api.<resource>.<action>` namespace the admin app and its test
+ * mocks already use. It contains no endpoint URLs, no request types, and no
+ * fetch logic.
  *
- * Accepts the canonical envelope `{ success: true, data: { csrfToken } }`
- * as well as the legacy bare `{ csrfToken }` shape, so a rolling deploy
- * (new admin against an old server, or vice versa) keeps working.
+ * Transport concerns (API origin, Clerk bearer token, CSRF injection,
+ * timeout, 401 auto-refresh, navigation abort) live in the generated client's
+ * mutator and are wired up in `api-client-setup.ts`.
  */
-function extractCsrfToken(body: unknown): string | null {
-  if (typeof body !== "object" || body === null) return null;
-  if ("csrfToken" in body && typeof body.csrfToken === "string") return body.csrfToken;
-  if ("data" in body) return extractCsrfToken(body.data);
-  return null;
+import {
+  listSkills,
+  createSkill,
+  updateSkill,
+  deleteSkill,
+  listProjects,
+  createProject,
+  updateProject,
+  deleteProject,
+  listExperience,
+  createExperience,
+  updateExperience,
+  deleteExperience,
+  listCertifications,
+  createCertification,
+  updateCertification,
+  deleteCertification,
+  listPosts,
+  createPost,
+  updatePost,
+  deletePost,
+  listMessages,
+  unreadMessageCount,
+  markMessageRead,
+  markMessageUnread,
+  markAllMessagesRead,
+  archiveMessage,
+  unarchiveMessage,
+  deleteMessage,
+  replyMessage,
+  bulkDeleteMessages,
+  bulkArchiveMessages,
+  bulkUnarchiveMessages,
+  archiveTestSubmissions,
+  restoreAllArchivedMessages,
+  getHero,
+  updateHero,
+  getAbout,
+  updateAbout,
+  getContactInfo,
+  updateContactInfo,
+  getThemeSettings,
+  updateThemeSettings,
+  getTypographySettings,
+  updateTypographySettings,
+  getSeoSettings,
+  updateSeoSettings,
+  listThemePresets,
+  createThemePreset,
+  updateThemePreset,
+  deleteThemePreset,
+  listSectionSettings,
+  updateSectionSetting,
+  reorderSectionSettings,
+  getSiteSettings,
+  updateSiteSettings,
+  updateSiteLanguage,
+  getCurrentUser,
+  listUsers,
+  updateUserRole,
+  getCvSettings,
+  updateCvSettings,
+  deleteCvSettings,
+  listAudit,
+  getAnalytics,
+  previewEntity,
+  seedData,
+  submitContactForm,
+  deleteImage,
+  reorderImages,
+  adminAiGenerate,
+  adminAiImprove,
+} from "@workspace/api-client-react";
+
+/** Map an optional viewing-user id to the generated `{ userId }` query param. */
+function userIdParam(userId?: string): { userId: string } | undefined {
+  return userId ? { userId } : undefined;
 }
 
-export async function getCsrfToken(): Promise<string> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 5000);
-  try {
-    const res = await fetch(`${apiBase}/api/v1/csrf-token`, {
-      credentials: "include",
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
-    if (!res.ok) throw new Error(`CSRF fetch failed (${res.status})`);
-    const body: unknown = await res.json();
-    const csrfToken = extractCsrfToken(body);
-    if (!csrfToken) throw new Error("No CSRF token in response");
-    return csrfToken;
-  } catch (err) {
-    clearTimeout(timeoutId);
-    throw new Error("Unable to establish secure session — please refresh the page", { cause: err });
-  }
-}
+export const api = {
+  users: {
+    me: () => getCurrentUser(),
+    list: () => listUsers(),
+    updateRole: (id: string, role: "user" | "superadmin") => updateUserRole(id, { role }),
+  },
+  hero: {
+    get: () => getHero(),
+    update: (data: Parameters<typeof updateHero>[0]) => updateHero(data),
+  },
+  about: {
+    get: () => getAbout(),
+    update: (data: Parameters<typeof updateAbout>[0]) => updateAbout(data),
+  },
+  skills: {
+    list: (userId?: string) => listSkills(userIdParam(userId)),
+    create: (data: Parameters<typeof createSkill>[0]) => createSkill(data),
+    update: (id: string, data: Parameters<typeof updateSkill>[1]) => updateSkill(id, data),
+    delete: (id: string) => deleteSkill(id),
+  },
+  projects: {
+    list: (userId?: string) => listProjects(userIdParam(userId)),
+    create: (data: Parameters<typeof createProject>[0]) => createProject(data),
+    update: (id: string, data: Parameters<typeof updateProject>[1]) => updateProject(id, data),
+    delete: (id: string) => deleteProject(id),
+  },
+  experience: {
+    list: (userId?: string) => listExperience(userIdParam(userId)),
+    create: (data: Parameters<typeof createExperience>[0]) => createExperience(data),
+    update: (id: string, data: Parameters<typeof updateExperience>[1]) => updateExperience(id, data),
+    delete: (id: string) => deleteExperience(id),
+  },
+  certifications: {
+    list: (userId?: string) => listCertifications(userIdParam(userId)),
+    create: (data: Parameters<typeof createCertification>[0]) => createCertification(data),
+    update: (id: string, data: Parameters<typeof updateCertification>[1]) => updateCertification(id, data),
+    delete: (id: string) => deleteCertification(id),
+  },
+  posts: {
+    list: (userId?: string) => listPosts(userIdParam(userId)),
+    create: (data: Parameters<typeof createPost>[0]) => createPost(data),
+    update: (id: string, data: Parameters<typeof updatePost>[1]) => updatePost(id, data),
+    delete: (id: string) => deletePost(id),
+  },
+  messages: {
+    /**
+     * `status` mirrors the list endpoint's server-side filter — omit or pass
+     * `"all"` for the default view; `"unread"`/`"read"`/`"archived"` page
+     * over exactly those rows instead of a client-side slice of page one.
+     * `preset` applies one of the saved compound views and is mutually
+     * exclusive with `status`. `limit`/`offset` drive server-side pagination
+     * (the admin fetches every matching row in batches of 200, the server's
+     * MAX_LIMIT, so a view never stops at the default 50-row page).
+     */
+    list: (
+      userId?: string,
+      status?: "unread" | "read" | "archived" | "spam" | "all",
+      limit?: number,
+      offset?: number,
+      preset?: "unread_today" | "unread_or_archived" | "needs_reply",
+    ) =>
+      listMessages({
+        ...userIdParam(userId),
+        ...(status && status !== "all" ? { status } : {}),
+        ...(preset ? { preset } : {}),
+        ...(limit !== undefined ? { limit } : {}),
+        ...(offset !== undefined ? { offset } : {}),
+      }),
+    unreadCount: (userId?: string) => unreadMessageCount(userIdParam(userId)),
+    markRead: (id: string) => markMessageRead(id),
+    markUnread: (id: string) => markMessageUnread(id),
+    markAllRead: () => markAllMessagesRead(),
+    archive: (id: string) => archiveMessage(id),
+    unarchive: (id: string) => unarchiveMessage(id),
+    delete: (id: string) => deleteMessage(id),
+    bulkDelete: (ids: string[]) => bulkDeleteMessages({ ids }),
+    /**
+     * Archive by explicit id list or by the active view filter. When every
+     * row matching the current view is selected, pass `{ filter }` so the
+     * whole set is archived server-side in one statement — no giant id
+     * payload (the contract: exactly one of `ids` / `filter`).
+     */
+    bulkArchive: (opts: Parameters<typeof bulkArchiveMessages>[0]) => bulkArchiveMessages(opts),
+    /**
+     * Restore by explicit id list or by the active view filter — the mirror
+     * of bulkArchive. When every row in the Archived view is selected, pass
+     * `{ filter }` so the whole set is restored server-side in one statement
+     * (the contract: exactly one of `ids` / `filter`).
+     */
+    bulkUnarchive: (opts: Parameters<typeof bulkUnarchiveMessages>[0]) => bulkUnarchiveMessages(opts),
+    archiveTestSubmissions: () => archiveTestSubmissions(),
+    restoreAllArchived: () => restoreAllArchivedMessages(),
+    reply: (id: string, reply: string) => replyMessage(id, { reply }),
+  },
+  contact: {
+    submit: (data: Parameters<typeof submitContactForm>[0]) => submitContactForm(data),
+  },
+  images: {
+    delete: (id: string) => deleteImage(id),
+    reorder: (orderedIds: string[]) => reorderImages({ ordered_ids: orderedIds }),
+  },
+  contactInfo: {
+    get: () => getContactInfo(),
+    update: (data: Parameters<typeof updateContactInfo>[0]) => updateContactInfo(data),
+  },
+  themeSettings: {
+    get: () => getThemeSettings(),
+    update: (data: Parameters<typeof updateThemeSettings>[0]) => updateThemeSettings(data),
+  },
+  themePresets: {
+    list: (userId?: string) => listThemePresets(userIdParam(userId)),
+    create: (data: Parameters<typeof createThemePreset>[0]) => createThemePreset(data),
+    update: (id: string, data: Parameters<typeof updateThemePreset>[1]) => updateThemePreset(id, data),
+    delete: (id: string) => deleteThemePreset(id),
+  },
+  typographySettings: {
+    get: () => getTypographySettings(),
+    update: (data: Parameters<typeof updateTypographySettings>[0]) => updateTypographySettings(data),
+  },
+  seoSettings: {
+    get: () => getSeoSettings(),
+    update: (data: Parameters<typeof updateSeoSettings>[0]) => updateSeoSettings(data),
+  },
+  sectionSettings: {
+    list: () => listSectionSettings(),
+    update: (id: string, data: Parameters<typeof updateSectionSetting>[1]) => updateSectionSetting(id, data),
+    reorder: (items: Parameters<typeof reorderSectionSettings>[0]["items"]) =>
+      reorderSectionSettings({ items }),
+  },
+  siteSettings: {
+    get: () => getSiteSettings(),
+    update: (data: Parameters<typeof updateSiteSettings>[0]) => updateSiteSettings(data),
+    updateLanguage: (data: Parameters<typeof updateSiteLanguage>[0]) => updateSiteLanguage(data),
+  },
+  seed: {
+    run: () => seedData(),
+  },
+  cv: {
+    getSettings: () => getCvSettings(),
+    updateSettings: (data: Parameters<typeof updateCvSettings>[0]) => updateCvSettings(data),
+    deleteSettings: () => deleteCvSettings(),
+  },
+  preview: {
+    entity: (entityType: string, entityId: string) => previewEntity(entityType, entityId),
+  },
+  audit: {
+    list: (opts?: Parameters<typeof listAudit>[0]) => listAudit(opts),
+  },
+  analytics: {
+    stats: (days?: number) => getAnalytics(days ? { days } : undefined),
+  },
+  ai: {
+    generate: (data: Parameters<typeof adminAiGenerate>[0]) => adminAiGenerate(data),
+    improve: (data: Parameters<typeof adminAiImprove>[0]) => adminAiImprove(data),
+  },
+};
 
-type ApiResult<T> =
-  | { success: true; data?: T; count?: number }
-  | { success: false; message: string };
-
-const STATE_CHANGING = new Set(["POST", "PUT", "PATCH", "DELETE"]);
-const REQUEST_TIMEOUT_MS = 15_000;
-
-/**
- * Internal shared request implementation. The only behavioural
- * difference between `request()` and `publicRequest()` is the URL
- * prefix (`/api/v1/admin` vs `/api/v1`); everything else — header
- * construction, CSRF, abort timeout, error normalisation, debug
- * logging — is identical and lives here.
- *
- * Auth contract (per the strict spec):
- *  - When `withAuth` is true, we MUST have a valid Bearer token before
- *    we send a single byte over the wire. If `getClerkToken()` returns
- *    null/empty/malformed, we short-circuit with `{ success: false,
- *    message: AUTH_MISSING_MESSAGE }` and notify the auth layer
- *    (via the registered handler in `auth-token.ts`) so it can sign
- *    the user out and redirect to `/sign-in`. We never send a request
- *    the server is guaranteed to 401.
- *  - The header is built with `Authorization` (capital A) via the
- *    `AUTHORIZATION_HEADER` constant. Any future change to header
- *    casing must go through that constant.
- *  - The token is also `isTokenLikelyValid()`-checked at construction
- *    time, so a stray whitespace-only or empty string never leaks
- *    into the header object.
- */
-/**
- * Maximum number of 401 retry attempts per request. After the first
- * 401, we force-refresh the Clerk token (bypassing the JWT cache)
- * and retry once. A second 401 means the session is genuinely dead.
- */
-const MAX_401_RETRIES = 1;
-
-async function doFetch<T>(
-  url: string,
-  method: string,
-  body: unknown,
-  withAuth: boolean,
-  retryCount = 0,
-): Promise<ApiResult<T>> {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-
-  if (withAuth) {
-    const clerkToken = await getClerkToken();
-    if (!isTokenLikelyValid(clerkToken)) {
-      if (import.meta.env.DEV) {
-        logError(
-          "[api-client] ABORTING request — no usable Clerk token.",
-          new Error("auth_missing"),
-          "api-client",
-          { method, url, withAuth, retryCount },
-        );
-      }
-      return { success: false, message: AUTH_MISSING_MESSAGE };
-    }
-    headers[AUTHORIZATION_HEADER] = `Bearer ${clerkToken}`;
-    if (import.meta.env.DEV) {
-      logInfo(
-        `[api-client] Attaching Authorization header (token length=${clerkToken.length}) for ${method} ${url}`,
-        "api-client",
-      );
-    }
-  }
-
-  if (STATE_CHANGING.has(method)) {
-    const csrfToken = await getCsrfToken();
-    headers[CSRF_HEADER] = csrfToken;
-  }
-
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
-    // Link the per-navigation signal so navigation aborts in-flight requests
-    const navSignal = getActiveSignal();
-    const onAbort = () => controller.abort();
-    if (navSignal) {
-      navSignal.addEventListener("abort", onAbort, { once: true });
-    }
-
-    if (import.meta.env.DEV) {
-      const hasAuth = Boolean(headers[AUTHORIZATION_HEADER]);
-      logDebug(
-        `[api-client] ${withAuth ? "request" : "publicRequest"} — method=${method}, url=${url}, hasAuth=${hasAuth}, hasCsrf=${Boolean(headers[CSRF_HEADER])}, retryCount=${retryCount}`,
-        "api-client",
-      );
-    }
-
-    let res: Response;
-    try {
-      res = await fetch(url, {
-        method,
-        headers,
-        body: body ? JSON.stringify(body) : undefined,
-        credentials: "include",
-        signal: controller.signal,
-      });
-    } finally {
-      clearTimeout(timeoutId);
-      if (navSignal) {
-        navSignal.removeEventListener("abort", onAbort);
-      }
-    }
-
-    if (!res.ok) {
-      let message = `Request failed (${res.status})`;
-      try {
-        const errData = await res.json();
-        if (errData.message) message = errData.message;
-        else if (errData.errors && withAuth) {
-          const fieldErrors = Object.entries(errData.errors)
-            .map(([k, v]) => `${k}: ${(v as string[]).join(", ")}`)
-            .join("; ");
-          message = fieldErrors || message;
-        }
-      } catch { /* response wasn't JSON */ }
-
-      // ── 401 auto-refresh (max 1 retry) ────────────────────────────────
-      // The server returned 401 for an authenticated request. This is
-      // the AUTHORITATIVE signal that the JWT has expired or is
-      // otherwise rejected. Rather than immediately signing the user
-      // out, we attempt to force-refresh the Clerk token (which
-      // bypasses the JWT cache) and retry the request once. If the
-      // retry also fails, THEN we fire the auth-missing handler.
-      if (withAuth && res.status === 401 && retryCount < MAX_401_RETRIES) {
-        if (import.meta.env.DEV) {
-          logInfo(
-            `[api-client] Server returned 401 (attempt ${retryCount + 1}/${MAX_401_RETRIES + 1}) — ` +
-              `force-refreshing token and retrying.`,
-            "api-client",
-            { method, url },
-          );
-        }
-        // Force Clerk to issue a fresh token (bypassing any in-memory
-        // cache that might still hold the stale/expired one).
-        await getClerkToken(true);
-        return doFetch<T>(url, method, body, withAuth, retryCount + 1);
-      }
-
-      // ── Auth failure (all retries exhausted) ─────────────────────────
-      if (withAuth && res.status === 401) {
-        if (import.meta.env.DEV) {
-          logError(
-            "[api-client] Server returned 401 after refresh attempt — " +
-              "token is genuinely expired. Firing auth-missing handler.",
-            new Error("server_401_after_refresh"),
-            "api-client",
-            { method, url, retryCount },
-          );
-        }
-        void import("./auth-token").then(({ fireAuthMissingFromApiClient }) => {
-          fireAuthMissingFromApiClient();
-        });
-      }
-      return { success: false, message };
-    }
-    return await res.json();
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Network error";
-    if (message.includes("aborted")) {
-      return { success: false, message: "Request timed out" };
-    }
-    return { success: false, message };
-  }
-}
-
-export async function request<T>(
-  method: string,
-  path: string,
-  body?: unknown,
-): Promise<ApiResult<T>> {
-  return doFetch<T>(`${apiBase}/api/v1/admin${path}`, method, body, true);
-}
-
-export async function publicRequest<T>(
-  method: string,
-  path: string,
-  body?: unknown,
-): Promise<ApiResult<T>> {
-  return doFetch<T>(`${apiBase}/api/v1${path}`, method, body, false);
-}
-
-export interface CvSettings {
-  objectPath: string | null;
-  fileName: string | null;
-  updatedAt: string;
-}
+export { beginRequestGroup, abortAllRequests } from "@workspace/api-client-react";
+export { getCsrfToken } from "./csrf";
+export type { User } from "@workspace/supabase/types";

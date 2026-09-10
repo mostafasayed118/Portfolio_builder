@@ -4,6 +4,7 @@ export * from "./contactInfo";
 export * from "./cvSettings";
 export * from "./experience";
 export * from "./heroContent";
+export * from "./images";
 export * from "./messages";
 export * from "./posts";
 export * from "./projects";

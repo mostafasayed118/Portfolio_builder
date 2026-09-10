@@ -5,6 +5,8 @@ export type HeroData = {
   description: string;
   github: string;
   linkedin: string;
+  youtube: string;
+  facebook: string;
   email: string;
   available: boolean;
   cvFileName: string;

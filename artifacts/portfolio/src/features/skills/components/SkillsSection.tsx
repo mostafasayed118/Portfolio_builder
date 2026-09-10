@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Zap } from "lucide-react";
-import SectionLabel from "@/components/SectionLabel";
+import SectionHeader from "@/components/SectionHeader";
 import EmptyState from "@/components/EmptyState";
-import { useReveal } from "@/hooks/use-reveal";
 import { useSkills, groupSkillsByCategory, SKILL_CATEGORIES } from "@/features/skills/hooks/useSkills";
 import { useLanguage } from "@/lib/language";
 import { SkillTag, LEVEL_CONFIG } from "@/features/skills/components/SkillTag";
@@ -20,7 +19,6 @@ function levelLabel(lvl: SkillLevel, t?: TranslationKeys): string {
 
 export default function SkillsSection() {
   const [activeCategory, setActiveCategory] = useState("all");
-  const { ref, revealed } = useReveal();
   const { data: supabaseSkills, isLoading } = useSkills();
   const { t } = useLanguage();
 
@@ -35,14 +33,14 @@ export default function SkillsSection() {
   const advancedCount = allSkills.filter((s) => s.level === "Advanced").length;
 
   return (
-    <section id="skills" ref={ref} className="py-24 px-6">
+    <section id="skills" className="py-24 px-6">
       <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-12">
-          <SectionLabel>{t.skills.title}</SectionLabel>
-          <h2 className="font-display font-bold text-3xl md:text-4xl text-foreground mb-3">{t.skills.title}</h2>
-          <p className="text-muted-foreground text-sm max-w-xl mx-auto mb-6">
-            {allSkills.length} skills across {categories.length} domains — {expertCount} Expert, {advancedCount} Advanced.
-          </p>
+        <SectionHeader
+          label={t.skills.title}
+          title={t.skills.title}
+          description={`${allSkills.length} skills across ${categories.length} domains — ${expertCount} Expert, ${advancedCount} Advanced.`}
+          descriptionClassName="mb-6"
+        >
           <div className="flex flex-wrap gap-2 justify-center">
             <button onClick={() => setActiveCategory("all")} aria-pressed={activeCategory === "all"}
               data-testid="skills-filter-all"
@@ -57,11 +55,11 @@ export default function SkillsSection() {
               </button>
             ))}
           </div>
-        </div>
+        </SectionHeader>
         {allSkills.length === 0 ? (
           <EmptyState icon={Zap} title="No skills listed yet" description="Skills data will appear here once added." compact />
         ) : (
-          <div className={`section-reveal ${revealed ? "revealed" : ""}`}>
+          <div>
             <div className="flex flex-wrap gap-3 justify-center">
               {displaySkills.map((skill, i) => <SkillTag key={skill.name} skill={skill} index={i} t={t} />)}
             </div>

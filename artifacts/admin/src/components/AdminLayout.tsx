@@ -2,7 +2,8 @@ import { useCallback, useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 import UserSwitcher from "./UserSwitcher";
-import CommandPalette from "./CommandPalette";
+import SearchPalette from "./SearchPalette";
+import ShortcutsHelp from "./ShortcutsHelp";
 import { useGlobalShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useAuthUser } from "@workspace/auth";
 import { useViewingUser } from "@/lib/viewing-user-context";
@@ -11,10 +12,20 @@ interface Props {
   children: React.ReactNode;
 }
 
+const SIDEBAR_COLLAPSED_STORAGE_KEY = "admin-sidebar-collapsed";
+
 export default function AdminLayout({ children }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     if (typeof window === "undefined") return true;
     return window.innerWidth >= 1024;
+  });
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === "1";
+    } catch {
+      return false;
+    }
   });
   const { isSuperadmin } = useAuthUser();
   const { viewingUserId, setViewingUserId } = useViewingUser();
@@ -30,7 +41,25 @@ export default function AdminLayout({ children }: Props) {
   }, []);
 
   const handleClose = useCallback(() => setSidebarOpen(false), []);
-  const handleMenuClick = useCallback(() => setSidebarOpen(prev => !prev), []);
+  const handleMenuClick = useCallback(() => {
+    if (window.innerWidth < 1024) {
+      setSidebarOpen(prev => !prev);
+      return;
+    }
+
+    setSidebarCollapsed(prev => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem(
+          SIDEBAR_COLLAPSED_STORAGE_KEY,
+          next ? "1" : "0",
+        );
+      } catch {
+        /* storage unavailable — keep the current session state */
+      }
+      return next;
+    });
+  }, []);
 
   useGlobalShortcuts();
 
@@ -42,8 +71,13 @@ export default function AdminLayout({ children }: Props) {
       >
         Skip to content
       </a>
-      <CommandPalette />
-      <Sidebar open={sidebarOpen} onClose={handleClose} />
+      <SearchPalette />
+      <ShortcutsHelp />
+      <Sidebar
+        open={sidebarOpen}
+        collapsed={sidebarCollapsed}
+        onClose={handleClose}
+      />
       <div className="flex flex-col flex-1 min-w-0">
         <Header onMenuClick={handleMenuClick} />
         {isSuperadmin && (

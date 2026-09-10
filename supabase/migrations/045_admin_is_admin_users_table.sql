@@ -8,7 +8,7 @@
 -- custom parameters, so the app.admin_emails database setting from 042
 -- cannot exist on hosted projects. The `users` table is the native,
 -- Supabase-correct source of truth: the API server syncs Clerk users
--- whose email is in VITE_ADMIN_EMAILS, and superadmins are flagged via
+-- whose email is in ADMIN_EMAILS, and superadmins are flagged via
 -- role = 'superadmin'.
 --
 -- SECURITY DEFINER + pinned search_path so the table check bypasses RLS

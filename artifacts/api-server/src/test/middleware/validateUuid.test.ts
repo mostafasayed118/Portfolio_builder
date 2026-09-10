@@ -1,5 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { Request, Response, NextFunction } from "express";
+import { describe, it, expect, vi } from "vitest";
 import { validateQueryUserId, validateParamId } from "../../middleware/validateUuid";
 
 function mockReq(overrides = {}) {
@@ -48,6 +47,21 @@ describe("validateQueryUserId", () => {
     });
     expect(next).not.toHaveBeenCalled();
   });
+
+  it("returns 400 for an empty-string userId query param", () => {
+    const req = mockReq({ query: { userId: "" } });
+    const res = mockRes();
+    const next = vi.fn();
+
+    validateQueryUserId(req, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      message: "Invalid userId format — must be a valid UUID",
+    });
+    expect(next).not.toHaveBeenCalled();
+  });
 });
 
 describe("validateParamId", () => {
@@ -73,6 +87,21 @@ describe("validateParamId", () => {
     expect(res.json).toHaveBeenCalledWith({
       success: false,
       errors: { id: ["Invalid id format — must be a valid UUID"] },
+    });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when params.id is missing", () => {
+    const req = mockReq({ params: {} });
+    const res = mockRes();
+    const next = vi.fn();
+
+    validateParamId(req, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      message: "Invalid id format — must be a valid UUID",
     });
     expect(next).not.toHaveBeenCalled();
   });

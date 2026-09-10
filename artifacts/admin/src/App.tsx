@@ -2,11 +2,11 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { Switch, Route, Router as WouterRouter, Redirect, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import AdminLayout from "@/components/AdminLayout";
-import { Toaster, TooltipProvider } from "@workspace/ui";
+import { Toaster, TooltipProvider, ApiHealthCheck } from "@workspace/ui";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { ViewingUserProvider } from "@/lib/viewing-user-context";
 import { ProtectedRoute, SignInPage } from "@/features/auth";
-import { ApiHealthCheck } from "@/components/ApiHealthCheck";
+import { getApiUrl } from "@/lib/env";
 import { abortAllRequests, beginRequestGroup } from "@/lib/api-client";
 
 const Overview = lazy(() => import("@/pages/Overview"));
@@ -26,6 +26,7 @@ const SectionOrderManager = lazy(() => import("@/features/settings").then(m => (
 const SiteSettingsManager = lazy(() => import("@/features/settings").then(m => ({ default: m.SiteSettingsManager })));
 const CvManager = lazy(() => import("@/features/cv").then(m => ({ default: m.CvManager })));
 const AuditLog = lazy(() => import("@/features/audit").then(m => ({ default: m.default })));
+const Analytics = lazy(() => import("@/features/analytics").then(m => ({ default: m.default })));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
 function PageFallback() {
@@ -70,7 +71,16 @@ function App() {
           <ViewingUserProvider>
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
               <Switch>
+                {/* Clerk's path-routed sign-in navigates through sub-paths
+                    (/sign-in/factor-one, /sign-in/sso-callback, …) during
+                    multi-step sign-in. The wildcard keeps those routes
+                    rendering SignInPage instead of falling through to
+                    ProtectedRoute, which would redirect back to /sign-in
+                    and wipe the in-flight sign-in state. */}
                 <Route path="/sign-in">
+                  <SignInPage />
+                </Route>
+                <Route path="/sign-in/*">
                   <SignInPage />
                 </Route>
 
@@ -95,6 +105,7 @@ function App() {
                         <Route path="/sections"><Suspense fallback={<PageFallback />}><SectionOrderManager /></Suspense></Route>
                         <Route path="/theme"><Suspense fallback={<PageFallback />}><ThemeManager /></Suspense></Route>
                         <Route path="/settings"><Suspense fallback={<PageFallback />}><SiteSettingsManager /></Suspense></Route>
+                        <Route path="/analytics"><Suspense fallback={<PageFallback />}><Analytics /></Suspense></Route>
                         <Route path="/audit"><Suspense fallback={<PageFallback />}><AuditLog /></Suspense></Route>
                         <Route component={NotFound} />
                       </Switch>
@@ -102,7 +113,11 @@ function App() {
                   </ProtectedRoute>
                 </Route>
               </Switch>
-              <ApiHealthCheck />
+              <ApiHealthCheck
+                apiUrl={getApiUrl()}
+                title="API Server Unreachable"
+                message="Admin operations require the API server. Check that it is running."
+              />
               <Toaster />
             </WouterRouter>
           </ViewingUserProvider>

@@ -1,24 +1,26 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { logError, logWarn, logInfo, logDebug, configureLogger } from "./index";
+import { logError, logWarn, logInfo, logDebug, configureLogger, createLogger, setCaptureError } from "./index";
 
 let consoleSpy: {
   error: ReturnType<typeof vi.spyOn>;
   warn: ReturnType<typeof vi.spyOn>;
-  info: ReturnType<typeof vi.spyOn>;
+  log: ReturnType<typeof vi.spyOn>;
 };
 
 beforeEach(() => {
   consoleSpy = {
     error: vi.spyOn(console, "error").mockImplementation(() => {}),
     warn: vi.spyOn(console, "warn").mockImplementation(() => {}),
-    info: vi.spyOn(console, "info").mockImplementation(() => {}),
+    // info/debug levels are written via console.log — in Node, console.info is
+    // an alias of console.log, so spying on it would never intercept the calls.
+    log: vi.spyOn(console, "log").mockImplementation(() => {}),
   };
 });
 
 afterEach(() => {
   consoleSpy.error.mockRestore();
   consoleSpy.warn.mockRestore();
-  consoleSpy.info.mockRestore();
+  consoleSpy.log.mockRestore();
 });
 
 describe("logError", () => {
@@ -75,12 +77,12 @@ describe("logWarn", () => {
     expect(consoleSpy.warn).toHaveBeenCalledWith("[WarnCtx] Warning message");
   });
 
-  it("logs JSON in production mode", () => {
+  it("logs JSON in production mode (warn goes to stderr / console.error)", () => {
     configureLogger(() => ({ dev: false }));
 
     logWarn("Prod warning");
 
-    const call = consoleSpy.warn.mock.calls[0][0] as string;
+    const call = consoleSpy.error.mock.calls[0][0] as string;
     const parsed = JSON.parse(call);
     expect(parsed.level).toBe("warn");
     expect(parsed.message).toBe("Prod warning");
@@ -95,7 +97,7 @@ describe("logInfo", () => {
 
     logInfo("Info message", "InfoCtx");
 
-    expect(consoleSpy.info).toHaveBeenCalledWith("[InfoCtx] Info message");
+    expect(consoleSpy.log).toHaveBeenCalledWith("[InfoCtx] Info message");
   });
 
   it("logs JSON in production mode", () => {
@@ -103,7 +105,7 @@ describe("logInfo", () => {
 
     logInfo("Prod info");
 
-    const call = consoleSpy.info.mock.calls[0][0] as string;
+    const call = consoleSpy.log.mock.calls[0][0] as string;
     const parsed = JSON.parse(call);
     expect(parsed.level).toBe("info");
     expect(parsed.message).toBe("Prod info");
@@ -117,7 +119,7 @@ describe("logDebug", () => {
 
     logDebug("Debug message", "DebugCtx");
 
-    expect(consoleSpy.info).toHaveBeenCalledWith("[DebugCtx] Debug message");
+    expect(consoleSpy.log).toHaveBeenCalledWith("[DebugCtx] Debug message");
   });
 
   it("logs JSON in production mode via console.log (not stderr)", () => {
@@ -125,7 +127,7 @@ describe("logDebug", () => {
 
     logDebug("Prod debug");
 
-    const call = consoleSpy.info.mock.calls[0][0] as string;
+    const call = consoleSpy.log.mock.calls[0][0] as string;
     const parsed = JSON.parse(call);
     expect(parsed.level).toBe("debug");
     expect(parsed.message).toBe("Prod debug");
@@ -140,6 +142,79 @@ describe("configureLogger", () => {
 
     // Should fallback to dev=true
     logInfo("fallback test");
-    expect(consoleSpy.info).toHaveBeenCalledWith("[App] fallback test");
+    expect(consoleSpy.log).toHaveBeenCalledWith("[App] fallback test");
+  });
+});
+
+describe("createLogger", () => {
+  it("applies defaultContext when the call omits one", () => {
+    const logger = createLogger({ env: () => ({ dev: true }), defaultContext: "auth-guard" });
+
+    logger.logInfo("hello");
+
+    expect(consoleSpy.log).toHaveBeenCalledWith("[auth-guard] hello");
+    // An explicit context still wins over the default.
+    logger.logInfo("hello", "explicit");
+    expect(consoleSpy.log).toHaveBeenCalledWith("[explicit] hello");
+  });
+
+  it("devOnly drops all output in production mode", () => {
+    const logger = createLogger({ env: () => ({ dev: false }), devOnly: true });
+
+    logger.logInfo("should be dropped");
+    logger.logError("also dropped", new Error("x"));
+
+    expect(consoleSpy.log).not.toHaveBeenCalled();
+    expect(consoleSpy.error).not.toHaveBeenCalled();
+  });
+
+  it("devOnly keeps output in dev mode", () => {
+    const logger = createLogger({ env: () => ({ dev: true }), devOnly: true, defaultContext: "auth-guard" });
+
+    logger.logInfo("dev line");
+
+    expect(consoleSpy.log).toHaveBeenCalledWith("[auth-guard] dev line");
+  });
+
+  it("uses its own captureError option instead of the global sink", () => {
+    const localCapture = vi.fn();
+    const globalCapture = vi.fn();
+    setCaptureError(globalCapture);
+    try {
+      const logger = createLogger({ env: () => ({ dev: true }), captureError: localCapture });
+
+      logger.logError("boom", new Error("e"));
+
+      expect(localCapture).toHaveBeenCalledTimes(1);
+      expect(globalCapture).not.toHaveBeenCalled();
+    } finally {
+      setCaptureError(null);
+    }
+  });
+
+  it("falls back to the global sink when captureError is omitted", () => {
+    const globalCapture = vi.fn();
+    setCaptureError(globalCapture);
+    try {
+      const logger = createLogger({ env: () => ({ dev: true }) });
+
+      logger.logError("boom", new Error("e"));
+
+      expect(globalCapture).toHaveBeenCalledTimes(1);
+    } finally {
+      setCaptureError(null);
+    }
+  });
+
+  it("is isolated from the default logger's env configuration", () => {
+    configureLogger(() => ({ dev: true }));
+    const prodLogger = createLogger({ env: () => ({ dev: false }) });
+
+    prodLogger.logInfo("prod line");
+
+    const call = consoleSpy.log.mock.calls[0][0] as string;
+    const parsed = JSON.parse(call);
+    expect(parsed.message).toBe("prod line");
+    expect(parsed.level).toBe("info");
   });
 });

@@ -29,6 +29,28 @@ describe("heroContent", () => {
       expect(result).toBeNull();
     });
 
+    it("replaces placeholder social URLs and email with canonical ones on read", async () => {
+      const mockData = {
+        id: "1",
+        heading: "Hi",
+        name: "Test",
+        email: "admin@example.com",
+        github_url: "https://github.com/yourusername",
+        linkedin_url: "https://www.linkedin.com/in/mustafa-sayed",
+        youtube_url: null,
+        facebook_url: "https://www.facebook.com/yourname",
+      };
+      supabase.maybeSingle.mockResolvedValueOnce({ data: mockData, error: null });
+      const result = await getHeroContent(supabase as any);
+      expect(result).toMatchObject({
+        email: "mustafasayed20002@gmail.com",
+        github_url: "https://github.com/mostafasayed118",
+        linkedin_url: "https://www.linkedin.com/in/mustafa-sayed11",
+        youtube_url: null,
+        facebook_url: "https://www.facebook.com/mustafa.sayed.91259",
+      });
+    });
+
     it("throws on supabase error", async () => {
       const error = new Error("DB error");
       supabase.maybeSingle.mockResolvedValueOnce({ data: null, error });

@@ -1,25 +1,30 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useLanguage } from "@/lib/language";
 import { FolderKanban } from "lucide-react";
-import { useReveal } from "@/hooks/use-reveal";
 import { useProjects, mapDbProject, PROJECTS } from "@/features/projects/hooks/useProjects";
 import ProjectCard from "@/features/projects/components/ProjectCard";
+import { imageVariants } from "@/features/projects/components/ProjectGallery";
+import { useProjectCovers } from "@/hooks/use-portfolio-data";
 import { ProjectsSkeleton } from "@/features/projects/components/ProjectsSkeleton";
-import SectionLabel from "@/components/SectionLabel";
+import SectionHeader from "@/components/SectionHeader";
 import EmptyState from "@/components/EmptyState";
 
 export default function ProjectsSection() {
   const [active, setActive] = useState("all");
-  const { ref, revealed } = useReveal();
   const { t } = useLanguage();
   const { data: projectsData, isLoading } = useProjects();
+  const projectIds = useMemo(() => (projectsData ?? []).map((p) => p.id), [projectsData]);
+  const { data: covers } = useProjectCovers(projectIds);
 
   if (isLoading) return <ProjectsSkeleton />;
 
   const allProjects = projectsData && projectsData.length > 0
     ? [...projectsData].filter((p) => p.is_published !== false)
         .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-        .map((p, i) => mapDbProject(p, i))
+        .map((p, i) => {
+          const coverUrl = covers?.[p.id];
+          return mapDbProject(p, i, coverUrl ? { url: coverUrl, variants: imageVariants(coverUrl) } : undefined);
+        })
     : PROJECTS;
 
   const categories = [
@@ -32,13 +37,13 @@ export default function ProjectsSection() {
   const filtered = active === "all" ? allProjects : allProjects.filter((p) => p.category === active);
 
   return (
-    <section id="projects" ref={ref} className="py-24 px-6">
+    <section id="projects" className="py-24 px-6">
       <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-12">
-          <SectionLabel>{t.projects.title}</SectionLabel>
-          <h2 className="font-display font-bold text-3xl md:text-4xl text-foreground mb-3">{t.projects.title}</h2>
-          <p className="text-muted-foreground text-sm max-w-xl mx-auto">Data pipelines, web scrapers, full-stack apps, and mobile experiences.</p>
-        </div>
+        <SectionHeader
+          label={t.projects.title}
+          title={t.projects.title}
+          description="Data pipelines, web scrapers, full-stack apps, and mobile experiences."
+        />
         <div className="flex flex-wrap gap-2 mb-8 justify-center">
           {categories.map((cat) => (
             <button key={cat.key} onClick={() => setActive(cat.key)} aria-pressed={active === cat.key}
@@ -52,7 +57,7 @@ export default function ProjectsSection() {
           <EmptyState icon={FolderKanban} title="No projects found"
             description={active !== "all" ? "Try a different category filter." : "No projects have been added yet."} compact />
         ) : (
-          <div className={`masonry-grid section-reveal ${revealed ? "revealed" : ""}`}>
+          <div className="masonry-grid">
             {filtered.map((project) => <ProjectCard key={project.id} project={project} />)}
           </div>
         )}

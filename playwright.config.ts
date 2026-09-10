@@ -46,8 +46,15 @@ export default defineConfig({
     },
     {
       name: "mobile",
-      // Portfolio app at mobile viewport: same scope as the portfolio project.
-      testIgnore: [/admin-.*\.spec\.ts/, /api-contract\.spec\.ts/],
+      // Portfolio app at mobile viewport: same scope as the portfolio project,
+      // except the live contact submission — the API rate-limits contact
+      // POSTs to 5/hour/IP, so that spec runs once per suite (portfolio
+      // project only) to avoid self-inflicted 429s.
+      testIgnore: [
+        /admin-.*\.spec\.ts/,
+        /api-contract\.spec\.ts/,
+        /portfolio-contact-submit\.spec\.ts/,
+      ],
       use: {
         ...devices["Pixel 5"],
         baseURL: "http://localhost:5173",

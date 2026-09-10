@@ -158,16 +158,16 @@ All tables live in the Supabase PostgreSQL database. 30 migration files in `supa
 
 ### Key Components
 
-| File                                                     | Role                                                                |
-| -------------------------------------------------------- | ------------------------------------------------------------------- |
-| `artifacts/portfolio/src/components/HeroSection.tsx`     | Hero section with typewriter, social links, CV download             |
-| `artifacts/portfolio/src/components/Navbar.tsx`          | Sticky navbar with scroll-aware glass effect                        |
-| `artifacts/portfolio/src/components/ProjectsSection.tsx` | Project grid with Supabase data                                     |
-| `artifacts/admin/src/pages/HeroEditor.tsx`               | Hero content form with live preview                                 |
-| `artifacts/admin/src/pages/ProjectsManager.tsx`          | CRUD project management with sheet form                             |
-| `artifacts/admin/src/pages/MessagesViewer.tsx`           | Contact message inbox with read/unread/delete                       |
-| `artifacts/admin/src/pages/CvManager.tsx`                | CV file upload and settings                                         |
-| `artifacts/admin/src/lib/admin-utils.ts`                 | Admin authorization check (email allowlist from `APP_ADMIN_EMAILS`) |
+| File                                                               | Role                                                                         |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| `artifacts/portfolio/src/components/HeroSection.tsx`               | Hero section with typewriter, social links, CV download                      |
+| `artifacts/portfolio/src/components/Navbar.tsx`                    | Sticky navbar with scroll-aware glass effect                                 |
+| `artifacts/portfolio/src/components/ProjectsSection.tsx`           | Project grid with Supabase data                                              |
+| `artifacts/admin/src/pages/HeroEditor.tsx`                         | Hero content form with live preview                                          |
+| `artifacts/admin/src/pages/ProjectsManager.tsx`                    | CRUD project management with sheet form                                      |
+| `artifacts/admin/src/pages/MessagesViewer.tsx`                     | Contact message inbox with read/unread/delete                                |
+| `artifacts/admin/src/pages/CvManager.tsx`                          | CV file upload and settings                                                  |
+| `artifacts/admin/src/features/auth/components/ClerkAuthBridge.tsx` | Derives `isAdmin` from the server (`/users/me`) and arms the auth-ready gate |
 
 ### API Server Routes
 
@@ -211,7 +211,6 @@ All tables live in the Supabase PostgreSQL database. 30 migration files in `supa
 | `VITE_SUPABASE_SERVICE_ROLE_KEY` | Yes      | Service role key (admin mutations)       |
 | `VITE_CLERK_PUBLISHABLE_KEY`     | Yes      | Clerk publishable key for authentication |
 | `VITE_SITE_URL`                  | No       | Admin site URL (default localhost:5174)  |
-| `APP_ADMIN_EMAILS`               | Yes      | Comma-separated admin email allowlist    |
 
 ### API Server (`artifacts/api-server/.env`)
 
@@ -227,7 +226,7 @@ Tests can override values via `_setOverride()` without touching `process.env`.
 | `CLERK_SECRET_KEY`                 | No       | Enables Clerk JWT verification (recommended in production)                         |
 | `CLERK_ISSUER`                     | No       | Clerk issuer URL (optional)                                                        |
 | `ADMIN_API_KEY`                    | No       | Alternative to Clerk JWT — `x-admin-key: <key>` header for machine-to-machine auth |
-| `VITE_ADMIN_EMAILS`                | No       | Comma-separated allowlist of admin emails (required if no `ADMIN_API_KEY`)         |
+| `ADMIN_EMAILS`                     | No       | Comma-separated allowlist of admin emails (required if no `ADMIN_API_KEY`)         |
 | `VITE_SITE_URL` / `VITE_ADMIN_URL` | No       | CORS allowed origins (contact form enforces allowlist)                             |
 | `VERCEL_URL`                       | No       | Auto-added CORS origin on Vercel                                                   |
 | `PORT`                             | No       | HTTP port (default 3001)                                                           |
@@ -286,7 +285,7 @@ See full report in [TECHNICAL_DEBT_REPORT.md](./TECHNICAL_DEBT_REPORT.md) — ov
 
 - ~~Contact form had no retry mechanism on submission failure~~ — Fixed with `handleRetry` function and "Try again" button
 - ~~No input sanitization on contact form API~~ — Fixed with `sanitizeHtml()` escaping HTML entities before storage
-- ~~CSP allowed `'unsafe-inline'` in script-src~~ — Removed; nonce-based CSP planned for future
+- ~~CSP allowed `'unsafe-inline'` in script-src~~ — Removed; api-server `script-src` is now `'none'`, and both SPAs enforce per-request nonce CSP via `middleware.ts`
 - ~~No pagination on messages manager~~ — Fixed with client-side pagination (20 per page)
 - ~~No soft-delete support~~ — Fixed with migration 030 adding `deleted_at` columns and updated RLS policies
 - ~~**`getSupabaseClient()` at module import time** (2026-06-01)~~ — Moved inside every route handler; env errors now surface at first request, not boot
@@ -306,16 +305,21 @@ See full report in [TECHNICAL_DEBT_REPORT.md](./TECHNICAL_DEBT_REPORT.md) — ov
 
 ### Top Remaining Issues
 
-1. **Form-integration tests act() warning** — `SkillsManager.form-integration` emits an act() warning during save test; functionally passes but warns. React 19 strict-mode noise.
-2. **CertificationsSection.tsx** — References `image_url`/`cert_url` from the local `Certification` type in `lib/db/src/certifications.ts`, which is intentionally different from the Supabase `Certification` type. Not a bug — the mapping layer handles the rename.
-3. **Migration numbering** — Several skipped/preserved placeholder numbers (003, 010, 016-019) from earlier development.
-4. **CSP nonce migration** — `scriptSrc` still relies on `'self'` only; inline script bundles may need nonce injection for full CSP compliance.
-5. **Service-role architecture** — API server uses `SUPABASE_SERVICE_ROLE_KEY` bypassing RLS, with all user-scoping enforced at the app layer. Documented in `artifacts/api-server/README.md` and `BACKEND_AUDIT_REPORT.md` (item C2 — accepted risk).
-6. **Hand-rolled `admin/src/lib/api-client.ts` reimplements what `lib/api-client-react` could provide** — 20 consumers; the generated client only covers 5 of 48 endpoints. Migration deferred until OpenAPI spec covers all endpoints.
+1. **CertificationsSection.tsx** — References `image_url`/`cert_url` from the local `Certification` type in `lib/db/src/certifications.ts`, which is intentionally different from the Supabase `Certification` type. Not a bug — the mapping layer handles the rename.
+2. **Service-role architecture** — API server uses `SUPABASE_SERVICE_ROLE_KEY` bypassing RLS, with all user-scoping enforced at the app layer. Documented in `artifacts/api-server/README.md` and `BACKEND_AUDIT_REPORT.md` (item C2 — accepted risk).
+3. **Portfolio data placeholders** — credential verification URLs point at issuer homepages, GitHub/LinkedIn handles are unconfirmed, and OG/canonical URLs still reference `mustafasayed.replit.app`. Data-only; needs the real values.
 
 ---
 
 ## 9. Recent Changes Log
+
+### 2026-08-15 session
+
+1. **Migrated admin off the hand-rolled `api-client`** — completed the OpenAPI spec to cover all ~60 endpoints, restored orval codegen, and moved ~30 consumers to the generated `@workspace/api-client-react` client. Deleted `request-core.ts` and `api-resources.ts`.
+2. **Hardened api-server CSP** — `script-src 'none'` (the server is JSON-only); removed the stale "migrate to nonce" TODO and documented the per-request nonce CSP already in place for both SPAs.
+3. **Verified Clerk admin JWT template** — the `admin` template already includes the `email` claim (`{{user.primary_email_address}}`); completed the local api-server env (allowlist `ADMIN_EMAILS`, `PORT=3002`).
+
+### Earlier
 
 1. **Fix 25** — Created DEPLOYMENT.md with comprehensive Vercel/Render/Supabase deployment guide
 2. **Fix 24** — Created LICENSE file (MIT License)
@@ -355,8 +359,8 @@ See full report in [TECHNICAL_DEBT_REPORT.md](./TECHNICAL_DEBT_REPORT.md) — ov
 
 ### Admin Authorization
 
-- Admin pages validate email against `APP_ADMIN_EMAILS` env var
-- Clerk provides JWT authentication; the `useAdminAuth` hook checks the allowlist
+- The API server enforces the `ADMIN_EMAILS` allowlist (server-side)
+- Clerk provides JWT authentication; the client derives `isAdmin` from the server's `/users/me` response
 - Service role key is used for admin Supabase operations (bypasses RLS)
 
 ### Section Ordering

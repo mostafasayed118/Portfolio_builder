@@ -69,7 +69,7 @@ export default function MobileMenu({ open, onToggle, onNavClick, activeSection, 
         </button>
       </div>
       {open && (
-        <div className="fixed inset-0 bg-black/40 z-30 md:hidden" onClick={onToggle} />
+        <div className="fixed inset-0 bg-overlay/40 z-30 md:hidden" onClick={onToggle} />
       )}
       <div
         id="mobile-nav"

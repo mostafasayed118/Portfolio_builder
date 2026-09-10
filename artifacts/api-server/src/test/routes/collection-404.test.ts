@@ -55,12 +55,23 @@ const mockSupabase = getSupabaseClient() as unknown as {
   eq: ReturnType<typeof vi.fn>;
 };
 
+// setup.ts mocks getSupabaseClient to return a FRESH client on every call,
+// which means a chain configured in a test never reaches the routes. Pin it
+// to this stable client so the update/delete chains below are actually what
+// the routes call. (Scoped to this file's module registry.)
+vi.mocked(getSupabaseClient).mockReturnValue(mockSupabase as never);
+
 beforeEach(() => {
   vi.clearAllMocks();
-  // Reset the chain mock for update → select("id") to return count=0
+  // Default update chain. `select` returns the chain so both terminal
+  // patterns work: collection PUT/DELETE end with select("id") (awaiting the
+  // chain yields no data → 404) and the users role PATCH ends with
+  // select(...).single() (single resolves no row → 404). Tests that need a
+  // resolved select override this per-test.
   const updateChain = {
     eq: vi.fn().mockReturnThis(),
-    select: vi.fn().mockResolvedValue({ data: [], count: 0, error: null }),
+    select: vi.fn().mockReturnThis(),
+    single: vi.fn().mockResolvedValue({ data: null, error: null }),
   };
   mockSupabase.update.mockReturnValue(updateChain);
   mockSupabase.from.mockReturnValue(mockSupabase);
@@ -236,5 +247,70 @@ describe("Regression: 404 on nonexistent row (TASK-004 / TASK-010)", () => {
 
       expect(res.status).toBe(404);
     });
+  });
+});
+
+describe("Regression: real Supabase update+select shape returns 200 (data populated, count null)", () => {
+  // Real Supabase behavior: `.update().eq().select("id")` returns the
+  // matched rows in `data` and leaves `count` null (Supabase only populates
+  // `count` when it was explicitly requested with the count option). The
+  // false-404 bug checked `count` instead of the returned rows, so a
+  // successful write — data populated, count null — was reported to the
+  // client as "not found" even though the row was updated. These tests pin
+  // the corrected behavior so the bug cannot return.
+
+  it("PUT /api/v1/admin/projects/:id returns 200 with success when data is populated and count is null", async () => {
+    const updateChain = {
+      eq: vi.fn().mockReturnThis(),
+      select: vi.fn().mockResolvedValue({
+        data: [{ id: NONEXISTENT_UUID }],
+        count: null,
+        error: null,
+      }),
+    };
+    mockSupabase.update.mockReturnValue(updateChain);
+
+    const res = await request(app)
+      .put(`/api/v1/admin/projects/${NONEXISTENT_UUID}`)
+      .set("x-admin-key", mockAdminKey)
+      .send({ title: "Updated Title" });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty("success", true);
+  });
+
+  it("PATCH /api/v1/admin/messages/:id/read returns 200 with success when data is populated and count is null", async () => {
+    const updateChain = {
+      eq: vi.fn().mockReturnThis(),
+      select: vi.fn().mockResolvedValue({
+        data: [{ id: NONEXISTENT_UUID }],
+        count: null,
+        error: null,
+      }),
+    };
+    mockSupabase.update.mockReturnValue(updateChain);
+
+    const res = await request(app)
+      .patch(`/api/v1/admin/messages/${NONEXISTENT_UUID}/read`)
+      .set("x-admin-key", mockAdminKey);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty("success", true);
+  });
+
+  it("still returns 404 when the write matched no rows (data empty, count null)", async () => {
+    const updateChain = {
+      eq: vi.fn().mockReturnThis(),
+      select: vi.fn().mockResolvedValue({ data: [], count: null, error: null }),
+    };
+    mockSupabase.update.mockReturnValue(updateChain);
+
+    const res = await request(app)
+      .put(`/api/v1/admin/projects/${NONEXISTENT_UUID}`)
+      .set("x-admin-key", mockAdminKey)
+      .send({ title: "Updated Title" });
+
+    expect(res.status).toBe(404);
+    expect(res.body).toHaveProperty("message", "Project not found");
   });
 });

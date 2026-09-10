@@ -1,33 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
+import { mockAdminKey, mockSupabaseClient, resetSupabaseClient } from "../helpers";
 import app from "../../app";
-
-const { mockSupabaseClient, mockAdminKey } = vi.hoisted(() => {
-  const mockAdminKey = "test-admin-key";
-  const mockStorage = {
-    from: vi.fn(),
-    upload: vi.fn(),
-    download: vi.fn(),
-    remove: vi.fn(),
-    getPublicUrl: vi.fn(),
-  };
-  const mockSupabaseClient = {
-    from: vi.fn(),
-    select: vi.fn(),
-    insert: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-    eq: vi.fn(),
-    single: vi.fn(),
-    maybeSingle: vi.fn(),
-    limit: vi.fn(),
-    order: vi.fn(),
-    storage: mockStorage,
-  };
-  // storage.from() returns storage so storage.from("images").upload() works
-  mockStorage.from.mockReturnValue(mockStorage);
-  return { mockSupabaseClient, mockAdminKey };
-});
 
 const mockImageMetadata = {
   id: "00000000-0000-0000-0000-000000000001",
@@ -43,49 +17,18 @@ vi.mock("../../lib/supabase-client", () => ({
   getSupabaseClient: vi.fn(() => mockSupabaseClient),
 }));
 
-vi.mock("@supabase/supabase-js", () => ({
-  createClient: vi.fn(() => mockSupabaseClient),
-}));
-
-vi.mock("../../middleware/adminAuth", () => ({
-  adminAuth: vi.fn((req: any, res: any, next: () => void) => {
-    const adminKey = req.headers?.["x-admin-key"];
-    if (adminKey === mockAdminKey) {
-      req.adminEmail = "admin@test.com";
-      return next();
-    }
-    return res.status(401).json({ success: false, message: "Unauthorized" });
-  }),
-}));
-
 /** Minimal valid magic-byte prefix for each format. */
 const JPEG_HEADER = Buffer.from([0xff, 0xd8, 0xff, 0xe0]);
 const PNG_HEADER = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const WEBP_HEADER = Buffer.from([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50]);
 
-function resetMockChain() {
-  mockSupabaseClient.from.mockReturnValue(mockSupabaseClient);
-  mockSupabaseClient.select.mockReturnValue(mockSupabaseClient);
-  mockSupabaseClient.insert.mockReturnValue(mockSupabaseClient);
-  mockSupabaseClient.update.mockReturnValue(mockSupabaseClient);
-  mockSupabaseClient.delete.mockReturnValue(mockSupabaseClient);
-  mockSupabaseClient.eq.mockReturnValue(mockSupabaseClient);
-  mockSupabaseClient.limit.mockReturnValue(mockSupabaseClient);
-  mockSupabaseClient.order.mockReturnValue(mockSupabaseClient);
-  // Reset terminal methods completely (clears mockResolvedValueOnce queue)
-  mockSupabaseClient.single.mockReset();
-  mockSupabaseClient.single.mockResolvedValue({ data: null, error: null });
-  mockSupabaseClient.maybeSingle.mockReset();
-  mockSupabaseClient.maybeSingle.mockResolvedValue({ data: null, error: null });
+beforeEach(() => {
+  resetSupabaseClient(mockSupabaseClient);
   mockSupabaseClient.storage.upload.mockReset();
   mockSupabaseClient.storage.upload.mockResolvedValue({ data: { path: "test-path" }, error: null });
   mockSupabaseClient.storage.remove.mockReset();
   mockSupabaseClient.storage.remove.mockResolvedValue({ data: null, error: null });
   mockSupabaseClient.storage.getPublicUrl.mockReturnValue({ data: { publicUrl: "https://example.com/image.jpg" } });
-}
-
-beforeEach(() => {
-  resetMockChain();
 });
 
 describe("Images API", () => {
@@ -263,6 +206,55 @@ describe("Images API", () => {
       expect(res.body.data.id).toBe(mockImageMetadata.id);
       expect(res.body.data.original_filename).toBe("test.jpg");
       expect(res.body.data.mime_type).toBe("image/jpeg");
+    });
+  });
+
+  describe("POST /api/v1/images/reorder", () => {
+    const IDS = [
+      "00000000-0000-0000-0000-000000000001",
+      "00000000-0000-0000-0000-000000000002",
+      "00000000-0000-0000-0000-000000000003",
+    ];
+
+    it("returns 401 without auth", async () => {
+      const res = await request(app)
+        .post("/api/v1/images/reorder")
+        .send({ ordered_ids: IDS.slice(0, 1) });
+      expect([400, 401, 403]).toContain(res.status);
+    });
+
+    it("returns 400 for a non-UUID id or non-array body", async () => {
+      const res = await request(app)
+        .post("/api/v1/images/reorder")
+        .set("x-admin-key", mockAdminKey)
+        .send({ ordered_ids: ["not-a-uuid"] });
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+    });
+
+    it("returns 200 and assigns sort_order by array position", async () => {
+      const res = await request(app)
+        .post("/api/v1/images/reorder")
+        .set("x-admin-key", mockAdminKey)
+        .send({ ordered_ids: IDS });
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(mockSupabaseClient.update).toHaveBeenCalledWith({ sort_order: 0 });
+      expect(mockSupabaseClient.update).toHaveBeenCalledWith({ sort_order: 1 });
+      expect(mockSupabaseClient.update).toHaveBeenCalledWith({ sort_order: 2 });
+      expect(mockSupabaseClient.eq).toHaveBeenCalledWith("id", IDS[2]);
+    });
+
+    it("returns 500 when an update fails", async () => {
+      // First update's chain resolves to an error → Promise.all finds it.
+      mockSupabaseClient.eq.mockResolvedValueOnce({ data: null, error: { message: "boom" } });
+
+      const res = await request(app)
+        .post("/api/v1/images/reorder")
+        .set("x-admin-key", mockAdminKey)
+        .send({ ordered_ids: IDS.slice(0, 1) });
+      expect(res.status).toBe(500);
+      expect(JSON.stringify(res.body)).toMatch(/reorder/i);
     });
   });
 

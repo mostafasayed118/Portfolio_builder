@@ -1,6 +1,10 @@
 export * from "./generated/api";
 export { certificationSchema } from "./certifications";
 export type { CertificationInput } from "./certifications";
+export { chatMessageSchema, chatMessagesSchema } from "./chat";
+export type { ChatMessageInput, ChatMessagesInput } from "./chat";
+export { themePresetSchema } from "./theme-presets";
+export type { ThemePresetInput } from "./theme-presets";
 export { cvSettingsUpdateSchema } from "./cv";
 export type { CvSettingsUpdateInput } from "./cv";
 export {
@@ -16,10 +20,11 @@ export {
   updateRoleSchema,
   contactSubmissionSchema,
   bulkDeleteMessagesSchema,
-  aiGenerateDescriptionSchema,
-  aiSuggestCategoriesSchema,
-  aiSuggestTagsSchema,
-  aiAnalyzeContentSchema,
+  bulkArchiveMessagesSchema,
+  bulkUnarchiveMessagesSchema,
+  aiContentTypeSchema,
+  aiGenerateSchema,
+  aiImproveSchema,
 } from "./admin";
 export type {
   HeroInput,

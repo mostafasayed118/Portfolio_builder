@@ -58,8 +58,12 @@ testsprite_tests/.env
 
 .vercel
 
+# Turbo build cache
+.turbo
+
 # Local scratch / tooling artifacts
 .freebuff/
+.worktrees/
 section-check.tmp.mjs
 
 # Test artifacts (should never be tracked)
@@ -79,3 +83,14 @@ test-*.log
 
 supabase/.temp/
 testsprite_tests/tmp/config.json
+
+# Pulled/derived env dumps (contain live secrets — never commit)
+*.env.tmp
+*.env.e2e-*
+.e2e-*
+
+# Temp inspection artifacts
+.tmp-img/
+
+# local E2E mailbox credentials (never committed)
+e2e/.auth-mailtm.json

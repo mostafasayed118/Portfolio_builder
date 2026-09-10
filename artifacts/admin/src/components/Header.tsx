@@ -28,7 +28,7 @@ const Header = memo(function Header({ onMenuClick }: Props) {
     <header className="h-16 border-b border-border bg-card/80 backdrop-blur-sm flex items-center px-4 lg:px-6 gap-3 shrink-0">
       <button
         onClick={onMenuClick}
-        className="lg:hidden min-h-[44px] min-w-[44px] rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+        className="min-h-[44px] min-w-[44px] rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
         aria-label="Toggle sidebar"
       >
         <Menu size={18} />

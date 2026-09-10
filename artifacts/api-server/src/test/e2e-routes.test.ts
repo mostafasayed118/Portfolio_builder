@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
-import express from "express";
 
 // ─── Mock the supabase client to return controllable data ───────────────────
 const mockSelect = vi.fn();
@@ -99,6 +98,12 @@ describe("Health endpoint", () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({});
   });
+
+  it("GET /api/v1/healthz (documented deployment path) returns 200 with status ok", async () => {
+    const res = await request(app).get("/api/v1/healthz");
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe("ok");
+  });
 });
 
 describe("CV settings", () => {
@@ -119,7 +124,11 @@ describe("Rate limiting", () => {
   it("contact endpoint returns 200 with valid payload (mocked)", async () => {
     // The contact endpoint is public and doesn't require auth
     // It uses rate limiting but since we mock, we just test the route exists
-    mockInsert.mockResolvedValue({ data: { id: "1" }, error: null });
+    mockInsert.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        single: vi.fn().mockResolvedValue({ data: { id: "1" }, error: null }),
+      }),
+    });
     mockMaybeSingle.mockResolvedValue({ data: null, error: null });
 
     const res = await request(app)

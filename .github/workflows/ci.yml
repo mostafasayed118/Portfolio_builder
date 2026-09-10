@@ -2,9 +2,13 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   pull_request:
-    branches: [main]
+    branches: [main, master]
+  # Drift between the repo secret and the live Vercel Production env can be
+  # introduced manually from the dashboard between pushes — scan for it weekly.
+  schedule:
+    - cron: "0 6 * * 1" # every Monday 06:00 UTC
 
 # Cancel in-progress runs of the same branch on new pushes.
 concurrency:
@@ -27,10 +31,25 @@ jobs:
           version: 9.15.0
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm run typecheck
+
+  codegen-check:
+    name: OpenAPI client drift check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @workspace/api-spec run codegen:check
 
   lint:
     name: ESLint
@@ -42,10 +61,192 @@ jobs:
           version: 9.15.0
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm run lint
+      - name: Check for bare JS in the portfolio (TypeScript-only policy)
+        # Fails if any .js/.jsx file exists in artifacts/portfolio without a
+        # tracked .ts/.tsx twin — plain JavaScript must not slip into the
+        # TypeScript codebase.
+        run: pnpm --filter @workspace/scripts check-ts-twin
+      - name: Check for duplicate components and code blocks
+        # Fails if two shared components serve the same purpose (near-identical
+        # files) or duplicate code blocks reappear (copy-pasted runs of >= 10
+        # lines) anywhere in app source. New duplication fails the build.
+        run: pnpm --filter @workspace/scripts check-duplication
+
+  clerk-key:
+    name: Production secret validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate CLERK_SECRET_KEY against Clerk
+        env:
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+        # The same fail-closed check the API build runs at deploy time
+        # (artifacts/api-server/build.mjs). Catching a stale or rotated key
+        # here fails CI before it can ever reach a Vercel deploy.
+        run: |
+          node -e '
+            (async () => {
+              const key = process.env.CLERK_SECRET_KEY;
+              if (!key) {
+                console.error("CLERK_SECRET_KEY is not set as a GitHub Actions secret");
+                process.exit(1);
+              }
+              const res = await fetch("https://api.clerk.com/v1/instance", {
+                headers: { Authorization: "Bearer " + key },
+                signal: AbortSignal.timeout(10_000),
+              });
+              if (!res.ok) {
+                console.error("CLERK_SECRET_KEY is invalid — Clerk responded " + res.status);
+                process.exit(1);
+              }
+              console.log("CLERK_SECRET_KEY validated against Clerk OK");
+            })().catch((err) => {
+              console.error(err.message || err);
+              process.exit(1);
+            });
+          '
+      - name: Validate SUPABASE_SERVICE_ROLE_KEY against Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        # Mirrors the live REST probe in artifacts/api-server/build.mjs:
+        # /rest/v1/ returns 200 for a valid key, 401/403 for a dead one.
+        run: |
+          node -e '
+            (async () => {
+              const url = (process.env.SUPABASE_URL || "").replace(/\/+$/, "");
+              const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+              if (!url || !key) {
+                console.error("SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not set as a GitHub Actions secret");
+                process.exit(1);
+              }
+              const res = await fetch(url + "/rest/v1/", {
+                headers: { apikey: key, Authorization: "Bearer " + key },
+                signal: AbortSignal.timeout(10_000),
+              });
+              if (!res.ok) {
+                console.error("SUPABASE_SERVICE_ROLE_KEY is invalid — Supabase responded " + res.status);
+                process.exit(1);
+              }
+              console.log("SUPABASE_SERVICE_ROLE_KEY validated against Supabase OK");
+            })().catch((err) => {
+              console.error(err.message || err);
+              process.exit(1);
+            });
+          '
+      - name: Validate CSRF_SECRET strength
+        env:
+          CSRF_SECRET: ${{ secrets.CSRF_SECRET }}
+        # Structural check, mirroring build.mjs: CSRF_SECRET is a local signing
+        # secret (no remote service to probe), so we enforce the documented
+        # minimum entropy (>= 32 chars, `openssl rand -hex 32` recommends 64).
+        run: |
+          node -e '
+            const secret = process.env.CSRF_SECRET || "";
+            if (secret.length < 32) {
+              console.error("CSRF_SECRET must be at least 32 characters (got " + secret.length + ")");
+              process.exit(1);
+            }
+            console.log("CSRF_SECRET OK (" + secret.length + " chars)");
+          '
+
+  vercel-drift:
+    name: Clerk secret parity (GitHub vs Vercel)
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_API_PROJECT: portfolio-builder-api
+      VERCEL_API_URL: https://portfolio-builder-api-six.vercel.app
+      VERCEL_TEAM_ID: team_v74IkyOkmcdGNQ5f346Z777D
+      # The GitHub-side secret; the check compares it against the Vercel
+      # Production value and fails the build on any mismatch.
+      CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+      # Email the probe session is minted for; must be allowlisted on the
+      # deployed API. Falls back to ADMIN_EMAILS' first entry / a known admin.
+      CLERK_TEST_EMAIL: ${{ secrets.CLERK_TEST_EMAIL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Fail if GitHub CLERK_SECRET_KEY differs from Vercel Production
+        # scripts/check-vercel-drift.mjs — the Vercel var is now `encrypted`
+        # (readable), so the check fetches its plaintext, validates it against
+        # Clerk, and byte-compares with the GitHub secret. If the var is ever
+        # switched back to `sensitive` (write-only, value never returned), it
+        # falls back to minting a session with the GitHub secret and
+        # round-tripping it through the deployed API. Fails on any drift.
+        run: node scripts/check-vercel-drift.mjs
+
+  db-migrations:
+    name: Supabase migrations (fresh DB)
+    runs-on: ubuntu-latest
+    needs: [typecheck, lint]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.109.1
+
+      # Boots the local stack (postgres, auth, storage) and applies all
+      # migrations in order. Fails if any migration errors against the
+      # fresh database — the same surface the remote `supabase db push`
+      # would hit on merge.
+      - name: Start local Supabase stack
+        run: supabase start
+
+      # Reset discards the freshly-started DB and replays every migration
+      # from scratch, proving the whole chain is idempotent and applies
+      # cleanly on an empty database.
+      - name: Re-apply all migrations from scratch
+        run: supabase db reset
+
+      - name: Verify expected schema exists
+        run: |
+          COUNT=$(docker exec supabase_db_Portfolio-Fixer psql -U postgres -d postgres -tAc \
+            "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public';")
+          echo "public tables: $COUNT"
+          [ "$COUNT" -gt 0 ] || { echo "FAIL: no public tables after migration reset"; exit 1; }
+
+      - name: Verify singleton guard index (migration 047)
+        run: |
+          COUNT=$(docker exec supabase_db_Portfolio-Fixer psql -U postgres -d postgres -tAc \
+            "SELECT count(*) FROM pg_indexes WHERE indexdef LIKE '%(true)%' AND tablename = 'theme_settings';")
+          echo "singleton guard indexes: $COUNT"
+          [ "$COUNT" -ge 1 ] || { echo "FAIL: migration 047 singleton guard index missing"; exit 1; }
+
+  data-integrity:
+    name: Supabase duplicate scan
+    runs-on: ubuntu-latest
+    needs: [typecheck, lint]
+    env:
+      # Service-role access to read every table (same secret the E2E job uses).
+      SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Scan all tables for duplicate rows
+        # scan-duplicates.ts exits 1 when any table has duplicate rows,
+        # which fails this job and therefore the whole build.
+        run: pnpm --filter @workspace/scripts scan-duplicates
 
   component-tests:
     name: Vitest component tests (admin + portfolio)
@@ -58,7 +259,7 @@ jobs:
           version: 9.15.0
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Run component tests
@@ -85,13 +286,19 @@ jobs:
           version: 9.15.0
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Build portfolio
         run: pnpm --filter @workspace/portfolio build
       - name: Build admin
         run: pnpm --filter @workspace/admin build
+      - name: Check for UTF-8 BOMs (env files, env vars, bundles)
+        # Fails the build if any env file, process.env value, or bundle asset
+        # starts with a UTF-8 BOM — a BOM in an env value silently corrupts it
+        # (e.g. VITE_SITE_URL becomes "\uFEFFhttps://…") and a BOM in a bundle
+        # asset ships a non-standard first byte to production.
+        run: pnpm --filter @workspace/scripts check-bom
       - name: Analyze bundle sizes
         run: |
           echo "## Bundle Size Report" >> $GITHUB_STEP_SUMMARY
@@ -104,16 +311,10 @@ jobs:
             echo '```' >> $GITHUB_STEP_SUMMARY
           done
       - name: Bundle size regression check
-        run: |
-          MAX_JS_KB=300
-          for app in portfolio admin; do
-            for f in "artifacts/$app/dist/public/assets/"*.js; do
-              size=$(stat --printf="%s" "$f" 2>/dev/null)
-              if [ "$size" -gt $((MAX_JS_KB * 1024)) ]; then
-                echo "WARNING: $app/$(basename $f) is $(($size / 1024))KB (limit: ${MAX_JS_KB}KB)"
-              fi
-            done
-          done
+        # Budgets (per-chunk, per-app total, and combined total) are enforced
+        # by scripts/src/check-bundle-size.ts, so the same check runs locally:
+        #   pnpm --filter @workspace/scripts check-bundle-size
+        run: pnpm --filter @workspace/scripts check-bundle-size
       - name: Upload bundle analysis HTML
         if: always()
         uses: actions/upload-artifact@v4
@@ -129,7 +330,10 @@ jobs:
     name: Playwright E2E
     runs-on: ubuntu-latest
     needs: component-tests
-    timeout-minutes: 20
+    # The suite is ~150 tests + startup; 20m was repeatedly blown by the
+    # admin failures' retries. With those gated (see e2e/lib/session-mode.ts)
+    # the run fits in ~10m; 30m is headroom, not slack to hide breakage.
+    timeout-minutes: 30
     env:
       PORT: 3001
       LOG_LEVEL: info
@@ -140,8 +344,33 @@ jobs:
       CSRF_SECRET: ${{ secrets.CSRF_SECRET }}
       # Secrets scoped to E2E job only
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+      # The admin auth smoke test signs in as this account (a real mail.tm
+      # mailbox); ADMIN_EMAILS must allowlist it on the local api-server so
+      # adminAuth accepts the genuine browser session.
+      ADMIN_EMAILS: e2e-admin-tester@example.com,e2eclerkadmin@emalupe.com
       CLERK_TEST_EMAIL: ${{ secrets.CLERK_TEST_EMAIL }}
       CLERK_TEST_PASSWORD: ${{ secrets.CLERK_TEST_PASSWORD }}
+      # The 2FA code for the genuine sign-in is read from this mailbox
+      # (Clerk dev delivers the "new device verification" OTP to the inbox).
+      MAILTM_ADDRESS: ${{ secrets.MAILTM_ADDRESS }}
+      MAILTM_PASSWORD: ${{ secrets.MAILTM_PASSWORD }}
+      # API-contract specs require the real admin key (they fall back to a
+      # dev placeholder that 401s against the server's allowlisted key).
+      E2E_ADMIN_KEY: ${{ secrets.ADMIN_API_KEY }}
+      # The portfolio SPA reads Supabase directly (anon client). Without
+      # these the app runs offline in CI and data-dependent tests (e.g.
+      # skill tags) never render.
+      VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      # The admin SPA needs its Clerk config to hydrate. Without the
+      # publishable key it renders a "Clerk Setup Required" screen and every
+      # authenticated admin test fails. These are non-secret (the publishable
+      # key ships in the browser bundle); stored as Actions variables.
+      VITE_CLERK_PUBLISHABLE_KEY: ${{ vars.VITE_CLERK_PUBLISHABLE_KEY }}
+      VITE_CLERK_ISSUER: ${{ vars.VITE_CLERK_ISSUER }}
+      VITE_CLERK_JWT_TEMPLATE: ${{ vars.VITE_CLERK_JWT_TEMPLATE }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -149,7 +378,7 @@ jobs:
           version: 9.15.0
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
 
@@ -170,6 +399,10 @@ jobs:
         env:
           PORT: 3001
           LOG_LEVEL: info
+          # The genuine admin suite now makes real browser requests, so the
+          # prod safeguard (adminLimiter 200/15min) exhausts and later specs
+          # 429 instead of exercising the API. CI is not production — disable.
+          DISABLE_RATE_LIMIT: "true"
 
       - name: Wait for api-server to bind :3001
         run: |

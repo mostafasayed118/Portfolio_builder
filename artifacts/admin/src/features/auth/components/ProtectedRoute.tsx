@@ -5,6 +5,7 @@ import { Redirect, useLocation } from "wouter";
 import { diag } from "./diag";
 import { SIGN_IN_URL } from "./constants";
 import { NotAdminScreen } from "./NotAdminScreen";
+import { AuthFallbackScreen } from "./AuthFallbackScreen";
 
 /**
  * Guard for every authenticated Admin route.
@@ -41,13 +42,17 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
     return () => { mountedRef.current = false; };
   }, []);
 
-  diag("ProtectedRoute render", {
-    path: location,
-    isLoaded,
-    isSignedIn,
-    loading,
-    user: user ? { id: user.id, email: user.email, role: user.role } : null,
-    isAdmin,
+  // Log render diagnostics in an effect (not during render) so the render
+  // body stays side-effect-free.
+  useEffect(() => {
+    diag("ProtectedRoute render", {
+      path: location,
+      isLoaded,
+      isSignedIn,
+      loading,
+      user: user ? { id: user.id, email: user.email, role: user.role } : null,
+      isAdmin,
+    });
   });
 
   const handleSignOut = useCallback(() => {
@@ -119,30 +124,20 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
       path: location,
     });
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-6">
-        <div className="max-w-md text-center space-y-4 p-8 rounded-xl border border-border bg-card">
-          <div className="text-4xl">🔒</div>
-          <h1 className="text-2xl font-bold text-foreground">Session Expired</h1>
-          <p className="text-muted-foreground text-sm">
-            Your Clerk session is active, but the server could not
-            verify your admin credentials. This can happen when:
-          </p>
-          <ul className="text-muted-foreground text-sm text-left list-disc list-inside space-y-1">
-            <li>Your JWT token has expired</li>
-            <li>Your email is not in the admin allow-list</li>
-            <li>The server is temporarily unreachable</li>
-          </ul>
-          <p className="text-muted-foreground text-sm mt-2">
-            Sign out and sign back in to refresh your session.
-          </p>
-          <button
-            onClick={handleSignOut}
-            className="mt-4 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary min-h-[44px]"
-          >
-            Sign Out
-          </button>
-        </div>
-      </div>
+      <AuthFallbackScreen emoji="🔒" title="Session Expired" onSignOut={handleSignOut}>
+        <p className="text-muted-foreground text-sm">
+          Your Clerk session is active, but the server could not
+          verify your admin credentials. This can happen when:
+        </p>
+        <ul className="text-muted-foreground text-sm text-left list-disc list-inside space-y-1">
+          <li>Your JWT token has expired</li>
+          <li>Your email is not in the admin allow-list</li>
+          <li>The server is temporarily unreachable</li>
+        </ul>
+        <p className="text-muted-foreground text-sm">
+          Sign out and sign back in to refresh your session.
+        </p>
+      </AuthFallbackScreen>
     );
   }
 

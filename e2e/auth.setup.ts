@@ -7,19 +7,20 @@
  *
  * Two execution paths are supported, in this order:
  *
- *   (A) REAL Clerk dev session — runs when the following are all true:
- *         - `CLERK_TEST_EMAIL` and `CLERK_TEST_PASSWORD` env vars are set
- *         - The dev server (http://localhost:5174) can reach Clerk's
- *           API (network access to clerk.accounts.dev / frontend API).
- *       In this mode we drive the actual Clerk sign-in form, capture
- *       cookies + localStorage, and save them.
+ *   (A) REAL browser sign-in — runs when `CLERK_TEST_EMAIL` /
+ *       `CLERK_TEST_PASSWORD` are set and Clerk is reachable. Drives the
+ *       ACTUAL Clerk sign-in form (identifier → password → "new device"
+ *       verification) and completes the 2FA step with the OTP delivered to
+ *       the mail.tm mailbox (MAILTM_ADDRESS / MAILTM_PASSWORD). This is the
+ *       path CI uses — a genuine browser session, no cookie injection.
  *
- *   (B) FALLBACK — runs when the env vars are missing or Clerk is
- *       unreachable. We synthesize a Clerk-compatible cookie set
- *       and a small localStorage payload so the Admin app believes
- *       the user is signed in. The CvManager page mounts the
- *       "Loading…" state (the auth bridge is waiting on isLoaded),
- *       and the API contract is verified directly.
+ *   (B) TESTING TOKEN — fallback when only `CLERK_SECRET_KEY` is set (no
+ *       password / mailbox): signs in through the official @clerk/testing
+ *       flow — a server-side token minted via the Clerk Backend API that
+ *       bypasses verification, injected as the dev-browser testing token.
+ *
+ *   (C) FALLBACK — when the env vars are missing or Clerk is unreachable,
+ *       synthesize a stub storageState (documented, marked `stub`).
  *
  * The setup NEVER throws — it always writes a usable storageState
  * (real or stub) so the dependent specs can `test.use({ storageState })`.
@@ -27,10 +28,12 @@
  * Run: `pnpm exec playwright test --project=admin --grep="setup"`
  * or simply as a dependency of any admin spec via `test.use()`.
  */
-import { test as setup, expect, type Page, type BrowserContext } from "@playwright/test";
-import { execSync } from "child_process";
-import { mkdirSync, writeFileSync } from "fs";
-import { dirname, resolve } from "path";
+import { test as setup, type BrowserContext } from "@playwright/test";
+import { mkdirSync, readFileSync, writeFileSync } from "fs";
+import { resolve } from "path";
+import { clerk } from "@clerk/testing/playwright";
+import { resolveAdminEmail } from "./lib/clerk-session";
+import { ensureSigninUser, completeBrowserSignIn } from "./lib/real-signin";
 
 const AUTH_DIR = resolve(process.cwd(), "playwright/.auth");
 const STORAGE_FILE = resolve(AUTH_DIR, "admin.json");
@@ -45,7 +48,8 @@ function writeStubStorage(reason: string) {
   // An empty (but valid) storageState — Playwright accepts it.
   // Downstream specs that don't depend on auth will still run; specs
   // that need the Admin UI will land on the Loading… state and skip
-  // the form-dependent assertions.
+  // the form-dependent assertions. The __e2e_auth_mode marker lets
+  // those specs detect the stub and skip cleanly (see e2e/lib/session-mode.ts).
   const stub = {
     cookies: [],
     origins: [
@@ -53,11 +57,86 @@ function writeStubStorage(reason: string) {
         origin: BASE_URL,
         localStorage: [
           { name: "__clerk_test_mode_reason", value: reason },
+          { name: "__e2e_auth_mode", value: "stub" },
         ],
       },
     ],
   };
   writeFileSync(STORAGE_FILE, JSON.stringify(stub, null, 2));
+}
+
+/**
+ * Tag an already-written storageState (real sign-in or testing-token session)
+ * with the __e2e_auth_mode marker so downstream specs can tell a real
+ * browser session from the stub. `context.storageState()` snapshots the
+ * live browser state, so the marker is merged in afterwards.
+ */
+function markStorageMode(mode: "real" | "minted") {
+  const raw = JSON.parse(readFileSync(STORAGE_FILE, "utf8")) as {
+    origins?: { origin: string; localStorage: { name: string; value: string }[] }[];
+  };
+  raw.origins ??= [];
+  let entry = raw.origins.find((o) => o.origin === BASE_URL);
+  if (!entry) {
+    entry = { origin: BASE_URL, localStorage: [] };
+    raw.origins.push(entry);
+  }
+  entry.localStorage = [
+    ...entry.localStorage.filter((l) => l.name !== "__e2e_auth_mode"),
+    { name: "__e2e_auth_mode", value: mode },
+  ];
+  writeFileSync(STORAGE_FILE, JSON.stringify(raw, null, 2));
+}
+
+/**
+ * Path B: sign in via @clerk/testing's Testing Token flow (no password).
+ * `clerk.signIn({ emailAddress })` creates a server-side token through the
+ * Backend API that bypasses all verification (email, MFA) and injects the
+ * testing token into the browser, which lets the dev instance accept the
+ * session without the manual dev-browser handshake the old cookie-injection
+ * approach depended on. Runs when CLERK_SECRET_KEY is set.
+ */
+async function tryClerkTestingSignIn(context: BrowserContext): Promise<boolean> {
+  if (!process.env.CLERK_SECRET_KEY) return false;
+  const email = resolveAdminEmail();
+  const page = await context.newPage();
+  try {
+    // First load an unprotected route so clerk-js boots and the testing
+    // token can be injected into this exact browser context.
+    await page.goto(`${BASE_URL}/sign-in`, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(1_500);
+
+    const frontendApiUrl = clerkFrontendApi()?.replace(/^https?:\/\//, "");
+    await clerk.signIn({
+      page,
+      emailAddress: email,
+      ...(frontendApiUrl
+        ? { setupClerkTestingTokenOptions: { frontendApiUrl } }
+        : {}),
+    });
+
+    // Require the authenticated shell to render (see note below about why
+    // the URL check alone is not enough).
+    await page.goto(`${BASE_URL}/overview`, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(2_000);
+    await page.waitForURL(/\/overview/, { timeout: 20_000 });
+    if (new URL(page.url()).pathname.includes("/sign-in")) {
+      throw new Error("testing-token session bounced back to /sign-in");
+    }
+    if ((await page.getByText("Clerk Setup Required").count()) > 0) {
+      throw new Error("admin app is not configured (Clerk Setup Required)");
+    }
+    await page.locator("aside, nav[aria-label*='navigation' i]").first().waitFor({
+      state: "visible",
+      timeout: 10_000,
+    });
+    await page.close();
+    return true;
+  } catch (err) {
+    console.warn("[auth.setup] @clerk/testing sign-in failed:", (err as Error).message);
+    await page.close().catch(() => {});
+    return false;
+  }
 }
 
 /**
@@ -103,36 +182,42 @@ async function tryRealClerkSignIn(context: BrowserContext): Promise<boolean> {
   if (!email || !password) return false;
   if (!(await clerkIsReachable())) return false;
 
+  // Provision the account (email + password) via the Backend API so the
+  // form can actually sign in. Tolerate failure — the user may already
+  // exist with the right password (e.g. a local run without the secret).
+  if (process.env.CLERK_SECRET_KEY) {
+    try {
+      await ensureSigninUser({ secretKey: process.env.CLERK_SECRET_KEY, email, password });
+    } catch (err) {
+      console.warn("[auth.setup] could not provision sign-in user:", (err as Error).message);
+    }
+  }
+
   const page = await context.newPage();
   try {
-    await page.goto(`${BASE_URL}/sign-in`, { waitUntil: "domcontentloaded" });
-    // Clerk v5 renders the sign-in form in-page, but only after its JS
-    // hydrates — wait for the identifier field before choosing a path.
-    // Older Clerk versions rendered the form inside an iframe.
-    const inPageIdentifier = page.locator('input[name="identifier"]').first();
-    const inPage = await inPageIdentifier
-      .waitFor({ state: "visible", timeout: 10_000 })
-      .then(() => true)
-      .catch(() => false);
-
-    if (inPage) {
-      await inPageIdentifier.fill(email);
-      await inPageIdentifier.press("Enter");
-      const passwordField = page.locator('input[name="password"]');
-      await passwordField.fill(password);
-      await passwordField.press("Enter");
-    } else {
-      const frame = page.frameLocator("iframe[src*='clerk']").first();
-      await frame.locator('input[name="identifier"]').fill(email);
-      await frame.locator('input[name="identifier"]').press("Enter");
-      await frame.locator('input[name="password"]').fill(password);
-      await frame.locator('input[name="password"]').press("Enter");
-    }
-    // Wait for the post-sign-in redirect to /overview.
+    // Genuine sign-in: identifier → password → new-device verification OTP
+    // read from the mail.tm mailbox (dev-mode 424242 when no mailbox).
+    const result = await completeBrowserSignIn({
+      page,
+      baseURL: BASE_URL,
+      email,
+      password,
+      mailtmAddress: process.env.MAILTM_ADDRESS,
+      mailtmPassword: process.env.MAILTM_PASSWORD,
+    });
+    console.log(`[auth.setup] real sign-in completed (2FA via ${result.codeSource})`);
+    // Require the authenticated shell — a "Clerk Setup Required" screen
+    // renders in place without redirecting and must not count as success.
     await page.waitForURL(/\/overview/, { timeout: 20_000 });
+    if (new URL(page.url()).pathname.includes("/sign-in")) return false;
+    if ((await page.getByText("Clerk Setup Required").count()) > 0) return false;
+    await page.locator("aside, nav[aria-label*='navigation' i]").first().waitFor({
+      state: "visible",
+      timeout: 10_000,
+    });
     return true;
   } catch (err) {
-    console.warn("[auth.setup] real Clerk sign-in failed:", err);
+    console.warn("[auth.setup] real Clerk sign-in failed:", (err as Error).message);
     return false;
   } finally {
     await page.close();
@@ -147,15 +232,27 @@ setup("authenticate admin user", async ({ context, baseURL }) => {
   const ok = await tryRealClerkSignIn(context);
   if (ok) {
     await context.storageState({ path: STORAGE_FILE });
-    console.log(`[auth.setup] wrote real Clerk session → ${STORAGE_FILE}`);
+    markStorageMode("real");
+    console.log(`[auth.setup] wrote real Clerk sign-in session → ${STORAGE_FILE}`);
+    return;
+  }
+
+  // Path B: @clerk/testing token sign-in (CLERK_SECRET_KEY present) — no password needed.
+  const testing = await tryClerkTestingSignIn(context);
+  if (testing) {
+    await context.storageState({ path: STORAGE_FILE });
+    markStorageMode("minted");
+    console.log(`[auth.setup] wrote @clerk/testing session → ${STORAGE_FILE}`);
     return;
   }
 
   // FALLBACK: synthesize a storageState that documents why we fell back.
+  const missingSecret = !process.env.CLERK_SECRET_KEY;
   const missingCreds =
     !process.env.CLERK_TEST_EMAIL || !process.env.CLERK_TEST_PASSWORD;
   const reachable = await clerkIsReachable();
   const reason = [
+    missingSecret ? "missing CLERK_SECRET_KEY (testing-token path unavailable)" : null,
     missingCreds ? "missing CLERK_TEST_EMAIL / CLERK_TEST_PASSWORD env vars" : null,
     !reachable ? "Clerk frontend API unreachable from this sandbox" : null,
     !missingCreds && reachable ? "real Clerk sign-in did not complete (2FA / credentials)" : null,
@@ -166,7 +263,7 @@ setup("authenticate admin user", async ({ context, baseURL }) => {
   console.warn(
     `[auth.setup] FALLBACK path engaged (${reason}). ` +
       `A stub storageState was written to ${STORAGE_FILE}. ` +
-      `Downstream admin specs that require the signed-in UI will need to ` +
-      `set CLERK_TEST_EMAIL and CLERK_TEST_PASSWORD in CI and re-run.`,
+      `Set CLERK_SECRET_KEY (testing-token sign-in) or CLERK_TEST_EMAIL / ` +
+      `CLERK_TEST_PASSWORD (real sign-in) in CI for real admin auth.`,
   );
 });

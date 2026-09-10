@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { setCaptureError } from "@workspace/logging";
 import App from "./App";
 import "./index.css";
+import "./lib/api-client-setup";
 import { AdminProviders } from "@/features/auth";
 
 // Initialize Sentry error monitoring if VITE_SENTRY_DSN is configured.
@@ -18,7 +19,9 @@ if (import.meta.env.VITE_SENTRY_DSN) {
   });
 }
 
-createRoot(document.getElementById("root")!).render(
+const rootEl = document.getElementById("root");
+if (!rootEl) throw new Error("Root element #root not found");
+createRoot(rootEl).render(
   <StrictMode>
     <AdminProviders>
       <App />

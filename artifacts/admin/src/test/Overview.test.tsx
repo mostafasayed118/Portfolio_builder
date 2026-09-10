@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import Overview from "@/pages/Overview";
 
 const mockUseQuery = vi.fn();
@@ -33,6 +33,7 @@ describe("Overview", () => {
     vi.clearAllMocks();
     mockSupabaseConfigured = false;
     mockUseQuery.mockReturnValue({ data: undefined, isLoading: true });
+    localStorage.clear();
   });
 
   it("renders page heading", () => {
@@ -89,5 +90,30 @@ describe("Overview", () => {
     for (const path of expectedPaths) {
       expect(hrefs).toContain(path);
     }
+  });
+
+  it("shows the first-visit welcome nudge explaining the admin surface", () => {
+    render(<Overview />);
+    const tip = screen.getByRole("status");
+    expect(tip).toHaveTextContent(/Welcome to your portfolio CMS/i);
+    expect(tip).toHaveTextContent(/answer Messages/i);
+  });
+
+  it("dismissing the welcome nudge hides it permanently", async () => {
+    const first = render(<Overview />);
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss welcome tip" }));
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(localStorage.getItem("overview-welcome-dismissed")).toBe("1");
+    first.unmount();
+
+    // A fresh mount never shows it again.
+    render(<Overview />);
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("hides the welcome nudge when already dismissed", () => {
+    localStorage.setItem("overview-welcome-dismissed", "1");
+    render(<Overview />);
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 });

@@ -39,6 +39,8 @@ vi.mock("@/lib/language", () => ({
         relatedProjects: "Related Projects",
         notFound: "Project not found",
         notFoundDescription: "The project you're looking for doesn't exist.",
+        galleryEmptyTitle: "No screenshots yet",
+        galleryEmptyHint: "Gallery images added from the admin will appear here.",
       },
     },
     isArabic: false,
@@ -54,6 +56,7 @@ vi.mock("@workspace/db/analytics", () => ({
 
 vi.mock("@/hooks/use-portfolio-data", () => ({
   useProjectBySlug: vi.fn(),
+  useProjectImages: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase-provider", () => ({
@@ -74,8 +77,9 @@ vi.mock("@/components/ProjectCard", () => ({
   ),
 }));
 
-import { useProjectBySlug } from "@/hooks/use-portfolio-data";
+import { useProjectBySlug, useProjectImages } from "@/hooks/use-portfolio-data";
 const mockUseProjectBySlug = vi.mocked(useProjectBySlug);
+const mockUseProjectImages = vi.mocked(useProjectImages);
 
 function renderWithProviders(ui: React.ReactElement) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -84,6 +88,13 @@ function renderWithProviders(ui: React.ReactElement) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Default: no images, not loading (settled empty).
+  mockUseProjectImages.mockReturnValue({
+    data: undefined,
+    isLoading: false,
+    isError: false,
+    error: null,
+  } as any);
 });
 
 describe("ProjectDetail (smoke)", () => {
@@ -135,6 +146,105 @@ describe("ProjectDetail (smoke)", () => {
     await waitFor(() => {
       expect(screen.getByText(/project not found/i)).toBeInTheDocument();
     });
+  });
+
+  it("shows the empty gallery card when the project has no images and no fallback", async () => {
+    mockUseProjectBySlug.mockReturnValue({
+      data: {
+        id: "1",
+        slug: "depi-azure",
+        title: "DEPI Azure Data Engineering",
+        description: "Capstone",
+        full_description: "Full",
+        tech_stack: [],
+        category: "data",
+        featured: false,
+        github_url: "https://github.com/test/depi",
+        live_url: null,
+        image_url: null,
+        created_at: "2026-01-01T00:00:00Z",
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as any);
+
+    renderWithProviders(<ProjectDetail slug="depi-azure" />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("gallery-empty")).toBeInTheDocument();
+    });
+    expect(screen.getByText("No screenshots yet")).toBeInTheDocument();
+  });
+
+  it("shows the loading placeholder while gallery images are fetching", async () => {
+    mockUseProjectBySlug.mockReturnValue({
+      data: {
+        id: "1",
+        slug: "depi-azure",
+        title: "DEPI Azure Data Engineering",
+        description: "Capstone",
+        full_description: "Full",
+        tech_stack: [],
+        category: "data",
+        featured: false,
+        github_url: "https://github.com/test/depi",
+        live_url: null,
+        image_url: null,
+        created_at: "2026-01-01T00:00:00Z",
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as any);
+    mockUseProjectImages.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isError: false,
+      error: null,
+    } as any);
+
+    renderWithProviders(<ProjectDetail slug="depi-azure" />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("gallery-placeholder")).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId("gallery-empty")).not.toBeInTheDocument();
+  });
+
+  it("renders the gallery when images exist", async () => {
+    mockUseProjectBySlug.mockReturnValue({
+      data: {
+        id: "1",
+        slug: "depi-azure",
+        title: "DEPI Azure Data Engineering",
+        description: "Capstone",
+        full_description: "Full",
+        tech_stack: [],
+        category: "data",
+        featured: false,
+        github_url: "https://github.com/test/depi",
+        live_url: null,
+        image_url: null,
+        created_at: "2026-01-01T00:00:00Z",
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as any);
+    mockUseProjectImages.mockReturnValue({
+      data: [{ id: "a", url: "https://img.example.com/a.png" }],
+      isLoading: false,
+      isError: false,
+      error: null,
+    } as any);
+
+    renderWithProviders(<ProjectDetail slug="depi-azure" />);
+
+    await waitFor(() => {
+      expect(screen.getByAltText(/DEPI Azure Data Engineering — screenshot 1/i)).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId("gallery-empty")).not.toBeInTheDocument();
   });
 
   it("renders nothing when loading and no static fallback", () => {

@@ -26,7 +26,8 @@ describe("MessageCard", () => {
         message={baseMessage}
         onReply={vi.fn()}
         onMarkRead={vi.fn()}
-        onDelete={vi.fn()}
+        onArchive={vi.fn()}
+        onUnarchive={vi.fn()}
         formatDate={formatDate}
       />,
     );
@@ -44,7 +45,8 @@ describe("MessageCard", () => {
         message={{ ...baseMessage, status: "unread" }}
         onReply={vi.fn()}
         onMarkRead={vi.fn()}
-        onDelete={vi.fn()}
+        onArchive={vi.fn()}
+        onUnarchive={vi.fn()}
         formatDate={formatDate}
       />,
     );
@@ -59,7 +61,8 @@ describe("MessageCard", () => {
         message={{ ...baseMessage, status: "archived" }}
         onReply={vi.fn()}
         onMarkRead={vi.fn()}
-        onDelete={vi.fn()}
+        onArchive={vi.fn()}
+        onUnarchive={vi.fn()}
         formatDate={formatDate}
       />,
     );
@@ -73,7 +76,8 @@ describe("MessageCard", () => {
         message={{ ...baseMessage, status: "read" }}
         onReply={vi.fn()}
         onMarkRead={vi.fn()}
-        onDelete={vi.fn()}
+        onArchive={vi.fn()}
+        onUnarchive={vi.fn()}
         formatDate={formatDate}
       />,
     );
@@ -90,7 +94,8 @@ describe("MessageCard", () => {
         message={baseMessage}
         onReply={onReply}
         onMarkRead={vi.fn()}
-        onDelete={vi.fn()}
+        onArchive={vi.fn()}
+        onUnarchive={vi.fn()}
         formatDate={formatDate}
       />,
     );
@@ -106,7 +111,8 @@ describe("MessageCard", () => {
         message={{ ...baseMessage, status: "unread" }}
         onReply={vi.fn()}
         onMarkRead={onMarkRead}
-        onDelete={vi.fn()}
+        onArchive={vi.fn()}
+        onUnarchive={vi.fn()}
         formatDate={formatDate}
       />,
     );
@@ -120,22 +126,48 @@ describe("MessageCard", () => {
     });
   });
 
-  it("calls onDelete when delete button is clicked", async () => {
-    const onDelete = vi.fn();
+  it("calls onArchive when archive button is clicked", async () => {
+    const onArchive = vi.fn();
     render(
       <MessageCard
         message={baseMessage}
         onReply={vi.fn()}
         onMarkRead={vi.fn()}
-        onDelete={onDelete}
+        onArchive={onArchive}
+        onUnarchive={vi.fn()}
         formatDate={formatDate}
       />,
     );
 
     await userEvent.click(
-      screen.getByLabelText("Delete message from John Doe"),
+      screen.getByLabelText("Archive message from John Doe"),
     );
-    expect(onDelete).toHaveBeenCalledWith(baseMessage);
+    expect(onArchive).toHaveBeenCalledWith(baseMessage);
+  });
+
+  it("calls onUnarchive when unarchive button is clicked on an archived message", async () => {
+    const onUnarchive = vi.fn();
+    render(
+      <MessageCard
+        message={{ ...baseMessage, status: "archived" }}
+        onReply={vi.fn()}
+        onMarkRead={vi.fn()}
+        onArchive={vi.fn()}
+        onUnarchive={onUnarchive}
+        formatDate={formatDate}
+      />,
+    );
+
+    expect(
+      screen.queryByLabelText("Archive message from John Doe"),
+    ).not.toBeInTheDocument();
+    await userEvent.click(
+      screen.getByLabelText("Unarchive message from John Doe"),
+    );
+    expect(onUnarchive).toHaveBeenCalledWith({
+      ...baseMessage,
+      status: "archived",
+    });
   });
 
   it("renders all action buttons with correct aria-labels", () => {
@@ -144,7 +176,8 @@ describe("MessageCard", () => {
         message={{ ...baseMessage, status: "unread" }}
         onReply={vi.fn()}
         onMarkRead={vi.fn()}
-        onDelete={vi.fn()}
+        onArchive={vi.fn()}
+        onUnarchive={vi.fn()}
         formatDate={formatDate}
       />,
     );
@@ -156,8 +189,11 @@ describe("MessageCard", () => {
       screen.getByLabelText("Mark message from John Doe as read"),
     ).toBeInTheDocument();
     expect(
-      screen.getByLabelText("Delete message from John Doe"),
+      screen.getByLabelText("Archive message from John Doe"),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("Unarchive message from John Doe"),
+    ).not.toBeInTheDocument();
   });
 
   it("renders formatted date", () => {
@@ -166,7 +202,8 @@ describe("MessageCard", () => {
         message={baseMessage}
         onReply={vi.fn()}
         onMarkRead={vi.fn()}
-        onDelete={vi.fn()}
+        onArchive={vi.fn()}
+        onUnarchive={vi.fn()}
         formatDate={formatDate}
       />,
     );
@@ -181,7 +218,8 @@ describe("MessageCard", () => {
         message={baseMessage}
         onReply={vi.fn()}
         onMarkRead={vi.fn()}
-        onDelete={vi.fn()}
+        onArchive={vi.fn()}
+        onUnarchive={vi.fn()}
         formatDate={formatDate}
       />,
     );

@@ -1,14 +1,18 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { Certification } from "@workspace/supabase/types";
 import { api } from "@/lib/api-client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@workspace/ui";
-import { Plus, Pencil, Trash2, AlertCircle, RefreshCw, Download } from "lucide-react";
+import { Plus, Download } from "lucide-react";
 import { logError } from "@/lib/logger";
-import { Button, Card, CardContent, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, Skeleton, Switch } from "@workspace/ui";
+import { Button, Card, CardContent, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Input, Label, Switch } from "@workspace/ui";
 import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
 import { SmartEmptyState } from "@/components/SmartEmptyState";
-import { getErrorMessage } from "@/lib/error-messages";
+import { AdminErrorState } from "@/components/AdminErrorState";
+import { AdminLoadingState } from "@/components/AdminLoadingState";
+import { PageHeader } from "@/components/PageHeader";
+import { RowActions } from "@/components/RowActions";
+import { FormDialogFooter } from "@/components/FormDialogFooter";
 import { useEntityQuery } from "@/lib/use-entity-query";
 import { exportToCsv } from "@/lib/export-csv";
 
@@ -48,6 +52,36 @@ export default function CertificationsManager() {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const openNew = () => { setIsNew(true); setEditing({ ...EMPTY_CERT }); };
+
+  // Deep-link support: the command palette's quick actions navigate here
+  // with a URL hash — #new opens the create dialog, #edit-<id> opens the
+  // editor for that certification (deep-link by id). The hash is stripped
+  // after opening so refetches don't re-open the dialog.
+  useEffect(() => {
+    const handleDeepLink = () => {
+      const hash = window.location.hash.replace(/^#/, "");
+      if (hash === "new") {
+        setIsNew(true);
+        setEditing({ ...EMPTY_CERT });
+        clearDeepLinkHash();
+        return;
+      }
+      if (hash.startsWith("edit-")) {
+        const cert = items?.find((c) => c.id === hash.slice("edit-".length));
+        if (cert) {
+          setIsNew(false);
+          setEditing({ ...cert });
+          clearDeepLinkHash();
+        }
+      }
+    };
+    const clearDeepLinkHash = () => {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    };
+    handleDeepLink();
+    window.addEventListener("hashchange", handleDeepLink);
+    return () => window.removeEventListener("hashchange", handleDeepLink);
+  }, [items]);
   const openEdit = (c: Cert) => { setIsNew(false); setEditing({ ...c }); };
 
   const handleSave = async () => {
@@ -73,7 +107,8 @@ export default function CertificationsManager() {
       if (isNew) {
         res = await api.certifications.create(rowData);
       } else {
-        res = await api.certifications.update(editing.id!, rowData);
+        if (!editing.id) throw new Error("Cannot update a certification without an id");
+        res = await api.certifications.update(editing.id, rowData);
       }
       if (!res.success) throw new Error(res.message);
       toast({ title: isNew ? "Created" : "Updated" });
@@ -85,47 +120,29 @@ export default function CertificationsManager() {
 
   const cats = [...new Set(items?.map(c => c.category ?? "Other") ?? [])] as string[];
 
-  if (isLoading) {
-    return (
-      <div className="p-6 space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-10 w-full" />
-        <div className="space-y-2">
-          {[1,2,3,4,5].map(i => (
-            <Skeleton key={i} className="h-16 w-full rounded-lg" />
-          ))}
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return <AdminLoadingState />;
 
   if (isError) {
-    return (
-      <div className="p-6 flex flex-col items-center justify-center min-h-64 gap-4">
-        <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-destructive font-medium">{getErrorMessage(error)}</p>
-        <Button onClick={() => refetch()} variant="outline">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Try Again
-        </Button>
-      </div>
-    );
+    return <AdminErrorState error={error} onRetry={() => refetch()} />;
   }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex-1 min-w-[120px]"><h1 className="text-2xl font-bold">Certifications</h1><p className="text-sm text-muted-foreground mt-0.5">{items?.length ?? 0} certifications</p></div>
-        <Button size="sm" variant="outline" onClick={() => items && exportToCsv(items.map(c => ({ title: c.title, issuer: c.issuer, date: c.date, category: c.category ?? "", credential_url: c.credential_url ?? "", is_published: c.is_published ?? true })), [
-          { key: "title", label: "Title" },
-          { key: "issuer", label: "Issuer" },
-          { key: "date", label: "Date" },
-          { key: "category", label: "Category" },
-          { key: "credential_url", label: "Credential URL" },
-          { key: "is_published", label: "Published" },
-        ], `certifications-${Date.now()}.csv`)}><Download className="h-4 w-4 mr-1.5" />Export</Button>
-        <Button size="sm" onClick={openNew} className="min-h-[44px]"><Plus className="h-4 w-4 mr-1.5" />Add Cert</Button>
-      </div>
+      <PageHeader
+        title="Certifications"
+        description={`${items?.length ?? 0} certifications`}
+        actions={<>
+          <Button size="sm" variant="outline" onClick={() => items && exportToCsv(items.map(c => ({ title: c.title, issuer: c.issuer, date: c.date, category: c.category ?? "", credential_url: c.credential_url ?? "", is_published: c.is_published ?? true })), [
+            { key: "title", label: "Title" },
+            { key: "issuer", label: "Issuer" },
+            { key: "date", label: "Date" },
+            { key: "category", label: "Category" },
+            { key: "credential_url", label: "Credential URL" },
+            { key: "is_published", label: "Published" },
+          ], `certifications-${Date.now()}.csv`)}><Download className="h-4 w-4 mr-1.5" />Export</Button>
+          <Button size="sm" onClick={openNew} className="min-h-[44px]"><Plus className="h-4 w-4 mr-1.5" />Add Cert</Button>
+        </>}
+      />
 
       {(!items || items.length === 0) ? (
         <SmartEmptyState type="certifications" onAction={openNew} />
@@ -141,10 +158,7 @@ export default function CertificationsManager() {
                     <div className="font-medium text-sm">{cert.title}</div>
                     <div className="text-xs text-muted-foreground">{cert.issuer} · {cert.date}</div>
                   </div>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]" aria-label="Edit certification" onClick={() => openEdit(cert)}><Pencil className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px] text-destructive hover:text-destructive hover:bg-destructive/10" aria-label="Delete certification" onClick={() => setDeleteTarget(cert.id)}><Trash2 className="h-4 w-4" /></Button>
-                  </div>
+                  <RowActions editLabel="Edit certification" deleteLabel="Delete certification" onEdit={() => openEdit(cert)} onDelete={() => setDeleteTarget(cert.id)} />
                 </CardContent>
               </Card>
             ))}
@@ -163,35 +177,32 @@ export default function CertificationsManager() {
           {editing && (
             <div className="space-y-4 py-2">
               <div className="space-y-1.5"><Label className="text-xs">Title</Label>
-                <Input value={editing.title} onChange={e => setEditing(x => ({ ...x!, title: e.target.value }))} className="h-9" /></div>
-              <div className="grid grid-cols-2 gap-3">
+                <Input value={editing.title} onChange={e => setEditing(x => x ? ({ ...x, title: e.target.value }) : x)} className="h-9" /></div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1"><Label className="text-xs">Issuer</Label>
-                  <Input value={editing.issuer} onChange={e => setEditing(x => ({ ...x!, issuer: e.target.value }))} className="h-8 text-sm" /></div>
+                  <Input value={editing.issuer} onChange={e => setEditing(x => x ? ({ ...x, issuer: e.target.value }) : x)} className="h-8 text-sm" /></div>
                 <div className="space-y-1"><Label className="text-xs">Issuer Logo (emoji)</Label>
-                  <Input value={editing.issuer_logo ?? ""} onChange={e => setEditing(x => ({ ...x!, issuer_logo: e.target.value }))} className="h-8 text-sm" /></div>
+                  <Input value={editing.issuer_logo ?? ""} onChange={e => setEditing(x => x ? ({ ...x, issuer_logo: e.target.value }) : x)} className="h-8 text-sm" /></div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1"><Label className="text-xs">Date (display)</Label>
-                  <Input value={editing.date} onChange={e => setEditing(x => ({ ...x!, date: e.target.value }))} placeholder="Mar 2024" className="h-8 text-sm" /></div>
+                  <Input value={editing.date} onChange={e => setEditing(x => x ? ({ ...x, date: e.target.value }) : x)} placeholder="Mar 2024" className="h-8 text-sm" /></div>
                 <div className="space-y-1"><Label className="text-xs">Date Sort (YYYY-MM)</Label>
-                  <Input value={editing.date_sort ?? ""} onChange={e => setEditing(x => ({ ...x!, date_sort: e.target.value }))} placeholder="2024-03" className="h-8 text-sm" /></div>
+                  <Input value={editing.date_sort ?? ""} onChange={e => setEditing(x => x ? ({ ...x, date_sort: e.target.value }) : x)} placeholder="2024-03" className="h-8 text-sm" /></div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1"><Label className="text-xs">Category</Label>
-                  <Input value={editing.category ?? ""} onChange={e => setEditing(x => ({ ...x!, category: e.target.value }))} className="h-8 text-sm" /></div>
+                  <Input value={editing.category ?? ""} onChange={e => setEditing(x => x ? ({ ...x, category: e.target.value }) : x)} className="h-8 text-sm" /></div>
                 <div className="space-y-1"><Label className="text-xs">Sort Order</Label>
-                  <Input type="number" value={editing.sort_order ?? 0} onChange={e => setEditing(x => ({ ...x!, sort_order: Number(e.target.value) }))} className="h-8 text-sm" /></div>
+                  <Input type="number" value={editing.sort_order ?? 0} onChange={e => setEditing(x => x ? ({ ...x, sort_order: Number(e.target.value) }) : x)} className="h-8 text-sm" /></div>
               </div>
               <div className="space-y-1"><Label className="text-xs">Credential URL</Label>
-                <Input value={editing.credential_url ?? ""} onChange={e => setEditing(x => ({ ...x!, credential_url: e.target.value }))} className="h-8 text-sm" /></div>
+                <Input value={editing.credential_url ?? ""} onChange={e => setEditing(x => x ? ({ ...x, credential_url: e.target.value }) : x)} className="h-8 text-sm" /></div>
               <div className="flex items-center justify-between"><Label className="text-sm">Published</Label>
-                <Switch checked={editing.is_published ?? false} onCheckedChange={v => setEditing(x => ({ ...x!, is_published: v }))} /></div>
+                <Switch checked={editing.is_published ?? false} onCheckedChange={v => setEditing(x => x ? ({ ...x, is_published: v }) : x)} /></div>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditing(null)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
-          </DialogFooter>
+          <FormDialogFooter onCancel={() => setEditing(null)} onSave={handleSave} saving={saving} />
         </DialogContent>
       </Dialog>
 
@@ -203,8 +214,9 @@ export default function CertificationsManager() {
           confirmLabel: "Delete",
           variant: "danger",
           onConfirm: async () => {
+            if (!deleteTarget) return;
             try {
-              const res = await api.certifications.delete(deleteTarget!);
+              const res = await api.certifications.delete(deleteTarget);
               if (!res.success) throw new Error(res.message);
               toast({ title: "Certification deleted" });
               queryClient.invalidateQueries({ queryKey: ["certifications"] });

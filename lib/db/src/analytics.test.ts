@@ -67,7 +67,7 @@ function buildEventStatsMock(pageViews: any[] = [], projectViews: any[] = [], co
             };
           }
           // data query
-          if (cols === "created_at") {
+          if (cols === "created_at" || cols === "created_at, path") {
             return {
               eq: vi.fn().mockReturnValue({
                 gte: vi.fn().mockReturnValue({
@@ -140,6 +140,7 @@ describe("fetchEventStats", () => {
     expect(stats.cvDownloads).toBe(0);
     expect(stats.contactClicks).toBe(0);
     expect(stats.topProjects).toEqual([]);
+    expect(stats.topPosts).toEqual([]);
   });
 });
 

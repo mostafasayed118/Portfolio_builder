@@ -1,7 +1,10 @@
 import { test, expect } from "@playwright/test";
 
 /**
- * API contract tests against the running api-server (http://localhost:3001).
+ * API contract tests against a running api-server.
+ *
+ * Defaults to the local dev server (http://localhost:3001); set E2E_API_BASE
+ * to point at a deployed environment (e.g. https://portfolio-builder-api-six.vercel.app).
  *
  * These run under the dedicated `api` Playwright project only (see
  * playwright.config.ts), so they execute exactly once per run.
@@ -13,8 +16,10 @@ import { test, expect } from "@playwright/test";
  *   - admin endpoints: authorized with x-admin-key, rejected without
  */
 
-const API_BASE = "http://localhost:3001";
-const ADMIN_KEY = "dev-admin-key-12345";
+// Overridable so the same suite can run against any environment:
+//   E2E_API_BASE=https://… E2E_ADMIN_KEY=… playwright test
+const API_BASE = process.env.E2E_API_BASE ?? "http://localhost:3001";
+const ADMIN_KEY = process.env.E2E_ADMIN_KEY ?? "dev-admin-key-12345";
 
 test.describe("API contracts", () => {
   test("GET /api/healthz → 200 with liveness payload", async ({ request }) => {

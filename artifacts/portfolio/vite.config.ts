@@ -51,6 +51,13 @@ export default defineConfig({
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
     rollupOptions: {
+      // Shared UI primitives are bundled from workspace source files whose
+      // `use client` directives can trigger a false-positive source-map
+      // location warning in Rollup. Keep all other warnings visible.
+      onwarn(warning, warn) {
+        if (warning.code === "SOURCEMAP_ERROR") return;
+        warn(warning);
+      },
       output: {
         manualChunks(id: string) {
           if (!id.includes("node_modules")) return;
@@ -61,6 +68,16 @@ export default defineConfig({
           if (id.includes("lucide-react")) return "vendor-icons";
           if (id.includes("@tanstack/react-query")) return "vendor-query";
           if (id.includes("wouter")) return "vendor-router";
+          if (id.includes("@radix-ui")) return "vendor-radix";
+          if (id.includes("@floating-ui")) return "vendor-radix";
+          if (id.includes("zod")) return "vendor-zod";
+          if (id.includes("tailwind-merge")) return "vendor-utils";
+          if (id.includes("react-resizable-panels")) return "vendor-resizable";
+          if (id.includes("embla-carousel")) return "vendor-carousel";
+          if (id.includes("sonner")) return "vendor-toast";
+          if (id.includes("vaul")) return "vendor-utils";
+          if (id.includes("cmdk")) return "vendor-utils";
+          if (id.includes("input-otp")) return "vendor-utils";
         },
       },
     },

@@ -1,6 +1,6 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { renderWithProviders, stubUseToast } from "./helpers";
 import { SkillsManager } from "@/features/skills";
 
 const { mockListSkills, mockCreateSkill, mockUpdateSkill, mockDeleteSkill } =
@@ -27,18 +27,7 @@ vi.mock("@/lib/api-client", () => ({
   },
 }));
 
-vi.mock("@workspace/ui", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@workspace/ui")>();
-  return {
-    ...actual,
-    useToast: () => ({ toast: vi.fn() }),
-  };
-});
-
-function renderWithProviders(ui: React.ReactElement) {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
-}
+vi.mock("@workspace/ui", (importOriginal) => stubUseToast(importOriginal));
 
 const mockSkills = [
   {
@@ -75,6 +64,26 @@ describe("SkillsManager", () => {
     mockDeleteSkill.mockResolvedValue({ success: true });
   });
 
+  afterEach(() => {
+    window.location.hash = "";
+  });
+
+  it("auto-opens the Add Skill dialog from the #new deep link", async () => {
+    window.location.hash = "#new";
+    renderWithProviders(<SkillsManager />);
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Add Skill")).toBeInTheDocument();
+  });
+
+  it("auto-opens the editor for the skill targeted by the #edit-<id> deep link", async () => {
+    window.location.hash = "#edit-1";
+    renderWithProviders(<SkillsManager />);
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Edit Skill")).toBeInTheDocument();
+  });
+
   it("renders skills grouped by category", async () => {
     renderWithProviders(<SkillsManager />);
 
@@ -85,6 +94,27 @@ describe("SkillsManager", () => {
     expect(screen.getByText("SQL")).toBeInTheDocument();
     expect(screen.getByText("Apache Spark")).toBeInTheDocument();
     expect(screen.getByText("3 skills across 2 categories.")).toBeInTheDocument();
+  });
+
+  it("groups null, empty, and whitespace categories into one Uncategorized bucket", async () => {
+    mockListSkills.mockResolvedValue({
+      success: true,
+      data: [
+        { id: "1", name: "Python", category: "", proficiency: 90, is_visible: true, sort_order: 1 },
+        { id: "2", name: "SQL", category: "  ", proficiency: 85, is_visible: true, sort_order: 2 },
+        { id: "3", name: "Spark", category: null, proficiency: 80, is_visible: true, sort_order: 1 },
+        { id: "4", name: "Rust", category: "Languages", proficiency: 75, is_visible: true, sort_order: 1 },
+      ],
+    });
+
+    renderWithProviders(<SkillsManager />);
+
+    await screen.findByText("Skills Manager");
+
+    // Empty/whitespace/null categories collapse into a single visible group.
+    expect(screen.getByText("Uncategorized")).toBeInTheDocument();
+    expect(screen.getByText("Languages")).toBeInTheDocument();
+    expect(screen.getByText("4 skills across 2 categories.")).toBeInTheDocument();
   });
 
   it("calls createSkill on form submit", async () => {

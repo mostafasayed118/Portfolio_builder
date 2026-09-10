@@ -69,31 +69,32 @@ Three independent CSP layers, scoped to each app:
 
 All three set `frame-ancestors 'none'` and `object-src 'none'`.
 
-### Production migration to nonces
+### Script loading policy
 
-The current `script-src` for api-server and the two SPAs is
-`'self' 'unsafe-inline'`. `'unsafe-inline'` is **required** by Vite-injected
-`<script type="module">` and by React 19's hydration helpers. To remove
-it, we would need to:
+Script loading is already fully hardened; there is no pending nonce
+migration.
 
-1. Configure Vite to emit a CSP nonce per request.
-2. Replace each inline `<script>` with the nonce attribute.
-3. Migrate the JSON-LD `<script type="application/ld+json">` blocks
-   (currently inlined by `SEO.tsx` via `createPortal`) to data attributes
-   that a runtime helper converts to JSON-LD.
-
-That is a follow-up task — see `TECHNICAL_DEBT_REPORT.md`.
+- **api-server** — serves no HTML or scripts (JSON plus a PDF download for
+  `/cv`), so its `script-src` is `'none'`. There is nothing to nonce.
+- **portfolio** (`artifacts/portfolio`) — a static Vite build on Vercel's
+  CDN. `middleware.ts` generates a fresh per-request nonce, stamps it into
+  the `__CSP_NONCE__` placeholder in inline scripts, and returns the
+  matching `Content-Security-Policy` header. Policy helpers live in
+  `src/lib/csp.ts` (unit-tested).
+- **admin** (`artifacts/admin`) — same mechanism as portfolio:
+  `middleware.ts` + `src/lib/csp.ts`, with Clerk (`*.clerk.accounts.dev`)
+  in `script-src` per Clerk's CSP guidance.
 
 ## Authentication
 
-| Surface             | Mechanism                                                              | Where                                                         |
-| ------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------- |
-| Public portfolio    | None (intentional)                                                     | —                                                             |
-| Public contact POST | Honeypot + time-trap + rate limit + origin check                       | `public/contact.ts`                                           |
-| Admin sign-in       | Clerk JWT template (includes email claim)                              | `lib/auth/src/index.tsx` + `admin/src/features/auth/auth.tsx` |
+| Surface             | Mechanism                                                         | Where                                                         |
+| ------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------- |
+| Public portfolio    | None (intentional)                                                | —                                                             |
+| Public contact POST | Honeypot + time-trap + rate limit + origin check                  | `public/contact.ts`                                           |
+| Admin sign-in       | Clerk JWT template (includes email claim)                         | `lib/auth/src/index.tsx` + `admin/src/features/auth/auth.tsx` |
 | Admin API           | Clerk JWT verified server-side + email allowlist (`ADMIN_EMAILS`) | `middleware/adminAuth.ts`                                     |
-| API key             | `timingSafeEqual` constant-time compare                                | `middleware/adminAuth.ts`                                     |
-| CV download         | Public (anon)                                                          | `routes/cv.ts` (with `is_published` gate on settings)         |
+| API key             | `timingSafeEqual` constant-time compare                           | `middleware/adminAuth.ts`                                     |
+| CV download         | Public (anon)                                                     | `routes/cv.ts` (with `is_published` gate on settings)         |
 
 The api-server's `getDefaultAdminUser()` provisions the API-key user with
 `role: "user"` (not `superadmin`) by default. Run
@@ -193,7 +194,7 @@ CSRF tokens are fetched on every mutating request by `admin/src/lib/api-client.t
 - [ ] A JWT template named `admin` exists in Clerk Dashboard with the `email` claim.
 - [ ] `VITE_CLERK_JWT_TEMPLATE` matches the template name in Clerk Dashboard.
 - [ ] RLS is enabled on every table (`SELECT * FROM pg_tables WHERE
-  rowsecurity = false;` should return 0 rows in `public`).
+rowsecurity = false;` should return 0 rows in `public`).
 - [ ] The `app.admin_emails` GUC is set at the database level.
 - [ ] The TestSprite / TestSprite API key in `opencode.json` uses
       `{env:TESTSPRITE_API_KEY}` substitution (not a hardcoded literal).

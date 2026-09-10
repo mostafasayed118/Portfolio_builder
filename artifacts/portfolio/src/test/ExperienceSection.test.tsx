@@ -1,15 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { LanguageProvider } from "@/lib/language";
+import { screen } from "@testing-library/react";
+import { mockEmptyState, mockSectionLabel, mockUseReveal, renderWithProviders } from "./helpers";
 
 vi.mock("@/hooks/use-portfolio-data", () => ({
   useExperience: vi.fn(),
 }));
 
-vi.mock("@/hooks/use-reveal", () => ({
-  useReveal: vi.fn(() => ({ ref: vi.fn(), revealed: true })),
-}));
+vi.mock("@/hooks/use-reveal", () => mockUseReveal());
 
 vi.mock("@/components/TimelineItem", () => ({
   default: ({ title, company }: { title: string; company: string }) => (
@@ -19,25 +16,12 @@ vi.mock("@/components/TimelineItem", () => ({
   ),
 }));
 
-vi.mock("@/components/SectionLabel", () => ({
-  default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}));
+vi.mock("@/components/SectionLabel", () => mockSectionLabel());
 
-vi.mock("@/components/EmptyState", () => ({
-  default: ({ title }: { title: string }) => <div data-testid="empty-state">{title}</div>,
-}));
+vi.mock("@/components/EmptyState", () => mockEmptyState());
 
 import ExperienceSection from "@/components/ExperienceSection";
 import { useExperience } from "@/hooks/use-portfolio-data";
-
-function renderWithProviders(ui: React.ReactElement) {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={qc}>
-      <LanguageProvider>{ui}</LanguageProvider>
-    </QueryClientProvider>,
-  );
-}
 
 describe("ExperienceSection", () => {
   beforeEach(() => {

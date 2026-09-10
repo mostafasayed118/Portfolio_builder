@@ -34,6 +34,8 @@ export const heroSchema = z.object({
   github_url: nullableUrl,
   linkedin_url: nullableUrl,
   twitter_url: nullableUrl,
+  youtube_url: nullableUrl,
+  facebook_url: nullableUrl,
   email: z.string().email().optional().or(z.literal("")).or(z.null()),
   avatar_url: nullableUrl,
   cv_url: nullableUrl,
@@ -192,6 +194,35 @@ export const bulkDeleteMessagesSchema = z.object({
   ids: z.array(z.string().uuid()).min(1, "At least one ID required"),
 });
 
+/**
+ * Body for bulk archive/unarchive: exactly one of an explicit `ids` batch or
+ * a `filter` describing the view to act on (status/preset — the same
+ * server-side predicates the list endpoint applies). A filter-based action
+ * touches every matching row in ONE statement, so "archive/restore all
+ * matching" scales past any id-list payload.
+ */
+export const bulkActionMessagesSchema = z
+  .object({
+    ids: z.array(z.string().uuid()).min(1, "At least one ID required").optional(),
+    filter: z
+      .object({
+        status: z.enum(["unread", "read", "archived", "spam"]).optional(),
+        preset: z.enum(["unread_today", "unread_or_archived", "needs_reply"]).optional(),
+      })
+      .optional(),
+  })
+  .refine((b) => !(b.ids && b.filter), "Provide either ids or a filter, not both")
+  .refine(
+    (b) => (b.ids?.length ?? 0) > 0 || !!b.filter?.status || !!b.filter?.preset,
+    "Provide at least one id or a status/preset filter",
+  );
+
+/** Bulk-archive accepts `{ ids }` or `{ filter }` (see `bulkActionMessagesSchema`). */
+export const bulkArchiveMessagesSchema = bulkActionMessagesSchema;
+
+/** Bulk-unarchive accepts `{ ids }` or `{ filter }` (see `bulkActionMessagesSchema`). */
+export const bulkUnarchiveMessagesSchema = bulkActionMessagesSchema;
+
 export const postSchema = z.object({
   title: z.string().trim().min(1, "Title is required").max(180, "Title must be under 180 characters"),
   slug: z
@@ -207,23 +238,18 @@ export const postSchema = z.object({
   is_published: z.boolean().optional(),
 });
 
-export const aiGenerateDescriptionSchema = z.object({
-  techStack: z.array(z.string()).min(1),
-  title: z.string().optional(),
+export const aiContentTypeSchema = z.enum(["hero", "about", "project", "skill", "experience", "general"]);
+
+export const aiGenerateSchema = z.object({
+  contentType: aiContentTypeSchema,
+  instructions: z.string().trim().max(500).optional(),
+  context: z.string().trim().max(2000).optional(),
 });
 
-export const aiSuggestTagsSchema = z.object({
-  techStack: z.array(z.string()).min(1),
-  category: z.string().optional(),
-});
-
-export const aiAnalyzeContentSchema = z.object({
-  content: z.string().min(1),
-  contentType: z.enum(["hero", "about", "project"]),
-});
-
-export const aiSuggestCategoriesSchema = z.object({
-  skillName: z.string().min(1),
+export const aiImproveSchema = z.object({
+  contentType: aiContentTypeSchema,
+  text: z.string().trim().min(1, "Text is required").max(4000, "Text is too long"),
+  instructions: z.string().trim().max(500).optional(),
 });
 
 export type HeroInput = z.infer<typeof heroSchema>;

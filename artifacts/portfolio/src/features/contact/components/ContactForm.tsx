@@ -98,8 +98,8 @@ export default function ContactForm({ labels }: { labels: Labels }) {
   if (submitted) {
     return (
       <div className="glass rounded-xl p-10 border flex flex-col items-center justify-center text-center h-full">
-        <div className="h-14 w-14 rounded-full bg-green-500/10 flex items-center justify-center mb-4">
-          <CheckCircle className="h-7 w-7 text-green-500" />
+        <div className="h-14 w-14 rounded-full bg-success/10 flex items-center justify-center mb-4">
+          <CheckCircle className="h-7 w-7 text-success" />
         </div>
         <h3 className="font-display font-semibold text-lg text-foreground mb-2">{labels.successTitle}</h3>
         <p className="text-muted-foreground text-sm">{labels.successMessage}</p>
@@ -134,7 +134,7 @@ export default function ContactForm({ labels }: { labels: Labels }) {
           placeholder="Mustafa Sayed"
           maxLength={100}
           aria-describedby={form.errors.name && form.touched.name ? "error-name" : undefined}
-          className={`w-full rounded-lg px-4 py-2.5 text-sm bg-muted/50 border focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all text-foreground placeholder:text-muted-foreground ${form.errors.name && form.touched.name ? "border-red-500" : "border-border"}`}
+          className={`w-full rounded-lg px-4 py-2.5 text-sm bg-muted/50 border focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all text-foreground placeholder:text-muted-foreground ${form.errors.name && form.touched.name ? "border-destructive" : "border-border"}`}
           data-testid="input-name"
           validationRules={[rules.required(labels.name + " is required"), rules.maxLength(100)]}
         />
@@ -157,7 +157,7 @@ export default function ContactForm({ labels }: { labels: Labels }) {
           onBlur={() => form.handleBlur("email")}
           placeholder="you@example.com"
           aria-describedby={form.errors.email && form.touched.email ? "error-email" : undefined}
-          className={`w-full rounded-lg px-4 py-2.5 text-sm bg-muted/50 border focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all text-foreground placeholder:text-muted-foreground ${form.errors.email && form.touched.email ? "border-red-500" : "border-border"}`}
+          className={`w-full rounded-lg px-4 py-2.5 text-sm bg-muted/50 border focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all text-foreground placeholder:text-muted-foreground ${form.errors.email && form.touched.email ? "border-destructive" : "border-border"}`}
           data-testid="input-email"
           validationRules={[rules.required(labels.email + " is required"), rules.email()]}
         />
@@ -180,7 +180,7 @@ export default function ContactForm({ labels }: { labels: Labels }) {
           placeholder="Tell me about your project or just say hello..."
           maxLength={2000}
           aria-describedby={form.errors.message && form.touched.message ? "error-message" : undefined}
-          className={`w-full rounded-lg px-4 py-2.5 text-sm bg-muted/50 border focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all text-foreground placeholder:text-muted-foreground resize-none ${form.errors.message && form.touched.message ? "border-red-500" : "border-border"}`}
+          className={`w-full rounded-lg px-4 py-2.5 text-sm bg-muted/50 border focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all text-foreground placeholder:text-muted-foreground resize-none ${form.errors.message && form.touched.message ? "border-destructive" : "border-border"}`}
           data-testid="input-message"
           validationRules={[rules.required(labels.message + " is required"), rules.maxLength(2000)]}
         />

@@ -10,16 +10,18 @@ import postsRouter from "./posts";
 import messagesRouter from "./messages";
 import contactInfoRouter from "./contact-info";
 import themeSettingsRouter from "./theme-settings";
+import themePresetsRouter from "./theme-presets";
 import typographySettingsRouter from "./typography-settings";
 import seoSettingsRouter from "./seo-settings";
 import sectionSettingsRouter from "./section-settings";
 import siteSettingsRouter from "./site-settings";
 import seedRouter from "./seed";
-import aiAssistantRouter from "./ai-assistant";
+import aiRouter from "./ai";
 import usersRouter from "./users";
 import auditRouter from "./audit";
 import previewRouter from "./preview";
 import cvRouter from "./cv";
+import analyticsRouter from "./analytics";
 
 const router: IRouter = Router();
 
@@ -37,14 +39,16 @@ router.use("/posts", postsRouter);
 router.use("/messages", messagesRouter);
 router.use("/contact-info", contactInfoRouter);
 router.use("/theme-settings", themeSettingsRouter);
+router.use("/theme-presets", themePresetsRouter);
 router.use("/typography-settings", typographySettingsRouter);
 router.use("/seo-settings", seoSettingsRouter);
 router.use("/section-settings", sectionSettingsRouter);
 router.use("/site-settings", siteSettingsRouter);
 router.use("/seed", seedRouter);
-router.use("/ai-assistant", aiAssistantRouter);
+router.use("/ai", aiRouter);
 router.use("/users", usersRouter);
 router.use("/audit", auditRouter);
 router.use("/preview", previewRouter);
+router.use("/analytics", analyticsRouter);
 
 export default router;

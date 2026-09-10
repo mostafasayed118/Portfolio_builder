@@ -10,10 +10,8 @@ import {
   updateRoleSchema,
   contactSubmissionSchema,
   bulkDeleteMessagesSchema,
-  aiGenerateDescriptionSchema,
-  aiSuggestCategoriesSchema,
-  aiSuggestTagsSchema,
-  aiAnalyzeContentSchema,
+  bulkArchiveMessagesSchema,
+  bulkUnarchiveMessagesSchema,
 } from "./admin";
 
 describe("admin schemas", () => {
@@ -186,23 +184,72 @@ describe("admin schemas", () => {
     });
   });
 
-  describe("AI schemas", () => {
-    it("aiGenerateDescriptionSchema requires techStack >= 1", () => {
-      expect(aiGenerateDescriptionSchema.safeParse({ techStack: [] }).success).toBe(false);
+  describe("bulkArchiveMessagesSchema", () => {
+    it("accepts an explicit ids batch", () => {
+      const r = bulkArchiveMessagesSchema.safeParse({
+        ids: ["11111111-1111-1111-1111-111111111111"],
+      });
+      expect(r.success).toBe(true);
+    });
+
+    it("accepts a filter instead of ids (status or preset)", () => {
+      expect(bulkArchiveMessagesSchema.safeParse({ filter: { status: "unread" } }).success).toBe(true);
       expect(
-        aiGenerateDescriptionSchema.safeParse({ techStack: ["TS"] }).success,
+        bulkArchiveMessagesSchema.safeParse({ filter: { preset: "needs_reply" } }).success,
       ).toBe(true);
     });
-    it("aiSuggestCategoriesSchema requires skillName", () => {
-      expect(aiSuggestCategoriesSchema.safeParse({ skillName: "" }).success).toBe(false);
+
+    it("rejects ids AND filter together", () => {
+      const r = bulkArchiveMessagesSchema.safeParse({
+        ids: ["11111111-1111-1111-1111-111111111111"],
+        filter: { status: "unread" },
+      });
+      expect(r.success).toBe(false);
     });
-    it("aiSuggestTagsSchema requires techStack", () => {
-      expect(aiSuggestTagsSchema.safeParse({ techStack: [] }).success).toBe(false);
+
+    it("rejects neither ids nor filter", () => {
+      expect(bulkArchiveMessagesSchema.safeParse({}).success).toBe(false);
     });
-    it("aiAnalyzeContentSchema requires valid contentType", () => {
-      expect(
-        aiAnalyzeContentSchema.safeParse({ content: "x", contentType: "wrong" }).success,
-      ).toBe(false);
+
+    it("rejects empty ids and empty filter", () => {
+      expect(bulkArchiveMessagesSchema.safeParse({ ids: [] }).success).toBe(false);
+      expect(bulkArchiveMessagesSchema.safeParse({ filter: {} }).success).toBe(false);
     });
   });
+
+  describe("bulkUnarchiveMessagesSchema", () => {
+    it("accepts an explicit ids batch", () => {
+      const r = bulkUnarchiveMessagesSchema.safeParse({
+        ids: ["11111111-1111-1111-1111-111111111111"],
+      });
+      expect(r.success).toBe(true);
+    });
+
+    it("accepts a filter instead of ids (status or preset)", () => {
+      expect(
+        bulkUnarchiveMessagesSchema.safeParse({ filter: { status: "archived" } }).success,
+      ).toBe(true);
+      expect(
+        bulkUnarchiveMessagesSchema.safeParse({ filter: { preset: "unread_or_archived" } }).success,
+      ).toBe(true);
+    });
+
+    it("rejects ids AND filter together", () => {
+      const r = bulkUnarchiveMessagesSchema.safeParse({
+        ids: ["11111111-1111-1111-1111-111111111111"],
+        filter: { status: "archived" },
+      });
+      expect(r.success).toBe(false);
+    });
+
+    it("rejects neither ids nor filter", () => {
+      expect(bulkUnarchiveMessagesSchema.safeParse({}).success).toBe(false);
+    });
+
+    it("rejects empty ids and empty filter", () => {
+      expect(bulkUnarchiveMessagesSchema.safeParse({ ids: [] }).success).toBe(false);
+      expect(bulkUnarchiveMessagesSchema.safeParse({ filter: {} }).success).toBe(false);
+    });
+  });
+
 });
