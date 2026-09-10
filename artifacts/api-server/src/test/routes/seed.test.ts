@@ -76,7 +76,7 @@ describe("Seed API", () => {
       expect([200, 500]).toContain(res.status);
       if (res.status === 200) {
         expect(res.body.success).toBe(true);
-        expect(res.body).toHaveProperty("summary");
+        expect(res.body.data).toHaveProperty("summary");
       }
     });
 
@@ -133,7 +133,7 @@ describe("Seed API", () => {
 
       if (res.status === 200) {
         // With no existing skills, all 6 should be inserted (3+2+1 from categories)
-        expect(res.body.summary.skills).toBe(6);
+        expect(res.body.data.summary.skills).toBe(6);
         // Verify insert was called with user_id
         const insertCalls = vi.mocked(supabaseChain.insert).mock.calls;
         const skillInsertCall = insertCalls.find((call: any) =>
@@ -164,18 +164,18 @@ describe("Seed API", () => {
         .send({});
 
       if (res.status === 200) {
-        expect(res.body).toHaveProperty("summary");
-        expect(res.body.summary).toHaveProperty("hero");
-        expect(res.body.summary).toHaveProperty("about");
-        expect(res.body.summary).toHaveProperty("skills");
-        expect(res.body.summary).toHaveProperty("projects");
-        expect(res.body.summary).toHaveProperty("experience");
-        expect(res.body.summary).toHaveProperty("certifications");
+        expect(res.body.data).toHaveProperty("summary");
+        expect(res.body.data.summary).toHaveProperty("hero");
+        expect(res.body.data.summary).toHaveProperty("about");
+        expect(res.body.data.summary).toHaveProperty("skills");
+        expect(res.body.data.summary).toHaveProperty("projects");
+        expect(res.body.data.summary).toHaveProperty("experience");
+        expect(res.body.data.summary).toHaveProperty("certifications");
 
         // Verify counts are numbers
-        expect(typeof res.body.summary.hero).toBe("number");
-        expect(typeof res.body.summary.skills).toBe("number");
-        expect(typeof res.body.summary.projects).toBe("number");
+        expect(typeof res.body.data.summary.hero).toBe("number");
+        expect(typeof res.body.data.summary.skills).toBe("number");
+        expect(typeof res.body.data.summary.projects).toBe("number");
       }
     });
   });
