@@ -21,7 +21,9 @@ describe("envelope", () => {
     expect(src).toContain("paginated(");
   });
   it("collection helper sends via paginated()", () => {
-    const src = readRoot("artifacts/api-server/src/lib/route-helpers.ts");
+    // The collection send lives in collection-query.ts since route-helpers
+    // was split into focused modules (pagination / user-scope / collection-query).
+    const src = readRoot("artifacts/api-server/src/lib/collection-query.ts");
     expect(src).toContain("paginated(res, data");
   });
 });

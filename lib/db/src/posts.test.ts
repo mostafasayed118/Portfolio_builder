@@ -25,10 +25,10 @@ function resolveOnSecondOrder(rows: unknown, error: unknown = null) {
 }
 
 const LIST_COLUMNS =
-  "id,slug,title,excerpt,cover_image_url,tags,is_published,published_at";
+  "id,slug,title,excerpt,content,cover_image_url,tags,is_published,published_at,created_at,updated_at";
 
 describe("listPublishedPosts", () => {
-  it("selects card columns without the heavy content field", async () => {
+  it("selects list columns (content included for reading-time estimates)", async () => {
     const rows = [
       { id: "1", slug: "a", title: "A", excerpt: "x", content: "SHOULD NOT LOAD" },
     ];
