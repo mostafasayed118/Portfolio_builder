@@ -56,7 +56,7 @@ Optional but commonly used:
 | `CLERK_SECRET_KEY`           | Enables Clerk JWT verification           |
 | `CLERK_ISSUER`               | Clerk issuer (optional)                  |
 | `ADMIN_API_KEY`              | X-Admin-Key bypass for non-browser auth  |
-| `VITE_ADMIN_EMAILS`          | Comma-separated allowlist of admin emails|
+| `ADMIN_EMAILS`          | Comma-separated allowlist of admin emails|
 | `VITE_SITE_URL` / `VITE_ADMIN_URL` | CORS allowed origins              |
 | `VERCEL_URL`                 | Auto-added CORS origin on Vercel         |
 | `PORT`                       | Server port (default 3001)               |
@@ -118,7 +118,7 @@ those instead of constructing `res.status(500).json(...)` inline.
 - **Public routes** (`/healthz`, `/contact`, `/cv`, `/images`): no auth
 - **Admin routes** (everything under `/api/v1/admin/*`): require
   - `Authorization: Bearer <clerk_jwt>` (verified against `CLERK_SECRET_KEY`) AND
-    email in `VITE_ADMIN_EMAILS`, **or**
+    email in `ADMIN_EMAILS`, **or**
   - `x-admin-key: <ADMIN_API_KEY>` (machine-to-machine)
 
   Admin JWTs map to a row in `users` (auto-provisioned on first login).
