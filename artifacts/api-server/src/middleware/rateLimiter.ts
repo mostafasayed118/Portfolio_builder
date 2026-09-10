@@ -1,18 +1,29 @@
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
-import type { Request } from "express";
 import { logger } from "../lib/logger";
 import { env } from "../lib/env";
 
 const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
 const ONE_MINUTE_MS = 60 * 1000;
 
-const RATE_LIMIT_DISABLED = env.DISABLE_RATE_LIMIT;
+// Evaluated per-request (not captured at import) so env overrides and
+// test stubs are honored, and so production never honors the dev flag.
+const skipIfDev = () => env.DISABLE_RATE_LIMIT && !env.IS_PRODUCTION;
 
-if (RATE_LIMIT_DISABLED) {
-  logger.warn("Rate limiting DISABLED — DISABLE_RATE_LIMIT=true. This is unsafe in production.");
+if (env.DISABLE_RATE_LIMIT) {
+  if (env.IS_PRODUCTION) {
+    logger.error("Rate limiting DISABLED via DISABLE_RATE_LIMIT — ignored in production. Limits stay active.");
+  } else {
+    logger.warn("Rate limiting DISABLED — DISABLE_RATE_LIMIT=true (non-production only).");
+  }
 }
 
-const skipIfDev = (_req: Request) => RATE_LIMIT_DISABLED;
+// Limits live in process memory unless REDIS_URL is configured. On
+// serverless/multi-instance deployments (Vercel) each instance counts
+// separately, so effective limits multiply by instance count. Wire a
+// rate-limit-redis store here when REDIS_URL is set.
+if (env.IS_PRODUCTION && !env.REDIS_URL) {
+  logger.warn("No REDIS_URL configured — rate limits are per-instance and can be diluted across instances.");
+}
 
 const standardMessage = { success: false, message: "Too many requests, please try again later" };
 
@@ -70,7 +81,7 @@ export const imageUploadLimiter = rateLimit({
 export const apiKeyLimiter = rateLimit({
   windowMs: FIFTEEN_MINUTES_MS,
   max: 50,
-  skip: (req) => RATE_LIMIT_DISABLED || !req.headers["x-admin-key"],
+  skip: (req) => skipIfDev() || !req.headers["x-admin-key"],
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: "API key rate limit exceeded" },

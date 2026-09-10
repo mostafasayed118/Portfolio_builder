@@ -5,7 +5,7 @@ import { logger } from "../lib/logger";
 import { env } from "../lib/env";
 import { syncUserFromClerk, getDefaultAdminUser } from "../lib/user-sync";
 
-const ADMIN_EMAILS = env.VITE_ADMIN_EMAILS.split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
+const ADMIN_EMAILS = env.ADMIN_EMAILS.split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
 const clerkClient = env.CLERK_SECRET_KEY ? createClerkClient({ secretKey: env.CLERK_SECRET_KEY }) : null;
 
 function isApiKeyValid(key: string | undefined): key is string {
@@ -103,7 +103,7 @@ export async function adminAuth(req: AuthenticatedRequest, res: Response, next: 
   if (ADMIN_EMAILS.length === 0 && !env.ADMIN_API_KEY) {
     res.status(401).json({
       success: false,
-      message: "Admin access not configured. Set VITE_ADMIN_EMAILS or ADMIN_API_KEY.",
+      message: "Admin access not configured. Set ADMIN_EMAILS or ADMIN_API_KEY.",
     });
     return;
   }

@@ -14,9 +14,7 @@ describe("env guards", () => {
     const md = readRoot("replit.md");
     expect(md).not.toContain("VITE_SUPABASE_SERVICE_ROLE_KEY");
   });
-  // Task 8 owns artifacts/api-server/src/lib/env.ts (ADMIN_EMAILS rename).
-  // Unskip once the VITE_ADMIN_EMAILS fallback is removed there.
-  it.skip("server env rejects VITE_ADMIN_EMAILS fallback", async () => {
+  it("server env rejects VITE_ADMIN_EMAILS fallback", async () => {
     const src = readRoot("artifacts/api-server/src/lib/env.ts");
     expect(src).not.toContain("VITE_ADMIN_EMAILS");
   });

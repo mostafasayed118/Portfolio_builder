@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { Request, Response, NextFunction } from "express";
+import type { Request, Response } from "express";
 
 describe("adminAuth middleware", () => {
   let req: Partial<Request>;
@@ -41,7 +41,7 @@ describe("adminAuth middleware", () => {
     vi.stubEnv("NODE_ENV", "development");
     vi.stubEnv("ADMIN_API_KEY", "");
     vi.stubEnv("CLERK_SECRET_KEY", "");
-    vi.stubEnv("VITE_ADMIN_EMAILS", "");
+    vi.stubEnv("ADMIN_EMAILS", "");
     req.headers = {};
     req.path = "/admin/projects";
     req.method = "POST";
@@ -56,7 +56,7 @@ describe("adminAuth middleware", () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("ADMIN_API_KEY", "");
     vi.stubEnv("CLERK_SECRET_KEY", "");
-    vi.stubEnv("VITE_ADMIN_EMAILS", "");
+    vi.stubEnv("ADMIN_EMAILS", "");
     req.headers = {};
     req.path = "/admin/projects";
     req.method = "GET";
@@ -83,7 +83,7 @@ describe("adminAuth middleware", () => {
 
     vi.stubEnv("ADMIN_API_KEY", "my-api-key");
     vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv("VITE_ADMIN_EMAILS", "");
+    vi.stubEnv("ADMIN_EMAILS", "");
     vi.stubEnv("CLERK_SECRET_KEY", "");
     req.headers = { "x-admin-key": "my-api-key" };
     req.path = "/admin/projects";
@@ -103,7 +103,7 @@ describe("adminAuth middleware", () => {
     vi.stubEnv("NODE_ENV", "development");
     vi.stubEnv("ADMIN_API_KEY", "");
     vi.stubEnv("CLERK_SECRET_KEY", "");
-    vi.stubEnv("VITE_ADMIN_EMAILS", "");
+    vi.stubEnv("ADMIN_EMAILS", "");
     req.headers = {};
     req.path = "/admin/projects";
 
@@ -119,7 +119,7 @@ describe("adminAuth middleware", () => {
     (verifyToken as ReturnType<typeof vi.fn>).mockResolvedValue({ sub: "user_clerk123" });
 
     vi.stubEnv("CLERK_SECRET_KEY", "sk_test_secret");
-    vi.stubEnv("VITE_ADMIN_EMAILS", "admin@example.com");
+    vi.stubEnv("ADMIN_EMAILS", "admin@example.com");
     vi.stubEnv("ADMIN_API_KEY", "");
     vi.stubEnv("NODE_ENV", "production");
 
@@ -157,7 +157,7 @@ describe("adminAuth middleware", () => {
     });
 
     vi.stubEnv("CLERK_SECRET_KEY", "sk_test_secret");
-    vi.stubEnv("VITE_ADMIN_EMAILS", "admin@example.com");
+    vi.stubEnv("ADMIN_EMAILS", "admin@example.com");
     vi.stubEnv("ADMIN_API_KEY", "fallback-key");
     vi.stubEnv("NODE_ENV", "production");
 
@@ -178,7 +178,7 @@ describe("adminAuth middleware", () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("ADMIN_API_KEY", "required-key");
     vi.stubEnv("CLERK_SECRET_KEY", "");
-    vi.stubEnv("VITE_ADMIN_EMAILS", "");
+    vi.stubEnv("ADMIN_EMAILS", "");
 
     req.headers = {};
     req.path = "/admin/projects";
@@ -194,7 +194,7 @@ describe("adminAuth middleware", () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("ADMIN_API_KEY", "");
     vi.stubEnv("CLERK_SECRET_KEY", "");
-    vi.stubEnv("VITE_ADMIN_EMAILS", "");
+    vi.stubEnv("ADMIN_EMAILS", "");
 
     req.headers = {};
     req.path = "/admin/projects";
@@ -206,7 +206,7 @@ describe("adminAuth middleware", () => {
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({
         success: false,
-        message: "Admin access not configured. Set VITE_ADMIN_EMAILS or ADMIN_API_KEY.",
+        message: "Admin access not configured. Set ADMIN_EMAILS or ADMIN_API_KEY.",
       }),
     );
     expect(next).not.toHaveBeenCalled();
@@ -220,7 +220,7 @@ describe("adminAuth middleware", () => {
     (verifyToken as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("Token expired"));
 
     vi.stubEnv("CLERK_SECRET_KEY", "sk_test_secret");
-    vi.stubEnv("VITE_ADMIN_EMAILS", "admin@example.com");
+    vi.stubEnv("ADMIN_EMAILS", "admin@example.com");
     vi.stubEnv("ADMIN_API_KEY", "");
     vi.stubEnv("NODE_ENV", "production");
 
@@ -248,7 +248,7 @@ describe("adminAuth middleware", () => {
     });
 
     vi.stubEnv("CLERK_SECRET_KEY", "");
-    vi.stubEnv("VITE_ADMIN_EMAILS", "");
+    vi.stubEnv("ADMIN_EMAILS", "");
     vi.stubEnv("ADMIN_API_KEY", "my-secret-key");
     vi.stubEnv("NODE_ENV", "production");
 
@@ -270,7 +270,7 @@ describe("adminAuth middleware", () => {
     });
 
     vi.stubEnv("CLERK_SECRET_KEY", "sk_test_secret");
-    vi.stubEnv("VITE_ADMIN_EMAILS", "admin@example.com,superadmin@example.com");
+    vi.stubEnv("ADMIN_EMAILS", "admin@example.com,superadmin@example.com");
     vi.stubEnv("ADMIN_API_KEY", "");
     vi.stubEnv("NODE_ENV", "production");
 
@@ -304,7 +304,7 @@ describe("adminAuth middleware", () => {
     });
 
     vi.stubEnv("CLERK_SECRET_KEY", "sk_test_secret");
-    vi.stubEnv("VITE_ADMIN_EMAILS", "admin@example.com");
+    vi.stubEnv("ADMIN_EMAILS", "admin@example.com");
     vi.stubEnv("ADMIN_API_KEY", "api-fallback-key");
     vi.stubEnv("NODE_ENV", "production");
 
@@ -326,7 +326,7 @@ describe("adminAuth middleware", () => {
     vi.stubEnv("NODE_ENV", "development");
     vi.stubEnv("ADMIN_API_KEY", "");
     vi.stubEnv("CLERK_SECRET_KEY", "");
-    vi.stubEnv("VITE_ADMIN_EMAILS", "");
+    vi.stubEnv("ADMIN_EMAILS", "");
 
     req.headers = {};
     req.path = "/api/v1/admin/hero";
@@ -343,7 +343,7 @@ describe("adminAuth middleware", () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("ADMIN_API_KEY", "correct-key");
     vi.stubEnv("CLERK_SECRET_KEY", "");
-    vi.stubEnv("VITE_ADMIN_EMAILS", "");
+    vi.stubEnv("ADMIN_EMAILS", "");
 
     req.headers = { "x-admin-key": "wrong-key" };
     req.path = "/admin/projects";
