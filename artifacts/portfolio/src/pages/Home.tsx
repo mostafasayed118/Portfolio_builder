@@ -6,7 +6,9 @@ import { useToast } from "@workspace/ui";
 import { useLanguage } from "@/lib/language";
 import { useRealtimeSync } from "@/hooks/use-realtime-sync";
 const HeroSection = lazy(() => import("@/features/hero").then((m) => ({ default: m.HeroSection })));
-import BackToTop from "@/components/BackToTop";
+// Lazy: BackToTop pulls framer-motion (~100KB gzip) — keep it out of the
+// initial chunk; the button is invisible until the user scrolls anyway.
+const BackToTop = lazy(() => import("@/components/BackToTop"));
 import { SyncDebug } from "@/components/SyncDebug";
 
 const AboutSection = lazy(() => import("@/features/about").then((m) => ({ default: m.AboutSection })));
@@ -86,7 +88,9 @@ export default function Home() {
       <Suspense fallback={<SectionSkeleton />}>
         <ContactSection />
       </Suspense>
-      <BackToTop />
+      <Suspense fallback={null}>
+        <BackToTop />
+      </Suspense>
       <SyncDebug />
     </main>
     </>
