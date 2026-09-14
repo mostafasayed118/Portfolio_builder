@@ -15,13 +15,27 @@ function sanitizeFileName(name: string): string {
  * Public endpoint — intentionally unauthenticated.
  * CV is meant to be publicly downloadable by portfolio visitors.
  * If CV contains sensitive info, add auth middleware here.
+ *
+ * The generated PDF is cached in memory for CV_PDF_CACHE_TTL_MS (default
+ * 5 min): generation is fully synchronous CPU work (jsPDF + QR code) that
+ * would otherwise block the event loop on every download. A TTL — rather
+ * than content-versioned invalidation — trades up to TTL minutes of
+ * staleness for zero coupling to the content tables; the fallback storage
+ * path below is unaffected.
  */
+let cvPdfCache: { bytes: Uint8Array; at: number } | null = null;
+
 router.get("/cv", async (req: Request, res: Response) => {
   const portfolioUrl = env.VITE_SITE_URL ?? "https://mustafa-sayed-portfolio.vercel.app";
 
   try {
-    const supabase = getSupabaseClient();
-    const pdfBytes = await generateCvPdf(supabase, portfolioUrl);
+    const now = Date.now();
+    let pdfBytes = cvPdfCache && now - cvPdfCache.at < env.CV_PDF_CACHE_TTL_MS ? cvPdfCache.bytes : null;
+    if (!pdfBytes) {
+      const supabase = getSupabaseClient();
+      pdfBytes = await generateCvPdf(supabase, portfolioUrl);
+      cvPdfCache = { bytes: pdfBytes, at: now };
+    }
     const fileName = "Mustafa_Sayed_CV.pdf";
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);

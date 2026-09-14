@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { singletonUpsert } from "./singleton-upsert";
+import { safeErrorMessage } from "./safe-error";
+import { logger } from "./logger";
 
 export const SEED_HERO = {
   heading: "Hi, I'm",
@@ -97,7 +99,12 @@ async function seedCollection<T>(
   const newItems = items.filter((item) => !existing.has(identityFn(item)));
   if (newItems.length > 0) {
     const { error } = await supabase.from(table).insert(newItems.map((item, i) => toRow(item, i)));
-    if (error) errors.push(`${table}: ${error.message}`);
+    if (error) {
+      // Log the raw PostgREST error server-side; only the sanitized copy may
+      // reach the client response (seed errors are surfaced in the admin UI).
+      logger.error({ err: error, targetTable: table }, "Seed insert failed");
+      errors.push(`${table}: ${safeErrorMessage(error)}`);
+    }
   }
   return { count: newItems.length, errors };
 }

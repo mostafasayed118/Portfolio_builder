@@ -4,6 +4,7 @@ import { requireSuperadmin } from "../../middleware/requireSuperadmin";
 import type { Response } from "express";
 import { getSupabaseClient } from "../../lib/supabase-client";
 import { ok, serverError } from "../../lib/api-response";
+import { safeErrorMessage } from "../../lib/safe-error";
 
 const router: IRouter = Router();
 
@@ -36,7 +37,7 @@ router.get("/", requireSuperadmin, async (req: AuthenticatedRequest, res: Respon
   if (entityId) query = query.eq("entity_id", entityId);
 
   const { data, error, count } = await query;
-  if (error) return serverError(res, error.message);
+  if (error) return serverError(res, safeErrorMessage(error));
 
   return ok(res, {
     data: data ?? [],

@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import request from "supertest";
 import { mockAdminKey, mockSupabaseClient, resetSupabaseClient } from "../helpers";
+import { _setOverride, _resetOverrides } from "../../lib/env";
 import app from "../../app";
 
 const { mockGenerateCvPdf } = vi.hoisted(() => ({
@@ -16,6 +17,11 @@ vi.mock("../../utils/cv-generator", () => ({
 }));
 
 beforeEach(() => {
+  // The generated PDF is cached in memory (CV_PDF_CACHE_TTL_MS, default 5
+  // min). Disable the cache by default so each test exercises generation or
+  // the fallback path independently; the cache-specific tests below re-enable
+  // it via their own overrides.
+  _setOverride("CV_PDF_CACHE_TTL_MS", "0");
   resetSupabaseClient(mockSupabaseClient);
   mockSupabaseClient.storage.download.mockReset();
   mockSupabaseClient.storage.download.mockResolvedValue({
@@ -24,6 +30,10 @@ beforeEach(() => {
   });
   mockGenerateCvPdf.mockReset();
   mockGenerateCvPdf.mockResolvedValue(Buffer.from("%PDF-1.4 fake pdf content"));
+});
+
+afterEach(() => {
+  _resetOverrides();
 });
 
 describe("CV API", () => {
@@ -91,6 +101,44 @@ describe("CV API", () => {
 
       expect(res.status).toBe(500);
       expect(res.body.message).toMatch(/failed to fetch cv settings/i);
+    });
+
+    it("serves cached PDF on repeat requests within the TTL", async () => {
+      // Prime the cache with a known buffer. With TTL 0 the entry is written
+      // but never read, so this request always regenerates.
+      _setOverride("CV_PDF_CACHE_TTL_MS", "0");
+      const fakePdf = Buffer.from("%PDF-1.4 cached-content");
+      mockGenerateCvPdf.mockResolvedValueOnce(fakePdf);
+      await request(app).get("/api/v1/cv");
+
+      // Enable the cache: the entry written just above is now fresh.
+      _setOverride("CV_PDF_CACHE_TTL_MS", "60000");
+      mockGenerateCvPdf.mockClear();
+
+      const first = await request(app).get("/api/v1/cv");
+      const second = await request(app).get("/api/v1/cv");
+
+      expect(first.status).toBe(200);
+      expect(second.status).toBe(200);
+      expect(mockGenerateCvPdf).not.toHaveBeenCalled();
+      expect(first.headers["content-length"]).toBe(String(fakePdf.length));
+      expect(second.headers["content-length"]).toBe(first.headers["content-length"]);
+    });
+
+    it("regenerates the PDF after the cache TTL expires", async () => {
+      // Prime the cache deterministically (TTL 0 writes without reads).
+      _setOverride("CV_PDF_CACHE_TTL_MS", "0");
+      await request(app).get("/api/v1/cv");
+
+      _setOverride("CV_PDF_CACHE_TTL_MS", "1");
+      const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      await sleep(10);
+
+      const res = await request(app).get("/api/v1/cv");
+
+      expect(res.status).toBe(200);
+      // Priming (1) + regeneration after expiry (2).
+      expect(mockGenerateCvPdf).toHaveBeenCalledTimes(2);
     });
   });
 

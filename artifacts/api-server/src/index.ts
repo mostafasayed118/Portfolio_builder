@@ -3,6 +3,9 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { env } from "./lib/env";
 
+// Fail fast on missing/weak configuration before binding the port.
+env.validate();
+
 const port = env.PORT;
 // env.PORT self-validates (invalid/placeholder values like PORT=0 fall back
 // to the 3001 default), so this is a defensive invariant rather than the

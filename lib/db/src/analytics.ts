@@ -94,23 +94,23 @@ export async function fetchEventStats(
       .slice(0, 10);
   }
 
-  const { count: cvDownloads } = await supabase
-    .from("analytics_events")
-    .select("id", { count: "exact", head: true })
-    .eq("type", "cv_download")
-    .gte("created_at", since.toISOString());
-
-  const { count: contactClicks } = await supabase
-    .from("analytics_events")
-    .select("id", { count: "exact", head: true })
-    .eq("type", "contact_click")
-    .gte("created_at", since.toISOString());
-
-  const { count: totalViews } = await supabase
-    .from("analytics_events")
-    .select("id", { count: "exact", head: true })
-    .eq("type", "page_view")
-    .gte("created_at", since.toISOString());
+  const [{ count: cvDownloads }, { count: contactClicks }, { count: totalViews }] = await Promise.all([
+    supabase
+      .from("analytics_events")
+      .select("id", { count: "exact", head: true })
+      .eq("type", "cv_download")
+      .gte("created_at", since.toISOString()),
+    supabase
+      .from("analytics_events")
+      .select("id", { count: "exact", head: true })
+      .eq("type", "contact_click")
+      .gte("created_at", since.toISOString()),
+    supabase
+      .from("analytics_events")
+      .select("id", { count: "exact", head: true })
+      .eq("type", "page_view")
+      .gte("created_at", since.toISOString()),
+  ]);
 
   return {
     pageViews,

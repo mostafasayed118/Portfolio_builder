@@ -22,9 +22,10 @@ vi.mock("../../middleware/adminAuth", () => ({
     const adminKey = req.headers["x-admin-key"];
     if (adminKey === mockAdminKey) {
       (req as Record<string, unknown>).adminEmail = "admin@test.com";
-      // No req.user → targetUserId stays undefined and the route applies NO
-      // user scope, so the assertions focus purely on the status/deleted
-      // filters (the `.or()` scope branch is not exercised here).
+      // Superadmin without ?userId: scopeMessagesQuery is a pass-through, so
+      // the assertions below focus purely on the status/deleted filters.
+      // (Regular-admin orphan scoping is covered by the list-filter tests.)
+      (req as Record<string, unknown>).user = { id: "super-admin-1", role: "superadmin" };
       return next();
     }
     return res.status(401).json({ success: false, message: "Unauthorized" });

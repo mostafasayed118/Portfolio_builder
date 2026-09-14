@@ -122,8 +122,6 @@ const csrfHandler = (req: Request, res: Response) => {
   ok(res, { csrfToken: generateCsrfToken(req, res) });
 };
 
-app.get("/api/v1/csrf-token", csrfHandler);
-
 // Health check (GET + HEAD) — mounted at BOTH the top-level /api
 // prefix and /api/v1, BEFORE the v1 rate limiter and BEFORE the v1
 // router. Serving both paths keeps liveness probes stable across
@@ -136,6 +134,12 @@ app.use("/api", healthRouter);
 app.use("/api/v1", healthRouter);
 
 app.use("/api/v1", generalLimiter);
+
+// CSRF token minting sits BEHIND the general rate limiter: it is
+// unauthenticated, sets a cookie, and does HMAC work per call — unlimited
+// access would make it a cheap request-flooding/cookie-setting amplifier.
+app.get("/api/v1/csrf-token", csrfHandler);
+
 app.use("/api/v1", v1Router);
 
 app.use((req: Request, res: Response) => {

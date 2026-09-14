@@ -13,7 +13,7 @@ beforeEach(() => {
 
 describe("Settings Routes — Error Handling", () => {
   describe("GET /api/v1/admin/hero — DB error", () => {
-    it("returns 500 when database query fails", async () => {
+    it("returns 500 with a sanitized message when database query fails", async () => {
       mockSupabaseClient.maybeSingle.mockResolvedValueOnce({
         data: null,
         error: { message: "Connection to database lost" },
@@ -25,10 +25,12 @@ describe("Settings Routes — Error Handling", () => {
 
       expect(res.status).toBe(500);
       expect(res.body.success).toBe(false);
-      expect(res.body.message).toMatch(/connection to database lost/i);
+      // Raw DB error details must never reach the client (safeErrorMessage).
+      expect(res.body.message).toBe("Internal server error");
+      expect(res.body.message).not.toMatch(/connection to database lost/i);
     });
 
-    it("returns 500 with error message from Supabase", async () => {
+    it("never leaks internal table/relation details in the response", async () => {
       mockSupabaseClient.maybeSingle.mockResolvedValueOnce({
         data: null,
         error: { message: "relation hero_content does not exist" },
@@ -39,12 +41,13 @@ describe("Settings Routes — Error Handling", () => {
         .set("x-admin-key", mockAdminKey);
 
       expect(res.status).toBe(500);
-      expect(res.body.message).toContain("does not exist");
+      expect(res.body.message).not.toContain("does not exist");
+      expect(res.body.message).not.toContain("hero_content");
     });
   });
 
   describe("GET /api/v1/admin/about — DB error", () => {
-    it("returns 500 when database query fails", async () => {
+    it("maps timeout-style DB errors to the upstream-timeout safe message", async () => {
       mockSupabaseClient.maybeSingle.mockResolvedValueOnce({
         data: null,
         error: { message: "Timeout executing query" },
@@ -56,7 +59,8 @@ describe("Settings Routes — Error Handling", () => {
 
       expect(res.status).toBe(500);
       expect(res.body.success).toBe(false);
-      expect(res.body.message).toMatch(/timeout/i);
+      expect(res.body.message).toBe("Upstream service timed out. Please try again.");
+      expect(res.body.message).not.toMatch(/timeout executing query/i);
     });
 
     it("returns 500 when table is missing", async () => {
@@ -75,7 +79,7 @@ describe("Settings Routes — Error Handling", () => {
   });
 
   describe("GET /api/v1/admin/theme-settings — DB error", () => {
-    it("returns 500 when database query fails", async () => {
+    it("returns 500 with a sanitized message when database query fails", async () => {
       mockSupabaseClient.maybeSingle.mockResolvedValueOnce({
         data: null,
         error: { message: "Permission denied for table theme_settings" },
@@ -87,7 +91,10 @@ describe("Settings Routes — Error Handling", () => {
 
       expect(res.status).toBe(500);
       expect(res.body.success).toBe(false);
-      expect(res.body.message).toMatch(/permission denied/i);
+      // The policy/permission internals must not leak (safeErrorMessage).
+      expect(res.body.message).toBe("Internal server error");
+      expect(res.body.message).not.toMatch(/permission denied/i);
+      expect(res.body.message).not.toMatch(/theme_settings/i);
     });
 
     it("returns 200 with null data when no record exists (no error)", async () => {
@@ -107,7 +114,7 @@ describe("Settings Routes — Error Handling", () => {
   });
 
   describe("GET /api/v1/admin/seo-settings — DB error", () => {
-    it("returns 500 when database query fails", async () => {
+    it("maps network-style DB errors to the upstream-timeout safe message", async () => {
       mockSupabaseClient.maybeSingle.mockResolvedValueOnce({
         data: null,
         error: { message: "Network error connecting to Supabase" },
@@ -119,7 +126,9 @@ describe("Settings Routes — Error Handling", () => {
 
       expect(res.status).toBe(500);
       expect(res.body.success).toBe(false);
-      expect(res.body.message).toMatch(/network error/i);
+      expect(res.body.message).toBe("Upstream service timed out. Please try again.");
+      expect(res.body.message).not.toMatch(/network error/i);
+      expect(res.body.message).not.toMatch(/supabase/i);
     });
 
     it("returns 200 with data when query succeeds", async () => {

@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import type { AuthenticatedRequest } from "../middleware/adminAuth";
 import { serverError, paginated, badRequest } from "./api-response";
+import { safeErrorMessage } from "./safe-error";
 import { getSupabaseClient } from "./supabase-client";
 import { logger } from "./logger";
 import { parsePagination } from "./pagination";
@@ -57,7 +58,7 @@ export function logSupabaseError(
  *     .select("*", { count: "exact" })
  *     .is("deleted_at", null)
  *     .order("sort_order");
- *   if (error) return serverError(res, error.message);
+ *   if (error) return serverError(res, safeErrorMessage(error));
  *   return paginated(res, data ?? [], count ?? 0, limit, offset);
  *
  * becomes:
@@ -185,7 +186,7 @@ export async function runCollectionQuery(
       targetTable: table,
       queryUserId: targetUserId ?? undefined,
     }, error);
-    return serverError(res, error.message);
+    return serverError(res, safeErrorMessage(error));
   }
 
   return paginated(res, data ?? [], count ?? 0, limit, offset);

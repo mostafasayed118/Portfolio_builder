@@ -3,7 +3,6 @@ import { createMockSupabase } from "./test-utils";
 import {
   listMessages,
   unreadCount,
-  sendMessage,
   markMessageRead,
   markAllMessagesRead,
   deleteMessage,
@@ -65,37 +64,6 @@ describe("unreadCount", () => {
     supabase.is.mockResolvedValue({ count: null, error: new Error("fail") });
 
     await expect(unreadCount(supabase as any)).rejects.toThrow("fail");
-  });
-});
-
-describe("sendMessage", () => {
-  it("inserts message with status 'unread'", async () => {
-    supabase.insert.mockResolvedValue({ error: null });
-
-    await sendMessage(supabase as any, {
-      name: "Alice",
-      email: "alice@example.com",
-      message: "Hello there!",
-    });
-
-    expect(supabase.from).toHaveBeenCalledWith("messages");
-    expect(supabase.insert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        name: "Alice",
-        email: "alice@example.com",
-        message: "Hello there!",
-        status: "unread",
-        created_at: expect.any(String),
-      }),
-    );
-  });
-
-  it("throws on insert error", async () => {
-    supabase.insert.mockResolvedValue({ error: new Error("insert failed") });
-
-    await expect(
-      sendMessage(supabase as any, { name: "A", email: "a@b.com", message: "m" }),
-    ).rejects.toThrow("insert failed");
   });
 });
 

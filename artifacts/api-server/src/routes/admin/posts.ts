@@ -6,6 +6,7 @@ import type { Response } from "express";
 import { postSchema } from "@workspace/api-zod";
 import { getSupabaseClient } from "../../lib/supabase-client";
 import { created, badRequest, serverError } from "../../lib/api-response";
+import { safeErrorMessage } from "../../lib/safe-error";
 import { runCollectionQuery, updateByIdAndUser, softDeleteByIdAndUser, parseBody } from "../../lib/route-helpers";
 
 const router: IRouter = Router();
@@ -46,7 +47,7 @@ router.post("/", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Re
     if (error.code === "23505") {
       return badRequest(res, { slug: ["Slug already in use"] });
     }
-    return serverError(res, error.message);
+    return serverError(res, safeErrorMessage(error));
   }
   return created(res);
 });
@@ -69,7 +70,7 @@ router.put("/:id", doubleCsrfProtection, validateParamId, async (req: Authentica
       .eq("id", req.params.id as string);
     if (userId) query = query.eq("user_id", userId);
     const { data, error } = await query.maybeSingle();
-    if (error) return serverError(res, error.message);
+    if (error) return serverError(res, safeErrorMessage(error));
     if (data && data.is_published !== true && !data.published_at) {
       updateData.published_at = new Date().toISOString();
     }

@@ -214,6 +214,10 @@ export const env = {
   get AI_CHAT_RATE_LIMIT_MAX() { return int("AI_CHAT_RATE_LIMIT_MAX", 20); },
   get AI_CHAT_RATE_LIMIT_WINDOW_MS() { return int("AI_CHAT_RATE_LIMIT_WINDOW_MS", 15 * 60 * 1000); },
   get AI_CONTEXT_TTL_MS() { return int("AI_CONTEXT_TTL_MS", 60_000); },
+  // CV PDF cache TTL. The generated PDF only changes when CV content changes,
+  // so a short TTL avoids re-running the synchronous jsPDF+QR generation on
+  // the event loop for every public download.
+  get CV_PDF_CACHE_TTL_MS() { return int("CV_PDF_CACHE_TTL_MS", 300_000); },
   get AI_TIMEOUT_MS() { return int("AI_TIMEOUT_MS", 20_000); },
   get AI_SPAM_TIMEOUT_MS() { return int("AI_SPAM_TIMEOUT_MS", 3_000); },
   get AI_CHAT_MAX_TURNS() { return int("AI_CHAT_MAX_TURNS", 10); },
@@ -241,7 +245,32 @@ export const env = {
       console.error("[env] Copy .env.example to .env and fill in your values.");
       process.exit(1);
     }
+    this.checkAdminApiKeyStrength();
     return { ok: true, missing };
+  },
+
+  /**
+   * ADMIN_API_KEY is a full-admin credential (it bypasses Clerk entirely), so
+   * a weak or placeholder value must never guard production. >= 32 chars is
+   * the floor; known example/placeholder values are always rejected.
+   * Production exits at startup; other environments warn so local dev with
+   * the .env.example value still boots.
+   */
+  checkAdminApiKeyStrength(): void {
+    const adminKey = get("ADMIN_API_KEY");
+    if (!adminKey) return;
+    const isWeak =
+      adminKey.length < 32 ||
+      /your-admin-api-key|change-?me|placeholder|example/i.test(adminKey);
+    if (!isWeak) return;
+    const hint =
+      "[env] ADMIN_API_KEY is too weak (needs >= 32 random characters, not a placeholder). " +
+      "It grants full admin access without Clerk — generate one with: openssl rand -hex 32";
+    if (this.IS_PRODUCTION && !this.IS_TEST) {
+      console.error(hint);
+      process.exit(1);
+    }
+    console.warn(`${hint} — continuing because this is not production.`);
   },
 };
 

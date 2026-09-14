@@ -1,6 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { getSupabaseClient } from "../../lib/supabase-client";
 import { ok, notFound, serverError } from "../../lib/api-response";
+import { safeErrorMessage } from "../../lib/safe-error";
 import { requireSuperadmin } from "../../middleware/requireSuperadmin";
 
 /**
@@ -50,7 +51,7 @@ router.get(
         .eq("id", entityId)
         .maybeSingle();
 
-      if (error) return serverError(res, error.message);
+      if (error) return serverError(res, safeErrorMessage(error));
       if (!data) return notFound(res, `No ${entityType} found with id ${entityId}`);
 
       return ok(res, data);

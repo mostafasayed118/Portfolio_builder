@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import type { Request, Response } from "express";
 import { getSupabaseClient } from "../../lib/supabase-client";
 import { ok, serverError, notFound } from "../../lib/api-response";
+import { safeErrorMessage } from "../../lib/safe-error";
 
 /**
  * @public blog routes
@@ -20,9 +21,10 @@ router.get("/", async (_req: Request, res: Response) => {
     .eq("is_published", true)
     .is("deleted_at", null)
     .order("published_at", { ascending: false, nullsFirst: false })
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(50);
 
-  if (error) return serverError(res, error.message);
+  if (error) return serverError(res, safeErrorMessage(error));
   return ok(res, { data, total: data?.length ?? 0 });
 });
 
@@ -37,7 +39,7 @@ router.get("/:slug", async (req: Request, res: Response) => {
     .is("deleted_at", null)
     .maybeSingle();
 
-  if (error) return serverError(res, error.message);
+  if (error) return serverError(res, safeErrorMessage(error));
   if (!data) return notFound(res, "Post not found");
   return ok(res, data);
 });

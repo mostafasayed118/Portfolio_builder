@@ -12,6 +12,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@workspace/supabase/types";
 import type { AuthenticatedRequest } from "../middleware/adminAuth";
 import { ok, serverError, notFound, badRequest } from "./api-response";
+import { safeErrorMessage } from "./safe-error";
 import { getSupabaseClient } from "./supabase-client";
 import { logSupabaseError } from "./collection-query";
 
@@ -58,7 +59,7 @@ export async function updateByIdAndUser(
       targetTable: table,
       targetId: id,
     }, error);
-    serverError(res, error.message);
+    serverError(res, safeErrorMessage(error));
     return;
   }
   if (!updated || updated.length === 0) {

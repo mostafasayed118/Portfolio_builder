@@ -14,6 +14,25 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 
 const router: IRouter = Router();
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+/** Storage extension derived from the magic-byte-verified MIME type. */
+const MIME_EXTENSIONS: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+
+/**
+ * The original filename is client input persisted into metadata and rendered
+ * in the admin UI — strip control characters (log/XSS injection via \n, \r,
+ * control bytes) and cap the length before storing.
+ */
+function sanitizeOriginalFilename(name: string): string {
+  // Stripping control characters is the entire purpose here, so the
+  // no-control-regex warning is a false positive.
+  // eslint-disable-next-line no-control-regex -- intentional control-character strip
+  return name.replace(/[\x00-\x1f\x7f]/g, "").slice(0, 255);
+}
 const ALLOWED_ENTITY_TYPES = [
   "projects",
   "about",
@@ -119,7 +138,10 @@ router.post(
     }
 
     const imageId = createHash("sha256").update(file.buffer).digest("hex").slice(0, 16);
-    const ext = file.originalname.split(".").pop() || "jpg";
+    // Derive the storage extension from the VERIFIED MIME type (magic bytes
+    // passed above), never from the client-controlled filename — a payload
+    // named "invoice.html" must not end up stored with a .html path.
+    const ext = MIME_EXTENSIONS[file.mimetype] ?? "bin";
     const storagePath = `${entityType}/${imageId}/original.${ext}`;
 
     // Upload to Supabase Storage
@@ -137,7 +159,7 @@ router.post(
       .from("image_metadata")
       .insert({
         storage_path: storagePath,
-        original_filename: file.originalname,
+        original_filename: sanitizeOriginalFilename(file.originalname),
         mime_type: file.mimetype,
         file_size_bytes: file.size,
         entity_type: entityType,

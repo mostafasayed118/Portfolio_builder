@@ -4,7 +4,8 @@ import type { AuthenticatedRequest } from "../../middleware/adminAuth";
 import { requireSuperadmin } from "../../middleware/requireSuperadmin";
 import type { Response } from "express";
 import { getSupabaseClient } from "../../lib/supabase-client";
-import { badRequest, ok, serverError } from "../../lib/api-response";
+import { badRequest, ok } from "../../lib/api-response";
+import { serverErrorSafe } from "../../lib/safe-error";
 import { seedHerContent, seedAboutContent, seedSkills, seedProjects, seedExperience, seedCertifications, seedPosts, softDeleteAll } from "../../lib/seed-data";
 
 const router: IRouter = Router();
@@ -55,7 +56,7 @@ router.post("/", requireSuperadmin, doubleCsrfProtection, async (req: Authentica
 
     return ok(res, { summary, errors });
   } catch (e) {
-    return serverError(res, e instanceof Error ? e.message : "Failed to seed data");
+    return serverErrorSafe(res, e);
   }
 });
 

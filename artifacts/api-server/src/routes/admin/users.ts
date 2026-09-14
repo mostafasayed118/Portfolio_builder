@@ -8,6 +8,7 @@ import { getSupabaseClient } from "../../lib/supabase-client";
 import { parsePagination } from "../../lib/route-helpers";
 import { validateParamId } from "../../middleware/validateUuid";
 import { ok, notFound, badRequest, serverError, unauthorized, paginated } from "../../lib/api-response";
+import { safeErrorMessage } from "../../lib/safe-error";
 
 const router: IRouter = Router();
 
@@ -33,7 +34,7 @@ router.get("/", requireSuperadmin, async (req: AuthenticatedRequest, res: Respon
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
 
-  if (error) return serverError(res, error.message);
+  if (error) return serverError(res, safeErrorMessage(error));
   return paginated(res, data ?? [], count ?? 0, limit, offset);
 });
 
@@ -59,7 +60,7 @@ router.patch("/:id/role", requireSuperadmin, doubleCsrfProtection, validateParam
     .select("id, clerk_id, email, name, role, created_at")
     .single();
 
-  if (error) return serverError(res, error.message);
+  if (error) return serverError(res, safeErrorMessage(error));
   if (!data) return notFound(res, "User not found");
   return ok(res, data);
 });

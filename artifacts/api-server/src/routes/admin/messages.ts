@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { z } from "zod";
 import { doubleCsrfProtection } from "../../middleware/csrf";
 import type { AuthenticatedRequest } from "../../middleware/adminAuth";
+import { requireSuperadmin } from "../../middleware/requireSuperadmin";
 import { validateQueryUserId, validateParamId } from "../../middleware/validateUuid";
 import type { Response } from "express";
 import {
@@ -12,6 +13,7 @@ import {
 import type { MsgStatus } from "@workspace/supabase/types";
 import { getSupabaseClient } from "../../lib/supabase-client";
 import { ok, badRequest, serverError, notFound } from "../../lib/api-response";
+import { safeErrorMessage } from "../../lib/safe-error";
 import { sendMessageReply } from "../../lib/mailer";
 import {
   runCollectionQuery,
@@ -113,6 +115,41 @@ function applyViewSpec<Q>(q: Q, spec: ViewSpec): Q {
 }
 
 /**
+ * User scoping for messages queries — the SINGLE implementation shared by
+ * every endpoint in this file (previously re-implemented six times inline).
+ * Mirrors `runCollectionQuery`'s semantics:
+ *   - Superadmin with `?userId=` → that user's rows (plus orphans when
+ *     `includeOrphans`, i.e. public contact-form rows with no owner).
+ *   - Superadmin without `?userId=` → every row.
+ *   - Regular admin → own rows (plus orphans when `includeOrphans`); a
+ *     `?userId` they pass is ignored (no privilege escalation). A missing
+ *     identity fails closed to `""` (matches nothing).
+ */
+function scopeMessagesQuery<
+  T extends { or(f: string): T; eq(c: string, v: unknown): T },
+>(query: T, req: AuthenticatedRequest, opts: { includeOrphans?: boolean } = {}): T {
+  const includeOrphans = opts.includeOrphans ?? false;
+  const isSuperadmin = req.user?.role === "superadmin";
+  const requestedUserId =
+    typeof req.query.userId === "string" && req.query.userId.length > 0
+      ? req.query.userId
+      : undefined;
+
+  if (isSuperadmin) {
+    if (requestedUserId) {
+      return includeOrphans
+        ? query.or(`user_id.eq.${requestedUserId},user_id.is.null`)
+        : query.eq("user_id", requestedUserId);
+    }
+    return query;
+  }
+  const ownId = req.user?.id ?? "";
+  return includeOrphans
+    ? query.or(`user_id.eq.${ownId},user_id.is.null`)
+    : query.eq("user_id", ownId);
+}
+
+/**
  * List messages, optionally filtered server-side by status or a saved preset.
  *
  * `?status=unread` / `?status=read` page over exactly those rows — the client
@@ -158,22 +195,22 @@ router.get("/", validateQueryUserId, async (req: AuthenticatedRequest, res: Resp
 
 router.get("/unread-count", validateQueryUserId, async (req: AuthenticatedRequest, res: Response) => {
   const supabase = getSupabaseClient();
-  const userId = req.user?.id;
-  const isSuperadmin = req.user?.role === "superadmin";
-  const targetUserId = isSuperadmin && req.query.userId ? req.query.userId as string : userId;
 
-  let query = supabase
-    .from("messages")
-    .select("*", { count: "exact", head: true })
-    .eq("status", "unread")
-    .is("deleted_at", null);
-
-  if (targetUserId) {
-    query = query.or(`user_id.eq.${targetUserId},user_id.is.null`);
-  }
+  // Same scoping as the list endpoint (includeOrphans): a superadmin without
+  // an explicit ?userId counts ALL rows — matching what "/" returns — so the
+  // badge can never disagree with the inbox it points at.
+  const query = scopeMessagesQuery(
+    supabase
+      .from("messages")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "unread")
+      .is("deleted_at", null),
+    req,
+    { includeOrphans: true },
+  );
 
   const { count, error } = await query;
-  if (error) return serverError(res, error.message);
+  if (error) return serverError(res, safeErrorMessage(error));
   return ok(res, count ?? 0);
 });
 
@@ -217,13 +254,8 @@ router.post("/:id/unarchive", doubleCsrfProtection, validateParamId, async (req:
  */
 router.post("/mark-all-read", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
   const supabase = getSupabaseClient();
-  const userId = req.user?.id;
-  const isSuperadmin = req.user?.role === "superadmin";
-
-  // User scope matches the unread-count endpoint: superadmins see everything,
-  // regular admins only their own rows (or rows with no owner).
-  const scope = <T extends { or: (f: string) => T }>(q: T): T =>
-    !isSuperadmin && userId ? q.or(`user_id.eq.${userId},user_id.is.null`) : q;
+  const scope = <T extends { or(f: string): T; eq(c: string, v: unknown): T }>(q: T): T =>
+    scopeMessagesQuery(q, req, { includeOrphans: true });
 
   const { count, error: countError } = await scope(
     supabase
@@ -232,7 +264,7 @@ router.post("/mark-all-read", doubleCsrfProtection, async (req: AuthenticatedReq
       .eq("status", "unread")
       .is("deleted_at", null),
   );
-  if (countError) return serverError(res, countError.message);
+  if (countError) return serverError(res, safeErrorMessage(countError));
 
   const { error } = await scope(
     supabase
@@ -241,7 +273,7 @@ router.post("/mark-all-read", doubleCsrfProtection, async (req: AuthenticatedReq
       .eq("status", "unread")
       .is("deleted_at", null),
   );
-  if (error) return serverError(res, error.message);
+  if (error) return serverError(res, safeErrorMessage(error));
   return ok(res, { marked: count ?? 0 });
 });
 
@@ -263,14 +295,11 @@ const TEST_SUBMISSION_EMAILS =
 /**
  * One-click cleanup: archive every automated test submission that is still
  * visible. Server-side on purpose — the list endpoint paginates, so the
- * client could never see all rows. Superadmin only: it is a global
- * maintenance action, not a per-user one. Idempotent: re-running only
- * touches rows still visible (deleted_at null).
+ * client could never see all rows. Superadmin only (declarative middleware):
+ * it is a global maintenance action, not a per-user one. Idempotent:
+ * re-running only touches rows still visible (deleted_at null).
  */
-router.post("/archive-test-submissions", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
-  if (req.user?.role !== "superadmin") {
-    return res.status(403).json({ success: false, message: "Superadmin required" });
-  }
+router.post("/archive-test-submissions", requireSuperadmin, doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
   const supabase = getSupabaseClient();
   // Count the visible test rows first (typed head-count, same as unread-count)
   // so the response can report how many were archived. The update then
@@ -281,14 +310,14 @@ router.post("/archive-test-submissions", doubleCsrfProtection, async (req: Authe
     .select("id", { count: "exact", head: true })
     .or(TEST_SUBMISSION_EMAILS)
     .is("deleted_at", null);
-  if (countError) return serverError(res, countError.message);
+  if (countError) return serverError(res, safeErrorMessage(countError));
 
   const { error } = await supabase
     .from("messages")
     .update({ deleted_at: new Date().toISOString() })
     .or(TEST_SUBMISSION_EMAILS)
     .is("deleted_at", null);
-  if (error) return serverError(res, error.message);
+  if (error) return serverError(res, safeErrorMessage(error));
   return ok(res, { archived: count ?? 0 });
 });
 
@@ -302,14 +331,11 @@ const ARCHIVED_ROWS = ["deleted_at", "is", null] as const;
 /**
  * One-click restore: bring every archived (soft-deleted) message back to the
  * inbox in one server-side statement — the inverse of archive-test-submissions,
- * so the whole Archived tab can be emptied in one call. Superadmin only: it
- * is a global maintenance action, not a per-user one. Idempotent: re-running
- * only touches rows still archived (deleted_at NOT NULL).
+ * so the whole Archived tab can be emptied in one call. Superadmin only
+ * (declarative middleware): it is a global maintenance action. Idempotent:
+ * re-running only touches rows still archived (deleted_at NOT NULL).
  */
-router.post("/restore-all-archived", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
-  if (req.user?.role !== "superadmin") {
-    return res.status(403).json({ success: false, message: "Superadmin required" });
-  }
+router.post("/restore-all-archived", requireSuperadmin, doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
   const supabase = getSupabaseClient();
   // Count the archived rows first (typed head-count) so the response can
   // report how many were restored. The update then targets the identical
@@ -319,13 +345,13 @@ router.post("/restore-all-archived", doubleCsrfProtection, async (req: Authentic
     .from("messages")
     .select("id", { count: "exact", head: true })
     .not(...ARCHIVED_ROWS);
-  if (countError) return serverError(res, countError.message);
+  if (countError) return serverError(res, safeErrorMessage(countError));
 
   const { error } = await supabase
     .from("messages")
     .update({ deleted_at: null })
     .not(...ARCHIVED_ROWS);
-  if (error) return serverError(res, error.message);
+  if (error) return serverError(res, safeErrorMessage(error));
   return ok(res, { restored: count ?? 0 });
 });
 
@@ -344,18 +370,17 @@ router.post(
       return badRequest(res, result.error.flatten().fieldErrors);
     }
     const messageId = req.params.id as string;
-    const isSuperadmin = req.user?.role === "superadmin";
 
-    let fetchQuery = supabase
-      .from("messages")
-      .select("id, name, email, message, subject")
-      .eq("id", messageId);
-    if (!isSuperadmin) {
-      fetchQuery = fetchQuery.eq("user_id", req.user?.id ?? "");
-    }
-    const { data, error } = await fetchQuery.single();
+    const fetchQuery = scopeMessagesQuery(
+      supabase.from("messages").select("id, name, email, message, subject").eq("id", messageId),
+      req,
+    );
+    const { data, error } = await fetchQuery.maybeSingle();
     if (error) {
-      return error.code === "PGRST116" ? notFound(res, "Message not found") : serverError(res, error.message);
+      return serverError(res, safeErrorMessage(error));
+    }
+    if (!data) {
+      return notFound(res, "Message not found");
     }
 
     const reply = result.data.reply;
@@ -371,7 +396,7 @@ router.post(
 
     const update = await supabase.from("messages").update(updated).eq("id", messageId);
     if (update.error) {
-      return serverError(res, update.error.message);
+      return serverError(res, safeErrorMessage(update.error));
     }
 
     // Send a branded reply to the original sender (opt-in via Gmail SMTP).
@@ -387,91 +412,64 @@ router.post(
   },
 );
 
-router.post("/bulk-delete", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
-  const supabase = getSupabaseClient();
-  const result = bulkDeleteSchema.safeParse(req.body);
-  if (!result.success) {
-    return badRequest(res, result.error.flatten().fieldErrors);
-  }
-  const { ids } = result.data;
-  const isSuperadmin = req.user?.role === "superadmin";
-  let query = supabase.from("messages").update({ deleted_at: new Date().toISOString() }).in("id", ids);
-  if (!isSuperadmin) {
-    query = query.eq("user_id", req.user?.id ?? "");
-  }
-  const { error } = await query;
-  if (error) return serverError(res, error.message);
-  return ok(res, undefined);
-});
+/**
+ * Shared skeleton for the three bulk endpoints — identical parse → scope →
+ * update → respond flows differing only in schema, patch payload, and (for
+ * filter-based bulk-archive/unarchive) the view predicates applied.
+ */
+interface BulkActionBody {
+  ids?: string[];
+  filter?: { status?: z.infer<typeof messageStatusSchema>; preset?: z.infer<typeof messagePresetSchema> };
+}
+
+function bulkSoftDeleteHandler(
+  schema: { safeParse(input: unknown): { success: true; data: BulkActionBody } | { success: false; error: { flatten(): { fieldErrors: Record<string, string[]>; formErrors: string[] } } } },
+  // Factory, not a value: the timestamp must be computed per request, not
+  // once at module load when the route is registered.
+  getDeletedAt: () => string | null,
+) {
+  return async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+    const supabase = getSupabaseClient();
+    const result = schema.safeParse(req.body);
+    if (!result.success) {
+      const flat = result.error.flatten();
+      return badRequest(res, {
+        ...flat.fieldErrors,
+        ...(flat.formErrors.length ? { form: flat.formErrors } : {}),
+      });
+    }
+    const { ids, filter } = result.data;
+    let query = supabase.from("messages").update({ deleted_at: getDeletedAt() });
+    if (ids) {
+      query = query.in("id", ids);
+    } else if (filter) {
+      // Filter-based action: apply the SAME view predicates the list endpoint
+      // uses (shared viewSpec), so "archive/restore all matching" is ONE
+      // server-side statement regardless of how many rows match — no giant
+      // id payload.
+      query = applyViewSpec(query, viewSpec(filter.status, filter.preset));
+    }
+    query = scopeMessagesQuery(query, req);
+    const { error } = await query;
+    if (error) return serverError(res, safeErrorMessage(error));
+    return ok(res, undefined);
+  };
+}
+
+router.post("/bulk-delete", doubleCsrfProtection, bulkSoftDeleteHandler(bulkDeleteSchema, () => new Date().toISOString()));
 
 /**
  * Bulk archive — same soft-delete semantics as bulk-delete, named to match
  * the archive/unarchive terminology so inbox cleanup (e.g. E2E test rows)
  * can be done from the UI without direct database access.
  */
-router.post("/bulk-archive", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
-  const supabase = getSupabaseClient();
-  const result = bulkArchiveMessagesSchema.safeParse(req.body);
-  if (!result.success) {
-    const flat = result.error.flatten();
-    return badRequest(res, {
-      ...flat.fieldErrors,
-      ...(flat.formErrors.length ? { form: flat.formErrors } : {}),
-    });
-  }
-  const { ids, filter } = result.data;
-  const isSuperadmin = req.user?.role === "superadmin";
-  let query = supabase.from("messages").update({ deleted_at: new Date().toISOString() });
-  if (ids) {
-    query = query.in("id", ids);
-  } else {
-    // Filter-based archive: apply the SAME view predicates the list endpoint
-    // uses (shared viewSpec), so "archive all matching" is ONE server-side
-    // statement regardless of how many rows match — no giant id payload.
-    query = applyViewSpec(query, viewSpec(filter?.status, filter?.preset));
-  }
-  if (!isSuperadmin) {
-    query = query.eq("user_id", req.user?.id ?? "");
-  }
-  const { error } = await query;
-  if (error) return serverError(res, error.message);
-  return ok(res, undefined);
-});
+router.post("/bulk-archive", doubleCsrfProtection, bulkSoftDeleteHandler(bulkArchiveMessagesSchema, () => new Date().toISOString()));
 
 /**
  * Bulk unarchive — clears `deleted_at` back to null, restoring every row to
  * the inbox in one statement. The inverse of bulk-archive, with the same
- * `{ ids }` OR `{ filter }` contract and user scoping: a filter-based restore
- * applies the SAME view predicates as the list endpoint (shared viewSpec), so
- * "restore all matching" in the Archived tab is one statement too.
+ * `{ ids }` OR `{ filter }` contract and user scoping.
  */
-router.post("/bulk-unarchive", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
-  const supabase = getSupabaseClient();
-  const result = bulkUnarchiveMessagesSchema.safeParse(req.body);
-  if (!result.success) {
-    const flat = result.error.flatten();
-    return badRequest(res, {
-      ...flat.fieldErrors,
-      ...(flat.formErrors.length ? { form: flat.formErrors } : {}),
-    });
-  }
-  const { ids, filter } = result.data;
-  const isSuperadmin = req.user?.role === "superadmin";
-  let query = supabase.from("messages").update({ deleted_at: null });
-  if (ids) {
-    query = query.in("id", ids);
-  } else {
-    // Filter-based restore: the same view predicates as the list endpoint,
-    // so "restore all matching" is ONE server-side statement regardless of
-    // how many rows match — no giant id payload.
-    query = applyViewSpec(query, viewSpec(filter?.status, filter?.preset));
-  }
-  if (!isSuperadmin) {
-    query = query.eq("user_id", req.user?.id ?? "");
-  }
-  const { error } = await query;
-  if (error) return serverError(res, error.message);
-  return ok(res, undefined);
-});
+router.post("/bulk-unarchive", doubleCsrfProtection, bulkSoftDeleteHandler(bulkUnarchiveMessagesSchema, () => null));
 
 export default router;

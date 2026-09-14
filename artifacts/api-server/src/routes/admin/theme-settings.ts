@@ -6,6 +6,7 @@ import { z } from "zod";
 import { getSupabaseClient } from "../../lib/supabase-client";
 import { singletonUpsert } from "../../lib/singleton-upsert";
 import { ok, badRequest, serverError } from "../../lib/api-response";
+import { safeErrorMessage, serverErrorSafe } from "../../lib/safe-error";
 
 const router: IRouter = Router();
 
@@ -35,7 +36,7 @@ const themeSettingsSchema = z.object({
 router.get("/", async (_req: AuthenticatedRequest, res: Response) => {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase.from("theme_settings").select("*").limit(1).maybeSingle();
-  if (error) return serverError(res, error.message);
+  if (error) return serverError(res, safeErrorMessage(error));
   return ok(res, data);
 });
 
@@ -49,8 +50,8 @@ router.put("/", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Res
     await singletonUpsert(supabase, "theme_settings", result.data);
     return ok(res, undefined);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return serverError(res, message);
+    req.log.error({ err }, "theme_settings upsert failed");
+    return serverErrorSafe(res, err);
   }
 });
 

@@ -6,6 +6,7 @@ import { z } from "zod";
 import { getSupabaseClient } from "../../lib/supabase-client";
 import { singletonUpsert } from "../../lib/singleton-upsert";
 import { ok, badRequest, serverError } from "../../lib/api-response";
+import { safeErrorMessage, serverErrorSafe } from "../../lib/safe-error";
 
 const router: IRouter = Router();
 
@@ -29,7 +30,7 @@ const languageSchema = z.object({
 router.get("/", async (_req: AuthenticatedRequest, res: Response) => {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase.from("site_settings").select("*").limit(1).maybeSingle();
-  if (error) return serverError(res, error.message);
+  if (error) return serverError(res, safeErrorMessage(error));
   return ok(res, data);
 });
 
@@ -43,8 +44,8 @@ router.put("/", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Res
     await singletonUpsert(supabase, "site_settings", result.data);
     return ok(res, undefined);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return serverError(res, message);
+    req.log.error({ err }, "site_settings upsert failed");
+    return serverErrorSafe(res, err);
   }
 });
 
@@ -58,8 +59,8 @@ router.patch("/language", doubleCsrfProtection, async (req: AuthenticatedRequest
     await singletonUpsert(supabase, "site_settings", { default_language: result.data.default_language });
     return ok(res, undefined);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return serverError(res, message);
+    req.log.error({ err }, "site_settings upsert failed");
+    return serverErrorSafe(res, err);
   }
 });
 

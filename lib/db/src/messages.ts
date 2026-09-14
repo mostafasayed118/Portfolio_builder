@@ -21,19 +21,6 @@ export async function unreadCount(
   return count;
 }
 
-export async function sendMessage(
-  supabase: SupabaseClient,
-  args: { name: string; email: string; message: string },
-): Promise<void> {
-  await queryOrThrow(
-    supabase.from("messages").insert({
-      name: args.name, email: args.email, message: args.message,
-      status: "unread", created_at: new Date().toISOString(),
-    }),
-    { table: "messages", operation: "sendMessage" },
-  );
-}
-
 export async function markMessageRead(
   supabase: SupabaseClient,
   id: string,

@@ -6,13 +6,14 @@ import { sectionSettingSchema, sectionReorderSchema } from "@workspace/api-zod";
 import { getSupabaseClient } from "../../lib/supabase-client";
 import { validateParamId } from "../../middleware/validateUuid";
 import { ok, badRequest, serverError, notFound } from "../../lib/api-response";
+import { safeErrorMessage } from "../../lib/safe-error";
 
 const router: IRouter = Router();
 
 router.get("/", async (_req: AuthenticatedRequest, res: Response) => {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase.from("section_settings").select("*").order("sort_order");
-  if (error) return serverError(res, error.message);
+  if (error) return serverError(res, safeErrorMessage(error));
   return ok(res, data);
 });
 
@@ -27,7 +28,7 @@ router.put("/:id", validateParamId, doubleCsrfProtection, async (req: Authentica
     .update(result.data)
     .eq("id", req.params.id as string)
     .select("id");
-  if (error) return serverError(res, error.message);
+  if (error) return serverError(res, safeErrorMessage(error));
   if (!count || count === 0) return notFound(res, "Section setting not found");
   return ok(res, undefined);
 });
@@ -47,7 +48,7 @@ router.post("/reorder", doubleCsrfProtection, async (req: AuthenticatedRequest, 
     sort_orders: sortOrders,
   });
 
-  if (error) return serverError(res, error.message);
+  if (error) return serverError(res, safeErrorMessage(error));
   return ok(res, undefined);
 });
 

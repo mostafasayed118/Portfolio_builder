@@ -6,6 +6,7 @@ import type { Response } from "express";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseClient } from "./supabase-client";
 import { created, badRequest, serverError, conflict } from "./api-response";
+import { safeErrorMessage } from "./safe-error";
 import { runCollectionQuery, updateByIdAndUser, softDeleteByIdAndUser } from "./route-helpers";
 
 /** Structured conflict signal returned by the `findDuplicate` hook. */
@@ -92,7 +93,7 @@ export function createCollectionRouter(opts: CollectionRouterOptions): IRouter {
           code: "DUPLICATE_NAME",
         });
       }
-      return serverError(res, error.message);
+      return serverError(res, safeErrorMessage(error));
     }
     return created(res);
   });

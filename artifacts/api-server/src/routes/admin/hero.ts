@@ -6,6 +6,7 @@ import { heroSchema } from "@workspace/api-zod";
 import { getSupabaseClient } from "../../lib/supabase-client";
 import { singletonUpsert } from "../../lib/singleton-upsert";
 import { ok, badRequest, serverError } from "../../lib/api-response";
+import { safeErrorMessage, serverErrorSafe } from "../../lib/safe-error";
 import { logSupabaseError } from "../../lib/route-helpers";
 
 const router: IRouter = Router();
@@ -21,7 +22,7 @@ router.get("/", async (req: AuthenticatedRequest, res: Response) => {
       userId: req.user?.id,
       adminEmail: req.adminEmail,
     }, error);
-    return serverError(res, error.message);
+    return serverError(res, safeErrorMessage(error));
   }
   return ok(res, data);
 });
@@ -36,15 +37,14 @@ router.put("/", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Res
     await singletonUpsert(supabase, "hero_content", { ...result.data, is_published: true });
     return ok(res, undefined);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Unknown error";
     logSupabaseError(req, {
       route: "PUT /hero",
       method: "PUT",
       targetTable: "hero_content",
       userId: req.user?.id,
       adminEmail: req.adminEmail,
-    }, { message }, { operation: "singletonUpsert" });
-    return serverError(res, message);
+    }, { message: err instanceof Error ? err.message : String(err) }, { operation: "singletonUpsert" });
+    return serverErrorSafe(res, err);
   }
 });
 

@@ -16,6 +16,10 @@ function isIgnorable(err: { code?: string; message?: string } | null | undefined
 }
 
 export async function syncUserFromClerk(clerkId: string, email: string, name?: string): Promise<{ id: string; email: string; role: string } | null> {
+  cleanUserCache();
+  const cached = userCache.get(clerkId);
+  if (cached && Date.now() - cached.ts < USER_CACHE_TTL) return cached.user;
+
   const supabase = getSupabaseClient();
 
   try {
@@ -82,6 +86,27 @@ export async function syncUserFromClerk(clerkId: string, email: string, name?: s
 
 let _defaultAdminCache: { id: string; email: string; role: string; ts: number } | null = null;
 const DEFAULT_ADMIN_CACHE_TTL = 60_000; // 1 minute — roles can change, don't cache forever
+
+// Cache of clerkId → synced user so every admin request does not pay a DB
+// round trip for the per-request syncUserFromClerk lookup. Same TTL contract
+// as the email cache in adminAuth: a role change takes up to a minute to be
+// seen — acceptable for this path.
+const userCache = new Map<string, { user: { id: string; email: string; role: string }; ts: number }>();
+const USER_CACHE_TTL = 60_000;
+const USER_CACHE_MAX = 100;
+
+function cleanUserCache() {
+  if (userCache.size < USER_CACHE_MAX) return;
+  const now = Date.now();
+  for (const [key, value] of userCache.entries()) {
+    if (now - value.ts > USER_CACHE_TTL) userCache.delete(key);
+  }
+  if (userCache.size >= USER_CACHE_MAX) {
+    const entries = Array.from(userCache.entries());
+    entries.sort((a, b) => a[1].ts - b[1].ts);
+    entries.slice(0, Math.floor(entries.length / 2)).forEach(([key]) => userCache.delete(key));
+  }
+}
 
 export async function getDefaultAdminUser(): Promise<{ id: string; email: string; role: string } | null> {
   if (_defaultAdminCache && Date.now() - _defaultAdminCache.ts < DEFAULT_ADMIN_CACHE_TTL) {
