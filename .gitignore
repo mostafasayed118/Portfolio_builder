@@ -99,3 +99,6 @@ attached_assets/
 # Build/scratch debris
 admin-build-output.txt
 COMMIT_MSG.txt
+
+# Superpowers SDD scratch workspaces
+.superpowers/
