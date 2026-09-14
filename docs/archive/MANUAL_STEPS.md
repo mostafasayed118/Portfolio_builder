@@ -9,6 +9,7 @@ After implementing all automated fixes, complete these manual steps in order.
 **What:** Remove `VITE_` prefix from service role key to prevent client-side exposure.
 
 **How:**
+
 1. Open your `.env` file (root directory)
 2. Find `VITE_SUPABASE_SERVICE_ROLE_KEY`
 3. Rename to `SUPABASE_SERVICE_ROLE_KEY` (remove `VITE_` prefix)
@@ -16,11 +17,13 @@ After implementing all automated fixes, complete these manual steps in order.
 5. Update any production environment variables (Vercel, Railway, etc.)
 
 **Before:**
+
 ```
 VITE_SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIs...
 ```
 
 **After:**
+
 ```
 SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIs...
 ```
@@ -32,6 +35,7 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIs...
 **What:** Removes duplicate UNIQUE constraint on `projects.slug` and duplicate indexes.
 
 **How:**
+
 ```bash
 # Option A: Using psql directly
 psql -h your-supabase-host -U postgres -d postgres -f supabase/migrations/035_drop_duplicates.sql
@@ -49,6 +53,7 @@ psql -h your-supabase-host -U postgres -d postgres -f supabase/migrations/035_dr
 **What:** Converts `experience.description_ar` from TEXT to TEXT[] to match the `description` column.
 
 **How:**
+
 ```bash
 psql -f supabase/migrations/036_fix_description_ar.sql
 ```
@@ -62,6 +67,7 @@ Or in Supabase Dashboard → SQL Editor, paste and run the migration.
 **What:** Drops the `contact_messages` table (consolidated into `messages` in migration 028).
 
 **How:**
+
 ```bash
 # FIRST: Check if table has data
 psql -c "SELECT COUNT(*) FROM contact_messages;"
@@ -79,6 +85,7 @@ psql -f supabase/migrations/037_cleanup.sql
 **What:** Adds CHECK constraint on `content_snapshots.entity_type`.
 
 **How:**
+
 ```bash
 psql -f supabase/migrations/038_snapshot_constraints.sql
 ```
@@ -90,6 +97,7 @@ psql -f supabase/migrations/038_snapshot_constraints.sql
 **What:** Sync `lib/supabase/src/types.ts` with current database schema.
 
 **How:**
+
 ```bash
 # Option A: Using Supabase CLI
 npx supabase gen types typescript --local > lib/supabase/src/types.ts
@@ -108,12 +116,14 @@ npx supabase gen types typescript --local > lib/supabase/src/types.ts
 **What:** Give your admin account superadmin role for user management features.
 
 **How:**
+
 ```bash
 cd artifacts/api-server
 npx tsx src/scripts/promote-superadmin.ts al3tar66@gmail.com
 ```
 
 **Prerequisites:**
+
 - You must have logged in at least once (so your user row exists)
 - SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in .env
 
@@ -124,6 +134,7 @@ npx tsx src/scripts/promote-superadmin.ts al3tar66@gmail.com
 **What:** Check if `section_variants` table needs public read access restored.
 
 **How:**
+
 ```sql
 -- Run in Supabase SQL Editor:
 SELECT policyname, cmd, roles, qual
@@ -132,6 +143,7 @@ WHERE tablename = 'section_variants';
 ```
 
 If no public SELECT policy exists and the frontend needs it, run:
+
 ```sql
 CREATE POLICY "public_read_variants" ON section_variants
   FOR SELECT USING (true);
@@ -143,7 +155,7 @@ CREATE POLICY "public_read_variants" ON section_variants
 
 After completing all steps:
 
-- [ ] `.env` has `SUPABASE_SERVICE_ROLE_KEY` (no VITE_ prefix)
+- [ ] `.env` has `SUPABASE_SERVICE_ROLE_KEY` (no VITE\_ prefix)
 - [ ] Migration 035 ran successfully
 - [ ] Migration 036 ran successfully
 - [ ] Migration 037 ran successfully (or skipped if data exists)
@@ -170,14 +182,18 @@ psql -f supabase/migrations/038_snapshot_constraints.sql
 ## Troubleshooting
 
 **Migration fails with "relation does not exist":**
+
 - The table may have been renamed or dropped. Check the migration history.
 
 **Migration fails with "constraint does not exist":**
+
 - The constraint may have already been dropped. Safe to skip.
 
 **promote-superadmin.ts fails with "User not found":**
+
 - Log in to the admin panel first, then run the script again.
 
 **Tests fail after changes:**
+
 - Run `npx vitest run` to see which tests are failing
 - Check that all mocks are properly set up in `src/test/setup.ts`

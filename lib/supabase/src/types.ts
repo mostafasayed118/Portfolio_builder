@@ -1,5 +1,5 @@
 // ============================================================================
-// Supabase Database Types — generated from supabase/migrations/001 through 038
+// Supabase Database Types — generated from supabase/migrations/001 through 059
 // ============================================================================
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];

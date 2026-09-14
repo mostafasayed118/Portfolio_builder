@@ -53,7 +53,7 @@ Numbering is contiguous `001`–`047` (no gaps). Earlier development had gaps at
 | 044 | `044_contact_spam_guard.sql`               | Contact spam guard (rate-limit helper)                                            |
 | 045 | `045_admin_is_admin_users_table.sql`       | is_admin() via users table (avoids ALTER DATABASE GUC)                            |
 | 046 | `046_blog_posts.sql`                       | blog_posts table + RLS                                                            |
-| 047 | `047_singleton_table_guard.sql`            | Singleton row guards (hero/about/site_settings)                                   |
+| 057 | `057_singleton_table_guard.sql`            | Singleton row guards (hero/about/site_settings)                                   |
 
 ## Summary
 

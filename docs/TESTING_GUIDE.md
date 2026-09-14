@@ -125,7 +125,7 @@ Key test files for the auth layer:
 
 ### 🚨 NO MODULE MOCKING for internal contracts (Strict Rule)
 
-> **Historical proof:** [`TEST_INTEGRITY_SCORECARD.md`](../TEST_INTEGRITY_SCORECARD.md) — Phase 2 found 3 tests that were **passing on the wrong layer** because they mocked the very module they were supposed to be testing. They looked green in CI but would not have caught a single bug in the real client.
+> **Historical proof:** [`TEST_INTEGRITY_SCORECARD.md`](./archive/TEST_INTEGRITY_SCORECARD.md) — Phase 2 found 3 tests that were **passing on the wrong layer** because they mocked the very module they were supposed to be testing. They looked green in CI but would not have caught a single bug in the real client.
 
 **Rule (must-follow):**
 
