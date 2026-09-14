@@ -8,7 +8,7 @@ import { formatDateTime } from "@/lib/format-date";
 import { Badge, Button, Card, CardContent } from "@workspace/ui";
 import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
 import { api } from "@/lib/api-client";
-import { CvUploadZone } from "@/features/cv/components/CvUploadZone";
+import { CvUploadZone } from "../components/CvUploadZone";
 import { AdminErrorState } from "@/components/AdminErrorState";
 import { AdminLoadingState } from "@/components/AdminLoadingState";
 

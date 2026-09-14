@@ -7,7 +7,7 @@ import { trackEvent } from "@workspace/db/analytics";
 import { logWarn } from "@/lib/logger";
 import { getApiUrl } from "@/lib/env";
 import { HERO } from "@/data/portfolio";
-import type { HeroData } from "@/features/hero/types";
+import type { HeroData } from "../types";
 
 export function useReducedMotion() {
   const [reduced, setReduced] = useState(false);

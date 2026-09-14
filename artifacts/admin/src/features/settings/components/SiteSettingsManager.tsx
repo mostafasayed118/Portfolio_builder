@@ -8,7 +8,7 @@ import { logError } from "@/lib/logger";
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, Label, RadioGroup, RadioGroupItem, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch } from "@workspace/ui";
 import { AdminErrorState } from "@/components/AdminErrorState";
 import { AdminLoadingState } from "@/components/AdminLoadingState";
-import { ArabicContentStatus } from "@/features/settings/components/ArabicStatus";
+import { ArabicContentStatus } from "../components/ArabicStatus";
 
 type LanguageMode = "en_only" | "ar_only" | "both";
 type SiteData = { site_name: string; site_tagline: string; footer_text: string; copyright_text: string; logo_text: string; default_theme: "light" | "dark" };

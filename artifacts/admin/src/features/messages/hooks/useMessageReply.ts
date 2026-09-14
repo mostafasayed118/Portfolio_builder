@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@workspace/ui";
 import { api } from "@/lib/api-client";
-import { type Message as Msg } from "@/features/messages/components/MessageCard";
+import { type Message as Msg } from "../components/MessageCard";
 
 /**
  * Reply-dialog state and the send mutation. The fire-and-forget cache

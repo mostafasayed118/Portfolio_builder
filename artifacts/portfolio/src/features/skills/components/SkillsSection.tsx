@@ -2,11 +2,11 @@ import { useState } from "react";
 import { Zap } from "lucide-react";
 import SectionHeader from "@/components/SectionHeader";
 import EmptyState from "@/components/EmptyState";
-import { useSkills, groupSkillsByCategory, SKILL_CATEGORIES } from "@/features/skills/hooks/useSkills";
+import { useSkills, groupSkillsByCategory, SKILL_CATEGORIES } from "../hooks/useSkills";
 import { useLanguage } from "@/lib/language";
-import { SkillTag, LEVEL_CONFIG } from "@/features/skills/components/SkillTag";
-import { SkillsSkeleton } from "@/features/skills/components/SkillsSkeleton";
-import type { SkillLevel } from "@/features/skills/types";
+import { SkillTag, LEVEL_CONFIG } from "../components/SkillTag";
+import { SkillsSkeleton } from "../components/SkillsSkeleton";
+import type { SkillLevel } from "../types";
 import type { TranslationKeys } from "@/i18n";
 
 function levelLabel(lvl: SkillLevel, t?: TranslationKeys): string {

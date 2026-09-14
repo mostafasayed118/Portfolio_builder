@@ -10,9 +10,9 @@ import { Badge, Button, Card, CardContent, Input, useToast } from "@workspace/ui
 import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
 import { PageHeader } from "@/components/PageHeader";
 import { RowActions } from "@/components/RowActions";
-import { useProjectsList } from "@/features/projects/hooks/useProjects";
-import { ProjectEditor } from "@/features/projects/components/ProjectEditor";
-import { type Project, BLANK_PROJECT } from "@/features/projects/types";
+import { useProjectsList } from "../hooks/useProjects";
+import { ProjectEditor } from "../components/ProjectEditor";
+import { type Project, BLANK_PROJECT } from "../types";
 import { exportToCsv } from "@/lib/export-csv";
 
 type ProjectForm = Partial<Project> & { id?: string };

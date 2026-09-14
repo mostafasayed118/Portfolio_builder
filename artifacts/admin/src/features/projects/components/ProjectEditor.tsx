@@ -6,8 +6,8 @@ import { getSupabase } from "@/lib/supabase";
 import { api } from "@/lib/api-client";
 import { logError } from "@/lib/logger";
 import { listEntityImages } from "@workspace/db/images";
-import AiTextButton from "@/features/ai/components/AiTextButton";
-import type { Project } from "@/features/projects/types";
+import { AiTextButton } from "@/features/ai";
+import type { Project } from "../types";
 
 type ProjectForm = Partial<Project> & { id?: string };
 

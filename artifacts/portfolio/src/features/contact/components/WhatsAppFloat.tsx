@@ -1,6 +1,6 @@
 import { MessageCircle } from "lucide-react";
-import { useContact } from "@/features/contact/hooks/useContact";
-import { buildWhatsAppHref } from "@/features/contact/lib/whatsapp";
+import { useContact } from "../hooks/useContact";
+import { buildWhatsAppHref } from "../lib/whatsapp";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
 import { trackEvent } from "@workspace/db/analytics";
 import { logWarn } from "@/lib/logger";

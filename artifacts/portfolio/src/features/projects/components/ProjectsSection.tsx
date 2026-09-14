@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
 import { useLanguage } from "@/lib/language";
 import { FolderKanban } from "lucide-react";
-import { useProjects, mapDbProject, PROJECTS } from "@/features/projects/hooks/useProjects";
-import ProjectCard from "@/features/projects/components/ProjectCard";
-import { imageVariants } from "@/features/projects/components/ProjectGallery";
+import { useProjects, mapDbProject, PROJECTS } from "../hooks/useProjects";
+import ProjectCard from "../components/ProjectCard";
+import { imageVariants } from "../components/ProjectGallery";
 import { useProjectCovers } from "@/hooks/usePortfolioData";
-import { ProjectsSkeleton } from "@/features/projects/components/ProjectsSkeleton";
+import { ProjectsSkeleton } from "../components/ProjectsSkeleton";
 import SectionHeader from "@/components/SectionHeader";
 import EmptyState from "@/components/EmptyState";
 

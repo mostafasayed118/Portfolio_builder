@@ -3,7 +3,7 @@ import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
 import { trackEvent } from "@workspace/db/analytics";
 import { logWarn } from "@/lib/logger";
 import { useLanguage } from "@/lib/language";
-import { buildWhatsAppHref } from "@/features/contact/lib/whatsapp";
+import { buildWhatsAppHref } from "../lib/whatsapp";
 
 interface Contact {
   email: string;

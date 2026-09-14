@@ -8,8 +8,8 @@ import { Button, Card, CardContent, CardHeader, CardTitle, Slider, Input } from 
 import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
 import { AdminErrorState } from "@/components/AdminErrorState";
 import { AdminLoadingState } from "@/components/AdminLoadingState";
-import { ColorField } from "@/features/settings/components/ThemeColorFields";
-import { PreviewPalette, type ThemePreviewData } from "@/features/settings/components/ThemePreview";
+import { ColorField } from "../components/ThemeColorFields";
+import { PreviewPalette, type ThemePreviewData } from "../components/ThemePreview";
 import {
   PresetPicker,
   findActivePreset,
@@ -21,14 +21,14 @@ import {
   exportPresetsToFile,
   type ThemePreset,
   type ImportPlan,
-} from "@/features/settings/components/ThemePresets";
+} from "../components/ThemePresets";
 import {
   randomizeTheme,
   nextHarmonyType,
   HARMONY_LABELS,
   generateSeed,
   type HarmonyType,
-} from "@/features/settings/lib/randomize-theme";
+} from "../lib/randomize-theme";
 
 type ThemeData = ThemePreviewData;
 

@@ -9,7 +9,7 @@ import {
   Input,
   Textarea,
 } from "@workspace/ui";
-import { type Message as Msg } from "@/features/messages/components/MessageCard";
+import { type Message as Msg } from "../components/MessageCard";
 
 interface ReplyDialogProps {
   replyTo: Msg | null;

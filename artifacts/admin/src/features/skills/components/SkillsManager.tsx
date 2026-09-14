@@ -13,9 +13,9 @@ import { PageHeader } from "@/components/PageHeader";
 import { RowActions } from "@/components/RowActions";
 import { FormDialogFooter } from "@/components/FormDialogFooter";
 import { api } from "@/lib/api-client";
-import AiTextButton from "@/features/ai/components/AiTextButton";
-import { useSkillsList } from "@/features/skills/hooks/useSkills";
-import { type SkillRow, BLANK_SKILL, mapToSkillRow } from "@/features/skills/types";
+import { AiTextButton } from "@/features/ai";
+import { useSkillsList } from "../hooks/useSkills";
+import { type SkillRow, BLANK_SKILL, mapToSkillRow } from "../types";
 import { exportToCsv } from "@/lib/export-csv";
 
 const UNCATEGORIZED = "Uncategorized";

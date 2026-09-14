@@ -1,5 +1,5 @@
 import { Download } from "lucide-react";
-import type { HeroCTAAction } from "@/features/hero/types";
+import type { HeroCTAAction } from "../types";
 import type { TranslationKeys } from "@/i18n/en";
 
 interface HeroCTAButtonsProps {

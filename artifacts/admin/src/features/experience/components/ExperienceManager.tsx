@@ -14,7 +14,7 @@ import { AdminLoadingState } from "@/components/AdminLoadingState";
 import { PageHeader } from "@/components/PageHeader";
 import { RowActions } from "@/components/RowActions";
 import { FormDialogFooter } from "@/components/FormDialogFooter";
-import AiTextButton from "@/features/ai/components/AiTextButton";
+import { AiTextButton } from "@/features/ai";
 import { useEntityQuery } from "@/lib/use-entity-query";
 import { exportToCsv } from "@/lib/export-csv";
 

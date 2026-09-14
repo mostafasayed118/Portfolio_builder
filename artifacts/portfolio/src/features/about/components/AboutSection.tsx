@@ -1,8 +1,8 @@
 import { GraduationCap, Languages, MapPin, Briefcase } from "lucide-react";
 import SkillMeter from "@/components/SkillMeter";
 import { SKILLS, STATS } from "@/data/portfolio";
-import { useAbout } from "@/features/about/hooks/useAbout";
-import { AboutSkeleton } from "@/features/about/components/AboutSkeleton";
+import { useAbout } from "../hooks/useAbout";
+import { AboutSkeleton } from "../components/AboutSkeleton";
 import SectionHeader from "@/components/SectionHeader";
 import { useLanguage } from "@/lib/language";
 

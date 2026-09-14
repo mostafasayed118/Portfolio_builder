@@ -1,7 +1,7 @@
 import { Mail } from "lucide-react";
 import { Card, CardContent } from "@workspace/ui";
 import { SmartEmptyState } from "@/components/SmartEmptyState";
-import { type Message as Msg } from "@/features/messages/components/MessageCard";
+import { type Message as Msg } from "../components/MessageCard";
 
 interface MessageEmptyStateProps {
   /** The full All-view list — distinguishes "nothing at all" from "this filter". */

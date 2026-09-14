@@ -3,15 +3,15 @@ import { SHORTCUTS_OPENED_EVENT } from "@/components/ShortcutsDialog";
 import { AdminErrorState } from "@/components/AdminErrorState";
 import { AdminLoadingState } from "@/components/AdminLoadingState";
 import { useAllMessages } from "@/lib/use-entity-query";
-import { type Message as Msg } from "@/features/messages/components/MessageCard";
+import { type Message as Msg } from "../components/MessageCard";
 import {
   MessageConfirmDialogs, MessageEmptyState, MessageFilterBar, MessageList, MessagePagination,
   MessagePresetBar, MessageSelectionToolbar, MessagesHeader, ReplyDialog,
-} from "@/features/messages/components";
-import { useMessageActions } from "@/features/messages/hooks/useMessageActions";
-import { useMessageFilters, type MessageView } from "@/features/messages/hooks/useMessageFilters";
-import { useMessageSelection } from "@/features/messages/hooks/useMessageSelection";
-import { useMessageShortcuts } from "@/features/messages/hooks/useMessageShortcuts";
+} from "../components";
+import { useMessageActions } from "../hooks/useMessageActions";
+import { useMessageFilters, type MessageView } from "../hooks/useMessageFilters";
+import { useMessageSelection } from "../hooks/useMessageSelection";
+import { useMessageShortcuts } from "../hooks/useMessageShortcuts";
 
 /** Thin composition shell: wires the messages hooks to the child components. */
 export default function MessagesManager() {

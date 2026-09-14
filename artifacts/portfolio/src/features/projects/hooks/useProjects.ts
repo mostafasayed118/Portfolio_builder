@@ -1,6 +1,6 @@
 import { useProjects as useDbProjects } from "@/hooks/usePortfolioData";
 import { PROJECTS } from "@/data/portfolio";
-import type { ImageVariant, Project } from "@/features/projects/types";
+import type { ImageVariant, Project } from "../types";
 
 export function useProjects() {
   const query = useDbProjects();

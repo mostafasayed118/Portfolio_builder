@@ -2,7 +2,7 @@ import { memo } from "react";
 import { useLocation } from "wouter";
 import { ExternalLink, Github, Sparkles, Globe, Smartphone, Cloud, Code2, Database } from "lucide-react";
 import OptimizedImage from "@/components/OptimizedImage";
-import type { Project } from "@/features/projects/types";
+import type { Project } from "../types";
 
 const CATEGORY_CONFIG: Record<string, { icon: typeof Globe; label: string; color: string }> = {
   web: { icon: Globe, label: "Web App", color: "text-category-web bg-category-web/10 border-category-web/20" },

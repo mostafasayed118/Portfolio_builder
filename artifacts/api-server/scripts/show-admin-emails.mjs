@@ -1,4 +1,3 @@
-/* global process */
 /**
  * Prints the configured admin allowlist WITHOUT leaking raw email addresses.
  *

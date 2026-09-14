@@ -2,7 +2,7 @@ import { useAboutContent } from "@/hooks/usePortfolioData";
 import { ABOUT } from "@/data/portfolio";
 import { useLanguage } from "@/lib/language";
 import type { TranslationKeys } from "@/i18n";
-import type { AboutData } from "@/features/about/types";
+import type { AboutData } from "../types";
 
 function getLevelLabel(level: number, t: TranslationKeys): string {
   const { levels } = t.skills;

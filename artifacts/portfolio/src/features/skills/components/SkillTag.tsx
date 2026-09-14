@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Skill, SkillLevel } from "@/features/skills/types";
+import type { Skill, SkillLevel } from "../types";
 import { PROFICIENCY_THRESHOLDS } from "@/data/skills";
 import type { TranslationKeys } from "@/i18n";
 

@@ -14,7 +14,7 @@ import { SmartEmptyState } from "@/components/SmartEmptyState";
 import { AdminErrorState } from "@/components/AdminErrorState";
 import { AdminLoadingState } from "@/components/AdminLoadingState";
 import ImageUploader, { type UploadedImage } from "@/components/ImageUploader";
-import MarkdownEditor from "@/features/posts/components/MarkdownEditor";
+import MarkdownEditor from "../components/MarkdownEditor";
 import { useEntityQuery } from "@/lib/use-entity-query";
 import type { BlogPost } from "@workspace/supabase/types";
 

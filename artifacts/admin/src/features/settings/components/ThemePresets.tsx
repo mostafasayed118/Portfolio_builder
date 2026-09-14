@@ -1,7 +1,7 @@
 import { Check, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api-client";
-import type { ThemePreviewData } from "@/features/settings/components/ThemePreview";
+import type { ThemePreviewData } from "../components/ThemePreview";
 
 /**
  * Preset theme templates for the admin Theme Manager.

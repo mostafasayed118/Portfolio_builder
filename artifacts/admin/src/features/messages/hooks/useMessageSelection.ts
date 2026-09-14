@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { type Message as Msg } from "@/features/messages/components/MessageCard";
+import { type Message as Msg } from "../components/MessageCard";
 
 interface UseMessageSelectionInput {
   /** The rows on the currently rendered page. */

@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { useAllMessages, useUnreadCountQuery, type MessagePreset } from "@/lib/use-entity-query";
-import { type Message as Msg, isArchived, isUnread } from "@/features/messages/components/MessageCard";
+import { type Message as Msg, isArchived, isUnread } from "../components/MessageCard";
 
 export type MessageFilter = "all" | "unread" | "read" | "archived" | "spam";
 

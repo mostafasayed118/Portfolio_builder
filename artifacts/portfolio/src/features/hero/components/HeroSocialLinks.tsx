@@ -1,5 +1,5 @@
 import { Github, Linkedin, Mail, Youtube, Facebook } from "lucide-react";
-import type { HeroData } from "@/features/hero/types";
+import type { HeroData } from "../types";
 
 interface HeroSocialLinksProps {
   hero: HeroData;

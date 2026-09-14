@@ -1,4 +1,4 @@
-import type { ThemePreviewData } from "@/features/settings/components/ThemePreview";
+import type { ThemePreviewData } from "../components/ThemePreview";
 
 /**
  * Random palette generator for the Theme Manager's "Randomize" button.

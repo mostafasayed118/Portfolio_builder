@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
 import { getContactInfo } from "@workspace/db/contact-info";
 import { CONTACT } from "@/data/portfolio";
-import type { ContactInfo } from "@/features/contact/types";
+import type { ContactInfo } from "../types";
 
 export function useContact() {
   const { data: contactData } = useQuery({

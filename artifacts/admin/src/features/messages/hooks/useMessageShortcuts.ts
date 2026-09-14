@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useToast } from "@workspace/ui";
-import { type Message as Msg } from "@/features/messages/components/MessageCard";
+import { type Message as Msg } from "../components/MessageCard";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { type MessageView } from "./useMessageFilters";
 

@@ -4,7 +4,7 @@ import { useFormValidation, SmartInput, SmartTextarea, createValidationRules } f
 import { contactFormSchema } from "@workspace/validation/schemas";
 import { getCsrfToken, clearCsrfCache } from "@/lib/csrf";
 import { getApiUrl } from "@/lib/env";
-import TurnstileWidget, { isTurnstileConfigured, getTurnstileSiteKey } from "@/features/contact/components/TurnstileWidget";
+import TurnstileWidget, { isTurnstileConfigured, getTurnstileSiteKey } from "../components/TurnstileWidget";
 
 const apiBase = getApiUrl();
 

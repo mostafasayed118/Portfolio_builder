@@ -1,4 +1,4 @@
-import { MessageCard, type Message as Msg } from "@/features/messages/components/MessageCard";
+import { MessageCard, type Message as Msg } from "../components/MessageCard";
 import { formatDateTime } from "@/lib/format-date";
 
 interface MessageListProps {

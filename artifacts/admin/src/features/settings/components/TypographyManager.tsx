@@ -7,7 +7,7 @@ import { logError } from "@/lib/logger";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, Slider } from "@workspace/ui";
 import { AdminErrorState } from "@/components/AdminErrorState";
 import { AdminLoadingState } from "@/components/AdminLoadingState";
-import { TypographyPreview } from "@/features/settings/components/TypographyPreview";
+import { TypographyPreview } from "../components/TypographyPreview";
 
 type TypoData = {
   body_font: string; display_font: string; body_font_url: string; display_font_url: string;

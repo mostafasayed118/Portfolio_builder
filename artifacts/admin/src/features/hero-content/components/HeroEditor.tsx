@@ -9,11 +9,11 @@ import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useBeforeUnload } from "@/hooks/useBeforeUnload";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
 import ImageUploader, { type UploadedImage } from "@/components/ImageUploader";
-import { HeroLivePreview, type HeroFormData } from "@/features/hero-content/components/HeroLivePreview";
+import { HeroLivePreview, type HeroFormData } from "../components/HeroLivePreview";
 import { EditorErrorState, EditorLoadingState } from "@/components/EditorStates";
 import { EditorHeader, EditorLayout } from "@/components/EditorScaffold";
 import { EditorCard, EditorField } from "@/components/EditorForm";
-import AiTextButton from "@/features/ai/components/AiTextButton";
+import { AiTextButton } from "@/features/ai";
 
 
 export default function HeroEditor() {

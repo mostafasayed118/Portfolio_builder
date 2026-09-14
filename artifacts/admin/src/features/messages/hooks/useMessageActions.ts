@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@workspace/ui";
 import { api } from "@/lib/api-client";
-import { type Message as Msg } from "@/features/messages/components/MessageCard";
+import { type Message as Msg } from "../components/MessageCard";
 import { isPresetView, type MessageView } from "./useMessageFilters";
 import { useMessageReply } from "./useMessageReply";
 

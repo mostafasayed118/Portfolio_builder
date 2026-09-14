@@ -162,10 +162,7 @@ describe("buildSiteContext concurrent fetches", () => {
   });
 
   it("caps list queries with .limit(100)", async () => {
-    let calls = 0;
-    const c = delayedClient(() => {
-      calls++;
-    });
+    const c = delayedClient(() => {});
     vi.mocked(getSupabaseClient).mockReturnValue(c as never);
 
     await buildSiteContext();

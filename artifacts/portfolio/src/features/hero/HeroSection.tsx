@@ -1,12 +1,12 @@
 import { ArrowDown, MapPin } from "lucide-react";
 import { motion } from "framer-motion";
-import { useHero } from "@/features/hero/hooks/useHero";
-import { BackgroundOrbs } from "@/features/hero/components/HeroBackground";
-import { AvatarContent } from "@/features/hero/components/HeroAvatar";
-import { HeroTypewriter } from "@/features/hero/components/HeroTypewriter";
-import { HeroCTAButtons } from "@/features/hero/components/HeroCTAButtons";
-import { HeroSocialLinks } from "@/features/hero/components/HeroSocialLinks";
-import { HeroSkeleton } from "@/features/hero/components/HeroSkeleton";
+import { useHero } from "./hooks/useHero";
+import { BackgroundOrbs } from "./components/HeroBackground";
+import { AvatarContent } from "./components/HeroAvatar";
+import { HeroTypewriter } from "./components/HeroTypewriter";
+import { HeroCTAButtons } from "./components/HeroCTAButtons";
+import { HeroSocialLinks } from "./components/HeroSocialLinks";
+import { HeroSkeleton } from "./components/HeroSkeleton";
 import { CONTACT } from "@/data/portfolio";
 
 export default function HeroSection() {
