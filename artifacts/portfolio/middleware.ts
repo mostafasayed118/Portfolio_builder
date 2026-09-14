@@ -29,7 +29,7 @@
 const NONCE_PLACEHOLDER = "__CSP_NONCE__";
 
 /** Supabase project the portfolio reads its content from. */
-const SUPABASE_URL = "https://txnuvpxhghxiwynhtbvo.supabase.co";
+const SUPABASE_URL = "https://njibfrkovexikcwzycan.supabase.co";
 /** API server powering the contact form and CV download. */
 const API_URL = "https://portfolio-builder-api-six.vercel.app";
 /** CSP violation reports are POSTed here (rate-limited, unauthenticated). */
@@ -61,7 +61,7 @@ function buildCsp(nonce: string): string {
     `script-src 'self' 'nonce-${nonce}' ${TURNSTILE_URL}`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com data:",
-    "img-src 'self' data: blob: https:",
+    "img-src 'self' data: blob: https://*.supabase.co",
     `connect-src 'self' ${SUPABASE_URL} wss://${supabaseHost} ${API_URL} ${TURNSTILE_URL}`,
     `frame-src 'self' https://www.openstreetmap.org ${TURNSTILE_URL}`,
     "worker-src 'self' blob:",

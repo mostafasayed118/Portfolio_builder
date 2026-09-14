@@ -7,6 +7,7 @@ import RemarkGfm from "remark-gfm";
 import SEO from "@/components/SEO";
 import { usePostBySlug, usePosts } from "@/hooks/use-portfolio-data";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
+import { getSiteUrl } from "@/lib/env";
 import { trackEvent } from "@workspace/db/analytics";
 import { logWarn } from "@/lib/logger";
 import { BlogPostCard, formatPostDate, getReadingTime } from "@/features/blog";
@@ -110,7 +111,7 @@ export default function BlogPostPage({ slug }: BlogPostPageProps) {
     );
   }
 
-  const baseUrl = import.meta.env.VITE_SITE_URL ?? "https://mustafa-sayed-portfolio.vercel.app";
+  const baseUrl = getSiteUrl();
   const articleUrl = `${baseUrl}/blog/${post.slug}`;
 
   return (
@@ -195,6 +196,9 @@ export default function BlogPostPage({ slug }: BlogPostPageProps) {
               <img
                 src={post.cover_image_url}
                 alt={post.title}
+                width={1200}
+                height={630}
+                loading="lazy"
                 className="w-full h-64 md:h-80 object-cover rounded-2xl border border-border/60 mb-8"
               />
             )}

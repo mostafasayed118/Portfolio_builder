@@ -10,7 +10,7 @@ import { listCertifications } from "@workspace/db/certifications";
 import { fetchProjectBySlug } from "@workspace/db/projects";
 import { listEntityImages, listCoversByEntity } from "@workspace/db/images";
 import { listPublishedPosts, getPublishedPostBySlug } from "@workspace/db/posts";
-import { SKILL_CATEGORIES } from "@/data/skills";
+import { SKILL_CATEGORIES, getSkillLevel, type SkillLevel } from "@/data/skills";
 
 // Realtime sync (use-realtime-sync.ts) handles live updates for the
 // 3 most-active tables. The remaining tables (about, skills,
@@ -188,14 +188,12 @@ const categoryColorMap = new Map(
 );
 
 export function groupSkillsByCategory(skills: SkillListItem[]) {
-  const grouped: Record<string, { name: string; proficiency: number; level: "Expert" | "Advanced" | "Intermediate" | "Familiar" }[]> = {};
+  const grouped: Record<string, { name: string; proficiency: number; level: SkillLevel }[]> = {};
   for (const s of skills) {
     if (s.is_visible === false) continue;
     const cat = s.category || "Other";
     if (!grouped[cat]) grouped[cat] = [];
-    const level: "Expert" | "Advanced" | "Intermediate" | "Familiar" = s.proficiency >= 90 ? "Expert" :
-                  s.proficiency >= 75 ? "Advanced" :
-                  s.proficiency >= 60 ? "Intermediate" : "Familiar";
+    const level: SkillLevel = getSkillLevel(s.proficiency);
     grouped[cat].push({
       name: s.name,
       proficiency: s.proficiency,

@@ -59,3 +59,12 @@ export function getApiUrl(): string {
   }
   return "";
 }
+
+/**
+ * Returns the public site base URL used for canonical links and
+ * schema.org metadata. Precedence: VITE_SITE_URL env var, then the
+ * production deploy URL.
+ */
+export function getSiteUrl(): string {
+  return import.meta.env.VITE_SITE_URL ?? "https://mustafa-sayed-portfolio.vercel.app";
+}

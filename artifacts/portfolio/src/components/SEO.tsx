@@ -4,8 +4,9 @@ import { useLocation } from "wouter";
 import { HERO, PROJECTS, CONTACT } from "@/data/portfolio";
 import { useBranding } from "@/lib/branding";
 import { useLanguage } from "@/lib/language";
+import { getSiteUrl } from "@/lib/env";
 
-const SITE_URL = import.meta.env.VITE_SITE_URL ?? "https://mustafa-sayed-portfolio.vercel.app";
+const SITE_URL = getSiteUrl();
 const DEFAULT_IMAGE = `${SITE_URL}/opengraph.jpg`;
 const TWITTER_HANDLE = import.meta.env.VITE_TWITTER_HANDLE ?? "";
 

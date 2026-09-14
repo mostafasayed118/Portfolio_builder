@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Skill, SkillLevel } from "@/features/skills/types";
+import { PROFICIENCY_THRESHOLDS } from "@/data/skills";
 import type { TranslationKeys } from "@/i18n";
 
 function levelLabel(lvl: SkillLevel, t?: TranslationKeys): string {
@@ -21,7 +22,7 @@ export function SkillTag({ skill, index, t }: { skill: Skill; index: number; t?:
   const [hovered, setHovered] = useState(false);
   const cfg = LEVEL_CONFIG[skill.level];
   const lvlLabel = levelLabel(skill.level, t);
-  const sizeClass = skill.proficiency >= 90 ? "text-sm px-4 py-2" : skill.proficiency >= 75 ? "text-xs px-3.5 py-1.5" : "text-xs px-3 py-1.5";
+  const sizeClass = skill.proficiency >= PROFICIENCY_THRESHOLDS.expert ? "text-sm px-4 py-2" : skill.proficiency >= PROFICIENCY_THRESHOLDS.advanced ? "text-xs px-3.5 py-1.5" : "text-xs px-3 py-1.5";
 
   return (
     <div className="relative group"
@@ -31,7 +32,7 @@ export function SkillTag({ skill, index, t }: { skill: Skill; index: number; t?:
       role="button" tabIndex={0}
       aria-label={`${skill.name}, ${lvlLabel}, ${skill.proficiency}% proficiency`}
       data-testid={`skill-tag-${skill.name.toLowerCase().replace(/\s+/g, "-")}`}>
-      <div className={`flex items-center gap-1.5 rounded-full border font-medium transition-all duration-200 cursor-pointer active:scale-[0.97] glass hover:scale-105 hover:shadow-[var(--shadow-float)] hover:border-primary/30 ${sizeClass} ${skill.proficiency >= 90 ? "font-semibold" : ""}`}
+      <div className={`flex items-center gap-1.5 rounded-full border font-medium transition-all duration-200 cursor-pointer active:scale-[0.97] glass hover:scale-105 hover:shadow-[var(--shadow-float)] hover:border-primary/30 ${sizeClass} ${skill.proficiency >= PROFICIENCY_THRESHOLDS.expert ? "font-semibold" : ""}`}
         style={{ animationDelay: `${index * 35}ms` }}>
         {skill.icon && <span className="text-base leading-none" aria-hidden>{skill.icon}</span>}
         <span>{skill.name}</span>

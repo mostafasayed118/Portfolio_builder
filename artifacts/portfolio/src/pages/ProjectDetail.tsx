@@ -7,6 +7,7 @@ import SEO, { generateProjectSchema } from "@/components/SEO";
 import { ProjectCard, ProjectGallery, GalleryEmpty, GalleryPlaceholder, mapDbProjectDetail } from "@/features/projects";
 import { useProjectBySlug, useProjectImages } from "@/hooks/use-portfolio-data";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
+import { getSiteUrl } from "@/lib/env";
 import { trackEvent } from "@workspace/db/analytics";
 import { logWarn } from "@/lib/logger";
 
@@ -142,7 +143,7 @@ export default function ProjectDetail({ slug }: ProjectDetailProps) {
       <SEO
         title={project.title}
         description={project.shortDescription}
-        url={`${import.meta.env.VITE_SITE_URL ?? "https://mustafa-sayed-portfolio.vercel.app"}/projects/${project.slug}`}
+        url={`${getSiteUrl()}/projects/${project.slug}`}
         type="article"
         publishedTime={project.completedAt}
         tags={project.techStack}

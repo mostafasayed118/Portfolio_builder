@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLanguage } from "@/lib/language";
+import { getSiteUrl } from "@/lib/env";
 import { useLocation } from "wouter";
 import { ArrowLeft, FileX, Search } from "lucide-react";
 import SEO from "@/components/SEO";
@@ -52,7 +53,7 @@ export default function Blog() {
       <SEO
         title={heading}
         description={subtitle}
-        url={`${import.meta.env.VITE_SITE_URL ?? "https://mustafa-sayed-portfolio.vercel.app"}/blog`}
+        url={`${getSiteUrl()}/blog`}
         type="website"
       />
       <main className="min-h-screen pt-20 relative overflow-hidden">

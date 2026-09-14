@@ -23,14 +23,20 @@ export interface SkillCategory {
   skills: Skill[];
 }
 
-function level(p: number): SkillLevel {
-  if (p >= 90) return "Expert";
-  if (p >= 75) return "Advanced";
-  if (p >= 60) return "Intermediate";
+export const PROFICIENCY_THRESHOLDS = {
+  expert: 90,
+  advanced: 75,
+  intermediate: 60,
+} as const;
+
+export function getSkillLevel(proficiency: number): SkillLevel {
+  if (proficiency >= PROFICIENCY_THRESHOLDS.expert) return "Expert";
+  if (proficiency >= PROFICIENCY_THRESHOLDS.advanced) return "Advanced";
+  if (proficiency >= PROFICIENCY_THRESHOLDS.intermediate) return "Intermediate";
   return "Familiar";
 }
 function s(name: string, proficiency: number, icon?: string): Skill {
-  return { name, proficiency, level: level(proficiency), icon };
+  return { name, proficiency, level: getSkillLevel(proficiency), icon };
 }
 
 // Technology icon mapping
