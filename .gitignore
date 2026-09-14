@@ -51,11 +51,6 @@ Thumbs.db
 .env.local
 .env
 
-# TestSprite
-testsprite_tests/tmp/
-testsprite_tests/*.log
-testsprite_tests/.env
-
 .vercel
 
 # Turbo build cache
@@ -69,20 +64,17 @@ section-check.tmp.mjs
 # Test artifacts (should never be tracked)
 playwright-report/
 test-results/
+test-*.log
+playwright/.auth/
+
+# TestSprite
+testsprite_tests/
 
 # Windows NUL device artifacts
 nul
 
-testsprite_tests\tmp\config.json
-
-# test artifacts and e2e runtime state
-test-results/
-playwright-report/
-playwright/.auth/
-test-*.log
-
+# Supabase CLI local state
 supabase/.temp/
-testsprite_tests/tmp/config.json
 
 # Pulled/derived env dumps (contain live secrets — never commit)
 *.env.tmp
@@ -94,3 +86,14 @@ testsprite_tests/tmp/config.json
 
 # local E2E mailbox credentials (never committed)
 e2e/.auth-mailtm.json
+
+# Tool caches and generated dumps (never commit — credentials, AST dumps,
+# zips of pasted assets). `list/` holds Vercel CLI auth tokens.
+list/
+graphify-out/
+.kilo/
+attached_assets/
+
+# Build/scratch debris
+admin-build-output.txt
+COMMIT_MSG.txt
