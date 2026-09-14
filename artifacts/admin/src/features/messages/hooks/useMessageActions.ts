@@ -1,9 +1,10 @@
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@workspace/ui";
 import { api } from "@/lib/api-client";
 import { type Message as Msg } from "@/features/messages/components/MessageCard";
 import { isPresetView, type MessageView } from "./useMessageFilters";
+import { useMessageReply } from "./useMessageReply";
 
 interface UseMessageActionsInput {
   selectedIds: Set<string>;
@@ -17,7 +18,7 @@ interface UseMessageActionsInput {
 /**
  * Every mutation the messages screen performs — reply, mark read, archive,
  * restore, bulk operations, and the one-click test-submission cleanup —
- * plus the reply-dialog state those actions drive.
+ * plus the reply-dialog state (owned by useMessageReply).
  */
 export function useMessageActions({
   selectedIds,
@@ -29,11 +30,7 @@ export function useMessageActions({
 }: UseMessageActionsInput) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
-  const [replyTo, setReplyTo] = useState<Msg | null>(null);
-  const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
-  const [sendingReply, setSendingReply] = useState(false);
+  const reply = useMessageReply();
 
   const fail = useCallback(
     (title: string, err: unknown) => {
@@ -50,51 +47,6 @@ export function useMessageActions({
     await queryClient.invalidateQueries({ queryKey: ["messages"] });
     await queryClient.invalidateQueries({ queryKey: ["unreadCount"] });
   }, [queryClient]);
-
-  const openReply = useCallback((msg: Msg) => {
-    setReplyTo(msg);
-    setSubject(`Re: ${msg.name}`);
-    setBody(`Hi ${msg.name},\n\nThanks for reaching out.\n\n`);
-  }, []);
-
-  const closeReply = useCallback(() => setReplyTo(null), []);
-
-  const sendReply = async () => {
-    if (!replyTo) return;
-    if (!body.trim()) {
-      toast({ title: "Reply message is required", variant: "destructive" });
-      return;
-    }
-    setSendingReply(true);
-    try {
-      let sent = false;
-      if (replyTo.id) {
-        const res = await api.messages.reply(replyTo.id, body);
-        sent = (res as { sent?: boolean }).sent === true;
-        if (!res.success) throw new Error(res.message);
-        await api.messages.markRead(replyTo.id).catch(() => {});
-        queryClient.invalidateQueries({ queryKey: ["messages"] });
-        queryClient.invalidateQueries({ queryKey: ["unreadCount"] });
-      }
-
-      if (sent) {
-        setReplyTo(null);
-        setBody("");
-        toast({ title: "Reply sent", description: `Replied to ${replyTo.email}` });
-      } else {
-        // Email delivery not configured — fall back to the user's mail client.
-        const mailto = `mailto:${replyTo.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-        window.location.href = mailto;
-        setReplyTo(null);
-        setBody("");
-        toast({ title: "Reply opened in email app (sending not configured)" });
-      }
-    } catch (err) {
-      fail("Failed to send reply", err);
-    } finally {
-      setSendingReply(false);
-    }
-  };
 
   const handleMarkRead = async (msg: Msg) => {
     try {
@@ -245,15 +197,7 @@ export function useMessageActions({
   }, [selectedIds, totalMatching, clearSelection, invalidateMessages, fail, toast]);
 
   return {
-    replyTo,
-    subject,
-    setSubject,
-    body,
-    setBody,
-    sendingReply,
-    openReply,
-    closeReply,
-    sendReply,
+    ...reply,
     handleMarkRead,
     handleArchive,
     handleUnarchive,
