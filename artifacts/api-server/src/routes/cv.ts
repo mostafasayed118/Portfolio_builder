@@ -24,6 +24,34 @@ function sanitizeFileName(name: string): string {
  * path below is unaffected.
  */
 let cvPdfCache: { bytes: Uint8Array; at: number } | null = null;
+let cvPdfInflight: Promise<Uint8Array> | null = null;
+
+/**
+ * Cache-read with in-flight coalescing: while a generation is underway,
+ * concurrent callers await the same promise instead of starting their own.
+ * A rejected generation clears the in-flight slot and propagates to every
+ * waiter, so each falls back to storage independently.
+ */
+async function getCvPdf(
+  supabase: ReturnType<typeof getSupabaseClient>,
+  portfolioUrl: string,
+): Promise<Uint8Array> {
+  const now = Date.now();
+  if (cvPdfCache && now - cvPdfCache.at < env.CV_PDF_CACHE_TTL_MS) {
+    return cvPdfCache.bytes;
+  }
+  if (!cvPdfInflight) {
+    cvPdfInflight = generateCvPdf(supabase, portfolioUrl)
+      .then((bytes) => {
+        cvPdfCache = { bytes, at: Date.now() };
+        return bytes;
+      })
+      .finally(() => {
+        cvPdfInflight = null;
+      });
+  }
+  return cvPdfInflight;
+}
 
 router.get("/cv", async (req: Request, res: Response) => {
   const portfolioUrl = env.VITE_SITE_URL ?? "https://mustafa-sayed-portfolio.vercel.app";
@@ -32,9 +60,7 @@ router.get("/cv", async (req: Request, res: Response) => {
     const now = Date.now();
     let pdfBytes = cvPdfCache && now - cvPdfCache.at < env.CV_PDF_CACHE_TTL_MS ? cvPdfCache.bytes : null;
     if (!pdfBytes) {
-      const supabase = getSupabaseClient();
-      pdfBytes = await generateCvPdf(supabase, portfolioUrl);
-      cvPdfCache = { bytes: pdfBytes, at: now };
+      pdfBytes = await getCvPdf(getSupabaseClient(), portfolioUrl);
     }
     const fileName = "Mustafa_Sayed_CV.pdf";
     res.setHeader("Content-Type", "application/pdf");

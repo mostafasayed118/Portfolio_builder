@@ -125,6 +125,31 @@ describe("CV API", () => {
       expect(second.headers["content-length"]).toBe(first.headers["content-length"]);
     });
 
+    it("coalesces concurrent misses into a single generation", async () => {
+      // TTL 0 keeps the cache out of the picture so this isolates the
+      // in-flight dedup path specifically.
+      _setOverride("CV_PDF_CACHE_TTL_MS", "0");
+      const fakePdf = Buffer.from("%PDF-1.4 concurrent-content");
+      mockGenerateCvPdf.mockImplementation(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(() => resolve(fakePdf), 20),
+          ),
+      );
+
+      const responses = await Promise.all([
+        request(app).get("/api/v1/cv"),
+        request(app).get("/api/v1/cv"),
+        request(app).get("/api/v1/cv"),
+      ]);
+
+      expect(mockGenerateCvPdf).toHaveBeenCalledTimes(1);
+      for (const res of responses) {
+        expect(res.status).toBe(200);
+        expect(res.body).toEqual(fakePdf);
+      }
+    });
+
     it("regenerates the PDF after the cache TTL expires", async () => {
       // Prime the cache deterministically (TTL 0 writes without reads).
       _setOverride("CV_PDF_CACHE_TTL_MS", "0");
