@@ -15,6 +15,11 @@ export async function buildSiteContext(): Promise<string> {
         return text;
       })
       .catch(() => {
+        // Intentional error backoff: refreshing the stale entry's timestamp
+        // serves the old text as fresh for one more TTL, so a Supabase
+        // outage costs at most one failed fetch per TTL window instead of a
+        // retry storm on every request. The slot is still cleared in
+        // .finally, so the entry is re-fetched once the window lapses.
         const stale = cache?.text ?? "";
         if (stale) cache = { text: stale, at: Date.now() };
         return stale;

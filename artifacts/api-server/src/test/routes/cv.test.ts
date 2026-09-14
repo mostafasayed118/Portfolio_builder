@@ -150,6 +150,42 @@ describe("CV API", () => {
       }
     });
 
+    it("serves the storage fallback to every concurrent request when generation rejects", async () => {
+      // TTL 0 isolates the in-flight dedup path. A slow rejection lets all
+      // three requests join the shared promise; when it rejects, each
+      // handler must fall back to storage independently.
+      _setOverride("CV_PDF_CACHE_TTL_MS", "0");
+      const fallbackBytes = new TextEncoder().encode("%PDF-1.4 concurrent-fallback");
+      mockGenerateCvPdf.mockImplementation(
+        () =>
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("generation down")), 20),
+          ),
+      );
+      mockSupabaseClient.maybeSingle.mockResolvedValue({
+        data: { object_path: "cv/fallback.pdf", file_name: "Fallback_CV.pdf" },
+        error: null,
+      });
+      mockSupabaseClient.storage.download.mockResolvedValue({
+        data: { arrayBuffer: () => Promise.resolve(fallbackBytes.buffer) },
+        error: null,
+      });
+
+      const responses = await Promise.all([
+        request(app).get("/api/v1/cv"),
+        request(app).get("/api/v1/cv"),
+        request(app).get("/api/v1/cv"),
+      ]);
+
+      // Shared rejection: one generation attempt coalesces the waiters.
+      expect(mockGenerateCvPdf).toHaveBeenCalledTimes(1);
+      for (const res of responses) {
+        expect(res.status).toBe(200);
+        expect(res.headers["content-disposition"]).toMatch(/Fallback_CV\.pdf/);
+        expect(res.body).toEqual(Buffer.from(fallbackBytes));
+      }
+    });
+
     it("regenerates the PDF after the cache TTL expires", async () => {
       // Prime the cache deterministically (TTL 0 writes without reads).
       _setOverride("CV_PDF_CACHE_TTL_MS", "0");

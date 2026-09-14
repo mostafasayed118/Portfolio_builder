@@ -117,6 +117,50 @@ describe("buildSiteContext concurrent fetches", () => {
     expect(calls).toBe(7);
   });
 
+  it("serves the same stale text to concurrent callers when the fetch rejects", async () => {
+    // Prime a non-empty cache entry via a successful fetch.
+    const ok = client();
+    ok.from().maybeSingle.mockResolvedValueOnce({
+      data: {
+        name: "Stale",
+        heading: "Engineer",
+        roles: ["Dev"],
+        description: "Builder",
+        email: "s@x.com",
+        github_url: "",
+        linkedin_url: "",
+        twitter_url: null,
+        youtube_url: null,
+        facebook_url: null,
+        tagline: null,
+        available: true,
+      },
+      error: null,
+    });
+    vi.mocked(getSupabaseClient).mockReturnValue(ok as never);
+    await buildSiteContext();
+
+    // Swap in a client whose queries reject; TTL 0 keeps the cache read
+    // path out of the picture so the concurrent callers reach the failing
+    // fetch and must be served the stale entry from the error path.
+    const failing = {
+      from: vi.fn(() => {
+        throw new Error("supabase down");
+      }),
+    };
+    vi.mocked(getSupabaseClient).mockReturnValue(failing as never);
+
+    const [a, b, d] = await Promise.all([
+      buildSiteContext(),
+      buildSiteContext(),
+      buildSiteContext(),
+    ]);
+
+    expect(a).toContain("Name: Stale");
+    expect(a).toBe(b);
+    expect(b).toBe(d);
+  });
+
   it("caps list queries with .limit(100)", async () => {
     let calls = 0;
     const c = delayedClient(() => {
