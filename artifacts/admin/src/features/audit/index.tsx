@@ -1,96 +1,50 @@
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
-import { Clock } from "lucide-react";
-import { Badge, Button, Card, CardContent, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui";
+import { Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui";
 import { AdminErrorState } from "@/components/AdminErrorState";
 import { AdminLoadingState } from "@/components/AdminLoadingState";
+import { AuditEntryCard } from "./AuditEntryCard";
 
-interface AuditEntry {
-  id: string;
-  entity_type: string;
-  entity_id: string;
-  version: number;
-  data: unknown;
-  changed_by: string | null;
-  created_at: string;
-}
-
-function formatTime(ts: string): string {
-  return new Date(ts).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+const AUDIT_PAGE_LIMIT = 25;
 
 export default function AuditLogPage() {
   const [entityFilter, setEntityFilter] = useState<string>("all");
-  const [items, setItems] = useState<AuditEntry[]>([]);
-  const [total, setTotal] = useState(0);
-  const [hasMore, setHasMore] = useState(false);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const limit = 25;
 
-  const { data, isLoading, isError, error, refetch } = useQuery({
+  const query = useInfiniteQuery({
     queryKey: ["audit", entityFilter],
-    queryFn: async () => {
+    queryFn: async ({ pageParam }) => {
       const res = await api.audit.list({
         entityType: entityFilter === "all" ? undefined : entityFilter,
-        limit,
-        offset: 0,
+        limit: AUDIT_PAGE_LIMIT,
+        offset: pageParam,
       });
       if (!res.success) throw new Error(res.message);
       if (!res.data) throw new Error("Audit response is missing data");
       return res.data;
     },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => {
+      if (!lastPage.pagination?.hasMore) return undefined;
+      const fetchedRows = allPages.reduce(
+        (sum, page) => sum + (page.data?.length ?? 0),
+        0,
+      );
+      return fetchedRows;
+    },
   });
 
-  useEffect(() => {
-    setItems([]);
-    setTotal(0);
-    setHasMore(false);
-  }, [entityFilter]);
+  const rows = query.data?.pages.flatMap((page) => page.data ?? []) ?? [];
+  const total = query.data?.pages[0]?.pagination?.total ?? 0;
 
-  useEffect(() => {
-    if (!data) return;
-    const next = (data.data ?? []) as AuditEntry[];
-    const pag = data.pagination;
-    setItems(next);
-    setTotal(pag?.total ?? 0);
-    setHasMore((pag?.hasMore ?? false) && next.length === limit);
-  }, [data, limit]);
+  if (query.isLoading) return <AdminLoadingState variant="audit" />;
 
-  const loadMore = async () => {
-    if (isLoadingMore) return;
-    setIsLoadingMore(true);
-    try {
-      const res = await api.audit.list({
-        entityType: entityFilter === "all" ? undefined : entityFilter,
-        limit,
-        offset: items.length,
-      });
-      if (!res.success) throw new Error(res.message);
-      const next = (res.data?.data ?? []) as AuditEntry[];
-      setItems(prev => [...prev, ...next]);
-      setTotal(res.data?.pagination?.total ?? total);
-      setHasMore((res.data?.pagination?.hasMore ?? false) && next.length === limit);
-    } catch {
-      setHasMore(false);
-    } finally {
-      setIsLoadingMore(false);
-    }
-  };
-
-  if (isLoading) return <AdminLoadingState variant="audit" />;
-
-  if (isError) {
+  if (query.isError) {
     return (
       <AdminErrorState
         title="Failed to load audit log"
-        message={error?.message}
-        onRetry={() => refetch()}
+        message={query.error?.message}
+        onRetry={() => query.refetch()}
         iconClassName="h-10 w-10 text-destructive"
       />
     );
@@ -127,51 +81,27 @@ export default function AuditLogPage() {
         </span>
       </div>
 
-      {items.length === 0 ? (
+      {rows.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground text-sm">
           No audit log entries found.
         </div>
       ) : (
         <div className="space-y-3">
-          {items.map((entry) => (
-            <Card key={entry.id}>
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Badge variant="outline" className="text-xs">
-                        {entry.entity_type}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        v{entry.version}
-                      </span>
-                    </div>
-                    <div className="mt-1 text-xs text-muted-foreground truncate">
-                      {entry.entity_id}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0 text-xs text-muted-foreground">
-                    {entry.changed_by && (
-                      <span className="truncate max-w-[120px]">
-                        {entry.changed_by}
-                      </span>
-                    )}
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {formatTime(entry.created_at)}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          {rows.map((entry) => (
+            <AuditEntryCard key={entry.id} entry={entry} />
           ))}
         </div>
       )}
 
-      {hasMore && (
+      {query.hasNextPage && (
         <div className="flex justify-center">
-          <Button variant="outline" size="sm" onClick={loadMore} disabled={isLoadingMore}>
-            {isLoadingMore ? "Loading..." : "Load more"}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void query.fetchNextPage()}
+            disabled={query.isFetchingNextPage}
+          >
+            {query.isFetchingNextPage ? "Loading..." : "Load more"}
           </Button>
         </div>
       )}
