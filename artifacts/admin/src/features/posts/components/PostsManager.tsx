@@ -1,7 +1,9 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, NotebookPen, CalendarCheck2, Image as ImageIcon } from "lucide-react";
 import { api } from "@/lib/api-client";
+import { useDeepLinkEditor } from "@/hooks/use-deep-link-editor";
+import { formatDate } from "@/lib/format-date";
 import {
   Button, Card, CardContent, Input, Textarea, Badge, Switch,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -31,11 +33,6 @@ function slugify(text: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
-}
-
-function formatDate(ts?: string | null): string {
-  if (!ts) return "—";
-  return new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 export default function PostsManager() {
@@ -73,40 +70,6 @@ export default function PostsManager() {
     setDialogOpen(true);
   };
 
-  // Deep-link support: the command palette's quick actions navigate here
-  // with a URL hash — #new opens the create dialog, #edit-<id> opens the
-  // editor for that post (used by "Edit Latest Draft"). The hash is stripped
-  // after opening so refetches don't re-open the dialog.
-  useEffect(() => {
-    const handleDeepLink = () => {
-      const hash = window.location.hash.replace(/^#/, "");
-      if (hash === "new") {
-        setEditing({ ...BLANK_POST });
-        setDialogOpen(true);
-        clearDeepLinkHash();
-        return;
-      }
-      if (hash.startsWith("edit-")) {
-        const post = posts?.find((p) => p.id === hash.slice("edit-".length));
-        if (post) {
-          setEditing({
-            id: post.id, title: post.title, slug: post.slug, excerpt: post.excerpt ?? "",
-            content: post.content, cover_image_url: post.cover_image_url,
-            tags: post.tags ?? [], is_published: post.is_published ?? false,
-          });
-          setDialogOpen(true);
-          clearDeepLinkHash();
-        }
-      }
-    };
-    const clearDeepLinkHash = () => {
-      window.history.replaceState(null, "", window.location.pathname + window.location.search);
-    };
-    handleDeepLink();
-    window.addEventListener("hashchange", handleDeepLink);
-    return () => window.removeEventListener("hashchange", handleDeepLink);
-  }, [posts]);
-
   const openEdit = (post: BlogPost) => {
     setEditing({
       id: post.id, title: post.title, slug: post.slug, excerpt: post.excerpt ?? "",
@@ -115,6 +78,13 @@ export default function PostsManager() {
     });
     setDialogOpen(true);
   };
+
+  useDeepLinkEditor({
+    items: posts,
+    getId: (p) => p.id,
+    onNew: openNew,
+    onEdit: openEdit,
+  });
 
   const handleTitleChange = (value: string) => {
     setEditing((prev) => {

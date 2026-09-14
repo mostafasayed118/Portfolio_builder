@@ -14,7 +14,7 @@ describe("admin CSP helpers", () => {
     const csp = buildCsp("n1");
     expect(csp).toContain("https://*.clerk.accounts.dev");
     expect(csp).toContain("frame-src 'self' https://*.clerk.accounts.dev");
-    expect(csp).toContain("connect-src 'self' https://txnuvpxhghxiwynhtbvo.supabase.co");
-    expect(csp).toContain("wss://txnuvpxhghxiwynhtbvo.supabase.co");
+    expect(csp).toContain("connect-src 'self' https://njibfrkovexikcwzycan.supabase.co");
+    expect(csp).toContain("wss://njibfrkovexikcwzycan.supabase.co");
   });
 });

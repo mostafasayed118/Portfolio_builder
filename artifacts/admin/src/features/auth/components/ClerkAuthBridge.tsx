@@ -142,6 +142,7 @@ export default function ClerkAuthBridge({ children }: { children: ReactNode }) {
       return;
     }
     let cancelled = false;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
     const attempt = (retries: number) => {
       diag("fetching /users/me for role lookup", { retries });
       api.users.me().then(res => {
@@ -153,17 +154,20 @@ export default function ClerkAuthBridge({ children }: { children: ReactNode }) {
           setAdminStatus("admin");
         } else {
           diag("/users/me returned no data", res);
-          if (retries > 0) setTimeout(() => attempt(retries - 1), 2000);
-          else setAdminStatus("denied");
+          if (retries > 0 && !cancelled) retryTimer = setTimeout(() => attempt(retries - 1), 2000);
+          else if (!cancelled) setAdminStatus("denied");
         }
       }).catch((err) => {
         diag("/users/me threw", String(err));
-        if (retries > 0 && !cancelled) setTimeout(() => attempt(retries - 1), 2000);
+        if (retries > 0 && !cancelled) retryTimer = setTimeout(() => attempt(retries - 1), 2000);
         else if (!cancelled) setAdminStatus("denied");
       });
     };
     attempt(2);
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      if (retryTimer !== undefined) clearTimeout(retryTimer);
+    };
   }, [isSignedIn, clerkUser]);
 
   const value: AuthContextValue = useMemo(() => {

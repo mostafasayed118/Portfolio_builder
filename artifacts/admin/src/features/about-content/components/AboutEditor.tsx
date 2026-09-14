@@ -29,11 +29,18 @@ type AboutFormData = {
   interests: string[];
 };
 
+const LANGUAGE_LEVEL_THRESHOLDS = {
+  beginner: 25,
+  intermediate: 50,
+  advanced: 75,
+  professional: 90,
+} as const;
+
 function getLanguageLabel(level: number): string {
-  if (level <= 25) return "Beginner";
-  if (level <= 50) return "Intermediate";
-  if (level <= 75) return "Advanced";
-  if (level <= 90) return "Professional";
+  if (level <= LANGUAGE_LEVEL_THRESHOLDS.beginner) return "Beginner";
+  if (level <= LANGUAGE_LEVEL_THRESHOLDS.intermediate) return "Intermediate";
+  if (level <= LANGUAGE_LEVEL_THRESHOLDS.advanced) return "Advanced";
+  if (level <= LANGUAGE_LEVEL_THRESHOLDS.professional) return "Professional";
   return "Native";
 }
 

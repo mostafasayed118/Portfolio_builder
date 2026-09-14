@@ -1,10 +1,11 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { Certification } from "@workspace/supabase/types";
 import { api } from "@/lib/api-client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useToast } from "@workspace/ui";
 import { Plus, Download } from "lucide-react";
 import { logError } from "@/lib/logger";
+import { useDeepLinkEditor } from "@/hooks/use-deep-link-editor";
 import { Button, Card, CardContent, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Input, Label, Switch } from "@workspace/ui";
 import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
 import { SmartEmptyState } from "@/components/SmartEmptyState";
@@ -53,35 +54,12 @@ export default function CertificationsManager() {
 
   const openNew = () => { setIsNew(true); setEditing({ ...EMPTY_CERT }); };
 
-  // Deep-link support: the command palette's quick actions navigate here
-  // with a URL hash — #new opens the create dialog, #edit-<id> opens the
-  // editor for that certification (deep-link by id). The hash is stripped
-  // after opening so refetches don't re-open the dialog.
-  useEffect(() => {
-    const handleDeepLink = () => {
-      const hash = window.location.hash.replace(/^#/, "");
-      if (hash === "new") {
-        setIsNew(true);
-        setEditing({ ...EMPTY_CERT });
-        clearDeepLinkHash();
-        return;
-      }
-      if (hash.startsWith("edit-")) {
-        const cert = items?.find((c) => c.id === hash.slice("edit-".length));
-        if (cert) {
-          setIsNew(false);
-          setEditing({ ...cert });
-          clearDeepLinkHash();
-        }
-      }
-    };
-    const clearDeepLinkHash = () => {
-      window.history.replaceState(null, "", window.location.pathname + window.location.search);
-    };
-    handleDeepLink();
-    window.addEventListener("hashchange", handleDeepLink);
-    return () => window.removeEventListener("hashchange", handleDeepLink);
-  }, [items]);
+  useDeepLinkEditor({
+    items,
+    getId: (c) => c.id,
+    onNew: () => { setIsNew(true); setEditing({ ...EMPTY_CERT }); },
+    onEdit: (cert) => { setIsNew(false); setEditing({ ...cert }); },
+  });
   const openEdit = (c: Cert) => { setIsNew(false); setEditing({ ...c }); };
 
   const handleSave = async () => {

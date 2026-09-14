@@ -29,7 +29,7 @@
 const NONCE_PLACEHOLDER = "__CSP_NONCE__";
 
 /** Supabase project the admin reads/writes its data from. */
-const SUPABASE_URL = "https://txnuvpxhghxiwynhtbvo.supabase.co";
+const SUPABASE_URL = "https://njibfrkovexikcwzycan.supabase.co";
 /** API server (CV generation, contact endpoints, CSP reports). */
 const API_URL = "https://portfolio-builder-api-six.vercel.app";
 /** CSP violation reports are POSTed here (rate-limited, unauthenticated). */

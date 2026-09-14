@@ -4,6 +4,7 @@ import { useToast } from "@workspace/ui";
 import { FileText, CheckCircle, ExternalLink, Trash2, Info } from "lucide-react";
 import { getSupabase } from "@/lib/supabase";
 import { logError } from "@/lib/logger";
+import { formatDateTime } from "@/lib/format-date";
 import { Badge, Button, Card, CardContent } from "@workspace/ui";
 import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
 import { api } from "@/lib/api-client";
@@ -73,8 +74,6 @@ export default function CvManager() {
     }
   };
 
-  const fmt = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
-
   if (isLoading) return <AdminLoadingState variant="cv" />;
   if (isError) return (
     <AdminErrorState
@@ -101,7 +100,7 @@ export default function CvManager() {
               <div className="h-10 w-10 rounded-lg bg-success/10 flex items-center justify-center shrink-0"><FileText size={20} className="text-success" /></div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap"><span className="font-medium text-sm truncate">{settings.fileName}</span><Badge variant="default" className="text-xs bg-success hover:bg-success/90">Live</Badge></div>
-                <p className="text-xs text-muted-foreground mt-0.5">Last updated {fmt(settings.updatedAt)}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Last updated {formatDateTime(settings.updatedAt)}</p>
               </div>
               <div className="flex gap-2 shrink-0">
                 <Button size="sm" variant="outline" className="min-h-[44px] gap-1.5 text-xs" onClick={() => window.open("/api/v1/cv", "_blank")}><ExternalLink size={12} />Preview</Button>

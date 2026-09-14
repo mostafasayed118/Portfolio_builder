@@ -1,10 +1,11 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { Experience } from "@workspace/supabase/types";
 import { api } from "@/lib/api-client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useToast } from "@workspace/ui";
 import { Plus, X, Download } from "lucide-react";
 import { logError } from "@/lib/logger";
+import { useDeepLinkEditor } from "@/hooks/use-deep-link-editor";
 import { Badge, Button, Card, CardContent, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch } from "@workspace/ui";
 import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
 import { SmartEmptyState } from "@/components/SmartEmptyState";
@@ -46,38 +47,21 @@ export default function ExperienceManager() {
   const openNew = () => { setIsNew(true); setEditing({ ...BLANK, description: [""], technologies: [] }); setTechInput(""); };
   const openEdit = (e: ExpRow) => { setIsNew(false); setEditing({ ...e, sort_order: e.sort_order ?? 999 }); setTechInput(""); };
 
-  // Deep-link support: the command palette's quick actions navigate here
-  // with a URL hash — #new opens the create dialog, #edit-<id> opens the
-  // editor for that experience. The hash is stripped after opening so
-  // refetches don't re-open the dialog.
-  useEffect(() => {
-    const handleDeepLink = () => {
-      const hash = window.location.hash.replace(/^#/, "");
-      if (hash === "new") {
-        setIsNew(true);
-        setEditing({ ...BLANK, description: [""], technologies: [] });
-        setTechInput("");
-        clearDeepLinkHash();
-        return;
-      }
-      if (hash.startsWith("edit-")) {
-        const item = items?.find((e) => e.id === hash.slice("edit-".length));
-        if (item) {
-          const { current, order_num, created_at, updated_at, ...rest } = item;
-          setIsNew(false);
-          setEditing({ ...rest, sort_order: item.sort_order ?? 999, is_published: item.is_published ?? false });
-          setTechInput("");
-          clearDeepLinkHash();
-        }
-      }
-    };
-    const clearDeepLinkHash = () => {
-      window.history.replaceState(null, "", window.location.pathname + window.location.search);
-    };
-    handleDeepLink();
-    window.addEventListener("hashchange", handleDeepLink);
-    return () => window.removeEventListener("hashchange", handleDeepLink);
-  }, [items]);
+  useDeepLinkEditor({
+    items,
+    getId: (e) => e.id,
+    onNew: () => {
+      setIsNew(true);
+      setEditing({ ...BLANK, description: [""], technologies: [] });
+      setTechInput("");
+    },
+    onEdit: (item) => {
+      const { current, order_num, created_at, updated_at, ...rest } = item;
+      setIsNew(false);
+      setEditing({ ...rest, sort_order: item.sort_order ?? 999, is_published: item.is_published ?? false });
+      setTechInput("");
+    },
+  });
 
   const updateDesc = (i: number, val: string) =>
     setEditing(x => x ? ({ ...x, description: x.description.map((d, idx) => idx === i ? val : d) }) : x);

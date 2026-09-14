@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@workspace/ui";
 import { Plus, Download } from "lucide-react";
 import { logError } from "@/lib/logger";
+import { useDeepLinkEditor } from "@/hooks/use-deep-link-editor";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Input, Label, Slider, Switch } from "@workspace/ui";
 import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
 import { SmartEmptyState } from "@/components/SmartEmptyState";
@@ -40,35 +41,12 @@ export default function SkillsManager() {
   const openNew = () => { setIsNew(true); setEditing(BLANK_SKILL); };
   const openEdit = (s: SkillRow) => { setIsNew(false); setEditing({ ...s }); };
 
-  // Deep-link support: the command palette's quick actions navigate here
-  // with a URL hash — #new opens the create dialog, #edit-<id> opens the
-  // editor for that skill. The hash is stripped after opening so refetches
-  // don't re-open the dialog.
-  useEffect(() => {
-    const handleDeepLink = () => {
-      const hash = window.location.hash.replace(/^#/, "");
-      if (hash === "new") {
-        setIsNew(true);
-        setEditing(BLANK_SKILL);
-        clearDeepLinkHash();
-        return;
-      }
-      if (hash.startsWith("edit-")) {
-        const skill = skills?.find((s) => s.id === hash.slice("edit-".length));
-        if (skill) {
-          setIsNew(false);
-          setEditing({ ...mapToSkillRow(skill) });
-          clearDeepLinkHash();
-        }
-      }
-    };
-    const clearDeepLinkHash = () => {
-      window.history.replaceState(null, "", window.location.pathname + window.location.search);
-    };
-    handleDeepLink();
-    window.addEventListener("hashchange", handleDeepLink);
-    return () => window.removeEventListener("hashchange", handleDeepLink);
-  }, [skills]);
+  useDeepLinkEditor({
+    items: skills,
+    getId: (s) => s.id,
+    onNew: () => { setIsNew(true); setEditing(BLANK_SKILL); },
+    onEdit: (skill) => { setIsNew(false); setEditing({ ...mapToSkillRow(skill) }); },
+  });
 
 
   const handleSave = async () => {

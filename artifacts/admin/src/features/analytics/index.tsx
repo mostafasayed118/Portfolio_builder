@@ -16,6 +16,7 @@ import { api } from "@/lib/api-client";
 import { Eye, MousePointerClick, Download, MessageSquare } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, Skeleton, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui";
 import { AdminErrorState } from "@/components/AdminErrorState";
+import { formatDateKey } from "@/lib/format-date";
 
 interface AnalyticsStats {
   days: number;
@@ -35,10 +36,6 @@ const RANGE_OPTIONS = [
 ];
 
 const PROJECT_COLORS = ["#4f6ef7", "#7c5cff", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#14b8a6", "#f97316", "#64748b"];
-
-function formatDate(d: string): string {
-  return new Date(d + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
 
 function MetricCard({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string | number }) {
   return (
@@ -129,7 +126,7 @@ export default function AnalyticsPage() {
   const stats = data as AnalyticsStats;
   const topPosts = stats.topPosts ?? [];
   const messageSeries = stats.messages.map((m) => ({
-    date: formatDate(m.date),
+    date: formatDateKey(m.date),
     Total: m.total,
     Unread: m.unread,
   }));
@@ -172,7 +169,7 @@ export default function AnalyticsPage() {
             <EmptyChart message="No page views recorded in this range yet." />
           ) : (
             <ResponsiveContainer width="100%" height={224}>
-              <LineChart data={stats.pageViews.map((p) => ({ date: formatDate(p.date), Views: p.count }))}>
+              <LineChart data={stats.pageViews.map((p) => ({ date: formatDateKey(p.date), Views: p.count }))}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
                 <YAxis allowDecimals={false} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={32} />

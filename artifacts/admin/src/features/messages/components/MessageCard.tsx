@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Mail, MailOpen, Reply, CheckCheck, Archive, ArchiveRestore } from "lucide-react";
 import { Badge, Card, CardContent, Button } from "@workspace/ui";
 
@@ -40,7 +41,7 @@ interface MessageCardProps {
   formatDate: (ts: string) => string;
 }
 
-export function MessageCard({
+export const MessageCard = memo(function MessageCard({
   message: msg,
   selected = false,
   focused = false,
@@ -164,4 +165,4 @@ export function MessageCard({
       </CardContent>
     </Card>
   );
-}
+});

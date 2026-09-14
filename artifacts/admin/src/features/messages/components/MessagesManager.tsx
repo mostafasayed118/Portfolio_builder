@@ -26,15 +26,7 @@ import { MessagePresetBar } from "@/features/messages/components/MessagePresetBa
 import { MessagePagination } from "@/features/messages/components/MessagePagination";
 import { useAllMessages, useUnreadCountQuery, type MessagePreset } from "@/lib/use-entity-query";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
-
-function formatDate(ts: string): string {
-  return new Date(ts).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+import { formatDateTime } from "@/lib/format-date";
 
 type MessageFilter = "all" | "unread" | "read" | "archived" | "spam";
 
@@ -727,7 +719,7 @@ export default function MessagesManager() {
               onMarkRead={handleMarkRead}
               onArchive={handleArchive}
               onUnarchive={handleUnarchive}
-              formatDate={formatDate}
+              formatDate={formatDateTime}
             />
           </div>
         ))}
