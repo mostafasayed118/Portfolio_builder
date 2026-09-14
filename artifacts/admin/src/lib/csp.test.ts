@@ -17,4 +17,12 @@ describe("admin CSP helpers", () => {
     expect(csp).toContain("connect-src 'self' https://njibfrkovexikcwzycan.supabase.co");
     expect(csp).toContain("wss://njibfrkovexikcwzycan.supabase.co");
   });
+
+  it("restricts img-src to the explicit host list", () => {
+    const csp = buildCsp("n1");
+    const imgSrc = csp.split("; ").find((d) => d.startsWith("img-src"));
+    expect(imgSrc).toBe(
+      "img-src 'self' data: blob: https://*.supabase.co https://img.clerk.com https://*.clerk.accounts.dev",
+    );
+  });
 });

@@ -55,7 +55,7 @@ export function buildCsp(nonce: string): string {
     `script-src 'self' 'nonce-${nonce}' https://*.clerk.accounts.dev`,
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.clerk.accounts.dev",
     "font-src 'self' https://fonts.gstatic.com data:",
-    "img-src 'self' data: blob: https: https://img.clerk.com https://*.clerk.accounts.dev",
+    "img-src 'self' data: blob: https://*.supabase.co https://img.clerk.com https://*.clerk.accounts.dev",
     `connect-src 'self' ${SUPABASE_URL} wss://${supabaseHost} https://*.clerk.accounts.dev https://api.clerk.com https://clerk.com ${API_URL}`,
     "frame-src 'self' https://*.clerk.accounts.dev https://accounts.clerk.com",
     "worker-src 'self' blob:",

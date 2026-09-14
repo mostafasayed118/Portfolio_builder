@@ -49,6 +49,19 @@ export function describeSharedCspBehavior(helpers: CspHelpers): void {
       expect(csp).toContain("frame-ancestors 'self'");
     });
 
+    it("does not allow arbitrary HTTPS origins in img-src", () => {
+      const csp = buildCsp("n1");
+      const imgSrc = csp.split("; ").find((d) => d.startsWith("img-src"));
+      expect(imgSrc).toBeDefined();
+      expect(imgSrc?.split(/\s+/)).not.toContain("https:");
+    });
+
+    it("scopes image loading to Supabase storage", () => {
+      const csp = buildCsp("n1");
+      const imgSrc = csp.split("; ").find((d) => d.startsWith("img-src"));
+      expect(imgSrc).toContain("https://*.supabase.co");
+    });
+
     it("wires violation reports to the API endpoint", () => {
       expect(buildCsp("n1")).toContain(
         "report-uri https://portfolio-builder-api-six.vercel.app/api/v1/csp-report",
