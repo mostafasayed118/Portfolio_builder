@@ -16,11 +16,11 @@ pnpm --filter @workspace/portfolio dev
 
 ## Environment Variables
 
-| Variable | Required | Description |
-|---|---|---|
-| `VITE_SUPABASE_URL` | Yes | Supabase project URL |
-| `VITE_SUPABASE_ANON_KEY` | Yes | Supabase anon/public key |
-| `VITE_SITE_URL` | No | Public site URL (default localhost:5173) |
+| Variable                 | Required | Description                              |
+| ------------------------ | -------- | ---------------------------------------- |
+| `VITE_SUPABASE_URL`      | Yes      | Supabase project URL                     |
+| `VITE_SUPABASE_ANON_KEY` | Yes      | Supabase anon/public key                 |
+| `VITE_SITE_URL`          | No       | Public site URL (default localhost:5173) |
 
 ## Folder Structure
 
@@ -28,7 +28,7 @@ pnpm --filter @workspace/portfolio dev
 src/
 ├── components/     # React components (HeroSection, Navbar, Footer, etc.)
 ├── pages/          # Route pages (Home, not-found)
-├── hooks/          # Custom hooks (use-typewriter, use-throttled-scroll, etc.)
+├── hooks/          # Custom hooks (useTypewriter, useThrottledScroll, etc.)
 ├── lib/            # Utilities (theme, supabase-provider, branding)
 ├── data/           # Static fallback data (portfolio.ts)
 └── test/           # Test files

@@ -3,6 +3,7 @@ import tseslint from "typescript-eslint";
 import reactHooks from "eslint-plugin-react-hooks";
 import filenamesPlugin from "eslint-plugin-filenames";
 import globals from "globals";
+import path from "node:path";
 
 // eslint-plugin-filenames@1.3.2 predates flat config: it exports function-style
 // rules with no option schema, which ESLint 9 rejects. Wrap `match-regex` into
@@ -17,6 +18,58 @@ const filenames = {
     },
   },
 };
+
+// Relative imports must not cross a feature boundary (CLAUDE.md: barrel-only
+// imports). Specifier-only rules (no-restricted-imports patterns) cannot do
+// this: they never see the importing file, so `../hooks/X` cannot be told
+// apart from `../projects/X` — same-feature for one file, cross-feature for
+// another at the same depth. This rule resolves each relative specifier
+// against the importing file and checks feature containment instead.
+//
+// Allowed: relative imports that stay inside the same `features/<feature>/`,
+// and any relative import resolving outside `features/` entirely (e.g.
+// `../../lib/...`). Non-relative specifiers (`@/features/<feature>` barrels,
+// `@/lib/...`, `@workspace/*`, npm packages) are out of scope here — the
+// alias-form deep-import ban lives in the `no-restricted-imports` block.
+// Blocked: any relative import from a file inside one feature into a
+// different feature (or the shared `features/` root), and any relative
+// import from outside `features/` into a feature — use the feature barrel
+// `@/features/<feature>` instead. Test files are exempt (see ignores).
+function featureOf(absolutePath) {
+  const posix = absolutePath.split(path.sep).join("/");
+  const matches = [...posix.matchAll(/\/features\/([^/]+)(?=\/|$)/g)];
+  return matches.length ? matches[matches.length - 1][1] : null;
+}
+
+const relativeFeatureBoundary = {
+  meta: { schema: [] },
+  create(context) {
+    const check = (node) => {
+      const specifier = node.source?.value;
+      if (typeof specifier !== "string" || !specifier.startsWith(".")) return;
+      const importerDir = path.dirname(context.getFilename());
+      const resolved = path.resolve(importerDir, specifier);
+      const importerFeature = featureOf(context.getFilename());
+      const resolvedFeature = featureOf(resolved);
+      if (!resolvedFeature) return; // outside features/ (e.g. src/lib) — allowed
+      if (importerFeature && importerFeature === resolvedFeature) return; // same feature
+      context.report({
+        node,
+        message: `Relative import crosses a feature boundary ('${
+          importerFeature ?? "outside features"
+        }' -> '${resolvedFeature ?? "features root"}'). Use the feature barrel '@/features/${resolvedFeature}'.`,
+      });
+    };
+    return {
+      ImportDeclaration: check,
+      ImportExpression: check,
+      ExportNamedDeclaration: check,
+      ExportAllDeclaration: check,
+    };
+  },
+};
+
+const local = { rules: { "relative-feature-boundary": relativeFeatureBoundary } };
 
 export default tseslint.config(
   {
@@ -60,14 +113,26 @@ export default tseslint.config(
     },
   },
   {
-    // Feature barrel-only imports (CLAUDE.md): code outside a feature must
-    // import from `@/features/<feature>`, never from the feature's internals
-    // (components/, hooks/, lib/, ...). Same-feature code uses relative
-    // paths instead of the `@/features/<feature>/...` alias.
+    // Feature barrel-only imports (CLAUDE.md). Covered surface, by import
+    // form:
+    // - `@/features/<feature>/<internal>` — blocked here via
+    //   no-restricted-imports patterns (alias deep imports).
+    // - Relative imports (from any file in artifacts/*/src):
+    //   * same-feature relative paths — allowed;
+    //   * relative paths crossing into another feature (e.g.
+    //     `../../projects/components/ProjectCard` from features/hero/) —
+    //     blocked by `local/relative-feature-boundary`, which resolves the
+    //     specifier against the importing file (specifier-only patterns
+    //     cannot see the importer);
+    //   * relative paths resolving outside `features/` (e.g. `../../lib`) —
+    //     allowed.
+    // - Relative imports into `features/` from outside are also blocked by
+    //   the local rule (use the `@/features/<feature>` barrel).
     // Test files are exempt: they intentionally reach internals to render
     // components in isolation and mock them via vi.mock.
     files: ["artifacts/*/src/**/*.{ts,tsx}"],
     ignores: ["**/*.test.*", "**/src/test/**"],
+    plugins: { local },
     rules: {
       "no-restricted-imports": [
         "error",
@@ -81,6 +146,7 @@ export default tseslint.config(
           ],
         },
       ],
+      "local/relative-feature-boundary": "error",
     },
   },
   {
