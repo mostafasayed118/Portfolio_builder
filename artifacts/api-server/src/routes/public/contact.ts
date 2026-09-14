@@ -95,17 +95,19 @@ router.post("/", contactLimiter, async (req: Request, res: Response) => {
   // 4. Time-trap: form must take at least 2 seconds to fill.
   // Bots typically submit in < 500ms; a real user needs at least 2s.
   const formLoadedAt = body._formLoadedAt;
-  if (typeof formLoadedAt === "number" && formLoadedAt > 0) {
-    const elapsed = Date.now() - formLoadedAt;
-    if (elapsed < 2000) {
-      logAbuse(req, "time_trap_too_fast", { elapsed_ms: elapsed });
-      return ok(res, undefined); // silently drop
-    }
-    // Reject timestamps in the future or too old (> 1 hour = likely replay)
-    if (elapsed > 3_600_000) {
-      logAbuse(req, "time_trap_stale", { elapsed_ms: elapsed });
-      return badRequest(res, { _form: ["Form expired, please reload"] });
-    }
+  if (typeof formLoadedAt !== "number" || !Number.isFinite(formLoadedAt) || formLoadedAt <= 0) {
+    // Real clients (ContactForm) always send this; absence signals a bot. Silently drop, same as honeypot.
+    logAbuse(req, "time_trap_missing");
+    return ok(res, undefined);
+  }
+  const elapsed = Date.now() - formLoadedAt;
+  if (elapsed < 2000) {
+    logAbuse(req, "time_trap_too_fast", { elapsed_ms: elapsed });
+    return ok(res, undefined);
+  }
+  if (elapsed > 3_600_000) {
+    logAbuse(req, "time_trap_stale", { elapsed_ms: elapsed });
+    return badRequest(res, { _form: ["Form expired, please reload"] });
   }
 
   // 4.5 Cloudflare Turnstile (opt-in). When configured, require a valid

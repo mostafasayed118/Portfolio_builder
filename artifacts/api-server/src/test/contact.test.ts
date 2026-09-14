@@ -44,6 +44,18 @@ function clientWithInsertResult(insertResult: unknown) {
   } as never;
 }
 
+/** Same as clientWithInsertResult but also returns the insert mock so tests
+ * can assert that no row was written. */
+function clientWithInsertSpy(insertResult: unknown) {
+  const insert = vi.fn().mockReturnValue({
+    select: vi.fn().mockReturnValue({
+      single: vi.fn().mockResolvedValue(insertResult),
+    }),
+  });
+  const client = { from: vi.fn().mockReturnValue({ insert }) } as never;
+  return { client, insert };
+}
+
 describe("POST /api/v1/contact", () => {
   beforeEach(() => {
     vi.stubEnv("SUPABASE_URL", "https://test.supabase.co");
@@ -57,7 +69,7 @@ describe("POST /api/v1/contact", () => {
   it("rejects missing name", async () => {
     const res = await request(app)
       .post("/api/v1/contact")
-      .send({ email: "test@example.com", message: "Hello world!" });
+      .send({ email: "test@example.com", message: "Hello world!", _formLoadedAt: Date.now() - 5000 });
     expect(res.status).toBe(400);
     expect(res.body.success).toBe(false);
   });
@@ -65,23 +77,48 @@ describe("POST /api/v1/contact", () => {
   it("rejects invalid email", async () => {
     const res = await request(app)
       .post("/api/v1/contact")
-      .send({ name: "Test", email: "invalid", message: "Hello world!" });
+      .send({ name: "Test", email: "invalid", message: "Hello world!", _formLoadedAt: Date.now() - 5000 });
     expect(res.status).toBe(400);
   });
 
   it("rejects short message", async () => {
     const res = await request(app)
       .post("/api/v1/contact")
-      .send({ name: "Test", email: "test@example.com", message: "Short" });
+      .send({ name: "Test", email: "test@example.com", message: "Short", _formLoadedAt: Date.now() - 5000 });
     expect(res.status).toBe(400);
   });
 
   it("accepts valid contact submission", async () => {
     const res = await request(app)
       .post("/api/v1/contact")
-      .send({ name: "Test User", email: "test@example.com", message: "This is a valid message with enough content" });
+      .send({ name: "Test User", email: "test@example.com", message: "This is a valid message with enough content", _formLoadedAt: Date.now() - 5000 });
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
+  });
+
+  it("silently drops submissions missing _formLoadedAt", async () => {
+    // Real clients (ContactForm) always send this; absence signals a bot.
+    const { client, insert } = clientWithInsertSpy({ data: { id: "msg-1" }, error: null });
+    vi.mocked(getSupabaseClient).mockReturnValue(client);
+
+    const res = await request(app)
+      .post("/api/v1/contact")
+      .send({ name: "A", email: "a@b.co", message: "hi there friend" }); // omit _formLoadedAt
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ success: true });
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("silently drops submissions with non-numeric _formLoadedAt", async () => {
+    const { client, insert } = clientWithInsertSpy({ data: { id: "msg-1" }, error: null });
+    vi.mocked(getSupabaseClient).mockReturnValue(client);
+
+    const res = await request(app)
+      .post("/api/v1/contact")
+      .send({ name: "A", email: "a@b.co", message: "hi there friend", _formLoadedAt: "fast" });
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ success: true });
+    expect(insert).not.toHaveBeenCalled();
   });
 
   it("triggers AI spam scoring when opt-in is enabled", async () => {
@@ -91,7 +128,7 @@ describe("POST /api/v1/contact", () => {
 
     const res = await request(app)
       .post("/api/v1/contact")
-      .send({ name: "Test User", email: "test@example.com", message: "This is a valid message with enough content" });
+      .send({ name: "Test User", email: "test@example.com", message: "This is a valid message with enough content", _formLoadedAt: Date.now() - 5000 });
     expect(res.status).toBe(200);
     expect(flagSpamIfNeeded).toHaveBeenCalledWith(
       expect.objectContaining({ id: "msg-1", email: "test@example.com" }),
@@ -110,7 +147,7 @@ describe("POST /api/v1/contact", () => {
 
     const res = await request(app)
       .post("/api/v1/contact")
-      .send({ name: "Test User", email: "test@example.com", message: "This is a valid message with enough content" });
+      .send({ name: "Test User", email: "test@example.com", message: "This is a valid message with enough content", _formLoadedAt: Date.now() - 5000 });
     expect(res.status).toBe(429);
     expect(res.body).toEqual({ success: false, message: "Too many messages sent, please try again later" });
   });
@@ -122,7 +159,7 @@ describe("POST /api/v1/contact", () => {
 
     const res = await request(app)
       .post("/api/v1/contact")
-      .send({ name: "Test User", email: "test@example.com", message: "This is a valid message with enough content" });
+      .send({ name: "Test User", email: "test@example.com", message: "This is a valid message with enough content", _formLoadedAt: Date.now() - 5000 });
     expect(res.status).toBe(500);
     expect(res.body).toEqual({ success: false, message: "Failed to send message" });
   });
