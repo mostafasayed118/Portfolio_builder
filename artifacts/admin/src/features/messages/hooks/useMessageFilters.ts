@@ -32,7 +32,6 @@ export function useMessageFilters({ allMessages, allLoading }: UseMessageFilters
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
-  const isPreset = isPresetView(view);
   const statusParam = !isPresetView(view) && view !== "all" ? view : undefined;
   const presetParam = isPresetView(view) ? view : undefined;
   const { data: filteredMessages, isLoading: filteredLoading } = useAllMessages(
@@ -79,7 +78,6 @@ export function useMessageFilters({ allMessages, allLoading }: UseMessageFilters
 
   return {
     view,
-    isPreset,
     activePreset,
     msgs,
     isLoading,
