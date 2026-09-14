@@ -147,14 +147,14 @@ All tables live in the Supabase PostgreSQL database. 30 migration files in `supa
 
 ### Auth Setup
 
-| File                                                | Role                                                                               |
-| --------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `lib/supabase/src/client.ts`                        | Browser Supabase client (`getSupabase()`, `isSupabaseConfigured`)                  |
-| `lib/supabase/src/server.ts`                        | Server-side service-role client (for API server)                                   |
-| `lib/supabase/src/admin.ts`                         | Admin service-role client (for admin SPA via `VITE_SUPABASE_SERVICE_ROLE_KEY`)     |
-| `lib/supabase/src/types.ts`                         | Generated `Database` type from Supabase CLI                                        |
-| `artifacts/portfolio/src/lib/supabase-provider.tsx` | Portfolio's Supabase provider (re-exports client + QueryClient)                    |
-| `artifacts/admin/src/lib/convex.ts`                 | Admin's Supabase client (named `convex.ts` for historical reasons — to be renamed) |
+| File                                                | Role                                                                                       |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `lib/supabase/src/client.ts`                        | Browser Supabase client (`getSupabase()`, `isSupabaseConfigured`)                          |
+| `lib/supabase/src/server.ts`                        | Server-side service-role client (for API server)                                           |
+| `lib/supabase/src/admin.ts`                         | Server-side service-role client (`getAdminSupabase()` — api-server only)                   |
+| `lib/supabase/src/types.ts`                         | Generated `Database` type from Supabase CLI                                                |
+| `artifacts/portfolio/src/lib/supabase-provider.tsx` | Portfolio's Supabase provider (re-exports client + QueryClient)                            |
+| `artifacts/admin/src/lib/supabase.ts`               | Admin's Supabase client (re-exports the anon-key client from `@workspace/supabase/client`) |
 
 ### Key Components
 
@@ -204,13 +204,16 @@ All tables live in the Supabase PostgreSQL database. 30 migration files in `supa
 
 ### Admin (`artifacts/admin/.env`)
 
-| Variable                         | Required | Description                              |
-| -------------------------------- | -------- | ---------------------------------------- |
-| `VITE_SUPABASE_URL`              | Yes      | Supabase project URL                     |
-| `VITE_SUPABASE_ANON_KEY`         | Yes      | Supabase anon/public key                 |
-| `VITE_SUPABASE_SERVICE_ROLE_KEY` | Yes      | Service role key (admin mutations)       |
-| `VITE_CLERK_PUBLISHABLE_KEY`     | Yes      | Clerk publishable key for authentication |
-| `VITE_SITE_URL`                  | No       | Admin site URL (default localhost:5174)  |
+| Variable                     | Required | Description                              |
+| ---------------------------- | -------- | ---------------------------------------- |
+| `VITE_SUPABASE_URL`          | Yes      | Supabase project URL                     |
+| `VITE_SUPABASE_ANON_KEY`     | Yes      | Supabase anon/public key                 |
+| `VITE_CLERK_PUBLISHABLE_KEY` | Yes      | Clerk publishable key for authentication |
+| `VITE_SITE_URL`              | No       | Admin site URL (default localhost:5174)  |
+
+The admin SPA uses the **anon key** only (via `@workspace/supabase/client`).
+The service-role key is server-side (api-server) and must never appear in any
+`VITE_`-prefixed variable.
 
 ### API Server (`artifacts/api-server/.env`)
 

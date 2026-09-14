@@ -58,14 +58,16 @@ Thumbs.db
 
 # Local scratch / tooling artifacts
 .freebuff/
+.openclaude/
 .worktrees/
-section-check.tmp.mjs
+*.tmp.mjs
 
 # Test artifacts (should never be tracked)
 playwright-report/
 test-results/
 test-*.log
 playwright/.auth/
+screenshots/
 
 # TestSprite
 testsprite_tests/

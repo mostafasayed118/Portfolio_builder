@@ -55,16 +55,20 @@ artifacts/
 
 Copy `.env.example` to `.env` and fill in your Supabase credentials:
 
-| Variable                         | Required For      | Description                       |
-| -------------------------------- | ----------------- | --------------------------------- |
-| `VITE_SUPABASE_URL`              | All apps          | Supabase project URL              |
-| `VITE_SUPABASE_ANON_KEY`         | portfolio, admin  | Public anon key                   |
-| `VITE_SUPABASE_SERVICE_ROLE_KEY` | admin, api-server | Admin key (secret — never commit) |
-| `SUPABASE_URL`                   | api-server        | Same as VITE_SUPABASE_URL         |
-| `SUPABASE_SERVICE_ROLE_KEY`      | api-server        | Server-side service role key      |
-| `VITE_CLERK_PUBLISHABLE_KEY`     | admin             | Clerk key for admin auth          |
-| `ADMIN_EMAILS`                   | api-server        | Comma-separated admin emails      |
-| `PORT`                           | dev               | Dev server port (default 5173)    |
+| Variable                     | Required For     | Description                    |
+| ---------------------------- | ---------------- | ------------------------------ |
+| `VITE_SUPABASE_URL`          | All apps         | Supabase project URL           |
+| `VITE_SUPABASE_ANON_KEY`     | portfolio, admin | Public anon key                |
+| `SUPABASE_URL`               | api-server       | Same as `VITE_SUPABASE_URL`    |
+| `SUPABASE_SERVICE_ROLE_KEY`  | api-server       | Server-side service role key   |
+| `VITE_CLERK_PUBLISHABLE_KEY` | admin            | Clerk key for admin auth       |
+| `ADMIN_EMAILS`               | api-server       | Comma-separated admin emails   |
+| `PORT`                       | dev              | Dev server port (default 5173) |
+
+> **Security note:** Both SPAs (portfolio and admin) talk to Supabase with the
+> public **anon key** via `@workspace/supabase/client`. The service-role key
+> exists only in the api-server's server-side `.env` and must never be added to
+> any `VITE_`-prefixed variable (Vite bundles those into the client bundle).
 
 ## Database Setup
 

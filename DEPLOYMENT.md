@@ -130,15 +130,19 @@ Push to main branch. Vercel will auto-deploy.
 
 ### 4.2 Environment Variables on Vercel
 
-| Variable                         | Value                        |
-| -------------------------------- | ---------------------------- |
-| `VITE_SUPABASE_URL`              | Your Supabase project URL    |
-| `VITE_SUPABASE_ANON_KEY`         | Your Supabase anon key       |
-| `VITE_SUPABASE_SERVICE_ROLE_KEY` | Your service role key        |
-| `VITE_CLERK_PUBLISHABLE_KEY`     | Your Clerk publishable key   |
-| `VITE_API_URL`                   | Your Render API URL          |
-| `VITE_SITE_URL`                  | Your admin Vercel URL        |
-| `APP_ADMIN_EMAILS`               | Comma-separated admin emails |
+| Variable                     | Value                        |
+| ---------------------------- | ---------------------------- |
+| `VITE_SUPABASE_URL`          | Your Supabase project URL    |
+| `VITE_SUPABASE_ANON_KEY`     | Your Supabase anon key       |
+| `VITE_CLERK_PUBLISHABLE_KEY` | Your Clerk publishable key   |
+| `VITE_API_URL`               | Your Render API URL          |
+| `VITE_SITE_URL`              | Your admin Vercel URL        |
+| `APP_ADMIN_EMAILS`           | Comma-separated admin emails |
+
+> **Never add a Supabase service-role key to the admin SPA.** Vite bundles every
+> `VITE_`-prefixed variable into the client bundle, so the key would become
+> public. The admin SPA uses the anon key via `@workspace/supabase/client`;
+> the service-role key is held only by the API server, server-side.
 
 ### 4.3 Clerk Setup
 

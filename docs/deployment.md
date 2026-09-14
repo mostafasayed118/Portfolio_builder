@@ -13,15 +13,15 @@
 
 See [Setup Guide](./setup.md#complete-environment-variable-reference) for the full table. Production-specific notes:
 
-| Variable                         | Production Note                                                                                      |
-| -------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `NODE_ENV`                       | Must be `production` — enables HTTPS upgrade, strict CORS, rate limiting                             |
-| `CSRF_SECRET`                    | Generate with `openssl rand -hex 32` — do NOT use the dev default                                    |
-| `CLERK_SECRET_KEY`               | Required — server throws on startup without it                                                       |
-| `VITE_CLERK_JWT_TEMPLATE`        | Must match a JWT template in Clerk Dashboard (default: `admin`)                                      |
-| `VITE_SUPABASE_SERVICE_ROLE_KEY` | Keep secret — never expose to client bundle (Vite only bundles `VITE_` prefixed vars in client code) |
-| `VITE_SITE_URL`                  | Must match your deployed portfolio URL exactly                                                       |
-| `VITE_ADMIN_URL`                 | Must match your deployed admin URL exactly                                                           |
+| Variable                    | Production Note                                                                                                                                                            |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`                  | Must be `production` — enables HTTPS upgrade, strict CORS, rate limiting                                                                                                   |
+| `CSRF_SECRET`               | Generate with `openssl rand -hex 32` — do NOT use the dev default                                                                                                          |
+| `CLERK_SECRET_KEY`          | Required — server throws on startup without it                                                                                                                             |
+| `VITE_CLERK_JWT_TEMPLATE`   | Must match a JWT template in Clerk Dashboard (default: `admin`)                                                                                                            |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-side only (api-server `.env`) — the admin SPA uses the anon key; never put a service-role key in a `VITE_`-prefixed var (Vite bundles those into the client bundle) |
+| `VITE_SITE_URL`             | Must match your deployed portfolio URL exactly                                                                                                                             |
+| `VITE_ADMIN_URL`            | Must match your deployed admin URL exactly                                                                                                                                 |
 
 ## Clerk JWT Template (Required)
 
