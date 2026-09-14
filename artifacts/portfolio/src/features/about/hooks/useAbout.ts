@@ -1,4 +1,4 @@
-import { useAboutContent } from "@/hooks/use-portfolio-data";
+import { useAboutContent } from "@/hooks/usePortfolioData";
 import { ABOUT } from "@/data/portfolio";
 import { useLanguage } from "@/lib/language";
 import type { TranslationKeys } from "@/i18n";

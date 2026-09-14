@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { groupSkillsByCategory } from "./use-portfolio-data";
+import { groupSkillsByCategory } from "./usePortfolioData";
 
 // DbSkill type shape for testing
 type TestSkill = {
@@ -9,7 +9,7 @@ type TestSkill = {
   is_visible?: boolean;
 };
 
-describe("use-portfolio-data", () => {
+describe("usePortfolioData", () => {
   describe("groupSkillsByCategory", () => {
     it("groups skills by category", () => {
       const skills: TestSkill[] = [

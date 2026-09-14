@@ -3,11 +3,11 @@ import { renderHook } from "@testing-library/react";
 import { BrandingProvider, useBranding } from "@/lib/branding";
 import { HERO } from "@/data/hero";
 
-vi.mock("@/hooks/use-portfolio-data", () => ({
+vi.mock("@/hooks/usePortfolioData", () => ({
   useHeroContent: vi.fn(),
 }));
 
-import { useHeroContent } from "@/hooks/use-portfolio-data";
+import { useHeroContent } from "@/hooks/usePortfolioData";
 
 const mockHeroData = {
   site_name: "Custom Portfolio",

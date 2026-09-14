@@ -54,7 +54,7 @@ vi.mock("@workspace/db/analytics", () => ({
   },
 }));
 
-vi.mock("@/hooks/use-portfolio-data", () => ({
+vi.mock("@/hooks/usePortfolioData", () => ({
   useProjectBySlug: vi.fn(),
   useProjectImages: vi.fn(),
 }));
@@ -77,7 +77,7 @@ vi.mock("@/components/ProjectCard", () => ({
   ),
 }));
 
-import { useProjectBySlug, useProjectImages } from "@/hooks/use-portfolio-data";
+import { useProjectBySlug, useProjectImages } from "@/hooks/usePortfolioData";
 const mockUseProjectBySlug = vi.mocked(useProjectBySlug);
 const mockUseProjectImages = vi.mocked(useProjectImages);
 

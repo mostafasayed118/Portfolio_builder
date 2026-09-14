@@ -12,7 +12,7 @@ import { listEntityImages, listCoversByEntity } from "@workspace/db/images";
 import { listPublishedPosts, getPublishedPostBySlug } from "@workspace/db/posts";
 import { SKILL_CATEGORIES, getSkillLevel, type SkillLevel } from "@/data/skills";
 
-// Realtime sync (use-realtime-sync.ts) handles live updates for the
+// Realtime sync (useRealtimeSync.ts) handles live updates for the
 // 3 most-active tables. The remaining tables (about, skills,
 // experience, certifications, contact_info, theme, typography, seo,
 // section_settings) don't poll — their React Query cache is treated

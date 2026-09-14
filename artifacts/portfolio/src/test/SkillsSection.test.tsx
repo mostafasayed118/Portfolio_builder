@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { LanguageProvider } from "@/lib/language";
 
-vi.mock("@/hooks/use-portfolio-data", () => ({
+vi.mock("@/hooks/usePortfolioData", () => ({
   useSkills: vi.fn(),
   groupSkillsByCategory: vi.fn((skills: any[]) => {
     const grouped: Record<string, any[]> = {};
@@ -26,7 +26,7 @@ vi.mock("@/hooks/use-portfolio-data", () => ({
   }),
 }));
 
-vi.mock("@/hooks/use-reveal", () => ({
+vi.mock("@/hooks/useReveal", () => ({
   useReveal: vi.fn(() => ({ ref: vi.fn(), revealed: true })),
 }));
 
@@ -39,7 +39,7 @@ vi.mock("@/components/EmptyState", () => ({
 }));
 
 import { SkillsSection } from "@/features/skills";
-import { useSkills } from "@/hooks/use-portfolio-data";
+import { useSkills } from "@/hooks/usePortfolioData";
 
 function renderWithProviders(ui: React.ReactElement) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });

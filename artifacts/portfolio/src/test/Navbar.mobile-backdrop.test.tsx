@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { TestRouter } from "@/test/test-router";
 import Navbar from "@/components/Navbar";
 
-vi.mock("@/hooks/use-throttled-scroll", () => ({
+vi.mock("@/hooks/useThrottledScroll", () => ({
   useThrottledScroll: vi.fn(),
 }));
 

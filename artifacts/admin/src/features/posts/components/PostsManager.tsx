@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus, NotebookPen, CalendarCheck2, Image as ImageIcon } from "lucide-react";
 import { api } from "@/lib/api-client";
-import { useDeepLinkEditor } from "@/hooks/use-deep-link-editor";
+import { useDeepLinkEditor } from "@/hooks/useDeepLinkEditor";
 import { formatDate } from "@/lib/format-date";
 import {
   Button, Card, CardContent, Input, Textarea, Badge, Switch,

@@ -2,11 +2,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen } from "@testing-library/react";
 import { mockEmptyState, mockSectionLabel, mockUseReveal, renderWithProviders } from "./helpers";
 
-vi.mock("@/hooks/use-portfolio-data", () => ({
+vi.mock("@/hooks/usePortfolioData", () => ({
   useCertifications: vi.fn(),
 }));
 
-vi.mock("@/hooks/use-reveal", () => mockUseReveal());
+vi.mock("@/hooks/useReveal", () => mockUseReveal());
 
 vi.mock("@/components/CertCard", () => ({
   CertCard: ({ cert }: { cert: { title: string; issuer: string } }) => (
@@ -35,7 +35,7 @@ vi.mock("@/components/SectionLabel", () => mockSectionLabel());
 vi.mock("@/components/EmptyState", () => mockEmptyState());
 
 import CertificationsSection from "@/components/CertificationsSection";
-import { useCertifications } from "@/hooks/use-portfolio-data";
+import { useCertifications } from "@/hooks/usePortfolioData";
 
 describe("CertificationsSection", () => {
   beforeEach(() => {

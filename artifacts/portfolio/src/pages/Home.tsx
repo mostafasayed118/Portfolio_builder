@@ -4,7 +4,7 @@ import { trackEvent } from "@workspace/db/analytics";
 import { logWarn } from "@/lib/logger";
 import { useToast } from "@workspace/ui";
 import { useLanguage } from "@/lib/language";
-import { useRealtimeSync } from "@/hooks/use-realtime-sync";
+import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 const HeroSection = lazy(() => import("@/features/hero").then((m) => ({ default: m.HeroSection })));
 // Lazy: BackToTop pulls framer-motion (~100KB gzip) — keep it out of the
 // initial chunk; the button is invisible until the user scrolls anyway.

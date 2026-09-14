@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 
-vi.mock("@/hooks/use-reveal", () => ({
+vi.mock("@/hooks/useReveal", () => ({
   useReveal: vi.fn(() => ({ ref: vi.fn(), revealed: true })),
 }));
 

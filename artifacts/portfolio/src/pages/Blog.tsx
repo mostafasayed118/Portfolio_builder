@@ -4,7 +4,7 @@ import { getSiteUrl } from "@/lib/env";
 import { useLocation } from "wouter";
 import { ArrowLeft, FileX, Search } from "lucide-react";
 import SEO from "@/components/SEO";
-import { usePosts } from "@/hooks/use-portfolio-data";
+import { usePosts } from "@/hooks/usePortfolioData";
 import { BlogPostCard } from "@/features/blog";
 
 const POSTS_PER_PAGE = 6;

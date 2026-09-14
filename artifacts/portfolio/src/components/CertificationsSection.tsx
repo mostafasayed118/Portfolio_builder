@@ -7,7 +7,7 @@ import { CertCard } from "./CertCard";
 import CertFilters, { getFilters } from "./CertFilters";
 import CertStats from "./CertStats";
 import { CERTIFICATIONS, type Certificate } from "@/data/portfolio";
-import { useCertifications } from "@/hooks/use-portfolio-data";
+import { useCertifications } from "@/hooks/usePortfolioData";
 
 const VALID_CATEGORIES = new Set([
   "python",

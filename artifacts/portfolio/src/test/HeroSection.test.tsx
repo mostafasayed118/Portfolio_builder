@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { LanguageProvider } from "@/lib/language";
 import { HeroSection } from "@/features/hero";
 
-vi.mock("@/hooks/use-typewriter", () => ({
+vi.mock("@/hooks/useTypewriter", () => ({
   useTypewriter: vi.fn(() => "Data Engineer"),
 }));
 

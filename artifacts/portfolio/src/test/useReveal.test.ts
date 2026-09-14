@@ -1,5 +1,5 @@
 import { renderHook } from "@testing-library/react";
-import { useReveal } from "@/hooks/use-reveal";
+import { useReveal } from "@/hooks/useReveal";
 
 describe("useReveal", () => {
   it("returns ref and revealed=false initially", () => {

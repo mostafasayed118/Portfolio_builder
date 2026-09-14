@@ -6,7 +6,7 @@ import { api } from "@/lib/api-client";
 import { useToast } from "@workspace/ui";
 import { Button, Input, Textarea } from "@workspace/ui";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
-import { useBeforeUnload } from "@/hooks/use-before-unload";
+import { useBeforeUnload } from "@/hooks/useBeforeUnload";
 import { ImageWithFallback } from "@/components/ImageWithFallback";
 import ImageUploader, { type UploadedImage } from "@/components/ImageUploader";
 import { HeroLivePreview, type HeroFormData } from "@/features/hero-content/components/HeroLivePreview";

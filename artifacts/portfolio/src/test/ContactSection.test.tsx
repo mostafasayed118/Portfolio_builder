@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { LanguageProvider } from "@/lib/language";
 
-vi.mock("@/hooks/use-reveal", () => ({
+vi.mock("@/hooks/useReveal", () => ({
   useReveal: vi.fn(() => ({ ref: vi.fn(), revealed: true })),
 }));
 

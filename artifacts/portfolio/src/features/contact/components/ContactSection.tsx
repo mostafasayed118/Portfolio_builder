@@ -1,5 +1,5 @@
 import { useLanguage } from "@/lib/language";
-import { useReveal } from "@/hooks/use-reveal";
+import { useReveal } from "@/hooks/useReveal";
 import { useContact } from "@/features/contact/hooks/useContact";
 import ContactInfoPanel from "@/features/contact/components/ContactInfoPanel";
 import ContactForm from "@/features/contact/components/ContactForm";

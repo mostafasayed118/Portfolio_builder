@@ -22,7 +22,7 @@ vi.mock("@/lib/env", () => ({
   getApiUrl: () => "http://test-api",
 }));
 
-vi.mock("@/hooks/use-reveal", () => ({
+vi.mock("@/hooks/useReveal", () => ({
   useReveal: vi.fn(() => ({ ref: vi.fn(), revealed: true })),
 }));
 

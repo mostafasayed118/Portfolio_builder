@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@workspace/ui";
 import { Plus, Download } from "lucide-react";
 import { logError } from "@/lib/logger";
-import { useDeepLinkEditor } from "@/hooks/use-deep-link-editor";
+import { useDeepLinkEditor } from "@/hooks/useDeepLinkEditor";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Input, Label, Slider, Switch } from "@workspace/ui";
 import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
 import { SmartEmptyState } from "@/components/SmartEmptyState";

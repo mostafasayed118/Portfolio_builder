@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useHeroContent, useProjects, useSkills } from "@/hooks/use-portfolio-data";
+import { useHeroContent, useProjects, useSkills } from "@/hooks/usePortfolioData";
 import { isSupabaseConfigured } from "@/lib/supabase-provider";
 import { useState } from "react";
 

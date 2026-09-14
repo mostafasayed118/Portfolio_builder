@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useToast } from "@workspace/ui";
 import { Plus, Download } from "lucide-react";
 import { logError } from "@/lib/logger";
-import { useDeepLinkEditor } from "@/hooks/use-deep-link-editor";
+import { useDeepLinkEditor } from "@/hooks/useDeepLinkEditor";
 import { Button, Card, CardContent, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Input, Label, Switch } from "@workspace/ui";
 import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
 import { SmartEmptyState } from "@/components/SmartEmptyState";

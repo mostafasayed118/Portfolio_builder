@@ -6,7 +6,7 @@ import { api } from "@/lib/api-client";
 import { useToast } from "@workspace/ui";
 import { Button, Input, Slider, Textarea } from "@workspace/ui";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
-import { useBeforeUnload } from "@/hooks/use-before-unload";
+import { useBeforeUnload } from "@/hooks/useBeforeUnload";
 import { AboutLivePreview } from "@/features/about-content/components/AboutLivePreview";
 import { InterestsEditor } from "@/features/about-content/components/InterestsEditor";
 import { EditorErrorState, EditorLoadingState } from "@/components/EditorStates";

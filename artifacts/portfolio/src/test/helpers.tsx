@@ -19,9 +19,9 @@ export function renderWithProviders(ui: ReactElement) {
 }
 
 /**
- * The shared `@/hooks/use-reveal` mock module shape. Reference it lazily so
+ * The shared `@/hooks/useReveal` mock module shape. Reference it lazily so
  * vitest's `vi.mock` hoisting can resolve it:
- *   vi.mock("@/hooks/use-reveal", () => mockUseReveal());
+ *   vi.mock("@/hooks/useReveal", () => mockUseReveal());
  */
 export function mockUseReveal() {
   return { useReveal: vi.fn(() => ({ ref: vi.fn(), revealed: true })) };

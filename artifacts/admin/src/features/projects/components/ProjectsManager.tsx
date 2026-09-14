@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api-client";
 import { logError } from "@/lib/logger";
-import { useDeepLinkEditor } from "@/hooks/use-deep-link-editor";
+import { useDeepLinkEditor } from "@/hooks/useDeepLinkEditor";
 import { AdminErrorState } from "@/components/AdminErrorState";
 import { AdminLoadingState } from "@/components/AdminLoadingState";
 import { Plus, Star, Search, SearchX, Download } from "lucide-react";

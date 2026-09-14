@@ -1,4 +1,4 @@
-import { useTypewriter } from "@/hooks/use-typewriter";
+import { useTypewriter } from "@/hooks/useTypewriter";
 
 export function HeroTypewriter({ texts, fallback }: { texts: string[]; fallback?: string }) {
   const effectiveTexts = texts.length > 0 ? texts : (fallback ? [fallback] : []);

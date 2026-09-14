@@ -16,7 +16,7 @@ vi.mock("@/lib/branding", () => ({
   useBranding: vi.fn(() => ({ siteName: "Test Portfolio", logoUrl: null })),
 }));
 
-vi.mock("@/hooks/use-throttled-scroll", () => ({
+vi.mock("@/hooks/useThrottledScroll", () => ({
   useThrottledScroll: vi.fn(),
 }));
 

@@ -20,7 +20,7 @@ vi.mock("@workspace/ui", async (importOriginal) => {
 });
 
 vi.mock("@/hooks/useKeyboardShortcuts", () => ({ useKeyboardShortcuts: vi.fn() }));
-vi.mock("@/hooks/use-before-unload", () => ({ useBeforeUnload: vi.fn() }));
+vi.mock("@/hooks/useBeforeUnload", () => ({ useBeforeUnload: vi.fn() }));
 vi.mock("@/lib/supabase", () => ({ getSupabase: vi.fn(() => ({})), isSupabaseConfigured: true }));
 
 function renderWithProviders(ui: React.ReactElement) {

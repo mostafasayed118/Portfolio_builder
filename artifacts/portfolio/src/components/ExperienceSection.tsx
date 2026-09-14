@@ -4,7 +4,7 @@ import TimelineItem from "./TimelineItem";
 import SectionHeader from "./SectionHeader";
 import EmptyState from "./EmptyState";
 import { EXPERIENCE } from "@/data/portfolio";
-import { useExperience } from "@/hooks/use-portfolio-data";
+import { useExperience } from "@/hooks/usePortfolioData";
 
 function ExperienceSkeleton() {
   return (

@@ -33,7 +33,7 @@ vi.mock("@/hooks/useKeyboardShortcuts", () => ({
   useKeyboardShortcuts: vi.fn(),
 }));
 
-vi.mock("@/hooks/use-before-unload", () => ({
+vi.mock("@/hooks/useBeforeUnload", () => ({
   useBeforeUnload: vi.fn(),
 }));
 

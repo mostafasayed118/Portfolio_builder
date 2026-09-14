@@ -5,7 +5,7 @@ import { ArrowLeft, ExternalLink, Github, Calendar, Sparkles, FileX } from "luci
 import { PROJECTS } from "@/data/portfolio";
 import SEO, { generateProjectSchema } from "@/components/SEO";
 import { ProjectCard, ProjectGallery, GalleryEmpty, GalleryPlaceholder, mapDbProjectDetail } from "@/features/projects";
-import { useProjectBySlug, useProjectImages } from "@/hooks/use-portfolio-data";
+import { useProjectBySlug, useProjectImages } from "@/hooks/usePortfolioData";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
 import { getSiteUrl } from "@/lib/env";
 import { trackEvent } from "@workspace/db/analytics";

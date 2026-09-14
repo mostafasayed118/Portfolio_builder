@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook } from "@testing-library/react";
-import { useBeforeUnload } from "./use-before-unload";
+import { useBeforeUnload } from "./useBeforeUnload";
 
 describe("useBeforeUnload", () => {
   beforeEach(() => {

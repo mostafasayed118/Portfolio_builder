@@ -3,7 +3,7 @@ import { Moon, Sun } from "lucide-react";
 import { useLocation } from "wouter";
 import { useTheme } from "@/lib/theme";
 import { useBranding } from "@/lib/branding";
-import { useThrottledScroll } from "@/hooks/use-throttled-scroll";
+import { useThrottledScroll } from "@/hooks/useThrottledScroll";
 import ThemeSyncBanner from "@/components/navbar/ThemeSyncBanner";
 import NavLinks from "@/components/navbar/NavLinks";
 import MobileMenu from "@/components/navbar/MobileMenu";

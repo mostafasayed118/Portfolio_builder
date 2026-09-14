@@ -4,7 +4,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 // Capture the scroll callback for manual invocation
 let scrollCallback: (() => void) | null = null;
 
-vi.mock("@/hooks/use-throttled-scroll", () => ({
+vi.mock("@/hooks/useThrottledScroll", () => ({
   useThrottledScroll: (callback: () => void) => {
     scrollCallback = callback;
   },

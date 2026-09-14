@@ -5,7 +5,7 @@ import { ArrowLeft, Calendar, Check, Clock, FileX, Share2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import RemarkGfm from "remark-gfm";
 import SEO from "@/components/SEO";
-import { usePostBySlug, usePosts } from "@/hooks/use-portfolio-data";
+import { usePostBySlug, usePosts } from "@/hooks/usePortfolioData";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
 import { getSiteUrl } from "@/lib/env";
 import { trackEvent } from "@workspace/db/analytics";

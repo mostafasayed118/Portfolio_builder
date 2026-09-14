@@ -19,7 +19,7 @@ vi.mock("@/lib/supabase-provider", () => ({
   SupabaseProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-vi.mock("@/hooks/use-portfolio-data", () => ({
+vi.mock("@/hooks/usePortfolioData", () => ({
   useHeroContent: () => ({
     data: {
       heading: "Hi, I'm",
@@ -71,13 +71,13 @@ vi.mock("@workspace/db/contact-info", () => ({ getContactInfo: vi.fn() }));
 vi.mock("@workspace/db/analytics", () => ({ trackEvent: mockTrackEvent }));
 vi.mock("@/lib/logger", () => ({ logWarn: vi.fn(), logError: vi.fn() }));
 vi.mock("@/lib/env", () => ({ getApiUrl: () => "http://test-api" }));
-vi.mock("@/hooks/use-mouse-tilt", () => ({
+vi.mock("@/hooks/useMouseTilt", () => ({
   useMouseTilt: () => ({ ref: vi.fn(), onMouseMove: vi.fn(), onMouseEnter: vi.fn(), onMouseLeave: vi.fn(), style: {} }),
 }));
-vi.mock("@/hooks/use-typewriter", () => ({
+vi.mock("@/hooks/useTypewriter", () => ({
   useTypewriter: (texts: string[]) => texts[0] ?? "",
 }));
-vi.mock("@/hooks/use-throttled-scroll", () => ({
+vi.mock("@/hooks/useThrottledScroll", () => ({
   useThrottledScroll: vi.fn(),
 }));
 vi.mock("@workspace/db/analytics", () => ({ trackEvent: mockTrackEvent }));

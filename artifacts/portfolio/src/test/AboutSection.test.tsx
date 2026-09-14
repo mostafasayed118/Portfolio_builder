@@ -3,12 +3,12 @@ import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { LanguageProvider } from "@/lib/language";
 
-vi.mock("@/hooks/use-portfolio-data", () => ({
+vi.mock("@/hooks/usePortfolioData", () => ({
   useAboutContent: vi.fn(),
   useSkills: vi.fn(() => ({ data: [], isLoading: false })),
 }));
 
-vi.mock("@/hooks/use-reveal", () => ({
+vi.mock("@/hooks/useReveal", () => ({
   useReveal: vi.fn(() => ({ ref: vi.fn(), revealed: true })),
 }));
 
@@ -20,12 +20,12 @@ vi.mock("@/components/SectionLabel", () => ({
   default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-vi.mock("@/hooks/use-localized", () => ({
+vi.mock("@/hooks/useLocalized", () => ({
   useLocalized: vi.fn(() => ({ localize: (v: string) => v })),
 }));
 
 import { AboutSection } from "@/features/about";
-import { useAboutContent } from "@/hooks/use-portfolio-data";
+import { useAboutContent } from "@/hooks/usePortfolioData";
 
 function renderWithProviders(ui: React.ReactElement) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });

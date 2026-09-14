@@ -1,4 +1,4 @@
-import { useSkills as useDbSkills, groupSkillsByCategory as groupByCategory } from "@/hooks/use-portfolio-data";
+import { useSkills as useDbSkills, groupSkillsByCategory as groupByCategory } from "@/hooks/usePortfolioData";
 import { SKILL_CATEGORIES } from "@/data/portfolio";
 import type { SkillCategory } from "@/features/skills/types";
 import type { SkillListItem } from "@workspace/db/skills";

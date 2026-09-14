@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import { useHeroContent } from "@/hooks/use-portfolio-data";
+import { useHeroContent } from "@/hooks/usePortfolioData";
 import { HERO } from "@/data/portfolio";
 
 export type BrandingConfig = {

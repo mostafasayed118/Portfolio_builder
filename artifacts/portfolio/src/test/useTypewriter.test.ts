@@ -1,5 +1,5 @@
 import { renderHook } from "@testing-library/react";
-import { useTypewriter } from "@/hooks/use-typewriter";
+import { useTypewriter } from "@/hooks/useTypewriter";
 
 describe("useTypewriter", () => {
   const texts = ["Data Engineer", "Python Dev"];

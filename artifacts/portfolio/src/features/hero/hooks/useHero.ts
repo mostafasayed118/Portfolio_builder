@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { useHeroContent } from "@/hooks/use-portfolio-data";
-import { useMouseTilt } from "@/hooks/use-mouse-tilt";
+import { useHeroContent } from "@/hooks/usePortfolioData";
+import { useMouseTilt } from "@/hooks/useMouseTilt";
 import { useLanguage } from "@/lib/language";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
 import { trackEvent } from "@workspace/db/analytics";

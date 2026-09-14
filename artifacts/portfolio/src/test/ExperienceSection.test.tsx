@@ -2,11 +2,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { screen } from "@testing-library/react";
 import { mockEmptyState, mockSectionLabel, mockUseReveal, renderWithProviders } from "./helpers";
 
-vi.mock("@/hooks/use-portfolio-data", () => ({
+vi.mock("@/hooks/usePortfolioData", () => ({
   useExperience: vi.fn(),
 }));
 
-vi.mock("@/hooks/use-reveal", () => mockUseReveal());
+vi.mock("@/hooks/useReveal", () => mockUseReveal());
 
 vi.mock("@/components/TimelineItem", () => ({
   default: ({ title, company }: { title: string; company: string }) => (
@@ -21,7 +21,7 @@ vi.mock("@/components/SectionLabel", () => mockSectionLabel());
 vi.mock("@/components/EmptyState", () => mockEmptyState());
 
 import ExperienceSection from "@/components/ExperienceSection";
-import { useExperience } from "@/hooks/use-portfolio-data";
+import { useExperience } from "@/hooks/usePortfolioData";
 
 describe("ExperienceSection", () => {
   beforeEach(() => {
