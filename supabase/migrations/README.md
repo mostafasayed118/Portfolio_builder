@@ -37,10 +37,10 @@ export SUPABASE_ACCESS_TOKEN=sbp_...
 **2. Link the project (once per checkout)**
 
 ```bash
-supabase link --project-ref txnuvpxhghxiwynhtbvo
+supabase link --project-ref njibfrkovexikcwzycan
 ```
 
-The ref for the live project is `txnuvpxhghxiwynhtbvo` (Portfolio_builder, West EU Ireland). Find all refs with `supabase projects list`; the linked project is marked with `●`. Linking only writes to the gitignored `supabase/.temp` directory.
+The ref for the live project is `njibfrkovexikcwzycan` (Portfolio_builder, West EU Ireland). Find all refs with `supabase projects list`; the linked project is marked with `●`. Linking only writes to the gitignored `supabase/.temp` directory.
 
 **3. See what's pending**
 
@@ -68,7 +68,7 @@ Or query the live data through the REST API with the anon key from the root `.en
 
 ```bash
 ANON=$(grep -E '^VITE_SUPABASE_ANON_KEY=' .env | cut -d= -f2-)
-curl -s "https://txnuvpxhghxiwynhtbvo.supabase.co/rest/v1/hero_content?select=*&limit=1" \
+curl -s "https://njibfrkovexikcwzycan.supabase.co/rest/v1/hero_content?select=*&limit=1" \
   -H "apikey: $ANON" -H "Authorization: Bearer $ANON"
 ```
 

@@ -1,5 +1,5 @@
 -- ============================================================================
--- 047_singleton_table_guard.sql
+-- 057_singleton_table_guard.sql
 --
 -- Enforce single-row (singleton) semantics on the settings tables at the
 -- database level.
