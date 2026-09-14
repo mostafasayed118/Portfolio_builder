@@ -3,17 +3,27 @@ import { getSupabaseClient } from "../supabase-client";
 
 const MAX_CONTEXT_CHARS = 6000;
 let cache: { text: string; at: number } | null = null;
+let inflight: Promise<string> | null = null;
 
 export async function buildSiteContext(): Promise<string> {
   const now = Date.now();
   if (cache && now - cache.at < env.AI_CONTEXT_TTL_MS) return cache.text;
-  try {
-    const text = await fetchContext();
-    cache = { text, at: now };
-    return text;
-  } catch {
-    return cache?.text ?? "";
+  if (!inflight) {
+    inflight = fetchContext()
+      .then((text) => {
+        cache = { text, at: Date.now() };
+        return text;
+      })
+      .catch(() => {
+        const stale = cache?.text ?? "";
+        if (stale) cache = { text: stale, at: Date.now() };
+        return stale;
+      })
+      .finally(() => {
+        inflight = null;
+      });
   }
+  return inflight;
 }
 
 async function fetchContext(): Promise<string> {
@@ -25,10 +35,10 @@ async function fetchContext(): Promise<string> {
     supabase.from("about_content")
       .select("bio1, bio2, bio, location, years_of_experience, degree, school, education, languages, interests")
       .eq("is_published", true).maybeSingle(),
-    supabase.from("skills").select("name, category, proficiency").is("deleted_at", null).eq("is_visible", true),
-    supabase.from("projects").select("title, description, tech_stack, category, tags").is("deleted_at", null).eq("is_published", true),
-    supabase.from("experience").select("title, company, location, period, description, technologies, type").is("deleted_at", null).eq("is_published", true),
-    supabase.from("certifications").select("title, issuer, date, skills").is("deleted_at", null).eq("is_published", true),
+    supabase.from("skills").select("name, category, proficiency").is("deleted_at", null).eq("is_visible", true).limit(100),
+    supabase.from("projects").select("title, description, tech_stack, category, tags").is("deleted_at", null).eq("is_published", true).limit(100),
+    supabase.from("experience").select("title, company, location, period, description, technologies, type").is("deleted_at", null).eq("is_published", true).limit(100),
+    supabase.from("certifications").select("title, issuer, date, skills").is("deleted_at", null).eq("is_published", true).limit(100),
     supabase.from("contact_info").select("email, phone, location, github, linkedin, youtube, facebook, whatsapp, availability_status, working_hours").limit(1).maybeSingle(),
   ]);
 

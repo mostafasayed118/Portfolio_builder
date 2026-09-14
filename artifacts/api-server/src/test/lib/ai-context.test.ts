@@ -60,3 +60,74 @@ describe("buildSiteContext", () => {
     expect(text).toContain("Name: Jane");
   });
 });
+
+describe("buildSiteContext concurrent fetches", () => {
+  beforeEach(() => {
+    // TTL 0 disables the cache read path so every call reaches the fetch
+    // layer — this isolates in-flight coalescing from cache hits.
+    vi.stubEnv("AI_CONTEXT_TTL_MS", "0");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  function delayedClient(onQuery: () => void) {
+    const chains: Record<string, ReturnType<typeof makeChain>> = {};
+    function makeChain() {
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn(
+          () =>
+            new Promise((resolve) =>
+              setTimeout(() => resolve({ data: null, error: null }), 5),
+            ),
+        ),
+      };
+    }
+    return {
+      from: vi.fn((table: string) => {
+        onQuery();
+        if (!chains[table]) chains[table] = makeChain();
+        return chains[table];
+      }),
+      chains,
+    };
+  }
+
+  it("coalesces concurrent misses into one fetch", async () => {
+    let calls = 0;
+    const c = delayedClient(() => {
+      calls++;
+    });
+    vi.mocked(getSupabaseClient).mockReturnValue(c as never);
+
+    const [a, b, d] = await Promise.all([
+      buildSiteContext(),
+      buildSiteContext(),
+      buildSiteContext(),
+    ]);
+
+    expect(a).toBe(b);
+    expect(b).toBe(d);
+    // One round of 7 queries, not 3 x 7.
+    expect(calls).toBe(7);
+  });
+
+  it("caps list queries with .limit(100)", async () => {
+    let calls = 0;
+    const c = delayedClient(() => {
+      calls++;
+    });
+    vi.mocked(getSupabaseClient).mockReturnValue(c as never);
+
+    await buildSiteContext();
+
+    for (const table of ["skills", "projects", "experience", "certifications"]) {
+      expect(c.chains[table].limit).toHaveBeenCalledWith(100);
+    }
+  });
+});
