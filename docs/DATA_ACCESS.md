@@ -91,15 +91,14 @@ The API server path adds: authentication (Clerk JWT verification), CSRF protecti
 
 ### `messages.ts`
 
-| Function                               | Returns     | Description                    |
-| -------------------------------------- | ----------- | ------------------------------ |
-| `listMessages(supabase)`               | `Message[]` | All ordered by created_at DESC |
-| `unreadCount(supabase)`                | `number`    | Count of unread messages       |
-| `sendMessage(supabase, args)`          | `void`      | Insert (public anon key works) |
-| `markMessageRead(supabase, id)`        | `void`      | Set status = 'read'            |
-| `markAllMessagesRead(supabase)`        | `void`      | Set all unread → read          |
-| `deleteMessage(supabase, id)`          | `void`      | Delete by id                   |
-| `replyToMessage(email, subject, body)` | `string`    | Generate mailto: URL           |
+| Function                            | Returns     | Description                                 |
+| ----------------------------------- | ----------- | ------------------------------------------- |
+| `listMessages(supabase, limit=100)` | `Message[]` | Latest `limit` non-deleted, created_at DESC |
+| `unreadCount(supabase)`             | `number`    | Count of unread messages                    |
+| `sendMessage(supabase, args)`       | `void`      | Insert (public anon key works)              |
+| `markMessageRead(supabase, id)`     | `void`      | Set status = 'read'                         |
+| `markAllMessagesRead(supabase)`     | `void`      | Set all unread → read                       |
+| `deleteMessage(supabase, id)`       | `void`      | Delete by id                                |
 
 ### `contactInfo.ts`, `themeSettings.ts`, `typographySettings.ts`, `seoSettings.ts`, `siteSettings.ts`
 

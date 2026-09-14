@@ -11,64 +11,71 @@ All functions accept `SupabaseClient` as the first parameter:
 ## Module Reference
 
 ### `heroContent.ts`
-| Function | Returns | Description |
-|----------|---------|-------------|
-| `getHeroContent(supabase)` | `HeroContent \| null` | Get singleton row |
-| `upsertHeroContent(supabase, args)` | `string` (id) | Update or insert |
-| `seedDefaultHeroContent(supabase)` | `string \| null` | Insert defaults if empty |
+
+| Function                            | Returns               | Description              |
+| ----------------------------------- | --------------------- | ------------------------ |
+| `getHeroContent(supabase)`          | `HeroContent \| null` | Get singleton row        |
+| `upsertHeroContent(supabase, args)` | `string` (id)         | Update or insert         |
+| `seedDefaultHeroContent(supabase)`  | `string \| null`      | Insert defaults if empty |
 
 ### `aboutContent.ts`
-| Function | Returns | Description |
-|----------|---------|-------------|
-| `getAboutContent(supabase)` | `AboutContent \| null` | Get singleton |
-| `upsertAboutContent(supabase, args)` | `string` (id) | Update or insert |
+
+| Function                             | Returns                | Description      |
+| ------------------------------------ | ---------------------- | ---------------- |
+| `getAboutContent(supabase)`          | `AboutContent \| null` | Get singleton    |
+| `upsertAboutContent(supabase, args)` | `string` (id)          | Update or insert |
 
 ### `skills.ts`
-| Function | Returns | Description |
-|----------|---------|-------------|
-| `listSkills(supabase)` | `Skill[]` | All skills ordered by sort_order |
-| `listSkillsByCategory(supabase, category)` | `Skill[]` | Filtered by category |
-| `createSkill(supabase, args)` | `string` (id) | Insert |
-| `updateSkill(supabase, id, args)` | `void` | Partial update |
-| `deleteSkill(supabase, id)` | `void` | Delete by id |
+
+| Function                                   | Returns       | Description                      |
+| ------------------------------------------ | ------------- | -------------------------------- |
+| `listSkills(supabase)`                     | `Skill[]`     | All skills ordered by sort_order |
+| `listSkillsByCategory(supabase, category)` | `Skill[]`     | Filtered by category             |
+| `createSkill(supabase, args)`              | `string` (id) | Insert                           |
+| `updateSkill(supabase, id, args)`          | `void`        | Partial update                   |
+| `deleteSkill(supabase, id)`                | `void`        | Delete by id                     |
 
 ### `projects.ts`
-| Function | Returns | Description |
-|----------|---------|-------------|
-| `listProjects(supabase)` | `Project[]` | All ordered by sort_order |
-| `listPublishedProjects(supabase)` | `Project[]` | Only `is_published = true` |
-| `createProject(supabase, args)` | `string` (id) | Insert |
-| `updateProject(supabase, id, args)` | `void` | Partial update |
-| `deleteProject(supabase, id)` | `void` | Delete by id |
+
+| Function                            | Returns       | Description                |
+| ----------------------------------- | ------------- | -------------------------- |
+| `listProjects(supabase)`            | `Project[]`   | All ordered by sort_order  |
+| `listPublishedProjects(supabase)`   | `Project[]`   | Only `is_published = true` |
+| `createProject(supabase, args)`     | `string` (id) | Insert                     |
+| `updateProject(supabase, id, args)` | `void`        | Partial update             |
+| `deleteProject(supabase, id)`       | `void`        | Delete by id               |
 
 ### `experience.ts`
-| Function | Returns | Description |
-|----------|---------|-------------|
-| `listExperience(supabase)` | `Experience[]` | All ordered by sort_order |
-| `createExperience(supabase, args)` | `string` (id) | Insert |
-| `updateExperience(supabase, id, args)` | `void` | Partial update |
-| `deleteExperience(supabase, id)` | `void` | Delete by id |
+
+| Function                               | Returns        | Description               |
+| -------------------------------------- | -------------- | ------------------------- |
+| `listExperience(supabase)`             | `Experience[]` | All ordered by sort_order |
+| `createExperience(supabase, args)`     | `string` (id)  | Insert                    |
+| `updateExperience(supabase, id, args)` | `void`         | Partial update            |
+| `deleteExperience(supabase, id)`       | `void`         | Delete by id              |
 
 ### `certifications.ts`
-| Function | Returns | Description |
-|----------|---------|-------------|
-| `listCertifications(supabase)` | `Certification[]` | All ordered by sort_order |
-| `createCertification(supabase, args)` | `string` (id) | Insert |
-| `updateCertification(supabase, id, args)` | `void` | Partial update |
-| `deleteCertification(supabase, id)` | `void` | Delete by id |
+
+| Function                                  | Returns           | Description               |
+| ----------------------------------------- | ----------------- | ------------------------- |
+| `listCertifications(supabase)`            | `Certification[]` | All ordered by sort_order |
+| `createCertification(supabase, args)`     | `string` (id)     | Insert                    |
+| `updateCertification(supabase, id, args)` | `void`            | Partial update            |
+| `deleteCertification(supabase, id)`       | `void`            | Delete by id              |
 
 ### `messages.ts`
-| Function | Returns | Description |
-|----------|---------|-------------|
-| `listMessages(supabase)` | `Message[]` | All ordered by created_at DESC |
-| `unreadCount(supabase)` | `number` | Count of unread messages |
-| `sendMessage(supabase, args)` | `void` | Insert (public anon key works) |
-| `markMessageRead(supabase, id)` | `void` | Set status = 'read' |
-| `markAllMessagesRead(supabase)` | `void` | Set all unread → read |
-| `deleteMessage(supabase, id)` | `void` | Delete by id |
-| `replyToMessage(email, subject, body)` | `string` | Generate mailto: URL |
+
+| Function                            | Returns     | Description                                 |
+| ----------------------------------- | ----------- | ------------------------------------------- |
+| `listMessages(supabase, limit=100)` | `Message[]` | Latest `limit` non-deleted, created_at DESC |
+| `unreadCount(supabase)`             | `number`    | Count of unread messages                    |
+| `sendMessage(supabase, args)`       | `void`      | Insert (public anon key works)              |
+| `markMessageRead(supabase, id)`     | `void`      | Set status = 'read'                         |
+| `markAllMessagesRead(supabase)`     | `void`      | Set all unread → read                       |
+| `deleteMessage(supabase, id)`       | `void`      | Delete by id                                |
 
 ### `contactInfo.ts`, `themeSettings.ts`, `typographySettings.ts`, `seoSettings.ts`, `siteSettings.ts`
+
 Each follows the same singleton pattern:
 | Function | Returns | Description |
 |----------|---------|-------------|
@@ -76,17 +83,19 @@ Each follows the same singleton pattern:
 | `upsert*(supabase, args)` | `string` (id) | Update or insert |
 
 ### `sectionSettings.ts`
-| Function | Returns | Description |
-|----------|---------|-------------|
-| `listSectionSettings(supabase)` | `SectionSetting[]` | All ordered by sort_order |
-| `updateSectionSetting(supabase, id, args)` | `void` | Partial update |
-| `reorderSectionSettings(supabase, items)` | `void` | Batch update sort_order |
+
+| Function                                   | Returns            | Description               |
+| ------------------------------------------ | ------------------ | ------------------------- |
+| `listSectionSettings(supabase)`            | `SectionSetting[]` | All ordered by sort_order |
+| `updateSectionSetting(supabase, id, args)` | `void`             | Partial update            |
+| `reorderSectionSettings(supabase, items)`  | `void`             | Batch update sort_order   |
 
 ### `cvSettings.ts`
-| Function | Returns | Description |
-|----------|---------|-------------|
-| `getLatestCvSettings(supabase)` | `CvSettings \| null` | Most recent CV entry |
-| `upsertCvSettings(supabase, args)` | `string` (id) | Update or insert |
+
+| Function                           | Returns              | Description          |
+| ---------------------------------- | -------------------- | -------------------- |
+| `getLatestCvSettings(supabase)`    | `CvSettings \| null` | Most recent CV entry |
+| `upsertCvSettings(supabase, args)` | `string` (id)        | Update or insert     |
 
 ## Type Safety
 

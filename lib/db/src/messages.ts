@@ -4,9 +4,10 @@ import { queryOrThrow, queryOrThrowWithCount } from "./query";
 
 export async function listMessages(
   supabase: SupabaseClient,
+  limit = 100,
 ): Promise<Message[]> {
   return queryOrThrow<Message[]>(
-    supabase.from("messages").select("*").is("deleted_at", null).order("created_at", { ascending: false }),
+    supabase.from("messages").select("*").is("deleted_at", null).order("created_at", { ascending: false }).limit(limit),
     { table: "messages", operation: "listMessages" },
   );
 }
@@ -48,15 +49,4 @@ export async function deleteMessage(
     supabase.from("messages").update({ deleted_at: new Date().toISOString() }).eq("id", id),
     { table: "messages", operation: "deleteMessage" },
   );
-}
-
-export function replyToMessage(
-  email: string,
-  subject: string,
-  body: string,
-): string {
-  const mailto = new URL(`mailto:${email}`);
-  mailto.searchParams.set("subject", subject);
-  mailto.searchParams.set("body", body);
-  return mailto.toString();
 }

@@ -6,7 +6,6 @@ import {
   markMessageRead,
   markAllMessagesRead,
   deleteMessage,
-  replyToMessage,
 } from "./messages";
 
 let supabase: ReturnType<typeof createMockSupabase>;
@@ -15,12 +14,12 @@ beforeEach(() => {
 });
 
 describe("listMessages", () => {
-  it("selects non-deleted messages ordered by created_at descending", async () => {
+  it("selects non-deleted messages ordered by created_at descending, capped at 100", async () => {
     const rows = [
       { id: "1", name: "Alice", email: "a@b.com", message: "Hi", created_at: "2024-02-01" },
       { id: "2", name: "Bob", email: "b@c.com", message: "Hey", created_at: "2024-01-01" },
     ];
-    supabase.order.mockResolvedValue({ data: rows, error: null });
+    supabase.limit.mockResolvedValue({ data: rows, error: null });
 
     const result = await listMessages(supabase as any);
 
@@ -28,11 +27,20 @@ describe("listMessages", () => {
     expect(supabase.select).toHaveBeenCalledWith("*");
     expect(supabase.is).toHaveBeenCalledWith("deleted_at", null);
     expect(supabase.order).toHaveBeenCalledWith("created_at", { ascending: false });
+    expect(supabase.limit).toHaveBeenCalledWith(100);
     expect(result).toEqual(rows);
   });
 
+  it("forwards an explicit limit to the query builder", async () => {
+    supabase.limit.mockResolvedValue({ data: [], error: null });
+
+    await listMessages(supabase as any, 25);
+
+    expect(supabase.limit).toHaveBeenCalledWith(25);
+  });
+
   it("throws on error", async () => {
-    supabase.order.mockResolvedValue({ data: null, error: new Error("db error") });
+    supabase.limit.mockResolvedValue({ data: null, error: new Error("db error") });
 
     await expect(listMessages(supabase as any)).rejects.toThrow("db error");
   });
@@ -126,24 +134,5 @@ describe("deleteMessage", () => {
     supabase.eq.mockResolvedValue({ error: new Error("fail") });
 
     await expect(deleteMessage(supabase as any, "x")).rejects.toThrow("fail");
-  });
-});
-
-describe("replyToMessage", () => {
-  it("returns a mailto URL with subject and body", async () => {
-    const result = await replyToMessage("test@test.com", "Hello", "Body");
-    expect(result).toBe("mailto:test@test.com?subject=Hello&body=Body");
-  });
-
-  it("encodes special characters in subject and body", async () => {
-    const result = await replyToMessage("a@b.com", "Hello World", "Line 1\nLine 2");
-    expect(result).toContain("mailto:a@b.com");
-    expect(result).toContain("subject=Hello+World");
-    expect(result).toContain("body=");
-  });
-
-  it("handles empty subject and body", async () => {
-    const result = await replyToMessage("user@example.com", "", "");
-    expect(result).toBe("mailto:user@example.com?subject=&body=");
   });
 });
