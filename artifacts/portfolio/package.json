@@ -29,8 +29,6 @@
     "lucide-react": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "react-hook-form": "^7.55.0",
-    "recharts": "^2.15.2",
     "rollup-plugin-visualizer": "^7.0.1",
     "tailwind-merge": "catalog:",
     "tailwindcss": "catalog:",
