@@ -1,153 +1,31 @@
 import { Router, type IRouter } from "express";
-import { z } from "zod";
+import type { Response } from "express";
 import { doubleCsrfProtection } from "../../middleware/csrf";
 import type { AuthenticatedRequest } from "../../middleware/adminAuth";
 import { requireSuperadmin } from "../../middleware/requireSuperadmin";
 import { validateQueryUserId, validateParamId } from "../../middleware/validateUuid";
-import type { Response } from "express";
 import {
   bulkDeleteMessagesSchema,
   bulkArchiveMessagesSchema,
   bulkUnarchiveMessagesSchema,
 } from "@workspace/api-zod";
-import type { MsgStatus } from "@workspace/supabase/types";
 import { getSupabaseClient } from "../../lib/supabase-client";
 import { ok, badRequest, serverError, notFound } from "../../lib/api-response";
 import { safeErrorMessage } from "../../lib/safe-error";
-import { sendMessageReply } from "../../lib/mailer";
 import {
   runCollectionQuery,
   updateByIdAndUser,
   softDeleteByIdAndUser,
 } from "../../lib/route-helpers";
+import { messagePresetSchema, messageStatusSchema, viewSpec } from "../../lib/messages/view-spec";
+import { scopeMessagesQuery } from "../../lib/messages/scope";
+import { bulkSoftDeleteHandler } from "../../lib/messages/bulk";
+import { archiveTestSubmissions, restoreAllArchived } from "../../lib/messages/maintenance";
+import { replyToMessage } from "../../lib/messages/reply";
 
 const router: IRouter = Router();
 
 const bulkDeleteSchema = bulkDeleteMessagesSchema;
-
-const replySchema = z.object({
-  reply: z.string().trim().min(1, "Reply is required").max(5000, "Reply is too long"),
-});
-
-/** Valid values for the list endpoint's `?status=` filter. Omitted = default view. */
-const messageStatusSchema = z.enum(["unread", "read", "archived", "spam", "all"]).optional();
-
-/** Valid values for the list endpoint's `?preset=` compound views. */
-const messagePresetSchema = z.enum(["unread_today", "unread_or_archived", "needs_reply"]).optional();
-
-/**
- * Declarative predicate spec defining a messages view — the SINGLE source of
- * truth shared by the list endpoint and the bulk-archive filter, so the two
- * can never drift apart (list shows a view, bulk-archive archives exactly
- * that view in one statement).
- *
- * - `unread_today` — active unread messages created since UTC midnight.
- * - `needs_reply` — read but never replied to (actionable: the sender is
- *   waiting). `replied_at IS NULL` excludes messages the admin answered.
- * - `unread_or_archived` — every row that is unread OR archived: visible
- *   unread messages plus anything soft-deleted, regardless of its status.
- *   Read-and-visible rows are excluded. One `.or()` disjunction (soft-delete
- *   off, since the clause already covers deleted rows).
- * - `archived` — the soft-deleted set (softDelete: "only").
- * - `unread` / `read` — the active rows with that status.
- * - omitted — every visible row (softDelete: true).
- */
-interface ViewSpec {
-  softDelete?: boolean | "only";
-  eq?: Record<string, string | number | boolean>;
-  gte?: Record<string, string>;
-  isNull?: string[];
-  or?: string;
-}
-
-function viewSpec(
-  status?: NonNullable<z.infer<typeof messageStatusSchema>>,
-  preset?: NonNullable<z.infer<typeof messagePresetSchema>>,
-): ViewSpec {
-  switch (preset) {
-    case "unread_today": {
-      const startOfToday = new Date();
-      startOfToday.setUTCHours(0, 0, 0, 0);
-      return {
-        softDelete: true,
-        eq: { status: "unread" },
-        gte: { created_at: startOfToday.toISOString() },
-      };
-    }
-    case "needs_reply":
-      return { softDelete: true, eq: { status: "read" }, isNull: ["replied_at"] };
-    case "unread_or_archived":
-      return { or: "status.eq.unread,deleted_at.not.is.null" };
-  }
-  if (status === "archived") return { softDelete: "only" };
-  if (status === "unread" || status === "read") return { softDelete: true, eq: { status } };
-  if (status === "spam") return { softDelete: true, eq: { is_spam: true } };
-  return { softDelete: true };
-}
-
-/**
- * Apply a ViewSpec's predicates to a supabase query chain (list or update).
- * The concrete builder type is preserved through the generic — the internal
- * structural access is only for chaining the filter methods.
- */
-function applyViewSpec<Q>(q: Q, spec: ViewSpec): Q {
-  const chain = q as unknown as {
-    eq(c: string, v: unknown): unknown;
-    gte(c: string, v: string): unknown;
-    is(c: string, v: null): unknown;
-    not(c: string, op: string, v: unknown): unknown;
-    or(f: string): unknown;
-  };
-  let cur: unknown = chain;
-  if (spec.softDelete === "only") cur = (cur as typeof chain).not("deleted_at", "is", null);
-  else if (spec.softDelete) cur = (cur as typeof chain).is("deleted_at", null);
-  for (const [column, value] of Object.entries(spec.eq ?? {})) {
-    cur = (cur as typeof chain).eq(column, value);
-  }
-  for (const [column, value] of Object.entries(spec.gte ?? {})) {
-    cur = (cur as typeof chain).gte(column, value);
-  }
-  for (const column of spec.isNull ?? []) {
-    cur = (cur as typeof chain).is(column, null);
-  }
-  if (spec.or) cur = (cur as typeof chain).or(spec.or);
-  return cur as Q;
-}
-
-/**
- * User scoping for messages queries — the SINGLE implementation shared by
- * every endpoint in this file (previously re-implemented six times inline).
- * Mirrors `runCollectionQuery`'s semantics:
- *   - Superadmin with `?userId=` → that user's rows (plus orphans when
- *     `includeOrphans`, i.e. public contact-form rows with no owner).
- *   - Superadmin without `?userId=` → every row.
- *   - Regular admin → own rows (plus orphans when `includeOrphans`); a
- *     `?userId` they pass is ignored (no privilege escalation). A missing
- *     identity fails closed to `""` (matches nothing).
- */
-function scopeMessagesQuery<
-  T extends { or(f: string): T; eq(c: string, v: unknown): T },
->(query: T, req: AuthenticatedRequest, opts: { includeOrphans?: boolean } = {}): T {
-  const includeOrphans = opts.includeOrphans ?? false;
-  const isSuperadmin = req.user?.role === "superadmin";
-  const requestedUserId =
-    typeof req.query.userId === "string" && req.query.userId.length > 0
-      ? req.query.userId
-      : undefined;
-
-  if (isSuperadmin) {
-    if (requestedUserId) {
-      return includeOrphans
-        ? query.or(`user_id.eq.${requestedUserId},user_id.is.null`)
-        : query.eq("user_id", requestedUserId);
-    }
-    return query;
-  }
-  const ownId = req.user?.id ?? "";
-  return includeOrphans
-    ? query.or(`user_id.eq.${ownId},user_id.is.null`)
-    : query.eq("user_id", ownId);
-}
 
 /**
  * List messages, optionally filtered server-side by status or a saved preset.
@@ -278,21 +156,6 @@ router.post("/mark-all-read", doubleCsrfProtection, async (req: AuthenticatedReq
 });
 
 /**
- * Email predicate for automated test submissions. Shared by the count and
- * update statements so they can never drift apart: any row whose email
- * starts with `e2e-` or `qa.verify.` (the E2E suite and the QA verify
- * fixture), or is exactly `test@test.com` (the generic test inbox), is a
- * test submission — never a real inquiry.
- *
- * One `.or()` expression (not chained `.ilike()`s, which would AND together).
- * All three patterns are ILIKE so matching is case-insensitive; `@` and `.`
- * are literal in ILIKE, so `email.ilike.test@test.com` only ever matches the
- * exact test@test.com address.
- */
-const TEST_SUBMISSION_EMAILS =
-  "email.ilike.e2e-%,email.ilike.qa.verify.%,email.ilike.test@test.com";
-
-/**
  * One-click cleanup: archive every automated test submission that is still
  * visible. Server-side on purpose — the list endpoint paginates, so the
  * client could never see all rows. Superadmin only (declarative middleware):
@@ -300,33 +163,10 @@ const TEST_SUBMISSION_EMAILS =
  * re-running only touches rows still visible (deleted_at null).
  */
 router.post("/archive-test-submissions", requireSuperadmin, doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
-  const supabase = getSupabaseClient();
-  // Count the visible test rows first (typed head-count, same as unread-count)
-  // so the response can report how many were archived. The update then
-  // targets the identical predicate. Any row inserted between the two
-  // statements is out of scope for this run — fine for a cleanup tool.
-  const { count, error: countError } = await supabase
-    .from("messages")
-    .select("id", { count: "exact", head: true })
-    .or(TEST_SUBMISSION_EMAILS)
-    .is("deleted_at", null);
-  if (countError) return serverError(res, safeErrorMessage(countError));
-
-  const { error } = await supabase
-    .from("messages")
-    .update({ deleted_at: new Date().toISOString() })
-    .or(TEST_SUBMISSION_EMAILS)
-    .is("deleted_at", null);
-  if (error) return serverError(res, safeErrorMessage(error));
-  return ok(res, { archived: count ?? 0 });
+  const result = await archiveTestSubmissions();
+  if (!result.ok) return serverError(res, result.message);
+  return ok(res, { archived: result.count });
 });
-
-/**
- * Predicate selecting every soft-deleted (archived) row: `deleted_at IS NOT
- * NULL`. Shared by the count and update statements of restore-all-archived so
- * they can never drift apart.
- */
-const ARCHIVED_ROWS = ["deleted_at", "is", null] as const;
 
 /**
  * One-click restore: bring every archived (soft-deleted) message back to the
@@ -336,23 +176,9 @@ const ARCHIVED_ROWS = ["deleted_at", "is", null] as const;
  * re-running only touches rows still archived (deleted_at NOT NULL).
  */
 router.post("/restore-all-archived", requireSuperadmin, doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
-  const supabase = getSupabaseClient();
-  // Count the archived rows first (typed head-count) so the response can
-  // report how many were restored. The update then targets the identical
-  // predicate. Any row archived between the two statements is out of scope
-  // for this run — fine for a bulk restore tool.
-  const { count, error: countError } = await supabase
-    .from("messages")
-    .select("id", { count: "exact", head: true })
-    .not(...ARCHIVED_ROWS);
-  if (countError) return serverError(res, safeErrorMessage(countError));
-
-  const { error } = await supabase
-    .from("messages")
-    .update({ deleted_at: null })
-    .not(...ARCHIVED_ROWS);
-  if (error) return serverError(res, safeErrorMessage(error));
-  return ok(res, { restored: count ?? 0 });
+  const result = await restoreAllArchived();
+  if (!result.ok) return serverError(res, result.message);
+  return ok(res, { restored: result.count });
 });
 
 router.delete("/:id", doubleCsrfProtection, validateParamId, async (req: AuthenticatedRequest, res: Response) => {
@@ -364,97 +190,15 @@ router.post(
   doubleCsrfProtection,
   validateParamId,
   async (req: AuthenticatedRequest, res: Response) => {
-    const supabase = getSupabaseClient();
-    const result = replySchema.safeParse(req.body);
-    if (!result.success) {
-      return badRequest(res, result.error.flatten().fieldErrors);
+    const result = await replyToMessage(req, req.params.id as string, req.body);
+    if (!result.ok) {
+      if (result.kind === "invalid_body") return badRequest(res, result.fieldErrors);
+      if (result.kind === "not_found") return notFound(res, result.message);
+      return serverError(res, result.message);
     }
-    const messageId = req.params.id as string;
-
-    const fetchQuery = scopeMessagesQuery(
-      supabase.from("messages").select("id, name, email, message, subject").eq("id", messageId),
-      req,
-    );
-    const { data, error } = await fetchQuery.maybeSingle();
-    if (error) {
-      return serverError(res, safeErrorMessage(error));
-    }
-    if (!data) {
-      return notFound(res, "Message not found");
-    }
-
-    const reply = result.data.reply;
-    const updated: {
-      reply_email_draft: string;
-      replied_at: string;
-      status: MsgStatus;
-    } = {
-      reply_email_draft: reply,
-      replied_at: new Date().toISOString(),
-      status: "read",
-    };
-
-    const update = await supabase.from("messages").update(updated).eq("id", messageId);
-    if (update.error) {
-      return serverError(res, safeErrorMessage(update.error));
-    }
-
-    // Send a branded reply to the original sender (opt-in via Gmail SMTP).
-    const sent = await sendMessageReply({
-      to: data.email,
-      recipientName: data.name,
-      reply,
-      originalSubject: data.subject,
-      quoted: data.message,
-    });
-
-    return ok(res, { id: messageId, sent });
+    return ok(res, { id: req.params.id as string, sent: result.sent });
   },
 );
-
-/**
- * Shared skeleton for the three bulk endpoints — identical parse → scope →
- * update → respond flows differing only in schema, patch payload, and (for
- * filter-based bulk-archive/unarchive) the view predicates applied.
- */
-interface BulkActionBody {
-  ids?: string[];
-  filter?: { status?: z.infer<typeof messageStatusSchema>; preset?: z.infer<typeof messagePresetSchema> };
-}
-
-function bulkSoftDeleteHandler(
-  schema: { safeParse(input: unknown): { success: true; data: BulkActionBody } | { success: false; error: { flatten(): { fieldErrors: Record<string, string[]>; formErrors: string[] } } } },
-  // Factory, not a value: the timestamp must be computed per request, not
-  // once at module load when the route is registered.
-  getDeletedAt: () => string | null,
-) {
-  return async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
-    const supabase = getSupabaseClient();
-    const result = schema.safeParse(req.body);
-    if (!result.success) {
-      const flat = result.error.flatten();
-      return badRequest(res, {
-        ...flat.fieldErrors,
-        ...(flat.formErrors.length ? { form: flat.formErrors } : {}),
-      });
-    }
-    const { ids, filter } = result.data;
-    let query = supabase.from("messages").update({ deleted_at: getDeletedAt() });
-    if (ids) {
-      query = query.in("id", ids);
-    } else if (filter) {
-      // Filter-based action: apply the SAME view predicates the list endpoint
-      // uses (shared viewSpec), so "archive/restore all matching" is ONE
-      // server-side statement regardless of how many rows match — no giant
-      // id payload.
-      query = applyViewSpec(query, viewSpec(filter.status, filter.preset));
-    }
-    query = scopeMessagesQuery(query, req);
-    const { error } = await query;
-    if (error) return serverError(res, safeErrorMessage(error));
-    return ok(res, undefined);
-  };
-}
 
 router.post("/bulk-delete", doubleCsrfProtection, bulkSoftDeleteHandler(bulkDeleteSchema, () => new Date().toISOString()));
 
