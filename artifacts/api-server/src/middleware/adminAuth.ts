@@ -1,6 +1,8 @@
 import type { Request, Response, NextFunction } from "express";
 import { verifyToken, createClerkClient } from "@clerk/backend";
 import { timingSafeEqual, createHash } from "crypto";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@workspace/supabase/types";
 import { logger } from "../lib/logger";
 import { env } from "../lib/env";
 import { syncUserFromClerk, getDefaultAdminUser } from "../lib/user-sync";
@@ -22,6 +24,10 @@ export interface AuthenticatedRequest extends Request {
   user?: { id: string; email: string; role: string };
   /** Raw verified Clerk JWT (Bearer path only) — feeds the JWT-scoped client. */
   clerkToken?: string;
+  /** Request-scoped Supabase client, attached by attachRequestSupabase. */
+  supabase?: SupabaseClient<Database>;
+  /** Cached active portfolio id, resolved by resolveActivePortfolioId. */
+  activePortfolioId?: string;
 }
 
 // Cache of clerkId → verified email for tokens that lack an inline email

@@ -1,0 +1,50 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { AuthenticatedRequest } from "../middleware/adminAuth";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Raised when the caller owns no portfolio and none was requested. */
+export class NoActivePortfolioError extends Error {
+  constructor() {
+    super("No portfolio available for this account");
+    this.name = "NoActivePortfolioError";
+  }
+}
+
+// The portfolios table (migrations 064-067) is not yet in the hand-maintained
+// Database types, so this query goes through the untyped client — the same
+// pattern lib/db helpers use. RLS (owner_select policy) scopes the read to
+// rows the caller's JWT owns.
+async function fetchFirstOwnedPortfolioId(client: SupabaseClient): Promise<unknown> {
+  const { data, error } = await client
+    .from("portfolios")
+    .select("id")
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (error !== null) throw new NoActivePortfolioError();
+  if (data === null) throw new NoActivePortfolioError();
+  const id: unknown = data.id;
+  return id;
+}
+
+/**
+ * Resolve the portfolio an CMS write should target:
+ * 1. an explicit, valid-UUID portfolioId (query or body) — ownership is then
+ *    enforced by RLS (a foreign id yields 42501 → mapped to 404);
+ * 2. otherwise the caller's first owned portfolio, read through the
+ *    JWT-scoped client (owner_select policy), cached on the request.
+ */
+export async function resolveActivePortfolioId(req: AuthenticatedRequest): Promise<string> {
+  const raw: unknown = req.query.portfolioId ?? req.body?.portfolioId;
+  if (typeof raw === "string" && UUID_RE.test(raw)) return raw;
+
+  const cached = req.activePortfolioId;
+  if (cached) return cached;
+
+  if (!req.supabase) throw new NoActivePortfolioError();
+  const id = await fetchFirstOwnedPortfolioId(req.supabase);
+  if (typeof id !== "string" || !UUID_RE.test(id)) throw new NoActivePortfolioError();
+  req.activePortfolioId = id;
+  return id;
+}
