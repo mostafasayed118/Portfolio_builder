@@ -48,3 +48,49 @@ d("rls: portfolios (064)", () => {
     expect(data).toEqual([]);
   });
 });
+
+d("rls: tenant columns + backfill (065)", () => {
+  it("backfills portfolio #1 and stamps every existing row", async () => {
+    const svc = serviceClient();
+    const { data: pf } = await svc
+      .from("portfolios")
+      .select("id, slug, is_published")
+      .eq("slug", "mustafa")
+      .single();
+    expect(pf).not.toBeNull();
+    expect(pf?.is_published).toBe(true);
+
+    for (const table of ["projects", "skills", "messages", "site_settings", "blog_posts"]) {
+      const { data } = await svc.from(table).select("portfolio_id");
+      for (const row of data ?? []) {
+        expect(row.portfolio_id).toBe(pf?.id);
+      }
+    }
+  });
+
+  it("enforces singleton semantics per portfolio (not globally)", async () => {
+    const { portfolioB } = await ensureSchema();
+    const svc = serviceClient();
+    const { error: errB } = await svc.from("site_settings").insert({ portfolio_id: portfolioB });
+    expect(errB).toBeNull();
+    const { error: errDup } = await svc.from("site_settings").insert({ portfolio_id: portfolioB });
+    expect(errDup).not.toBeNull();
+    expect(errDup?.code).toBe("23505");
+  });
+
+  it("drops legacy contact_messages", async () => {
+    const svc = serviceClient();
+    const { error } = await svc.from("contact_messages").select("id").limit(1);
+    expect(error).not.toBeNull();
+  });
+
+  it("keeps section keys unique per portfolio", async () => {
+    const svc = serviceClient();
+    const { data: pf1 } = await svc.from("portfolios").select("id").eq("slug", "mustafa").single();
+    const { error: errDup } = await svc
+      .from("section_settings")
+      .insert({ portfolio_id: pf1?.id, key: "hero", label: "Hero" });
+    expect(errDup).not.toBeNull();
+    expect(errDup?.code).toBe("23505");
+  });
+});
