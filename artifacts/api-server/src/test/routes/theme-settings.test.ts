@@ -1,4 +1,5 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+import { getSupabaseClient } from "../../lib/supabase-client";
 import request from "supertest";
 import { mockAdminKey } from "../helpers";
 import app from "../../app";
@@ -14,7 +15,7 @@ describe("Theme Settings API", () => {
       const res = await request(app)
         .get("/api/v1/admin/theme-settings")
         .set("x-admin-key", mockAdminKey);
-      expect([200, 500]).toContain(res.status);
+      expect(res.status).toBe(200);
     });
   });
 
@@ -27,11 +28,15 @@ describe("Theme Settings API", () => {
     });
 
     it("updates theme settings", async () => {
+      const client = getSupabaseClient();
+      Object.assign(client, { upsert: vi.fn().mockResolvedValue({ data: null, error: null }) });
+      vi.mocked(getSupabaseClient).mockReturnValueOnce(client);
       const res = await request(app)
         .put("/api/v1/admin/theme-settings")
         .set("x-admin-key", mockAdminKey)
+        .query({ portfolioId: "11111111-1111-4111-8111-111111111111" })
         .send({ mode: "dark", radius: "0.5rem" });
-      expect([200, 500]).toContain(res.status);
+      expect(res.status).toBe(200);
     });
   });
 });

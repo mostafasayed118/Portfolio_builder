@@ -16,6 +16,7 @@ function makeRes() {
 function makeReq(body: unknown, role = "admin"): AuthenticatedRequest {
   return {
     body,
+    supabase: getSupabaseClient(),
     user: { id: "a-1", email: "a@b.c", role },
     query: {},
   } as unknown as AuthenticatedRequest;

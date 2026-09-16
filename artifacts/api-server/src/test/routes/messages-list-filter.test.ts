@@ -45,7 +45,8 @@ const chain = {
   eq: vi.fn().mockReturnThis(),
   or: vi.fn().mockReturnThis(),
   order: vi.fn().mockReturnThis(),
-  range: vi.fn().mockResolvedValue({ data: [], count: 0, error: null }),
+  range: vi.fn().mockReturnThis(),
+  returns: vi.fn().mockResolvedValue({ data: [], count: 0, error: null }),
 } as unknown as {
   select: ReturnType<typeof vi.fn>;
   is: ReturnType<typeof vi.fn>;
@@ -54,6 +55,7 @@ const chain = {
   or: ReturnType<typeof vi.fn>;
   order: ReturnType<typeof vi.fn>;
   range: ReturnType<typeof vi.fn>;
+  returns: ReturnType<typeof vi.fn>;
 };
 
 const mockSupabase = {
@@ -67,7 +69,7 @@ vi.mocked(getSupabaseClient).mockReturnValue(mockSupabase as never);
 beforeEach(() => {
   vi.clearAllMocks();
   mockSupabase.from.mockReturnValue(chain);
-  chain.range.mockResolvedValue({ data: [], count: 0, error: null });
+  chain.returns.mockResolvedValue({ data: [], count: 0, error: null });
 });
 
 describe("GET /api/v1/admin/messages?status=", () => {
@@ -156,7 +158,7 @@ describe("GET /api/v1/admin/messages?status=", () => {
   });
 
   it("surfaces a Supabase error as a 500", async () => {
-    chain.range.mockResolvedValue({ data: null, count: null, error: { message: "boom" } });
+    chain.returns.mockResolvedValue({ data: null, count: null, error: { message: "boom" } });
     const res = await request(app)
       .get("/api/v1/admin/messages?status=unread")
       .set("x-admin-key", mockAdminKey);

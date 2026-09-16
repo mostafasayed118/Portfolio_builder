@@ -42,7 +42,8 @@ const chain = {
   gte: vi.fn().mockReturnThis(),
   or: vi.fn().mockReturnThis(),
   order: vi.fn().mockReturnThis(),
-  range: vi.fn().mockResolvedValue({ data: [], count: 0, error: null }),
+  range: vi.fn().mockReturnThis(),
+  returns: vi.fn().mockResolvedValue({ data: [], count: 0, error: null }),
   // Serves the bulk-unarchive route in the parity test below (the update
   // chain is the same object; awaiting it resolves the plain chain, whose
   // `error` is undefined → success).
@@ -56,6 +57,7 @@ const chain = {
   or: ReturnType<typeof vi.fn>;
   order: ReturnType<typeof vi.fn>;
   range: ReturnType<typeof vi.fn>;
+  returns: ReturnType<typeof vi.fn>;
   update: ReturnType<typeof vi.fn>;
 };
 
@@ -77,7 +79,7 @@ function startOfTodayISO(): string {
 beforeEach(() => {
   vi.clearAllMocks();
   mockSupabase.from.mockReturnValue(chain);
-  chain.range.mockResolvedValue({ data: [], count: 0, error: null });
+  chain.returns.mockResolvedValue({ data: [], count: 0, error: null });
 });
 
 describe("GET /api/v1/admin/messages?preset=", () => {
@@ -178,7 +180,7 @@ describe("GET /api/v1/admin/messages?preset=", () => {
   });
 
   it("surfaces a Supabase error as a 500", async () => {
-    chain.range.mockResolvedValue({ data: null, count: null, error: { message: "boom" } });
+    chain.returns.mockResolvedValue({ data: null, count: null, error: { message: "boom" } });
     const res = await request(app)
       .get("/api/v1/admin/messages?preset=needs_reply")
       .set("x-admin-key", mockAdminKey);

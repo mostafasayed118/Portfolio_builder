@@ -17,6 +17,14 @@ const mockImageMetadata = {
 // file-level mock, so this file must not import helpers.
 const mockAdminKey = "test-admin-key";
 
+/** Active portfolio resolved by resolveActivePortfolioId in upload tests. */
+const TEST_PORTFOLIO_ID = "11111111-1111-4111-8111-111111111111";
+
+/** Queue the active-portfolio lookup (maybeSingle) ahead of an upload test. */
+function queueActivePortfolio() {
+  mockSupabaseClient.maybeSingle.mockResolvedValueOnce({ data: { id: TEST_PORTFOLIO_ID }, error: null });
+}
+
 const { mockSupabaseClient, adminAuthMock } = vi.hoisted(() => {
   const chain = () => {
     const client: Record<string, any> = {
@@ -166,6 +174,7 @@ describe("Images API", () => {
     it("returns 200 with valid admin key and valid JPEG file", async () => {
       // Override insert().select().single() to return metadata with id
       mockSupabaseClient.single.mockResolvedValueOnce({ data: mockImageMetadata, error: null });
+      queueActivePortfolio();
 
       const res = await request(app)
         .post("/api/v1/images/upload")
@@ -181,10 +190,15 @@ describe("Images API", () => {
       expect(res.body.data.url).toBeDefined();
       expect(res.body.data.variants).toBeDefined();
       expect(Array.isArray(res.body.data.variants)).toBe(true);
+      // Tenant scoping: the storage object lives under <portfolioId>/…
+      const uploadedPath = mockSupabaseClient.storage.upload.mock.calls[0][0] as string;
+      expect(uploadedPath.startsWith(`${TEST_PORTFOLIO_ID}/projects/`)).toBe(true);
+      expect(res.body.data.url).toContain(`${TEST_PORTFOLIO_ID}/projects/`);
     });
 
     it("returns 200 with valid PNG file", async () => {
       mockSupabaseClient.single.mockResolvedValueOnce({ data: { ...mockImageMetadata, id: "png-id" }, error: null });
+      queueActivePortfolio();
 
       const res = await request(app)
         .post("/api/v1/images/upload")
@@ -200,6 +214,7 @@ describe("Images API", () => {
 
     it("returns variants with correct URL structure", async () => {
       mockSupabaseClient.single.mockResolvedValueOnce({ data: mockImageMetadata, error: null });
+      queueActivePortfolio();
 
       const res = await request(app)
         .post("/api/v1/images/upload")
@@ -221,6 +236,7 @@ describe("Images API", () => {
 
     it("returns 200 with valid WebP file", async () => {
       mockSupabaseClient.single.mockResolvedValueOnce({ data: { ...mockImageMetadata, id: "webp-id" }, error: null });
+      queueActivePortfolio();
 
       const res = await request(app)
         .post("/api/v1/images/upload")
@@ -234,6 +250,7 @@ describe("Images API", () => {
     });
 
     it("returns 500 when storage upload fails", async () => {
+      queueActivePortfolio();
       mockSupabaseClient.storage.upload.mockResolvedValueOnce({
         data: null,
         error: { message: "Storage full" },
@@ -251,6 +268,20 @@ describe("Images API", () => {
       expect(res.body).toBeDefined();
       // Verify an error message exists
       expect(JSON.stringify(res.body)).toMatch(/upload failed/i);
+    });
+
+    it("returns 400 when no active portfolio exists", async () => {
+      // Default maybeSingle ({ data: null }) → NoActivePortfolioError.
+      const res = await request(app)
+        .post("/api/v1/images/upload")
+        .set("x-admin-key", mockAdminKey)
+        .field("entityType", "projects")
+        .attach("file", JPEG_HEADER, {
+          filename: "test.jpg",
+          contentType: "image/jpeg",
+        });
+      expect(res.status).toBe(400);
+      expect(res.body.errors.portfolioId[0]).toMatch(/portfolio/i);
     });
   });
 

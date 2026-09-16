@@ -46,18 +46,25 @@ export default function CvManager() {
     setUploading(true);
     setProgress(0);
     try {
+      const portfolioId = settings?.portfolioId;
+      if (!portfolioId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(portfolioId)) {
+        throw new Error("An owned portfolio is required to upload a CV");
+      }
       const supabase = getSupabase();
       if (!supabase) throw new Error("Supabase is not configured — cannot upload CV");
-      const objectPath = `cv-${Date.now()}.pdf`;
+      const basename = `cv-${Date.now()}.pdf`;
+      const objectPath = `${portfolioId}/${basename}`;
       const { error: uploadError } = await supabase.storage
         .from("cv")
         .upload(objectPath, file, { contentType: CV_MIME_TYPE, upsert: true });
       if (uploadError) throw new Error(uploadError.message);
       setProgress(100);
-      const saveResult = await api.cv.updateSettings({ objectPath, fileName: file.name });
-      if (!saveResult.success) {
+      try {
+        const saveResult = await api.cv.updateSettings({ objectPath: basename, fileName: file.name });
+        if (!saveResult.success) throw new Error(saveResult.message);
+      } catch (saveError: unknown) {
         await supabase.storage.from("cv").remove([objectPath]);
-        throw new Error(saveResult.message);
+        throw saveError;
       }
       await refetch();
       toast({ title: "CV uploaded successfully", description: `${file.name} is now live.` });

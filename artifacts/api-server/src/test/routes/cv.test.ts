@@ -3,13 +3,40 @@ import request from "supertest";
 import { mockAdminKey, mockSupabaseClient, resetSupabaseClient } from "../helpers";
 import { _setOverride, _resetOverrides } from "../../lib/env";
 import app from "../../app";
+import { adminAuth } from "../../middleware/adminAuth";
 
-const { mockGenerateCvPdf } = vi.hoisted(() => ({
+const { mockGenerateCvPdf, portfolioQuery } = vi.hoisted(() => ({
   mockGenerateCvPdf: vi.fn(),
+  portfolioQuery: {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockReturnThis(),
+    maybeSingle: vi.fn(),
+  },
 }));
+
+beforeEach(() => {
+  vi.mocked(adminAuth).mockImplementation(async (req, res, next) => {
+    if (req.headers["x-admin-key"] === mockAdminKey) {
+      req.adminEmail = "api-key-admin";
+      next();
+      return;
+    }
+    if (req.headers.authorization === "Bearer test-session") {
+      req.clerkToken = "test-session";
+      req.clerkSub = "user_owner";
+      next();
+      return;
+    }
+    res.status(401).json({ success: false });
+  });
+});
 
 vi.mock("../../lib/supabase-client", () => ({
   getSupabaseClient: vi.fn(() => mockSupabaseClient),
+  getAnonSupabaseClient: vi.fn(() => mockSupabaseClient),
+  getRequestSupabaseClient: vi.fn(() => mockSupabaseClient),
 }));
 
 vi.mock("../../utils/cv-generator", () => ({
@@ -22,7 +49,11 @@ beforeEach(() => {
   // the fallback path independently; the cache-specific tests below re-enable
   // it via their own overrides.
   _setOverride("CV_PDF_CACHE_TTL_MS", "0");
+  vi.clearAllMocks();
   resetSupabaseClient(mockSupabaseClient);
+  mockSupabaseClient.from.mockImplementation((table: string) => table === "portfolios" ? portfolioQuery : mockSupabaseClient);
+  portfolioQuery.maybeSingle.mockReset();
+  portfolioQuery.maybeSingle.mockResolvedValue({ data: { id: "11111111-1111-4111-8111-111111111111" }, error: null });
   mockSupabaseClient.storage.download.mockReset();
   mockSupabaseClient.storage.download.mockResolvedValue({
     data: { arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)) },
@@ -213,6 +244,29 @@ describe("CV API", () => {
   });
 
   describe("GET /api/v1/admin/cv/settings", () => {
+    it("returns an owned portfolio for upload and scopes settings to it", async () => {
+      const res = await request(app).get("/api/v1/admin/cv/settings").set("Authorization", "Bearer test-session");
+      expect(res.status).toBe(200);
+      expect(res.body.data.portfolioId).toBe("11111111-1111-4111-8111-111111111111");
+      expect(portfolioQuery.eq).toHaveBeenCalledWith("owner_user_id", "user_owner");
+      expect(mockSupabaseClient.eq).toHaveBeenCalledWith("portfolio_id", res.body.data.portfolioId);
+    });
+
+    it("rejects a caller without an owned portfolio instead of returning published settings", async () => {
+      portfolioQuery.maybeSingle.mockResolvedValue({ data: null, error: null });
+      const res = await request(app).get("/api/v1/admin/cv/settings").set("Authorization", "Bearer test-session");
+      expect(res.status).toBe(400);
+      expect(mockSupabaseClient.from).not.toHaveBeenCalledWith("cv_settings");
+    });
+
+    it("verifies ownership even for an explicit published portfolio", async () => {
+      portfolioQuery.maybeSingle.mockResolvedValue({ data: null, error: null });
+      const res = await request(app).get("/api/v1/admin/cv/settings")
+        .query({ portfolioId: "22222222-2222-4222-8222-222222222222" }).set("Authorization", "Bearer test-session");
+      expect(res.status).toBe(400);
+      expect(portfolioQuery.eq).toHaveBeenCalledWith("owner_user_id", "user_owner");
+      expect(mockSupabaseClient.from).not.toHaveBeenCalledWith("cv_settings");
+    });
     it("returns correct response shape", async () => {
       mockSupabaseClient.maybeSingle.mockResolvedValueOnce({
         data: {
@@ -311,6 +365,7 @@ describe("CV API", () => {
       const res = await request(app)
         .put("/api/v1/admin/cv/settings")
         .set("x-admin-key", mockAdminKey)
+        .query({ portfolioId: "11111111-1111-4111-8111-111111111111" })
         .send({ objectPath: "cv-1700000000000.pdf", fileName: "resume.pdf" });
       expect(res.status).toBe(200);
       expect(res.body.data.id).toBe("existing-id-123");
@@ -329,9 +384,16 @@ describe("CV API", () => {
       const res = await request(app)
         .put("/api/v1/admin/cv/settings")
         .set("x-admin-key", mockAdminKey)
+        .query({ portfolioId: "11111111-1111-4111-8111-111111111111" })
         .send({ objectPath: "cv-1700000000000.pdf", fileName: "resume.pdf" });
       expect(res.status).toBe(200);
       expect(res.body.data.id).toBe("new-id-456");
+      expect(mockSupabaseClient.insert).toHaveBeenCalledWith({
+        object_path: "11111111-1111-4111-8111-111111111111/cv-1700000000000.pdf",
+        file_name: "resume.pdf",
+        portfolio_id: "11111111-1111-4111-8111-111111111111",
+      });
+      expect(mockSupabaseClient.eq).toHaveBeenCalledWith("portfolio_id", "11111111-1111-4111-8111-111111111111");
     });
 
     it("rejects non-PDF filenames with pattern validation", async () => {

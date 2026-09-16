@@ -1,5 +1,5 @@
 // ============================================================================
-// Supabase Database Types — hand-maintained; verify against migrations 001-059
+// Supabase Database Types — hand-maintained; verify against migrations 001-067
 // when editing. `pnpm --filter @workspace/supabase gen:types` can regenerate
 // this file from a linked Supabase project, but it is NOT auto-generated today.
 // ============================================================================
@@ -15,6 +15,7 @@ export interface Database {
     Tables: {
       theme_settings: {
         Row: {
+          portfolio_id: string | null;
           id: string;
           mode: ThemeMode;
           light_primary: string;
@@ -40,6 +41,7 @@ export interface Database {
           created_at: string;
         };
         Insert: {
+          portfolio_id?: string | null;
           id?: string;
           mode?: ThemeMode;
           light_primary?: string;
@@ -65,6 +67,7 @@ export interface Database {
           created_at?: string;
         };
         Update: {
+          portfolio_id?: string | null;
           id?: string;
           mode?: ThemeMode;
           light_primary?: string;
@@ -93,6 +96,7 @@ export interface Database {
       };
       typography_settings: {
         Row: {
+          portfolio_id: string | null;
           id: string;
           body_font: string;
           display_font: string;
@@ -108,6 +112,7 @@ export interface Database {
           created_at: string;
         };
         Insert: {
+          portfolio_id?: string | null;
           id?: string;
           body_font?: string;
           display_font?: string;
@@ -123,6 +128,7 @@ export interface Database {
           created_at?: string;
         };
         Update: {
+          portfolio_id?: string | null;
           id?: string;
           body_font?: string;
           display_font?: string;
@@ -141,6 +147,7 @@ export interface Database {
       };
       site_settings: {
         Row: {
+          portfolio_id: string | null;
           id: string;
           site_name: string;
           site_tagline: string;
@@ -156,6 +163,7 @@ export interface Database {
           created_at: string;
         };
         Insert: {
+          portfolio_id?: string | null;
           id?: string;
           site_name?: string;
           site_tagline?: string;
@@ -171,6 +179,7 @@ export interface Database {
           created_at?: string;
         };
         Update: {
+          portfolio_id?: string | null;
           id?: string;
           site_name?: string;
           site_tagline?: string;
@@ -189,6 +198,7 @@ export interface Database {
       };
       seo_settings: {
         Row: {
+          portfolio_id: string | null;
           id: string;
           title: string;
           description: string;
@@ -203,6 +213,7 @@ export interface Database {
           created_at: string;
         };
         Insert: {
+          portfolio_id?: string | null;
           id?: string;
           title?: string;
           description?: string;
@@ -217,6 +228,7 @@ export interface Database {
           created_at?: string;
         };
         Update: {
+          portfolio_id?: string | null;
           id?: string;
           title?: string;
           description?: string;
@@ -234,6 +246,7 @@ export interface Database {
       };
       hero_content: {
         Row: {
+          portfolio_id: string | null;
           id: string;
           heading: string;
           name: string;
@@ -262,6 +275,7 @@ export interface Database {
           created_at: string;
         };
         Insert: {
+          portfolio_id?: string | null;
           id?: string;
           heading?: string;
           name?: string;
@@ -290,6 +304,7 @@ export interface Database {
           created_at?: string;
         };
         Update: {
+          portfolio_id?: string | null;
           id?: string;
           heading?: string;
           name?: string;
@@ -321,6 +336,7 @@ export interface Database {
       };
       about_content: {
         Row: {
+          portfolio_id: string | null;
           id: string;
           bio1: string;
           bio2: string;
@@ -361,6 +377,7 @@ export interface Database {
           created_at: string;
         };
         Insert: {
+          portfolio_id?: string | null;
           id?: string;
           bio1?: string;
           bio2?: string;
@@ -401,6 +418,7 @@ export interface Database {
           created_at?: string;
         };
         Update: {
+          portfolio_id?: string | null;
           id?: string;
           bio1?: string;
           bio2?: string;
@@ -444,6 +462,7 @@ export interface Database {
       };
       blog_posts: {
         Row: {
+          portfolio_id: string | null;
           id: string;
           title: string;
           slug: string;
@@ -462,6 +481,7 @@ export interface Database {
           updated_at: string;
         };
         Insert: {
+          portfolio_id?: string | null;
           id?: string;
           title: string;
           slug: string;
@@ -477,6 +497,7 @@ export interface Database {
           updated_at?: string;
         };
         Update: {
+          portfolio_id?: string | null;
           id?: string;
           title?: string;
           slug?: string;
@@ -531,6 +552,7 @@ export interface Database {
       };
       contact_info: {
         Row: {
+          portfolio_id: string | null;
           id: string;
           email: string | null;
           phone: string | null;
@@ -549,6 +571,7 @@ export interface Database {
           created_at: string;
         };
         Insert: {
+          portfolio_id?: string | null;
           id?: string;
           email?: string | null;
           phone?: string | null;
@@ -567,6 +590,7 @@ export interface Database {
           created_at?: string;
         };
         Update: {
+          portfolio_id?: string | null;
           id?: string;
           email?: string | null;
           phone?: string | null;
@@ -588,6 +612,7 @@ export interface Database {
       };
       cv_settings: {
         Row: {
+          portfolio_id: string | null;
           id: string;
           object_path: string;
           file_name: string;
@@ -595,6 +620,7 @@ export interface Database {
           created_at: string;
         };
         Insert: {
+          portfolio_id?: string | null;
           id?: string;
           object_path: string;
           file_name: string;
@@ -602,6 +628,7 @@ export interface Database {
           created_at?: string;
         };
         Update: {
+          portfolio_id?: string | null;
           id?: string;
           object_path?: string;
           file_name?: string;
@@ -612,6 +639,7 @@ export interface Database {
       };
       skills: {
         Row: {
+          portfolio_id: string | null;
           id: string;
           name: string;
           category: string;
@@ -626,6 +654,7 @@ export interface Database {
           updated_at: string;
         };
         Insert: {
+          portfolio_id?: string | null;
           id?: string;
           name: string;
           category: string;
@@ -640,6 +669,7 @@ export interface Database {
           updated_at?: string;
         };
         Update: {
+          portfolio_id?: string | null;
           id?: string;
           name?: string;
           category?: string;
@@ -657,6 +687,7 @@ export interface Database {
       };
       projects: {
         Row: {
+          portfolio_id: string | null;
           id: string;
           title: string;
           description: string;
@@ -686,6 +717,7 @@ export interface Database {
           updated_at: string;
         };
         Insert: {
+          portfolio_id?: string | null;
           id?: string;
           title: string;
           description: string;
@@ -715,6 +747,7 @@ export interface Database {
           updated_at?: string;
         };
         Update: {
+          portfolio_id?: string | null;
           id?: string;
           title?: string;
           description?: string;
@@ -747,6 +780,7 @@ export interface Database {
       };
       experience: {
         Row: {
+          portfolio_id: string | null;
           id: string;
           title: string;
           company: string;
@@ -769,6 +803,7 @@ export interface Database {
           updated_at: string;
         };
         Insert: {
+          portfolio_id?: string | null;
           id?: string;
           title: string;
           company: string;
@@ -791,6 +826,7 @@ export interface Database {
           updated_at?: string;
         };
         Update: {
+          portfolio_id?: string | null;
           id?: string;
           title?: string;
           company?: string;
@@ -816,6 +852,7 @@ export interface Database {
       };
       certifications: {
         Row: {
+          portfolio_id: string | null;
           id: string;
           title: string;
           issuer: string;
@@ -836,6 +873,7 @@ export interface Database {
           updated_at: string;
         };
         Insert: {
+          portfolio_id?: string | null;
           id?: string;
           title: string;
           issuer: string;
@@ -856,6 +894,7 @@ export interface Database {
           updated_at?: string;
         };
         Update: {
+          portfolio_id?: string | null;
           id?: string;
           title?: string;
           issuer?: string;
@@ -879,6 +918,7 @@ export interface Database {
       };
       messages: {
         Row: {
+          portfolio_id: string | null;
           id: string;
           name: string;
           email: string;
@@ -896,6 +936,7 @@ export interface Database {
           is_spam: boolean;
         };
         Insert: {
+          portfolio_id?: string | null;
           id?: string;
           name: string;
           email: string;
@@ -913,6 +954,7 @@ export interface Database {
           is_spam?: boolean;
         };
         Update: {
+          portfolio_id?: string | null;
           id?: string;
           name?: string;
           email?: string;
@@ -933,6 +975,7 @@ export interface Database {
       };
       section_settings: {
         Row: {
+          portfolio_id: string | null;
           id: string;
           key: string;
           label: string;
@@ -942,6 +985,7 @@ export interface Database {
           created_at: string;
         };
         Insert: {
+          portfolio_id?: string | null;
           id?: string;
           key: string;
           label: string;
@@ -951,6 +995,7 @@ export interface Database {
           created_at?: string;
         };
         Update: {
+          portfolio_id?: string | null;
           id?: string;
           key?: string;
           label?: string;
@@ -963,6 +1008,7 @@ export interface Database {
       };
       content_snapshots: {
         Row: {
+          portfolio_id: string | null;
           id: string;
           entity_type: string;
           entity_id: string;
@@ -972,6 +1018,7 @@ export interface Database {
           created_at: string;
         };
         Insert: {
+          portfolio_id?: string | null;
           id?: string;
           entity_type: string;
           entity_id: string;
@@ -981,6 +1028,7 @@ export interface Database {
           created_at?: string;
         };
         Update: {
+          portfolio_id?: string | null;
           id?: string;
           entity_type?: string;
           entity_id?: string;
@@ -993,6 +1041,7 @@ export interface Database {
       };
       section_variants: {
         Row: {
+          portfolio_id: string | null;
           id: string;
           section_key: string;
           variant_key: string;
@@ -1004,6 +1053,7 @@ export interface Database {
           created_at: string;
         };
         Insert: {
+          portfolio_id?: string | null;
           id?: string;
           section_key: string;
           variant_key: string;
@@ -1015,6 +1065,7 @@ export interface Database {
           created_at?: string;
         };
         Update: {
+          portfolio_id?: string | null;
           id?: string;
           section_key?: string;
           variant_key?: string;
@@ -1029,6 +1080,7 @@ export interface Database {
       };
       analytics_events: {
         Row: {
+          portfolio_id: string | null;
           id: string;
           type: string;
           path: string | null;
@@ -1041,6 +1093,7 @@ export interface Database {
           updated_at: string;
         };
         Insert: {
+          portfolio_id?: string | null;
           id?: string;
           type: string;
           path?: string | null;
@@ -1053,6 +1106,7 @@ export interface Database {
           updated_at?: string;
         };
         Update: {
+          portfolio_id?: string | null;
           id?: string;
           type?: string;
           path?: string | null;
@@ -1068,6 +1122,7 @@ export interface Database {
       };
       content_health_reports: {
         Row: {
+          portfolio_id: string | null;
           id: string;
           scope: string;
           issues: Json;
@@ -1078,6 +1133,7 @@ export interface Database {
           updated_at: string;
         };
         Insert: {
+          portfolio_id?: string | null;
           id?: string;
           scope: string;
           issues?: Json;
@@ -1088,6 +1144,7 @@ export interface Database {
           updated_at?: string;
         };
         Update: {
+          portfolio_id?: string | null;
           id?: string;
           scope?: string;
           issues?: Json;
@@ -1101,6 +1158,7 @@ export interface Database {
       };
       image_metadata: {
         Row: {
+          portfolio_id: string | null;
           id: string;
           storage_path: string;
           original_filename: string;
@@ -1119,6 +1177,7 @@ export interface Database {
           updated_at: string;
         };
         Insert: {
+          portfolio_id?: string | null;
           id?: string;
           storage_path: string;
           original_filename: string;
@@ -1137,6 +1196,7 @@ export interface Database {
           updated_at?: string;
         };
         Update: {
+          portfolio_id?: string | null;
           id?: string;
           storage_path?: string;
           original_filename?: string;
@@ -1158,6 +1218,7 @@ export interface Database {
       };
       image_variants: {
         Row: {
+          portfolio_id: string | null;
           id: string;
           parent_image_id: string;
           variant_type: string;
@@ -1169,6 +1230,7 @@ export interface Database {
           updated_at: string;
         };
         Insert: {
+          portfolio_id?: string | null;
           id?: string;
           parent_image_id: string;
           variant_type: string;
@@ -1180,6 +1242,7 @@ export interface Database {
           updated_at?: string;
         };
         Update: {
+          portfolio_id?: string | null;
           id?: string;
           parent_image_id?: string;
           variant_type?: string;
@@ -1222,8 +1285,50 @@ export interface Database {
         };
         Relationships: [];
       };
+      portfolios: {
+        Row: {
+          id: string;
+          owner_user_id: string;
+          slug: string;
+          title: string;
+          is_published: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_user_id: string;
+          slug: string;
+          title: string;
+          is_published?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          owner_user_id?: string;
+          slug?: string;
+          title?: string;
+          is_published?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
-    Views: Record<string, never>;
+    Views: {
+      public_portfolios: {
+        Row: {
+          id: string;
+          slug: string;
+          title: string;
+          is_published: boolean;
+        };
+        Insert: Record<string, never>;
+        Update: Record<string, never>;
+        Relationships: [];
+      };
+    };
     Functions: {
       reorder_sections: {
         Args: { section_ids: string[]; sort_orders: number[] };
@@ -1249,6 +1354,9 @@ type TableUpdate<T extends keyof Database["public"]["Tables"]> = Database["publi
 // ============================================================================
 // Domain type aliases
 // ============================================================================
+export type Portfolio = TableRow<"portfolios">;
+export type InsertPortfolio = TableInsert<"portfolios">;
+export type UpdatePortfolio = TableUpdate<"portfolios">;
 export type ThemeSettings = TableRow<"theme_settings">;
 export type TypographySettings = TableRow<"typography_settings">;
 export type SiteSettings = TableRow<"site_settings">;

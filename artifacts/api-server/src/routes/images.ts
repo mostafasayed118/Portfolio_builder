@@ -1,12 +1,15 @@
-import { Router, type IRouter, type Request, type Response } from "express";
+import { Router, type IRouter, type Response } from "express";
 import multer from "multer";
 import { createHash } from "crypto";
 import { z } from "zod";
 import { IMAGE_ENTITY_TYPES, imageEntityTypeSchema } from "@workspace/api-zod";
 import { doubleCsrfProtection } from "../middleware/csrf";
 import { adminAuth, type AuthenticatedRequest } from "../middleware/adminAuth";
+import { attachRequestSupabase } from "../middleware/requestClient";
 import { imageMetadataLimiter, imageUploadLimiter } from "../middleware/rateLimiter";
-import { getSupabaseClient } from "../lib/supabase-client";
+import { asUntypedClient } from "../lib/untyped-client";
+import { resolveActivePortfolioId, NoActivePortfolioError } from "../lib/active-portfolio";
+
 import {
   listImageOwnership,
   setImageSortOrder,
@@ -96,12 +99,12 @@ const VARIANTS: { suffix: string; width: number; height?: number; fit?: string }
 router.post(
   "/images/upload",
   adminAuth,
+  attachRequestSupabase,
   imageUploadLimiter,
   doubleCsrfProtection,
   upload.single("file"),
   async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const supabase = getSupabaseClient();
     const parsedEntityType = imageEntityTypeSchema.safeParse(req.body.entityType);
     const entityId = typeof req.body.entityId === "string" ? req.body.entityId : undefined;
     const file = req.file as Express.Multer.File | undefined;
@@ -131,12 +134,29 @@ router.post(
       return badRequest(res, { entityId: ["entityId must be a valid UUID"] });
     }
 
+    const supabase = req.supabase;
+    if (!supabase) {
+      return serverError(res, "Request client not initialized");
+    }
+    // Tenant scope: storage objects live under <portfolioId>/… and the
+    // metadata row carries portfolio_id (RLS enforces the boundary on JWT
+    // clients). Without an active portfolio the upload has no home.
+    let activePortfolioId: string;
+    try {
+      activePortfolioId = await resolveActivePortfolioId(req);
+    } catch (error) {
+      if (error instanceof NoActivePortfolioError) {
+        return badRequest(res, { portfolioId: ["Create a portfolio first"] });
+      }
+      throw error;
+    }
+
     const imageId = createHash("sha256").update(file.buffer).digest("hex").slice(0, 16);
     // Derive the storage extension from the VERIFIED MIME type (magic bytes
     // passed above), never from the client-controlled filename — a payload
     // named "invoice.html" must not end up stored with a .html path.
     const ext = MIME_EXTENSIONS[file.mimetype] ?? "bin";
-    const storagePath = `${entityType}/${imageId}/original.${ext}`;
+    const storagePath = `${activePortfolioId}/${entityType}/${imageId}/original.${ext}`;
 
     // Upload to Supabase Storage
     const { error: uploadError } = await supabase.storage
@@ -148,8 +168,9 @@ router.post(
 
     if (uploadError) throw new Error(`Storage upload failed: ${uploadError.message}`);
 
-    // Save metadata (stamped with the uploader for per-user scoping)
-    const { data: meta, error: metaError } = await supabase
+    // Save metadata (tenant-stamped; user_id is kept for the service-role
+    // path where RLS is bypassed, so cross-admin deletes stay fail-closed).
+    const { data: meta, error: metaError } = await asUntypedClient(supabase)
       .from("image_metadata")
       .insert({
         storage_path: storagePath,
@@ -159,6 +180,7 @@ router.post(
         entity_type: entityType,
         entity_id: entityId ?? null,
         user_id: req.user?.id ?? null,
+        portfolio_id: activePortfolioId,
       })
       .select("id")
       .single();
@@ -189,13 +211,16 @@ const imageReorderSchema = z.object({
 });
 
 // POST /api/images/reorder — persist gallery image order (admin only)
-router.post("/images/reorder", adminAuth, doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
+router.post("/images/reorder", adminAuth, attachRequestSupabase, doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
   const result = imageReorderSchema.safeParse(req.body);
   if (!result.success) {
     return badRequest(res, result.error.flatten().fieldErrors as Record<string, string[]>);
   }
   try {
-    const supabase = getSupabaseClient();
+    const supabase = req.supabase;
+    if (!supabase) {
+      return serverError(res, "Request client not initialized");
+    }
     // Ownership pre-check mirroring the DELETE route: non-superadmins may
     // only reorder their own uploads. Rows that predate user_id ownership
     // (user_id IS NULL) are fail-closed to authenticated non-superadmins;
@@ -228,13 +253,16 @@ router.post("/images/reorder", adminAuth, doubleCsrfProtection, async (req: Auth
 
 // GET /api/images/:id/metadata — get image metadata (admin only: the
 // response exposes the original filename and acts as an ID existence oracle)
-router.get("/images/:id/metadata", adminAuth, imageMetadataLimiter, async (req: Request, res: Response) => {
+router.get("/images/:id/metadata", adminAuth, attachRequestSupabase, imageMetadataLimiter, async (req: AuthenticatedRequest, res: Response) => {
   const imageId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   if (!z.string().uuid().safeParse(imageId).success) {
     return badRequest(res, { id: ["Invalid image ID"] });
   }
 
-  const supabase = getSupabaseClient();
+  const supabase = req.supabase;
+  if (!supabase) {
+    return serverError(res, "Request client not initialized");
+  }
   try {
     const data = await getImageMetadataById(supabase, imageId);
     if (!data) {
@@ -249,14 +277,17 @@ router.get("/images/:id/metadata", adminAuth, imageMetadataLimiter, async (req: 
 });
 
 // DELETE /api/images/:id — delete image (admin only, scoped by owner)
-router.delete("/images/:id", adminAuth, doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
+router.delete("/images/:id", adminAuth, attachRequestSupabase, doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
   const imageId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   if (!z.string().uuid().safeParse(imageId).success) {
     return badRequest(res, { id: ["Invalid image ID"] });
   }
 
   try {
-    const supabase = getSupabaseClient();
+    const supabase = req.supabase;
+    if (!supabase) {
+      return serverError(res, "Request client not initialized");
+    }
     let meta: Awaited<ReturnType<typeof getImageDeleteTarget>>;
     try {
       meta = await getImageDeleteTarget(supabase, imageId);

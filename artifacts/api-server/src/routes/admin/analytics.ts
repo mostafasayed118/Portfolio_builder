@@ -2,8 +2,7 @@ import { Router, type IRouter } from "express";
 import type { Response } from "express";
 import { z } from "zod";
 import type { AuthenticatedRequest } from "../../middleware/adminAuth";
-import { getSupabaseClient } from "../../lib/supabase-client";
-import { ok, badRequest } from "../../lib/api-response";
+import { ok, badRequest, serverError } from "../../lib/api-response";
 import { fetchEventStats, fetchMessageStats } from "@workspace/db/analytics";
 
 const router: IRouter = Router();
@@ -24,7 +23,10 @@ router.get("/", async (req: AuthenticatedRequest, res: Response) => {
   }
   const days = parsed.data;
 
-  const supabase = getSupabaseClient();
+  const supabase = req.supabase;
+  if (!supabase) {
+    return serverError(res, "Request client not initialized");
+  }
   const [events, messages] = await Promise.all([
     fetchEventStats(supabase, days),
     fetchMessageStats(supabase, days),

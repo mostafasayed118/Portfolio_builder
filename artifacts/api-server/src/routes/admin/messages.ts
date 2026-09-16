@@ -9,9 +9,8 @@ import {
   bulkArchiveMessagesSchema,
   bulkUnarchiveMessagesSchema,
 } from "@workspace/api-zod";
-import { getSupabaseClient } from "../../lib/supabase-client";
 import { ok, badRequest, serverError, notFound } from "../../lib/api-response";
-import { safeErrorMessage } from "../../lib/safe-error";
+import { respondDbError } from "../../lib/safe-error";
 import {
   runCollectionQuery,
   updateByIdAndUser,
@@ -72,7 +71,10 @@ router.get("/", validateQueryUserId, async (req: AuthenticatedRequest, res: Resp
 });
 
 router.get("/unread-count", validateQueryUserId, async (req: AuthenticatedRequest, res: Response) => {
-  const supabase = getSupabaseClient();
+  const supabase = req.supabase;
+  if (!supabase) {
+    return serverError(res, "Request client not initialized");
+  }
 
   // Same scoping as the list endpoint (includeOrphans): a superadmin without
   // an explicit ?userId counts ALL rows — matching what "/" returns — so the
@@ -88,7 +90,7 @@ router.get("/unread-count", validateQueryUserId, async (req: AuthenticatedReques
   );
 
   const { count, error } = await query;
-  if (error) return serverError(res, safeErrorMessage(error));
+  if (error) return respondDbError(res, error);
   return ok(res, count ?? 0);
 });
 
@@ -131,7 +133,10 @@ router.post("/:id/unarchive", doubleCsrfProtection, validateParamId, async (req:
  * their own rows (or rows with no owner). Returns how many were marked.
  */
 router.post("/mark-all-read", validateQueryUserId, doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
-  const supabase = getSupabaseClient();
+  const supabase = req.supabase;
+  if (!supabase) {
+    return serverError(res, "Request client not initialized");
+  }
   const scope = <T extends { or(f: string): T; eq(c: string, v: unknown): T }>(q: T): T =>
     scopeMessagesQuery(q, req, { includeOrphans: true });
 
@@ -142,7 +147,7 @@ router.post("/mark-all-read", validateQueryUserId, doubleCsrfProtection, async (
       .eq("status", "unread")
       .is("deleted_at", null),
   );
-  if (countError) return serverError(res, safeErrorMessage(countError));
+  if (countError) return respondDbError(res, countError);
 
   const { error } = await scope(
     supabase
@@ -151,7 +156,7 @@ router.post("/mark-all-read", validateQueryUserId, doubleCsrfProtection, async (
       .eq("status", "unread")
       .is("deleted_at", null),
   );
-  if (error) return serverError(res, safeErrorMessage(error));
+  if (error) return respondDbError(res, error);
   return ok(res, { marked: count ?? 0 });
 });
 
@@ -163,7 +168,11 @@ router.post("/mark-all-read", validateQueryUserId, doubleCsrfProtection, async (
  * re-running only touches rows still visible (deleted_at null).
  */
 router.post("/archive-test-submissions", requireSuperadmin, doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
-  const result = await archiveTestSubmissions();
+  const supabase = req.supabase;
+  if (!supabase) {
+    return serverError(res, "Request client not initialized");
+  }
+  const result = await archiveTestSubmissions(supabase);
   if (!result.ok) return serverError(res, result.message);
   return ok(res, { archived: result.count });
 });
@@ -176,7 +185,11 @@ router.post("/archive-test-submissions", requireSuperadmin, doubleCsrfProtection
  * re-running only touches rows still archived (deleted_at NOT NULL).
  */
 router.post("/restore-all-archived", requireSuperadmin, doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
-  const result = await restoreAllArchived();
+  const supabase = req.supabase;
+  if (!supabase) {
+    return serverError(res, "Request client not initialized");
+  }
+  const result = await restoreAllArchived(supabase);
   if (!result.ok) return serverError(res, result.message);
   return ok(res, { restored: result.count });
 });

@@ -2354,8 +2354,9 @@ components:
 
     Skill:
       type: object
-      required: [id, name, category, category_ar, proficiency, icon, sort_order, is_visible, user_id, deleted_at, created_at, updated_at]
+      required: [portfolio_id, id, name, category, category_ar, proficiency, icon, sort_order, is_visible, user_id, deleted_at, created_at, updated_at]
       properties:
+        portfolio_id: { type: string, nullable: true }
         id: { type: string }
         name: { type: string }
         category: { type: string }
@@ -2385,8 +2386,9 @@ components:
 
     Project:
       type: object
-      required: [id, title, description, full_description, challenges, outcome, title_ar, description_ar, full_description_ar, challenges_ar, outcome_ar, completed_at, tech_stack, category, featured, github_url, live_url, slug, metrics, sort_order, is_published, image_url, tags, user_id, deleted_at, created_at, updated_at]
+      required: [portfolio_id, id, title, description, full_description, challenges, outcome, title_ar, description_ar, full_description_ar, challenges_ar, outcome_ar, completed_at, tech_stack, category, featured, github_url, live_url, slug, metrics, sort_order, is_published, image_url, tags, user_id, deleted_at, created_at, updated_at]
       properties:
+        portfolio_id: { type: string, nullable: true }
         id: { type: string }
         title: { type: string }
         description: { type: string }
@@ -2417,8 +2419,9 @@ components:
 
     Experience:
       type: object
-      required: [id, title, company, location, period, description, technologies, title_ar, company_ar, location_ar, description_ar, type, sort_order, is_published, current, order_num, user_id, deleted_at, created_at, updated_at]
+      required: [portfolio_id, id, title, company, location, period, description, technologies, title_ar, company_ar, location_ar, description_ar, type, sort_order, is_published, current, order_num, user_id, deleted_at, created_at, updated_at]
       properties:
+        portfolio_id: { type: string, nullable: true }
         id: { type: string }
         title: { type: string }
         company: { type: string }
@@ -2442,8 +2445,9 @@ components:
 
     Certification:
       type: object
-      required: [id, title, issuer, title_ar, issuer_ar, issuer_logo, date, date_sort, category, credential_url, credential_id, sort_order, is_published, skills, user_id, deleted_at, created_at, updated_at]
+      required: [portfolio_id, id, title, issuer, title_ar, issuer_ar, issuer_logo, date, date_sort, category, credential_url, credential_id, sort_order, is_published, skills, user_id, deleted_at, created_at, updated_at]
       properties:
+        portfolio_id: { type: string, nullable: true }
         id: { type: string }
         title: { type: string }
         issuer: { type: string }
@@ -2465,8 +2469,9 @@ components:
 
     BlogPost:
       type: object
-      required: [id, title, slug, excerpt, content, reading_minutes, cover_image_url, tags, is_published, published_at, user_id, deleted_at, created_at, updated_at]
+      required: [portfolio_id, id, title, slug, excerpt, content, reading_minutes, cover_image_url, tags, is_published, published_at, user_id, deleted_at, created_at, updated_at]
       properties:
+        portfolio_id: { type: string, nullable: true }
         id: { type: string }
         title: { type: string }
         slug: { type: string }
@@ -2501,8 +2506,9 @@ components:
 
     Message:
       type: object
-      required: [id, name, email, subject, message, status, reply_email_draft, replied_at, user_id, deleted_at, created_at, updated_at, spam_score, spam_reason, is_spam]
+      required: [portfolio_id, id, name, email, subject, message, status, reply_email_draft, replied_at, user_id, deleted_at, created_at, updated_at, spam_score, spam_reason, is_spam]
       properties:
+        portfolio_id: { type: string, nullable: true }
         id: { type: string }
         name: { type: string }
         email: { type: string }
@@ -2655,11 +2661,12 @@ components:
 
     CvSettings:
       type: object
-      required: [objectPath, fileName, updatedAt]
+      required: [objectPath, fileName, updatedAt, portfolioId]
       properties:
         objectPath: { type: string, nullable: true }
         fileName: { type: string, nullable: true }
         updatedAt: { type: string, format: date-time }
+        portfolioId: { type: string, format: uuid, nullable: true }
 
     AuditEntry:
       type: object

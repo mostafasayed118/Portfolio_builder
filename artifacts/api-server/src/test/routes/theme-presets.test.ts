@@ -93,6 +93,7 @@ const { state, makeClient } = vi.hoisted(() => {
           return q;
         },
         range: () => q,
+        returns: () => Promise.resolve(compute()),
         limit: () => q,
         maybeSingle: () => Promise.resolve({ data: null, error: null }),
         single: () => Promise.resolve({ data: null, error: null }),

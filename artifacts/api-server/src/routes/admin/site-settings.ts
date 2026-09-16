@@ -5,9 +5,9 @@ import type { Response } from "express";
 import { z } from "zod";
 import { getSiteSettings } from "@workspace/db/site-settings";
 import { singletonUpsert } from "@workspace/db/singleton-upsert";
-import { getSupabaseClient } from "../../lib/supabase-client";
 import { ok, badRequest, serverError } from "../../lib/api-response";
-import { safeErrorMessage, serverErrorSafe } from "../../lib/safe-error";
+import { respondDbError } from "../../lib/safe-error";
+import { resolveActivePortfolioOr400 } from "../../lib/active-portfolio";
 
 const router: IRouter = Router();
 
@@ -28,12 +28,16 @@ const languageSchema = z.object({
   default_language: z.enum(["en", "ar"]),
 });
 
-router.get("/", async (_req: AuthenticatedRequest, res: Response) => {
+router.get("/", async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const data = await getSiteSettings(getSupabaseClient());
+    const supabase = req.supabase;
+    if (!supabase) {
+      return serverError(res, "Request client not initialized");
+    }
+    const data = await getSiteSettings(supabase);
     return ok(res, data);
   } catch (err: unknown) {
-    return serverError(res, safeErrorMessage(err));
+    return respondDbError(res, err);
   }
 });
 
@@ -43,11 +47,17 @@ router.put("/", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Res
     return badRequest(res, result.error.flatten().fieldErrors as Record<string, string[]>);
   }
   try {
-    await singletonUpsert(getSupabaseClient(), "site_settings", result.data);
+    const supabase = req.supabase;
+    if (!supabase) {
+      return serverError(res, "Request client not initialized");
+    }
+    const activePortfolioId = await resolveActivePortfolioOr400(req, res);
+    if (activePortfolioId === null) return res;
+    await singletonUpsert(supabase, "site_settings", result.data, { portfolioId: activePortfolioId });
     return ok(res, undefined);
   } catch (err: unknown) {
     req.log.error({ err }, "site_settings upsert failed");
-    return serverErrorSafe(res, err);
+    return respondDbError(res, err);
   }
 });
 
@@ -57,11 +67,17 @@ router.patch("/language", doubleCsrfProtection, async (req: AuthenticatedRequest
     return badRequest(res, result.error.flatten().fieldErrors as Record<string, string[]>);
   }
   try {
-    await singletonUpsert(getSupabaseClient(), "site_settings", { default_language: result.data.default_language });
+    const supabase = req.supabase;
+    if (!supabase) {
+      return serverError(res, "Request client not initialized");
+    }
+    const activePortfolioId = await resolveActivePortfolioOr400(req, res);
+    if (activePortfolioId === null) return res;
+    await singletonUpsert(supabase, "site_settings", { default_language: result.data.default_language }, { portfolioId: activePortfolioId });
     return ok(res, undefined);
   } catch (err: unknown) {
     req.log.error({ err }, "site_settings upsert failed");
-    return serverErrorSafe(res, err);
+    return respondDbError(res, err);
   }
 });
 

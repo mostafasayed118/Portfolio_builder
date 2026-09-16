@@ -42,8 +42,8 @@ vi.mock("../middleware/csrf", () => ({
   invalidCsrfTokenError: Object.assign(new Error("invalid csrf token"), { statusCode: 403, code: "EBADCSRFTOKEN" }),
 }));
 
-vi.mock("../lib/supabase-client", () => ({
-  getSupabaseClient: vi.fn(() => ({
+vi.mock("../lib/supabase-client", () => {
+  const makeClient = () => ({
     from: vi.fn().mockReturnThis(),
     select: vi.fn().mockReturnThis(),
     insert: vi.fn().mockReturnThis(),
@@ -56,5 +56,10 @@ vi.mock("../lib/supabase-client", () => ({
     order: vi.fn().mockReturnThis(),
     range: vi.fn().mockReturnThis(),
     rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
-  })),
-}));
+  });
+  return {
+    getSupabaseClient: vi.fn(() => makeClient()),
+    getRequestSupabaseClient: vi.fn(() => makeClient()),
+    getAnonSupabaseClient: vi.fn(() => makeClient()),
+  };
+});

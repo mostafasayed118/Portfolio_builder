@@ -3,10 +3,9 @@ import type { Response } from "express";
 import type { AuthenticatedRequest } from "../../middleware/adminAuth";
 import { adminListImagesQuerySchema } from "@workspace/api-zod";
 import { listEntityImages } from "@workspace/db/images";
-import { getSupabaseClient } from "../../lib/supabase-client";
 import { env } from "../../lib/env";
 import { ok, badRequest, serverError } from "../../lib/api-response";
-import { safeErrorMessage } from "../../lib/safe-error";
+import { respondDbError } from "../../lib/safe-error";
 import { logSupabaseError } from "../../lib/route-helpers";
 
 const router: IRouter = Router();
@@ -32,7 +31,10 @@ router.get("/", async (req: AuthenticatedRequest, res: Response) => {
   const { entity_type, entity_id } = parsed.data;
 
   try {
-    const supabase = getSupabaseClient();
+    const supabase = req.supabase;
+    if (!supabase) {
+      return serverError(res, "Request client not initialized");
+    }
     const rows = await listEntityImages(supabase, entity_type, entity_id);
     return ok(
       res,
@@ -49,7 +51,7 @@ router.get("/", async (req: AuthenticatedRequest, res: Response) => {
       userId: req.user?.id,
       adminEmail: req.adminEmail,
     }, { message: err instanceof Error ? err.message : String(err) }, { operation: "listAdminImages" });
-    return serverError(res, safeErrorMessage(err));
+    return respondDbError(res, err);
   }
 });
 

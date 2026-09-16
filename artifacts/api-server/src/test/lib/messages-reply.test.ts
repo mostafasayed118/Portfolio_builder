@@ -20,6 +20,7 @@ const superadminReq = {
 
 function adminReq(id: string): AuthenticatedRequest {
   return {
+    supabase: getSupabaseClient(),
     user: { id, email: "a@b.c", role: "admin" },
     query: {},
   } as unknown as AuthenticatedRequest;
@@ -44,6 +45,7 @@ function makeSupabase(opts: {
   };
   const supabase = { from: vi.fn(() => chain) };
   vi.mocked(getSupabaseClient).mockReturnValue(supabase as never);
+  superadminReq.supabase = getSupabaseClient();
   return { chain, supabase };
 }
 

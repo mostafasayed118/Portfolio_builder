@@ -109,65 +109,65 @@ async function seedCollection<T>(
   return { count: newItems.length, errors };
 }
 
-export async function seedHerContent(supabase: SupabaseClient): Promise<void> {
+export async function seedHerContent(supabase: SupabaseClient, portfolioId: string): Promise<void> {
   await singletonUpsert(supabase, "hero_content", {
     heading: SEED_HERO.heading, name: SEED_HERO.name, roles: SEED_HERO.roles,
     description: SEED_HERO.description, github_url: SEED_HERO.github,
     linkedin_url: SEED_HERO.linkedin, email: SEED_HERO.email, is_published: true,
-  });
+  }, { portfolioId });
 }
 
-export async function seedAboutContent(supabase: SupabaseClient): Promise<void> {
+export async function seedAboutContent(supabase: SupabaseClient, portfolioId: string): Promise<void> {
   await singletonUpsert(supabase, "about_content", {
     bio: SEED_ABOUT.bio, education: SEED_ABOUT.education,
     languages: SEED_ABOUT.languages, interests: SEED_ABOUT.interests, is_published: true,
-  });
+  }, { portfolioId });
 }
 
-export async function seedSkills(supabase: SupabaseClient, userId: string, force: boolean): Promise<SeedResult> {
+export async function seedSkills(supabase: SupabaseClient, portfolioId: string, force: boolean): Promise<SeedResult> {
   return seedCollection(
     supabase, "skills",
     SEED_SKILL_CATEGORIES.flatMap((cat) => cat.skills.map((s) => ({ ...s, cat: cat.key }))),
-    async () => force ? new Set() : new Set((await supabase.from("skills").select("name").eq("user_id", userId)).data?.map((s: { name: string }) => s.name.toLowerCase()) ?? []),
-    (item, i) => ({ name: item.name, category: item.cat, proficiency: item.proficiency, sort_order: i, is_visible: true, user_id: userId }),
+    async () => force ? new Set() : new Set((await supabase.from("skills").select("name").eq("portfolio_id", portfolioId)).data?.map((s: { name: string }) => s.name.toLowerCase()) ?? []),
+    (item, i) => ({ name: item.name, category: item.cat, proficiency: item.proficiency, sort_order: i, is_visible: true, portfolio_id: portfolioId }),
     (item) => item.name.toLowerCase(),
   );
 }
 
-export async function seedProjects(supabase: SupabaseClient, userId: string, force: boolean): Promise<SeedResult> {
+export async function seedProjects(supabase: SupabaseClient, portfolioId: string, force: boolean): Promise<SeedResult> {
   return seedCollection(
     supabase, "projects", SEED_PROJECTS,
-    async () => force ? new Set() : new Set((await supabase.from("projects").select("slug").eq("user_id", userId)).data?.map((p: { slug: string | null }) => p.slug).filter((s): s is string => !!s) ?? []),
-    (p, i) => ({ title: p.title, slug: p.slug, description: p.description, tech_stack: p.techStack, category: p.category, featured: p.featured, is_published: true, sort_order: i, user_id: userId }),
+    async () => force ? new Set() : new Set((await supabase.from("projects").select("slug").eq("portfolio_id", portfolioId)).data?.map((p: { slug: string | null }) => p.slug).filter((s): s is string => !!s) ?? []),
+    (p, i) => ({ title: p.title, slug: p.slug, description: p.description, tech_stack: p.techStack, category: p.category, featured: p.featured, is_published: true, sort_order: i, portfolio_id: portfolioId }),
     (p) => p.slug,
   );
 }
 
-export async function seedExperience(supabase: SupabaseClient, userId: string, force: boolean): Promise<SeedResult> {
+export async function seedExperience(supabase: SupabaseClient, portfolioId: string, force: boolean): Promise<SeedResult> {
   return seedCollection(
     supabase, "experience", SEED_EXPERIENCE,
-    async () => force ? new Set() : new Set((await supabase.from("experience").select("title, company").eq("user_id", userId)).data?.map((e: { title: string; company: string }) => `${e.title}|${e.company}`) ?? []),
-    (e, i) => ({ title: e.title, company: e.company, location: e.location, period: e.period, description: e.description, technologies: e.technologies, type: e.type, sort_order: i, is_published: true, user_id: userId }),
+    async () => force ? new Set() : new Set((await supabase.from("experience").select("title, company").eq("portfolio_id", portfolioId)).data?.map((e: { title: string; company: string }) => `${e.title}|${e.company}`) ?? []),
+    (e, i) => ({ title: e.title, company: e.company, location: e.location, period: e.period, description: e.description, technologies: e.technologies, type: e.type, sort_order: i, is_published: true, portfolio_id: portfolioId }),
     (e) => `${e.title}|${e.company}`,
   );
 }
 
-export async function seedCertifications(supabase: SupabaseClient, userId: string, force: boolean): Promise<SeedResult> {
+export async function seedCertifications(supabase: SupabaseClient, portfolioId: string, force: boolean): Promise<SeedResult> {
   return seedCollection(
     supabase, "certifications", SEED_CERTIFICATIONS,
-    async () => force ? new Set() : new Set((await supabase.from("certifications").select("title").eq("user_id", userId)).data?.map((c: { title: string }) => c.title) ?? []),
-    (c, i) => ({ title: c.title, issuer: c.issuer, date: c.date, date_sort: c.dateSort, category: c.category, is_published: true, user_id: userId, sort_order: i }),
+    async () => force ? new Set() : new Set((await supabase.from("certifications").select("title").eq("portfolio_id", portfolioId)).data?.map((c: { title: string }) => c.title) ?? []),
+    (c, i) => ({ title: c.title, issuer: c.issuer, date: c.date, date_sort: c.dateSort, category: c.category, is_published: true, portfolio_id: portfolioId, sort_order: i }),
     (c) => c.title,
   );
 }
 
-export async function seedPosts(supabase: SupabaseClient, userId: string): Promise<SeedResult> {
+export async function seedPosts(supabase: SupabaseClient, portfolioId: string): Promise<SeedResult> {
   return seedCollection(
     supabase,
     "blog_posts",
     SEED_BLOG_POSTS,
     async () => new Set(
-      (await supabase.from("blog_posts").select("slug").eq("user_id", userId).is("deleted_at", null)).data?.map((post: { slug: string }) => post.slug) ?? [],
+      (await supabase.from("blog_posts").select("slug").eq("portfolio_id", portfolioId).is("deleted_at", null)).data?.map((post: { slug: string }) => post.slug) ?? [],
     ),
     (post) => ({
       title: post.title,
@@ -177,18 +177,18 @@ export async function seedPosts(supabase: SupabaseClient, userId: string): Promi
       tags: post.tags,
       is_published: true,
       published_at: new Date().toISOString(),
-      user_id: userId,
+      portfolio_id: portfolioId,
     }),
     (post) => post.slug,
   );
 }
 
-export async function softDeleteAll(supabase: SupabaseClient, userId: string): Promise<void> {
+export async function softDeleteAll(supabase: SupabaseClient, portfolioId: string): Promise<void> {
   const now = new Date().toISOString();
   await Promise.all([
-    supabase.from("skills").update({ deleted_at: now }).eq("user_id", userId).is("deleted_at", null),
-    supabase.from("projects").update({ deleted_at: now }).eq("user_id", userId).is("deleted_at", null),
-    supabase.from("experience").update({ deleted_at: now }).eq("user_id", userId).is("deleted_at", null),
-    supabase.from("certifications").update({ deleted_at: now }).eq("user_id", userId).is("deleted_at", null),
+    supabase.from("skills").update({ deleted_at: now }).eq("portfolio_id", portfolioId).is("deleted_at", null),
+    supabase.from("projects").update({ deleted_at: now }).eq("portfolio_id", portfolioId).is("deleted_at", null),
+    supabase.from("experience").update({ deleted_at: now }).eq("portfolio_id", portfolioId).is("deleted_at", null),
+    supabase.from("certifications").update({ deleted_at: now }).eq("portfolio_id", portfolioId).is("deleted_at", null),
   ]);
 }

@@ -1,7 +1,8 @@
 import type { Request, Response } from "express";
+import { collectionQuery } from "@workspace/db/collection";
 import type { AuthenticatedRequest } from "../middleware/adminAuth";
 import { serverError, paginated, badRequest } from "./api-response";
-import { safeErrorMessage } from "./safe-error";
+import { respondDbError } from "./safe-error";
 import { logger } from "./logger";
 import { parsePagination } from "./pagination";
 import { InvalidTargetUserIdError, resolveTargetUserId } from "./user-scope";
@@ -142,65 +143,17 @@ export async function runCollectionQuery(
     }
   }
 
-  let query = supabase
-    .from(table)
-    .select(options.select ?? "*", { count: "exact" });
-
-  if (options.softDelete === "only") {
-    query = query.not("deleted_at", "is", null);
-  } else if (options.softDelete) {
-    query = query.is("deleted_at", null);
+  try {
+    const { data, count } = await collectionQuery(supabase, table, {
+      ...options,
+      targetUserId: isUserScoped ? targetUserId : null,
+      includeOrphans: isUserScoped && options.includeOrphans,
+      limit,
+      offset,
+    });
+    return paginated(res, data, count, limit, offset);
+  } catch (error: unknown) {
+    logger.error({ err: error, targetTable: table, path: req.path }, "DB operation failed");
+    return respondDbError(res, error);
   }
-
-  if (options.filters?.eq) {
-    for (const [column, value] of Object.entries(options.filters.eq)) {
-      query = query.eq(column, value);
-    }
-  }
-  if (options.filters?.gte) {
-    for (const [column, value] of Object.entries(options.filters.gte)) {
-      query = query.gte(column, value);
-    }
-  }
-  if (options.filters?.isNull) {
-    for (const column of options.filters.isNull) {
-      query = query.is(column, null);
-    }
-  }
-  if (options.or) {
-    query = query.or(options.or);
-  }
-
-  if (isUserScoped && targetUserId) {
-    if (options.includeOrphans) {
-      // Also return rows with no owner, in addition to the target user's rows.
-      query = query.or(`user_id.eq.${targetUserId},user_id.is.null`);
-    } else {
-      query = query.eq(userColumn, targetUserId);
-    }
-  }
-  // Tenanted tables: RLS already scoped the query to the caller's portfolios,
-  // so no user filter is applied. Superadmin with no explicit target user on
-  // theme_presets leaves the query unfiltered ("All users" view).
-
-  if (options.orderBy) {
-    query = query.order(options.orderBy, { ascending: options.orderAsc ?? true });
-  }
-
-  query = query.range(offset, offset + limit - 1);
-
-  const { data, error, count } = await query;
-  if (error) {
-    logSupabaseError(req, {
-      route: `${req.method} /${table}`,
-      method: req.method,
-      userId: req.user?.id,
-      adminEmail: req.adminEmail,
-      targetTable: table,
-      queryUserId: targetUserId ?? undefined,
-    }, error);
-    return serverError(res, safeErrorMessage(error));
-  }
-
-  return paginated(res, data ?? [], count ?? 0, limit, offset);
 }

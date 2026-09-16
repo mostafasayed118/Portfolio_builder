@@ -28,6 +28,11 @@ export interface AuthenticatedRequest extends Request {
   supabase?: SupabaseClient<Database>;
   /** Cached active portfolio id, resolved by resolveActivePortfolioId. */
   activePortfolioId?: string;
+  /**
+   * Verified Clerk subject (Bearer path only) — the JWT `sub` RLS compares
+   * against portfolios.owner_user_id; feeds app-layer ownership filters.
+   */
+  clerkSub?: string;
 }
 
 // Cache of clerkId → verified email for tokens that lack an inline email
@@ -166,6 +171,7 @@ export async function adminAuth(req: AuthenticatedRequest, res: Response, next: 
     if (verified && ADMIN_EMAILS.includes(verified.email)) {
       req.adminEmail = verified.email;
       req.clerkToken = clerkToken;
+      req.clerkSub = verified.clerkId;
 
       // Sync user from Clerk and attach to request
       const user = await syncUserFromClerk(verified.clerkId, verified.email);

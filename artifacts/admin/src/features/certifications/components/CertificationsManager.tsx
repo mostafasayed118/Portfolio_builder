@@ -20,6 +20,7 @@ import { exportToCsv } from "@/lib/export-csv";
 type Cert = Certification;
 
 const EMPTY_CERT: Cert = {
+  portfolio_id: null,
   id: "",
   title: "",
   issuer: "",

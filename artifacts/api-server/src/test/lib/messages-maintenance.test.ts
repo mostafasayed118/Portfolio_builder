@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { getSupabaseClient } from "../../lib/supabase-client";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   archiveTestSubmissions,
   restoreAllArchived,
@@ -12,7 +12,7 @@ function makeSupabase(opts: {
   count?: number | null;
   countError?: unknown;
   updateError?: unknown;
-} = {}) {
+} = {}): SupabaseClient {
   const countChain = {
     select: vi.fn().mockReturnThis(),
     or: vi.fn().mockReturnThis(),
@@ -29,8 +29,7 @@ function makeSupabase(opts: {
     error: opts.updateError ?? null,
   };
   const from = vi.fn().mockReturnValueOnce(countChain).mockReturnValue(updateChain);
-  vi.mocked(getSupabaseClient).mockReturnValue({ from } as never);
-  return { countChain, updateChain, from };
+  return { supabase: { from } as unknown as SupabaseClient, countChain, updateChain };
 }
 
 describe("archiveTestSubmissions", () => {
@@ -39,9 +38,9 @@ describe("archiveTestSubmissions", () => {
   });
 
   it("counts then archives with the identical test-email predicate", async () => {
-    const { countChain, updateChain } = makeSupabase({ count: 7 });
+    const { supabase, countChain, updateChain } = makeSupabase({ count: 7 });
 
-    const result = await archiveTestSubmissions();
+    const result = await archiveTestSubmissions(supabase);
 
     expect(result).toEqual({ ok: true, count: 7 });
     expect(countChain.select).toHaveBeenCalledWith("id", { count: "exact", head: true });
@@ -54,14 +53,14 @@ describe("archiveTestSubmissions", () => {
   });
 
   it("null count resolves to 0 (no visible test rows)", async () => {
-    makeSupabase({ count: null });
-    const result = await archiveTestSubmissions();
+    const { supabase } = makeSupabase({ count: null });
+    const result = await archiveTestSubmissions(supabase);
     expect(result).toEqual({ ok: true, count: 0 });
   });
 
   it("count error → db_error with sanitized message, update never runs", async () => {
-    const { updateChain } = makeSupabase({ countError: { code: "42P01", message: "missing table" } });
-    const result = await archiveTestSubmissions();
+    const { supabase, updateChain } = makeSupabase({ countError: { code: "42P01", message: "missing table" } });
+    const result = await archiveTestSubmissions(supabase);
     expect(result).toEqual({
       ok: false,
       message: "Service is initializing — please try again shortly.",
@@ -70,8 +69,8 @@ describe("archiveTestSubmissions", () => {
   });
 
   it("update error → db_error with sanitized message", async () => {
-    makeSupabase({ count: 1, updateError: { message: "boom" } });
-    const result = await archiveTestSubmissions();
+    const { supabase } = makeSupabase({ count: 1, updateError: { message: "boom" } });
+    const result = await archiveTestSubmissions(supabase);
     expect(result).toEqual({ ok: false, message: "Internal server error" });
   });
 });
@@ -82,9 +81,9 @@ describe("restoreAllArchived", () => {
   });
 
   it("counts then restores with the identical archived predicate", async () => {
-    const { countChain, updateChain } = makeSupabase({ count: 3 });
+    const { supabase, countChain, updateChain } = makeSupabase({ count: 3 });
 
-    const result = await restoreAllArchived();
+    const result = await restoreAllArchived(supabase);
 
     expect(result).toEqual({ ok: true, count: 3 });
     expect(countChain.not).toHaveBeenCalledWith(...ARCHIVED_ROWS);
@@ -93,14 +92,14 @@ describe("restoreAllArchived", () => {
   });
 
   it("null count resolves to 0", async () => {
-    makeSupabase({ count: null });
-    const result = await restoreAllArchived();
+    const { supabase } = makeSupabase({ count: null });
+    const result = await restoreAllArchived(supabase);
     expect(result).toEqual({ ok: true, count: 0 });
   });
 
   it("count error → db_error, update never runs", async () => {
-    const { updateChain } = makeSupabase({ countError: { message: "network" } });
-    const result = await restoreAllArchived();
+    const { supabase, updateChain } = makeSupabase({ countError: { message: "network" } });
+    const result = await restoreAllArchived(supabase);
     expect(result).toEqual({
       ok: false,
       message: "Upstream service timed out. Please try again.",

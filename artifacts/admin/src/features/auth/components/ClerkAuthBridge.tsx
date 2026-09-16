@@ -2,7 +2,8 @@ import { useAuth, useUser } from "@clerk/clerk-react";
 import { type ReactNode, useEffect, useMemo, useState, useRef } from "react";
 import { type AuthContextValue, AuthContextProvider } from "@workspace/auth";
 import { useLocation } from "wouter";
-import { setAuthTokenGetter, setAuthMissingHandler, setAuthReady } from "@/lib/auth-token";
+import { setAuthTokenGetter, setAuthMissingHandler, setAuthReady, getClerkToken } from "@/lib/auth-token";
+import { setSupabaseAccessTokenGetter } from "@workspace/supabase/client";
 import { api, type User } from "@/lib/api-client";
 import { diag } from "./diag";
 import { SIGN_IN_URL } from "./constants";
@@ -21,7 +22,7 @@ import { SIGN_IN_URL } from "./constants";
  * cleanup so it persists across the app lifetime.
  */
 export default function ClerkAuthBridge({ children }: { children: ReactNode }) {
-  const { isSignedIn, isLoaded, getToken, signOut: clerkSignOut } = useAuth();
+  const { isSignedIn, isLoaded, getToken, sessionId, signOut: clerkSignOut } = useAuth();
   const { user: clerkUser } = useUser();
   const [location] = useLocation();
   const [, navigate] = useLocation();
@@ -45,6 +46,12 @@ export default function ClerkAuthBridge({ children }: { children: ReactNode }) {
   // successful Clerk login into a sign-in loop. Once the backend has verified
   // this session, later auth failures can safely trigger a fresh login.
   const verifiedAdminRef = useRef(false);
+  const sessionIdRef = useRef(sessionId);
+  const isSignedInRef = useRef(isSignedIn);
+  useEffect(() => {
+    sessionIdRef.current = sessionId;
+    isSignedInRef.current = isSignedIn;
+  }, [sessionId, isSignedIn]);
   useEffect(() => {
     clerkSignOutRef.current = clerkSignOut;
     navigateRef.current = navigate;
@@ -92,6 +99,25 @@ export default function ClerkAuthBridge({ children }: { children: ReactNode }) {
       });
     }
   }, [isLoaded, getToken, jwtTemplate]);
+
+  useEffect(() => {
+    if (!isLoaded || !getToken) {
+      setSupabaseAccessTokenGetter(null);
+      return;
+    }
+    let active = true;
+    const registeredSessionId = sessionIdRef.current;
+    setSupabaseAccessTokenGetter(async () => {
+      if (!active || sessionIdRef.current !== registeredSessionId || !isSignedInRef.current) return null;
+      const token = await getClerkToken();
+      if (!active || sessionIdRef.current !== registeredSessionId || !isSignedInRef.current) return null;
+      return token;
+    });
+    return () => {
+      active = false;
+      setSupabaseAccessTokenGetter(null);
+    };
+  }, [isLoaded, getToken, isSignedIn, sessionId]);
 
   // CRITICAL: Arm / disarm the auth-missing handler based on
   // Clerk's authoritative state. Until we have positive evidence

@@ -33,20 +33,31 @@ export async function singletonUpsert(
   supabase: SupabaseClient,
   table: string,
   payload: Record<string, unknown>,
+  opts: { portfolioId?: string } = {},
 ): Promise<{ success: true }> {
-  const merged = { ...payload, updated_at: new Date().toISOString() };
+  // Tenanted singletons must carry portfolio_id for the owner RLS policies
+  // (owner_insert checks owns_portfolio(portfolio_id)); an unstamped insert
+  // through a JWT-scoped client would be rejected. Per-portfolio uniqueness
+  // (Phase 1) means one row per portfolio — reads must target the active
+  // portfolio's row, not just any row the caller can see.
+  const portfolioStamp = opts.portfolioId ? { portfolio_id: opts.portfolioId } : {};
+  const merged: Record<string, unknown> = { ...portfolioStamp, ...payload, updated_at: new Date().toISOString() };
 
-  // Read: typed to the minimal shape we need (id only). The singleton
-  // guard (047) guarantees at most one row, so `.maybeSingle()` is safe.
-  const existing = await queryOrThrow<IdRow | null>(
-    supabase.from(table).select("id").limit(1).maybeSingle(),
-    { table, operation: "singletonUpsert.read" },
-  );
+  // Read: typed to the minimal shape we need (id only). The read is scoped to
+  // the active portfolio when one is given (JWT clients rely on RLS for the
+  // ownership half of that filter).
+  const readId = async (operation: string): Promise<IdRow | null> => {
+    let q = supabase.from(table).select("id").limit(1);
+    if (opts.portfolioId) q = q.eq("portfolio_id", opts.portfolioId);
+    return queryOrThrow<IdRow | null>(q.maybeSingle(), { table, operation });
+  };
+
+  const existing = await readId("singletonUpsert.read");
 
   // Single atomic upsert on the primary key. No window between "check the
   // row exists" and "write" — a racing insert of a second singleton row is
   // impossible through this helper.
-  const row = existing
+  const row: Record<string, unknown> = existing
     ? { ...merged, id: existing.id }
     : merged;
 
@@ -56,13 +67,10 @@ export async function singletonUpsert(
       { table, operation: "singletonUpsert.upsert" },
     );
   } catch (err: unknown) {
-    // unique_violation — the 047 singleton guard rejected a racing insert.
+    // unique_violation — the singleton guard rejected a racing insert.
     // Another request won the race; update its row instead.
     if (isUniqueViolationError(err) && !existing) {
-      const winner = await queryOrThrow<IdRow | null>(
-        supabase.from(table).select("id").limit(1).maybeSingle(),
-        { table, operation: "singletonUpsert.raceRetry.read" },
-      );
+      const winner = await readId("singletonUpsert.raceRetry.read");
       if (winner) {
         await queryOrThrow(
           supabase.from(table).update(merged).eq("id", winner.id),

@@ -5,6 +5,7 @@ import app from "../../app";
 
 vi.mock("../../lib/supabase-client", () => ({
   getSupabaseClient: vi.fn(() => mockSupabaseClient),
+  getAnonSupabaseClient: vi.fn(() => mockSupabaseClient),
 }));
 
 const POST_ROW = {

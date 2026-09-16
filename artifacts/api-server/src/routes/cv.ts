@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { generateCvPdf } from "../utils/cv-generator";
-import { getSupabaseClient } from "../lib/supabase-client";
+import { getAnonSupabaseClient } from "../lib/supabase-client";
 import { env } from "../lib/env";
 
 const router: IRouter = Router();
@@ -33,7 +33,7 @@ let cvPdfInflight: Promise<Uint8Array> | null = null;
  * waiter, so each falls back to storage independently.
  */
 async function getCvPdf(
-  supabase: ReturnType<typeof getSupabaseClient>,
+  supabase: ReturnType<typeof getAnonSupabaseClient>,
   portfolioUrl: string,
 ): Promise<Uint8Array> {
   const now = Date.now();
@@ -60,7 +60,7 @@ router.get("/cv", async (req: Request, res: Response) => {
     const now = Date.now();
     let pdfBytes = cvPdfCache && now - cvPdfCache.at < env.CV_PDF_CACHE_TTL_MS ? cvPdfCache.bytes : null;
     if (!pdfBytes) {
-      pdfBytes = await getCvPdf(getSupabaseClient(), portfolioUrl);
+      pdfBytes = await getCvPdf(getAnonSupabaseClient(), portfolioUrl);
     }
     const fileName = "Mustafa_Sayed_CV.pdf";
     res.setHeader("Content-Type", "application/pdf");
@@ -78,7 +78,9 @@ router.get("/cv", async (req: Request, res: Response) => {
 
   // Fallback: serve uploaded PDF from storage
   try {
-    const supabase = getSupabaseClient();
+    // Public endpoint: anon client + the 066 `public_read_cv` policy
+    // (published portfolios only) scope this read — no service key.
+    const supabase = getAnonSupabaseClient();
     const { data: settings, error } = await supabase
       .from("cv_settings")
       .select("object_path, file_name")

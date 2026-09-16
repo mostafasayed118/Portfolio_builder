@@ -53,10 +53,27 @@ export function safeErrorMessage(err: unknown): string {
 
 /** Convenience: 500 response with a safe message, returns Response for chaining. */
 import type { Response } from "express";
+import { notFound } from "./api-response";
 export function serverErrorSafe(
   res: Response,
   err: unknown,
   _ctx?: { route?: string; method?: string },
 ): Response {
   return res.status(500).json({ success: false, message: safeErrorMessage(err) });
+}
+
+/**
+ * Central DB-error responder for CMS routes. RLS denials (42501) mean the
+ * caller referenced a foreign or nonexistent portfolio — per spec §10 these
+ * map to 404 so tenant existence is not revealed. Unique violations map to
+ * 409; everything else is a safe 500.
+ */
+export function respondDbError(res: Response, err: unknown): Response {
+  if (err !== null && typeof err === "object" && "code" in err && err.code === "42501") {
+    return notFound(res, "Not found.");
+  }
+  if (err !== null && typeof err === "object" && "code" in err && err.code === "23505") {
+    return res.status(409).json({ success: false, message: safeErrorMessage(err) });
+  }
+  return serverErrorSafe(res, err);
 }

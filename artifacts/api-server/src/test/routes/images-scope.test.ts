@@ -59,7 +59,8 @@ describe("runCollectionQuery rejects injection userId with 400", () => {
   const chain = {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
-    range: vi.fn().mockResolvedValue({ data: [], count: 0, error: null }),
+    range: vi.fn().mockReturnThis(),
+    returns: vi.fn().mockResolvedValue({ data: [], count: 0, error: null }),
   };
   const stubSupabase = { from: vi.fn().mockReturnValue(chain) };
   mini.use((req, _res, next) => {
@@ -123,6 +124,9 @@ async function stubFetch(input: unknown, init?: { method?: string; body?: unknow
 
   if (raw.includes("/rest/v1/users")) {
     return json(scenario.requester);
+  }
+  if (raw.includes("/rest/v1/portfolios")) {
+    return json({ id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd" });
   }
   if (raw.includes("/rest/v1/image_metadata")) {
     if (method === "GET") {
@@ -222,6 +226,14 @@ describe("DELETE /api/v1/images/:id scoping (non-superadmin)", () => {
     const inserts = fetchLog.filter((e) => e.method === "POST" && e.url.includes("/rest/v1/image_metadata"));
     expect(inserts).toHaveLength(1);
     expect(inserts[0].bodyText).toContain(`"user_id":"${OWNER_A}"`);
+    // Tenant stamping: metadata carries portfolio_id and the storage object
+    // lives under <portfolioId>/…
+    expect(inserts[0].bodyText).toContain(`"portfolio_id":"dddddddd-dddd-4ddd-8ddd-dddddddddddd"`);
+    const uploads = fetchLog.filter(
+      (e) => e.method === "POST" && e.url.includes("/storage/v1/object/project_images/"),
+    );
+    expect(uploads).toHaveLength(1);
+    expect(decodeURIComponent(uploads[0].url)).toContain("dddddddd-dddd-4ddd-8ddd-dddddddddddd/projects/");
   });
 });
 

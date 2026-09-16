@@ -1,8 +1,7 @@
 import type { Response } from "express";
 import type { AuthenticatedRequest } from "../../middleware/adminAuth";
-import { getSupabaseClient } from "../supabase-client";
 import { ok, badRequest, serverError } from "../api-response";
-import { safeErrorMessage } from "../safe-error";
+import { respondDbError } from "../safe-error";
 import { applyViewSpec, viewSpec, type MessagePreset, type MessageStatus } from "./view-spec";
 import { scopeMessagesQuery } from "./scope";
 
@@ -37,7 +36,10 @@ export function bulkSoftDeleteHandler(
   getDeletedAt: () => string | null,
 ) {
   return async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
-    const supabase = getSupabaseClient();
+    const supabase = req.supabase;
+    if (!supabase) {
+      return serverError(res, "Request client not initialized");
+    }
     const result = schema.safeParse(req.body);
     if (!result.success) {
       const flat = result.error.flatten();
@@ -59,7 +61,7 @@ export function bulkSoftDeleteHandler(
     }
     query = scopeMessagesQuery(query, req);
     const { error } = await query;
-    if (error) return serverError(res, safeErrorMessage(error));
+    if (error) return respondDbError(res, error);
     return ok(res, undefined);
   };
 }

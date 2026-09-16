@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import type { Request, Response } from "express";
-import { getSupabaseClient } from "../../lib/supabase-client";
+import { getAnonSupabaseClient } from "../../lib/supabase-client";
 import { ok, serverError, notFound } from "../../lib/api-response";
 import { safeErrorMessage } from "../../lib/safe-error";
 
@@ -18,7 +18,7 @@ const router: IRouter = Router();
 const PUBLIC_CACHE_CONTROL = "public, s-maxage=300, stale-while-revalidate=600";
 
 router.get("/", async (_req: Request, res: Response) => {
-  const supabase = getSupabaseClient();
+  const supabase = getAnonSupabaseClient();
   const { data, error } = await supabase
     .from("blog_posts")
     .select("id, title, slug, excerpt, reading_minutes, cover_image_url, tags, published_at, created_at")
@@ -34,7 +34,7 @@ router.get("/", async (_req: Request, res: Response) => {
 });
 
 router.get("/:slug", async (req: Request, res: Response) => {
-  const supabase = getSupabaseClient();
+  const supabase = getAnonSupabaseClient();
   const slug = Array.isArray(req.params.slug) ? req.params.slug[0] : req.params.slug;
   const { data, error } = await supabase
     .from("blog_posts")

@@ -3,6 +3,7 @@ import request from "supertest";
 import app from "../../app";
 
 const mockAdminKey = "test-admin-key";
+const portfolioId = "11111111-1111-4111-8111-111111111111";
 
 // Override setup.ts mock: getSupabaseClient always returns a shared chain.
 // The chain object is created inside the vi.mock factory (hoisted).
@@ -72,12 +73,11 @@ describe("Seed API", () => {
       const res = await request(app)
         .post("/api/v1/admin/seed")
         .set("x-admin-key", mockAdminKey)
+        .query({ portfolioId })
         .send({});
-      expect([200, 500]).toContain(res.status);
-      if (res.status === 200) {
-        expect(res.body.success).toBe(true);
-        expect(res.body.data).toHaveProperty("summary");
-      }
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toHaveProperty("summary");
     });
 
     it("returns 403 when user is not superadmin", async () => {
@@ -91,92 +91,72 @@ describe("Seed API", () => {
       expect(res.body.success).toBe(false);
     });
 
-    it("seeds data with user_id from authenticated user", async () => {
-      vi.mocked(supabaseChain.select).mockReturnValue({
-        ...supabaseChain,
-        eq: vi.fn().mockReturnValue({
-          ...supabaseChain,
-          single: vi.fn().mockResolvedValue({ data: null, error: null }),
-        }),
-      } as any);
-
+    it("seeds data with portfolio_id from the requested portfolio", async () => {
       const res = await request(app)
         .post("/api/v1/admin/seed")
         .set("x-admin-key", mockAdminKey)
+        .query({ portfolioId })
         .send({});
 
-      if (res.status === 200) {
-        // Verify insert was called — the seed route inserts skills, projects, experience, certs
-        expect(supabaseChain.insert).toHaveBeenCalled();
-      }
+      expect(res.status).toBe(200);
+      expect(supabaseChain.insert).toHaveBeenCalledWith(
+        expect.arrayContaining([expect.objectContaining({ portfolio_id: portfolioId })]),
+      );
     });
 
-    it("force mode clears existing user data before insert", async () => {
-      await request(app)
+    it("force mode clears existing portfolio data before insert", async () => {
+      const res = await request(app)
         .post("/api/v1/admin/seed?force=true&confirm=true")
         .set("x-admin-key", mockAdminKey)
+        .query({ portfolioId })
         .send({});
 
       // In force mode, update (soft delete) should be called for skills, projects, experience, certifications
+      expect(res.status).toBe(200);
       expect(supabaseChain.update).toHaveBeenCalled();
-      expect(supabaseChain.eq).toHaveBeenCalledWith("user_id", "test-user-id");
+      expect(supabaseChain.eq).toHaveBeenCalledWith("portfolio_id", portfolioId);
     });
 
-    it("non-force mode inserts skills with user_id when none exist", async () => {
-      // Default mock: select().eq() returns empty data (no existing skills)
-      vi.mocked(supabaseChain.eq).mockResolvedValue({ data: [], error: null });
+    it("non-force mode inserts skills with portfolio_id when none exist", async () => {
+      vi.mocked(supabaseChain.eq).mockReturnValue({ ...supabaseChain, data: [], error: null });
 
       const res = await request(app)
         .post("/api/v1/admin/seed")
         .set("x-admin-key", mockAdminKey)
+        .query({ portfolioId })
         .send({});
 
-      if (res.status === 200) {
-        // With no existing skills, all 6 should be inserted (3+2+1 from categories)
-        expect(res.body.data.summary.skills).toBe(6);
-        // Verify insert was called with user_id
-        const insertCalls = vi.mocked(supabaseChain.insert).mock.calls;
-        const skillInsertCall = insertCalls.find((call: any) =>
-          Array.isArray(call[0]) && call[0][0]?.category,
-        );
-        expect(skillInsertCall).toBeDefined();
-        if (skillInsertCall) {
-          const skills = skillInsertCall[0] as any[];
-          skills.forEach((s: any) => {
-            expect(s.user_id).toBe("test-user-id");
-          });
-        }
-      }
+      expect(res.status).toBe(200);
+      expect(res.body.data.summary.skills).toBe(6);
+      expect(supabaseChain.insert).toHaveBeenCalledWith([
+        expect.objectContaining({ name: "Python", portfolio_id: portfolioId }),
+        expect.objectContaining({ name: "SQL", portfolio_id: portfolioId }),
+        expect.objectContaining({ name: "JavaScript", portfolio_id: portfolioId }),
+        expect.objectContaining({ name: "React", portfolio_id: portfolioId }),
+        expect.objectContaining({ name: "Next.js", portfolio_id: portfolioId }),
+        expect.objectContaining({ name: "Azure", portfolio_id: portfolioId }),
+      ]);
     });
 
     it("returns summary with counts for each table", async () => {
-      vi.mocked(supabaseChain.select).mockReturnValue({
-        ...supabaseChain,
-        eq: vi.fn().mockReturnValue({
-          ...supabaseChain,
-          single: vi.fn().mockResolvedValue({ data: null, error: null }),
-        }),
-      } as any);
-
       const res = await request(app)
         .post("/api/v1/admin/seed")
         .set("x-admin-key", mockAdminKey)
+        .query({ portfolioId })
         .send({});
 
-      if (res.status === 200) {
-        expect(res.body.data).toHaveProperty("summary");
-        expect(res.body.data.summary).toHaveProperty("hero");
-        expect(res.body.data.summary).toHaveProperty("about");
-        expect(res.body.data.summary).toHaveProperty("skills");
-        expect(res.body.data.summary).toHaveProperty("projects");
-        expect(res.body.data.summary).toHaveProperty("experience");
-        expect(res.body.data.summary).toHaveProperty("certifications");
+      expect(res.status).toBe(200);
+      expect(res.body.data).toHaveProperty("summary");
+      expect(res.body.data.summary).toHaveProperty("hero");
+      expect(res.body.data.summary).toHaveProperty("about");
+      expect(res.body.data.summary).toHaveProperty("skills");
+      expect(res.body.data.summary).toHaveProperty("projects");
+      expect(res.body.data.summary).toHaveProperty("experience");
+      expect(res.body.data.summary).toHaveProperty("certifications");
 
-        // Verify counts are numbers
-        expect(typeof res.body.data.summary.hero).toBe("number");
-        expect(typeof res.body.data.summary.skills).toBe("number");
-        expect(typeof res.body.data.summary.projects).toBe("number");
-      }
+      expect(typeof res.body.data.summary.hero).toBe("number");
+      expect(typeof res.body.data.summary.skills).toBe("number");
+      expect(typeof res.body.data.summary.projects).toBe("number");
     });
   });
 });

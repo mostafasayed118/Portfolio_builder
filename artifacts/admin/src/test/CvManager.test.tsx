@@ -1,5 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from "vitest";
-import { screen } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import {
   renderWithProviders,
   smartConfirmDialogMock,
@@ -51,6 +51,50 @@ describe("CvManager", () => {
         }),
       },
     });
+  });
+
+  it("uploads and rolls back the exact owned path while saving only the basename", async () => {
+    const portfolioId = "11111111-1111-4111-8111-111111111111";
+    mockCvGetSettings.mockResolvedValue({ success: true, data: { portfolioId, objectPath: null } });
+    const upload = vi.fn().mockResolvedValue({ error: null });
+    const remove = vi.fn().mockResolvedValue({ error: null });
+    mockGetSupabase.mockReturnValue({ storage: { from: () => ({ upload, remove }) } });
+    mockCvUpdateSettings.mockResolvedValue({ success: false, message: "Save failed" });
+    renderWithProviders(<CvManager />);
+    await screen.findByText("CV / Resume");
+    const file = new File(["%PDF"], "resume.pdf", { type: "application/pdf" });
+    fireEvent.drop(screen.getByRole("button", { name: /upload cv pdf/i }), { dataTransfer: { files: [file] } });
+    await waitFor(() => expect(remove).toHaveBeenCalled());
+    expect(upload).toHaveBeenCalledWith(expect.stringMatching(new RegExp(`^${portfolioId}/cv-\\d+\\.pdf$`)), file, expect.objectContaining({ contentType: "application/pdf" }));
+    const path: unknown = upload.mock.calls[0]?.[0];
+    if (typeof path !== "string") throw new Error("Missing upload path");
+    expect(remove).toHaveBeenCalledWith([path]);
+    expect(mockCvUpdateSettings).toHaveBeenCalledWith({ objectPath: path.split("/")[1], fileName: "resume.pdf" });
+  });
+
+  it("rolls back the uploaded object when saving settings throws", async () => {
+    const portfolioId = "11111111-1111-4111-8111-111111111111";
+    mockCvGetSettings.mockResolvedValue({ success: true, data: { portfolioId, objectPath: null } });
+    const upload = vi.fn().mockResolvedValue({ error: null });
+    const remove = vi.fn().mockResolvedValue({ error: null });
+    mockGetSupabase.mockReturnValue({ storage: { from: () => ({ upload, remove }) } });
+    mockCvUpdateSettings.mockRejectedValue(new Error("Network failed"));
+    renderWithProviders(<CvManager />);
+    await screen.findByText("CV / Resume");
+    fireEvent.drop(screen.getByRole("button", { name: /upload cv pdf/i }), {
+      dataTransfer: { files: [new File(["%PDF"], "resume.pdf", { type: "application/pdf" })] },
+    });
+    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledWith(expect.objectContaining({ title: "Upload failed" })));
+    expect(remove).toHaveBeenCalledWith([upload.mock.calls[0]?.[0]]);
+  });
+
+  it("fails closed when settings do not resolve an owned portfolio", async () => {
+    renderWithProviders(<CvManager />);
+    await screen.findByText("CV / Resume");
+    fireEvent.drop(screen.getByRole("button", { name: /upload cv pdf/i }), { dataTransfer: { files: [new File(["%PDF"], "resume.pdf", { type: "application/pdf" })] } });
+    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledWith(expect.objectContaining({ title: "Upload failed" })));
+    expect(mockGetSupabase).not.toHaveBeenCalled();
+    expect(mockCvUpdateSettings).not.toHaveBeenCalled();
   });
 
   it("renders upload form", async () => {

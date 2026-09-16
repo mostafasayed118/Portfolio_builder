@@ -1,7 +1,6 @@
 import { z } from "zod";
 import type { MsgStatus } from "@workspace/supabase/types";
 import type { AuthenticatedRequest } from "../../middleware/adminAuth";
-import { getSupabaseClient } from "../supabase-client";
 import { safeErrorMessage } from "../safe-error";
 import { sendMessageReply } from "../mailer";
 import { scopeMessagesQuery } from "./scope";
@@ -40,7 +39,10 @@ export async function replyToMessage(
   body: unknown,
   sendReply: ReplySender = sendMessageReply,
 ): Promise<ReplyOutcome> {
-  const supabase = getSupabaseClient();
+  const supabase = req.supabase;
+  if (!supabase) {
+    return { ok: false, kind: "db_error", message: "Request client not initialized" };
+  }
   const result = replySchema.safeParse(body);
   if (!result.success) {
     return { ok: false, kind: "invalid_body", fieldErrors: result.error.flatten().fieldErrors };

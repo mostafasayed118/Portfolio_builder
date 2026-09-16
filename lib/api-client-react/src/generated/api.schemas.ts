@@ -172,6 +172,7 @@ export interface AboutContent {
 }
 
 export interface Skill {
+  portfolio_id: string | null;
   id: string;
   name: string;
   category: string;
@@ -201,6 +202,7 @@ export interface ThemePreset {
 }
 
 export interface Project {
+  portfolio_id: string | null;
   id: string;
   title: string;
   description: string;
@@ -240,6 +242,7 @@ export const ExperienceType = {
 } as const;
 
 export interface Experience {
+  portfolio_id: string | null;
   id: string;
   title: string;
   company: string;
@@ -263,6 +266,7 @@ export interface Experience {
 }
 
 export interface Certification {
+  portfolio_id: string | null;
   id: string;
   title: string;
   issuer: string;
@@ -284,6 +288,7 @@ export interface Certification {
 }
 
 export interface BlogPost {
+  portfolio_id: string | null;
   id: string;
   title: string;
   slug: string;
@@ -323,6 +328,7 @@ export const MessageStatus = {
 } as const;
 
 export interface Message {
+  portfolio_id: string | null;
   id: string;
   name: string;
   email: string;
@@ -496,6 +502,7 @@ export interface CvSettings {
   objectPath: string | null;
   fileName: string | null;
   updatedAt: string;
+  portfolioId: string | null;
 }
 
 export type AuditEntryData = { [key: string]: unknown };

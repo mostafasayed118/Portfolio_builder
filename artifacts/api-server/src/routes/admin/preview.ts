@@ -1,5 +1,5 @@
-import { Router, type IRouter, type Request, type Response } from "express";
-import { getSupabaseClient } from "../../lib/supabase-client";
+import { Router, type IRouter, type Response } from "express";
+import type { AuthenticatedRequest } from "../../middleware/adminAuth";
 import { ok, notFound, serverError } from "../../lib/api-response";
 import { safeErrorMessage } from "../../lib/safe-error";
 import { requireSuperadmin } from "../../middleware/requireSuperadmin";
@@ -7,9 +7,11 @@ import { requireSuperadmin } from "../../middleware/requireSuperadmin";
 /**
  * GET /api/v1/admin/preview/:entityType/:entityId
  *
- * Returns the raw entity data for any table, bypassing the
+ * Returns the raw entity data for any tenanted table, bypassing the
  * `is_published` filter. Intended for superadmin preview of
- * draft content before publishing.
+ * draft content before publishing. Reads go through the request-scoped
+ * client, so Postgres RLS (066) restricts results to the caller's own
+ * portfolios.
  *
  * Unlike the public GET endpoints which filter `.eq("is_published", true)`,
  * this endpoint always returns the row regardless of publish status. It is
@@ -35,7 +37,7 @@ const VALID_TABLES = new Set([
 router.get(
   "/:entityType/:entityId",
   requireSuperadmin,
-  async (req: Request, res: Response) => {
+  async (req: AuthenticatedRequest, res: Response) => {
     const entityType = req.params.entityType as string;
     const entityId = req.params.entityId as string;
 
@@ -43,8 +45,12 @@ router.get(
       return notFound(res, `Unknown entity type "${entityType}"`);
     }
 
+    const supabase = req.supabase;
+    if (!supabase) {
+      return serverError(res, "Request client not initialized");
+    }
+
     try {
-      const supabase = getSupabaseClient();
       const { data, error } = await supabase
         .from(entityType as "hero_content")
         .select("*")

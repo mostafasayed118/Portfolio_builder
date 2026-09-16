@@ -5,16 +5,20 @@ import type { Response } from "express";
 import { aboutSchema } from "@workspace/api-zod";
 import { getAboutContent } from "@workspace/db/about-content";
 import { singletonUpsert } from "@workspace/db/singleton-upsert";
-import { getSupabaseClient } from "../../lib/supabase-client";
 import { ok, badRequest, serverError } from "../../lib/api-response";
-import { safeErrorMessage, serverErrorSafe } from "../../lib/safe-error";
+import { respondDbError } from "../../lib/safe-error";
+import { resolveActivePortfolioOr400 } from "../../lib/active-portfolio";
 import { logSupabaseError } from "../../lib/route-helpers";
 
 const router: IRouter = Router();
 
 router.get("/", async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const data = await getAboutContent(getSupabaseClient());
+    const supabase = req.supabase;
+    if (!supabase) {
+      return serverError(res, "Request client not initialized");
+    }
+    const data = await getAboutContent(supabase);
     return ok(res, data);
   } catch (err: unknown) {
     logSupabaseError(req, {
@@ -24,7 +28,7 @@ router.get("/", async (req: AuthenticatedRequest, res: Response) => {
       userId: req.user?.id,
       adminEmail: req.adminEmail,
     }, err instanceof Error ? err : { message: String(err) });
-    return serverError(res, safeErrorMessage(err));
+    return respondDbError(res, err);
   }
 });
 
@@ -34,7 +38,13 @@ router.put("/", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Res
     return badRequest(res, result.error.flatten().fieldErrors as Record<string, string[]>);
   }
   try {
-    await singletonUpsert(getSupabaseClient(), "about_content", { ...result.data, is_published: true });
+    const supabase = req.supabase;
+    if (!supabase) {
+      return serverError(res, "Request client not initialized");
+    }
+    const activePortfolioId = await resolveActivePortfolioOr400(req, res);
+    if (activePortfolioId === null) return res;
+    await singletonUpsert(supabase, "about_content", { ...result.data, is_published: true }, { portfolioId: activePortfolioId });
     return ok(res, undefined);
   } catch (err: unknown) {
     logSupabaseError(req, {
@@ -44,7 +54,7 @@ router.put("/", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Res
       userId: req.user?.id,
       adminEmail: req.adminEmail,
     }, { message: err instanceof Error ? err.message : String(err) }, { operation: "singletonUpsert" });
-    return serverErrorSafe(res, err);
+    return respondDbError(res, err);
   }
 });
 

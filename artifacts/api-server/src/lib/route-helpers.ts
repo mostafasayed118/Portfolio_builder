@@ -8,11 +8,9 @@ export { runCollectionQuery, logSupabaseError } from "./collection-query";
 export type { LogContext } from "./collection-query";
 
 import type { Response } from "express";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AuthenticatedRequest } from "../middleware/adminAuth";
 import { ok, serverError, notFound, badRequest } from "./api-response";
-import { safeErrorMessage } from "./safe-error";
-import { getSupabaseClient } from "./supabase-client";
+import { respondDbError } from "./safe-error";
 import { logSupabaseError } from "./collection-query";
 import { collectionMutate } from "@workspace/db/collection";
 
@@ -74,7 +72,7 @@ export async function updateByIdAndUser(
       targetTable: table,
       targetId: id,
     }, errInfo);
-    serverError(res, safeErrorMessage(error));
+    respondDbError(res, error);
   }
 }
 
@@ -111,9 +109,4 @@ export function parseBody<T>(
     return null;
   }
   return result.data;
-}
-
-/** Convenience for a Supabase client — exported for tests. */
-export function _getSupabase(): SupabaseClient {
-  return getSupabaseClient();
 }

@@ -6,8 +6,8 @@ import type { Response } from "express";
 import { postSchema } from "@workspace/api-zod";
 import { createPost, getPostPublishState } from "@workspace/db/posts";
 import { isUniqueViolationError } from "@workspace/db/singleton-upsert";
-import { getSupabaseClient } from "../../lib/supabase-client";
 import { created, badRequest, serverError } from "../../lib/api-response";
+import { respondDbError } from "../../lib/safe-error";
 import { runCollectionQuery, updateByIdAndUser, softDeleteByIdAndUser, parseBody } from "../../lib/route-helpers";
 
 const router: IRouter = Router();
@@ -25,7 +25,11 @@ router.post("/", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Re
   if (!body) return;
 
   try {
-    await createPost(getSupabaseClient(), {
+    const supabase = req.supabase;
+    if (!supabase) {
+      return serverError(res, "Request client not initialized");
+    }
+    await createPost(supabase, {
       ...body,
       user_id: req.user?.id ?? null,
     });
@@ -34,7 +38,7 @@ router.post("/", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Re
     if (isUniqueViolationError(err)) {
       return badRequest(res, { slug: ["Slug already in use"] });
     }
-    return serverError(res, err instanceof Error ? err.message : String(err));
+    return respondDbError(res, err);
   }
 });
 
@@ -51,12 +55,16 @@ router.put("/:id", doubleCsrfProtection, validateParamId, async (req: Authentica
       ? req.query.userId
       : req.user?.id;
     try {
-      const state = await getPostPublishState(getSupabaseClient(), id, userId);
+      const supabase = req.supabase;
+      if (!supabase) {
+        return serverError(res, "Request client not initialized");
+      }
+      const state = await getPostPublishState(supabase, id, userId);
       if (state && state.is_published !== true && !state.published_at) {
         updateData.published_at = new Date().toISOString();
       }
     } catch (err: unknown) {
-      return serverError(res, err instanceof Error ? err.message : String(err));
+      return respondDbError(res, err);
     }
   }
 

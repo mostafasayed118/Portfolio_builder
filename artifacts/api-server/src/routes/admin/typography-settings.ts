@@ -5,9 +5,9 @@ import type { Response } from "express";
 import { z } from "zod";
 import { getTypographySettings } from "@workspace/db/typography-settings";
 import { singletonUpsert } from "@workspace/db/singleton-upsert";
-import { getSupabaseClient } from "../../lib/supabase-client";
 import { ok, badRequest, serverError } from "../../lib/api-response";
-import { safeErrorMessage, serverErrorSafe } from "../../lib/safe-error";
+import { respondDbError } from "../../lib/safe-error";
+import { resolveActivePortfolioOr400 } from "../../lib/active-portfolio";
 
 const router: IRouter = Router();
 
@@ -24,12 +24,16 @@ const typographySettingsSchema = z.object({
   font_weight_heading: z.string().max(10).optional(),
 });
 
-router.get("/", async (_req: AuthenticatedRequest, res: Response) => {
+router.get("/", async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const data = await getTypographySettings(getSupabaseClient());
+    const supabase = req.supabase;
+    if (!supabase) {
+      return serverError(res, "Request client not initialized");
+    }
+    const data = await getTypographySettings(supabase);
     return ok(res, data);
   } catch (err: unknown) {
-    return serverError(res, safeErrorMessage(err));
+    return respondDbError(res, err);
   }
 });
 
@@ -39,11 +43,17 @@ router.put("/", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Res
     return badRequest(res, result.error.flatten().fieldErrors as Record<string, string[]>);
   }
   try {
-    await singletonUpsert(getSupabaseClient(), "typography_settings", result.data);
+    const supabase = req.supabase;
+    if (!supabase) {
+      return serverError(res, "Request client not initialized");
+    }
+    const activePortfolioId = await resolveActivePortfolioOr400(req, res);
+    if (activePortfolioId === null) return res;
+    await singletonUpsert(supabase, "typography_settings", result.data, { portfolioId: activePortfolioId });
     return ok(res, undefined);
   } catch (err: unknown) {
     req.log.error({ err }, "typography_settings upsert failed");
-    return serverErrorSafe(res, err);
+    return respondDbError(res, err);
   }
 });
 

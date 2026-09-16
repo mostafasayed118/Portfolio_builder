@@ -43,7 +43,7 @@ vi.mock("@workspace/ui", async (importOriginal) => {
 describe("CvManager — UX-019 regression: file type + size validation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetSettings.mockResolvedValue({ success: true, data: { objectPath: null, fileName: null, updatedAt: null } });
+    mockGetSettings.mockResolvedValue({ success: true, data: { portfolioId: "11111111-1111-4111-8111-111111111111", objectPath: null, fileName: null, updatedAt: null } });
     mockUpdateSettings.mockResolvedValue({ success: true });
   });
 

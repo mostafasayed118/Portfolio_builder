@@ -1,4 +1,4 @@
-import { getSupabaseClient } from "../supabase-client";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { safeErrorMessage } from "../safe-error";
 
 /**
@@ -35,8 +35,9 @@ export type CountedUpdateOutcome =
  * update then targets the identical predicate. Any row inserted between the
  * two statements is out of scope for this run — fine for a cleanup tool.
  */
-export async function archiveTestSubmissions(): Promise<CountedUpdateOutcome> {
-  const supabase = getSupabaseClient();
+export async function archiveTestSubmissions(
+  supabase: SupabaseClient,
+): Promise<CountedUpdateOutcome> {
   const { count, error: countError } = await supabase
     .from("messages")
     .select("id", { count: "exact", head: true })
@@ -62,8 +63,9 @@ export async function archiveTestSubmissions(): Promise<CountedUpdateOutcome> {
  * archived between the two statements is out of scope for this run — fine
  * for a bulk restore tool.
  */
-export async function restoreAllArchived(): Promise<CountedUpdateOutcome> {
-  const supabase = getSupabaseClient();
+export async function restoreAllArchived(
+  supabase: SupabaseClient,
+): Promise<CountedUpdateOutcome> {
   const { count, error: countError } = await supabase
     .from("messages")
     .select("id", { count: "exact", head: true })
