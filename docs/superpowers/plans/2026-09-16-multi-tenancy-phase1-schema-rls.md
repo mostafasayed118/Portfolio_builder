@@ -1180,10 +1180,10 @@ git commit -m "chore(ci): run RLS multi-tenant suite in db-migrations job; docum
 
 ## Phase 1 completion checklist
 
-- [ ] `supabase db reset` replays 001→067 cleanly on an empty database.
-- [ ] RLS suite: owner isolation, anon publish-gating, guarded public inserts, storage prefixing all green.
-- [ ] `pnpm typecheck`, `pnpm lint` clean; full Vitest run green.
-- [ ] Production runbook: after `supabase db push`, bind `mustafa` portfolio to the real Clerk user id.
+- [x] `supabase db reset` replays 001→067 cleanly on an empty database.
+- [x] RLS suite: owner isolation, anon publish-gating, guarded public inserts, storage prefixing all green (16/16).
+- [x] `pnpm typecheck`, `pnpm lint` clean; full Vitest run green (1766 tests, `--no-file-parallelism` on Windows).
+- [x] Production runbook: after `supabase db push`, bind `mustafa` portfolio to the real Clerk user id (see `supabase/migrations/README.md`).
 - [ ] Handoff to Phase 2 plan (API migration to JWT-scoped clients + retire service-role from request paths + drop `user_id` columns and `admin_all_*` policies + remove analytics NULL-portfolio branch).
 
 ## Known deferred items (intentionally out of scope)
