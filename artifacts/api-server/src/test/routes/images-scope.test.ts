@@ -53,12 +53,24 @@ describe("resolveTargetUserId fail-closed validation", () => {
 describe("runCollectionQuery rejects injection userId with 400", () => {
   const mini = express();
   mini.use(express.json());
+  // theme_presets is the only collection that keeps ?userId= scoping
+  // (tenanted tables are RLS-scoped and ignore it) — the fail-closed
+  // machinery is pinned here.
+  const chain = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    range: vi.fn().mockResolvedValue({ data: [], count: 0, error: null }),
+  };
+  const stubSupabase = { from: vi.fn().mockReturnValue(chain) };
   mini.use((req, _res, next) => {
-    Object.assign(req, { user: { id: "user-1", email: "admin@test.com", role: "superadmin" } });
+    Object.assign(req, {
+      user: { id: "user-1", email: "admin@test.com", role: "superadmin" },
+      supabase: stubSupabase,
+    });
     next();
   });
   mini.get("/t", (req, res) => {
-    void runCollectionQuery(req, res, "skills");
+    void runCollectionQuery(req, res, "theme_presets");
   });
 
   it("returns 400 with the canonical userId error for filter injection", async () => {

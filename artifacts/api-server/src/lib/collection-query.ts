@@ -2,7 +2,6 @@ import type { Request, Response } from "express";
 import type { AuthenticatedRequest } from "../middleware/adminAuth";
 import { serverError, paginated, badRequest } from "./api-response";
 import { safeErrorMessage } from "./safe-error";
-import { getSupabaseClient } from "./supabase-client";
 import { logger } from "./logger";
 import { parsePagination } from "./pagination";
 import { InvalidTargetUserIdError, resolveTargetUserId } from "./user-scope";
@@ -49,7 +48,13 @@ export function logSupabaseError(
 }
 
 /**
- * Run a paginated, user-scoped collection query and send the response.
+ * Run a paginated collection query and send the response.
+ *
+ * Tenanted collections are scoped by RLS on the JWT-scoped request client
+ * (`owner_select_<t>` policies restrict reads to the caller's portfolios),
+ * so no `user_id` filter is applied for them — `targetUserId`/`includeOrphans`
+ * are ignored. `theme_presets` is the only non-tenanted collection (spec
+ * §4.3) and keeps the `user_id` scoping machinery below.
  *
  * Reduces the GET-handler boilerplate from ~25 lines to one call:
  *
@@ -106,27 +111,35 @@ export async function runCollectionQuery(
     or?: string;
   } = {},
 ): Promise<Response> {
-  const supabase = getSupabaseClient();
+  const supabase = req.supabase;
+  if (!supabase) {
+    return serverError(res, "Request client not initialized");
+  }
   const { limit, offset } = parsePagination(req);
   const userColumn = options.userColumn ?? "user_id";
 
+  // Only theme_presets is user-scoped; tenanted tables rely on RLS.
+  const isUserScoped = table === "theme_presets" && userColumn === "user_id";
+
   // Fail closed: a non-UUID ?userId from a superadmin must never reach the
   // PostgREST .or() filter — map it to a 400 before building the query.
-  let targetUserId: string | null;
-  try {
-    targetUserId = options.targetUserId ?? resolveTargetUserId(req, req.query.userId as string | undefined);
-  } catch (error) {
-    if (error instanceof InvalidTargetUserIdError) {
-      return badRequest(res, { userId: [error.message] });
+  let targetUserId: string | null = null;
+  if (isUserScoped) {
+    try {
+      targetUserId = options.targetUserId ?? resolveTargetUserId(req, req.query.userId as string | undefined);
+    } catch (error) {
+      if (error instanceof InvalidTargetUserIdError) {
+        return badRequest(res, { userId: [error.message] });
+      }
+      throw error;
     }
-    throw error;
-  }
 
-  // Non-superadmin with no userId — return an empty paginated result so the
-  // response shape matches the normal success path (consumers unwrap `data`
-  // and would otherwise receive a bare array).
-  if (!targetUserId && req.user?.role !== "superadmin") {
-    return paginated(res, [], 0, limit, offset);
+    // Non-superadmin with no userId — return an empty paginated result so the
+    // response shape matches the normal success path (consumers unwrap `data`
+    // and would otherwise receive a bare array).
+    if (!targetUserId && req.user?.role !== "superadmin") {
+      return paginated(res, [], 0, limit, offset);
+    }
   }
 
   let query = supabase
@@ -158,17 +171,17 @@ export async function runCollectionQuery(
     query = query.or(options.or);
   }
 
-  if (targetUserId) {
+  if (isUserScoped && targetUserId) {
     if (options.includeOrphans) {
-      // Public contact-form messages carry no user_id; admins must see them
-      // in addition to rows explicitly assigned to themselves.
+      // Also return rows with no owner, in addition to the target user's rows.
       query = query.or(`user_id.eq.${targetUserId},user_id.is.null`);
     } else {
       query = query.eq(userColumn, targetUserId);
     }
   }
-  // Superadmin with no explicit target user — leave the query unfiltered so
-  // “All users” returns every row (owned and unowned alike).
+  // Tenanted tables: RLS already scoped the query to the caller's portfolios,
+  // so no user filter is applied. Superadmin with no explicit target user on
+  // theme_presets leaves the query unfiltered ("All users" view).
 
   if (options.orderBy) {
     query = query.order(options.orderBy, { ascending: options.orderAsc ?? true });

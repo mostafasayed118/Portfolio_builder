@@ -1,12 +1,12 @@
 import { Router, type IRouter } from "express";
 import { doubleCsrfProtection } from "../middleware/csrf";
 import type { AuthenticatedRequest } from "../middleware/adminAuth";
-import { validateQueryUserId, validateParamId } from "../middleware/validateUuid";
+import { validateParamId } from "../middleware/validateUuid";
 import type { Response } from "express";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getSupabaseClient } from "./supabase-client";
 import { created, badRequest, serverError, conflict } from "./api-response";
 import { safeErrorMessage } from "./safe-error";
+import { resolveActivePortfolioId, NoActivePortfolioError } from "./active-portfolio";
 import { runCollectionQuery, updateByIdAndUser, softDeleteByIdAndUser } from "./route-helpers";
 import { collectionMutate, isUniqueViolationError } from "@workspace/db/collection";
 
@@ -48,10 +48,13 @@ export interface CollectionRouterOptions {
 
 /**
  * Builds a standard admin CRUD router for a collection table:
- *   GET    /          → paginated, user-scoped list (soft-delete aware)
- *   POST   /          → validate + insert (owned by the requesting user)
- *   PUT    /:id       → validate + update (scoped to the user)
- *   DELETE /:id       → soft delete (scoped to the user)
+ *   GET    /          → paginated list (RLS scopes reads to the caller)
+ *   POST   /          → validate + insert (stamped with the active portfolio)
+ *   PUT    /:id       → validate + update (RLS scopes the write)
+ *   DELETE /:id       → soft delete (RLS scopes the write)
+ *
+ * `theme_presets` is the only non-tenanted collection: it keeps `user_id`
+ * scoping instead of `portfolio_id` stamping.
  *
  * The four verb handlers are identical across projects/skills/experience/
  * certifications, so they live here once instead of being copy-pasted.
@@ -60,12 +63,15 @@ export function createCollectionRouter(opts: CollectionRouterOptions): IRouter {
   const { table, entityName, schema, orderBy = "sort_order", orderAsc, insertDefaults } = opts;
   const router: IRouter = Router();
 
-  router.get("/", validateQueryUserId, async (req: AuthenticatedRequest, res: Response) => {
+  router.get("/", async (req: AuthenticatedRequest, res: Response) => {
     return runCollectionQuery(req, res, table, { softDelete: true, orderBy, orderAsc });
   });
 
   router.post("/", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
-    const supabase = getSupabaseClient();
+    const supabase = req.supabase;
+    if (!supabase) {
+      return serverError(res, "Request client not initialized");
+    }
     const result = schema.safeParse(req.body);
     if (!result.success) {
       return badRequest(res, result.error?.flatten().fieldErrors ?? {});
@@ -80,16 +86,26 @@ export function createCollectionRouter(opts: CollectionRouterOptions): IRouter {
         });
       }
     }
-    const insertData = {
-      ...data,
-      user_id: req.user?.id,
-      ...(insertDefaults ? insertDefaults(data) : {}),
-    };
+    const isTenanted = table !== "theme_presets";
+    const insertData: Record<string, unknown> = { ...data };
+    if (isTenanted) {
+      try {
+        insertData.portfolio_id = await resolveActivePortfolioId(req);
+      } catch (error) {
+        if (error instanceof NoActivePortfolioError) {
+          return badRequest(res, { portfolioId: ["Create a portfolio first"] });
+        }
+        throw error;
+      }
+    } else {
+      insertData.user_id = req.user?.id;
+    }
+    if (insertDefaults) {
+      Object.assign(insertData, insertDefaults(data));
+    }
     try {
       await collectionMutate(supabase, table, { action: "insert", row: insertData });
     } catch (error) {
-      // Race backstop: a concurrent insert beat us to the same name. Report
-      // it as the same 409 conflict the pre-insert check would have caught.
       if (isUniqueViolationError(error) && opts.findDuplicate) {
         return conflict(res, "An item with this name already exists", {
           code: "DUPLICATE_NAME",

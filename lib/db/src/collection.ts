@@ -146,7 +146,11 @@ export type CollectionMutation =
       action: "update";
       id: string;
       patch: Record<string, unknown>;
-      /** When set, the update is additionally scoped to `.eq(userColumn, userId)`. */
+      /**
+       * When set, the update is additionally scoped to `.eq(userColumn, userId)`.
+       * Only `theme_presets` (the single non-tenanted collection) passes this —
+       * tenanted tables rely on RLS on the JWT-scoped request client instead.
+       */
       userId?: string;
       /** Column used for the user scope (default: "user_id"). */
       userColumn?: string;

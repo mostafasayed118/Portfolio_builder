@@ -52,7 +52,11 @@ const mockSupabase = getSupabaseClient() as unknown as {
   from: ReturnType<typeof vi.fn>;
   update: ReturnType<typeof vi.fn>;
   select: ReturnType<typeof vi.fn>;
+  insert: ReturnType<typeof vi.fn>;
   eq: ReturnType<typeof vi.fn>;
+  order: ReturnType<typeof vi.fn>;
+  limit: ReturnType<typeof vi.fn>;
+  maybeSingle: ReturnType<typeof vi.fn>;
 };
 
 // setup.ts mocks getSupabaseClient to return a FRESH client on every call,
@@ -312,5 +316,42 @@ describe("Regression: real Supabase update+select shape returns 200 (data popula
 
     expect(res.status).toBe(404);
     expect(res.body).toHaveProperty("message", "Project not found");
+  });
+});
+
+describe("Portfolio stamping on POST (multi-tenancy phase 2)", () => {
+  // Tenanted inserts carry portfolio_id (resolved for the caller) and no
+  // user_id — RLS on the JWT-scoped request client is the ownership boundary.
+  const PORTFOLIO_ID = "22222222-2222-2222-2222-222222222222";
+
+  it("stamps portfolio_id and no user_id on tenanted inserts", async () => {
+    mockSupabase.maybeSingle.mockResolvedValueOnce({
+      data: { id: PORTFOLIO_ID },
+      error: null,
+    });
+
+    const res = await request(app)
+      .post("/api/v1/admin/projects")
+      .set("x-admin-key", mockAdminKey)
+      .send({ title: "Tenanted Project", description: "A test project with enough content" });
+
+    expect(res.status).toBe(201);
+    expect(mockSupabase.insert).toHaveBeenCalledWith(
+      expect.objectContaining({ portfolio_id: PORTFOLIO_ID }),
+    );
+    const row = mockSupabase.insert.mock.calls[0]?.[0] as unknown as Record<string, unknown>;
+    expect(row).not.toHaveProperty("user_id");
+  });
+
+  it("returns 400 when the caller owns no portfolio", async () => {
+    mockSupabase.maybeSingle.mockResolvedValueOnce({ data: null, error: null });
+
+    const res = await request(app)
+      .post("/api/v1/admin/projects")
+      .set("x-admin-key", mockAdminKey)
+      .send({ title: "Orphan Project", description: "A test project with enough content" });
+
+    expect(res.status).toBe(400);
+    expect(mockSupabase.insert).not.toHaveBeenCalled();
   });
 });

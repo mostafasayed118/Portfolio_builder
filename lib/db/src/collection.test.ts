@@ -113,10 +113,10 @@ describe("collectionMutate", () => {
     expect(result).toEqual([{ id: "p1" }]);
   });
 
-  it("additionally scopes the update by user when userId is set", async () => {
+  it("additionally scopes the update by user when userId is set (theme_presets)", async () => {
     supabase.select.mockResolvedValueOnce({ data: [], error: null });
 
-    const result = await collectionMutate(supabase as any, "projects", {
+    const result = await collectionMutate(supabase as any, "theme_presets", {
       action: "update",
       id: "p1",
       patch: { name: "New" },

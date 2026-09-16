@@ -9,7 +9,6 @@ export type { LogContext } from "./collection-query";
 
 import type { Response } from "express";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@workspace/supabase/types";
 import type { AuthenticatedRequest } from "../middleware/adminAuth";
 import { ok, serverError, notFound, badRequest } from "./api-response";
 import { safeErrorMessage } from "./safe-error";
@@ -18,8 +17,8 @@ import { logSupabaseError } from "./collection-query";
 import { collectionMutate } from "@workspace/db/collection";
 
 /**
- * Update a row by id, optionally scoped to `user_id` (admins who are
- * not superadmins can only mutate their own rows).
+ * Update a row by id. Ownership is enforced by RLS on the JWT-scoped
+ * request client — no `user_id` filter is applied here.
  *
  * Sends the response and returns void; the caller should `return` the
  * resolved Promise only if downstream logic depends on the outcome.
@@ -40,20 +39,22 @@ export async function updateByIdAndUser(
   patch: Record<string, unknown>,
   entityName?: string,
 ): Promise<void> {
-  const supabase = getSupabaseClient() as SupabaseClient<Database>;
-  const isSuperadmin = req.user?.role === "superadmin";
+  const supabase = req.supabase;
+  if (!supabase) {
+    serverError(res, "Request client not initialized");
+    return;
+  }
   try {
     // Supabase leaves `count` null on `.update().select()`, so the number of
     // matched rows must be read from the returned `data` array — checking
     // `count` made every successful PATCH report a false 404 (the write
     // applied, but the client was told the row didn't exist).
+    // RLS on the request client scopes the write; "no row matched" (a row
+    // owned by another portfolio, or a missing id) still yields the 404 below.
     const updated = await collectionMutate(supabase, table, {
       action: "update",
       id,
       patch,
-      // Superadmins mutate across all users; everyone else is pinned to
-      // their own rows (empty string matches nothing when unauthenticated).
-      userId: isSuperadmin ? undefined : (req.user?.id ?? ""),
     });
     if (!updated || updated.length === 0) {
       const name = entityName ?? table.replace(/s$/, "");
@@ -78,8 +79,8 @@ export async function updateByIdAndUser(
 }
 
 /**
- * Soft-delete a row by id (sets `deleted_at = now()`), optionally scoped
- * to `user_id`. Sends 404 when no row matched.
+ * Soft-delete a row by id (sets `deleted_at = now()`). RLS on the request
+ * client scopes the write. Sends 404 when no row matched.
  */
 export async function softDeleteByIdAndUser(
   req: AuthenticatedRequest,

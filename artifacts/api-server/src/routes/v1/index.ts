@@ -7,6 +7,7 @@ import publicPostsRouter from "../public/posts";
 import publicChatRouter from "../public/chat";
 import cspReportRouter from "../csp-report";
 import { adminAuth } from "../../middleware/adminAuth";
+import { attachRequestSupabase } from "../../middleware/requestClient";
 
 const router: IRouter = Router();
 
@@ -18,7 +19,7 @@ const router: IRouter = Router();
 //   - the response shape is owned by the health route, not by v1
 router.use(cvRouter);
 router.use(imagesRouter);
-router.use("/admin", adminAuth, adminRouter);
+router.use("/admin", adminAuth, attachRequestSupabase, adminRouter);
 router.use("/contact", publicContactRouter);
 router.use("/posts", publicPostsRouter);
 router.use("/chat", publicChatRouter);

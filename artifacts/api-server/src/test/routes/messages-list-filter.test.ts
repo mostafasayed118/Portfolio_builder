@@ -25,10 +25,10 @@ vi.mock("../../middleware/adminAuth", () => ({
     const adminKey = req.headers["x-admin-key"];
     if (adminKey === mockAdminKey) {
       (req as Record<string, unknown>).adminEmail = "admin@test.com";
-      // Superadmin so runCollectionQuery builds the query chain (without a
-      // superadmin req.user it early-returns an empty page and never touches
-      // the client). No userId → no user scope, so the assertions focus purely
-      // on the status/soft-delete clauses.
+      // Superadmin so the theme_presets-style user scope is bypassed: with no
+      // ?userId there is no user filter, so the assertions focus purely on
+      // the status/soft-delete clauses. (Tenanted tables are RLS-scoped;
+      // runCollectionQuery applies no user_id filter for them.)
       (req as Record<string, unknown>).user = { id: "user-1", email: "admin@test.com", role: "superadmin" };
       return next();
     }
