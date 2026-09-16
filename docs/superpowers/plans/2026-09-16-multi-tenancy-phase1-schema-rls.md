@@ -276,6 +276,8 @@ Expected: FAIL — relation `public.portfolios` does not exist (or connection re
 
 `supabase/migrations/064_portfolios.sql`:
 
+> **Execution note (discovered during implementation):** CLI v2.109.1's `db reset` applies migrations as `postgres`, whose default ACLs omit table CRUD for `service_role`/`anon`/`authenticated` in `public` — every REST query fails with "permission denied" on the local stack (hosted grants full CRUD; existing tests are mocked, so it was never hit). 064 therefore starts with grant-parity statements: explicit `GRANT SELECT, INSERT, UPDATE, DELETE` + function `EXECUTE` on schema `public` for the three roles, plus `ALTER DEFAULT PRIVILEGES FOR ROLE postgres` so future migrations inherit the hosted behavior. Row-level access is still governed solely by RLS policies.
+
 ```sql
 -- ============================================================================
 -- 064_portfolios.sql — Multi-tenancy foundations (spec: 2026-09-16-multi-tenancy-design.md)
