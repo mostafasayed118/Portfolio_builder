@@ -74,10 +74,17 @@ export interface SeedResult {
 
 /**
  * Seeds two identities and three portfolios (A published, B draft, C published)
- * with the service client (bypasses RLS).
+ * with the service client (bypasses RLS). Idempotent across runs: previously
+ * seeded test portfolios are deleted first — the portfolio_id ON DELETE CASCADE
+ * FK wipes any content previous test runs created against them.
  */
 export async function ensureSchema(): Promise<SeedResult> {
   const svc = serviceClient();
+  const testSlugs = ["rls-test-a", "rls-test-b", "rls-test-c"];
+
+  const { error: cleanErr } = await svc.from("portfolios").delete().in("slug", testSlugs);
+  if (cleanErr !== null) throw new Error(`cleanup test portfolios failed: ${cleanErr.message}`);
+
   const { error: userErr } = await svc.from("users").upsert(
     [
       { clerk_id: "user_test_ownerA", email: "owner-a@test.local", role: "superadmin" },

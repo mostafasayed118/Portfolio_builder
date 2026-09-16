@@ -571,6 +571,13 @@ git commit -m "feat(db): add portfolio_id columns, backfill tenant #1, per-portf
 
 ### Task 3: Owner + public RLS policies on tenanted tables
 
+**Implementation notes (recorded during execution):**
+
+- Test fixtures must satisfy real CHECK constraints: `projects` requires `slug` (NOT NULL) and description ≥ 10 chars; `messages.message` must be ≥ 10 chars. Seeding with placeholder data fails with 23514/23502 before RLS is even evaluated — and upsert errors must be asserted (`expect(err).toBeNull()`), not silently ignored.
+- Tenant isolation must be asserted on DRAFT content (`is_published: false`): published rows are intentionally visible cross-tenant via the public_read policies (that is how the public site works). `owns_portfolio` isolation still proven via draft reads + `messages`/`site_settings` private tables.
+- `ensureSchema` is self-cleaning: it first deletes `portfolios` where `slug IN ('rls-test-a','rls-test-b','rls-test-c')` — the `portfolio_id ON DELETE CASCADE` FKs wipe any content previous runs created, making the suite rerunnable without `supabase db reset` (full vitest suite runs the RLS file twice without a reset).
+- Full-suite runs on this Windows box require `pnpm vitest run --no-file-parallelism` (`ERR_IPC_CHANNEL_CLOSED` tinypool crash otherwise).
+
 **Files:**
 
 - Create: `supabase/migrations/066_tenant_rls.sql`

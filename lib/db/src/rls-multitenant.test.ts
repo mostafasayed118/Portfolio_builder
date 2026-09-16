@@ -94,3 +94,98 @@ d("rls: tenant columns + backfill (065)", () => {
     expect(errDup?.code).toBe("23505");
   });
 });
+
+d("rls: tenanted table isolation (066)", () => {
+  it("owner reads own rows and not other tenants' rows", async () => {
+    const { portfolioA } = await ensureSchema();
+    const svc = serviceClient();
+    await svc.from("projects").upsert(
+      { portfolio_id: portfolioA, slug: "a-project", title: "A project", description: "a decent description", is_published: false },
+      { onConflict: "id" },
+    );
+    const ownerA = clientFor({ sub: "user_test_ownerA" });
+    const ownerB = clientFor({ sub: "user_test_ownerB" });
+    const { data: seenByA } = await ownerA.from("projects").select("title").eq("title", "A project");
+    expect(seenByA?.length).toBe(1);
+    const { data: seenByB } = await ownerB.from("projects").select("title").eq("title", "A project");
+    expect(seenByB).toEqual([]);
+  });
+
+  it("owner can insert and delete within own portfolio only", async () => {
+    const { portfolioA, portfolioC } = await ensureSchema();
+    const ownerA = clientFor({ sub: "user_test_ownerA" });
+    const { data: inserted, error: insErr } = await ownerA
+      .from("skills")
+      .insert({ portfolio_id: portfolioA, name: "SQL", category: "Data", proficiency: 90 })
+      .select("id");
+    expect(insErr).toBeNull();
+    const skillId = inserted?.[0]?.id;
+    if (skillId === undefined) throw new Error("expected skill insert to return id");
+    const { error: crossErr } = await ownerA
+      .from("skills")
+      .insert({ portfolio_id: portfolioC, name: "Nope", category: "X", proficiency: 1 });
+    expect(crossErr).not.toBeNull();
+    const { error: delErr } = await ownerA.from("skills").delete().eq("id", skillId);
+    expect(delErr).toBeNull();
+  });
+
+  it("anon reads only published content from published portfolios", async () => {
+    const { portfolioA, portfolioB } = await ensureSchema();
+    const svc = serviceClient();
+    await svc.from("projects").upsert(
+      { portfolio_id: portfolioA, slug: "pub-project", title: "Pub project", description: "a decent description", is_published: true },
+      { onConflict: "id" },
+    );
+    await svc.from("projects").upsert(
+      { portfolio_id: portfolioB, slug: "draft-project", title: "Draft project", description: "a decent description", is_published: true },
+      { onConflict: "id" },
+    );
+    const anon = anonClient();
+    const { data } = await anon
+      .from("projects")
+      .select("title")
+      .in("title", ["Pub project", "Draft project", "A project"]);
+    expect(data?.map((row) => row.title)).toEqual(["Pub project"]);
+  });
+
+  it("anon can insert messages only into published portfolios, with guarded columns", async () => {
+    const { portfolioA, portfolioB } = await ensureSchema();
+    const anon = anonClient();
+    const { error: okErr } = await anon.from("messages").insert({
+      portfolio_id: portfolioA,
+      name: "Visitor",
+      email: "visitor@example.org",
+      message: "Hello from a real visitor message",
+      subject: null,
+    });
+    expect(okErr).toBeNull();
+    const { error: draftErr } = await anon.from("messages").insert({
+      portfolio_id: portfolioB,
+      name: "Visitor",
+      email: "visitor@example.org",
+      message: "Hello from a real visitor",
+    });
+    expect(draftErr).not.toBeNull();
+    const { error: statusErr } = await anon.from("messages").insert({
+      portfolio_id: portfolioA,
+      name: "Visitor",
+      email: "visitor@example.net",
+      message: "Hello from a real visitor",
+      status: "read",
+    });
+    expect(statusErr).not.toBeNull();
+  });
+
+  it("anon analytics inserts stay whitelisted and portfolio-scoped", async () => {
+    const { portfolioA } = await ensureSchema();
+    const anon = anonClient();
+    const { error: okErr } = await anon
+      .from("analytics_events")
+      .insert({ portfolio_id: portfolioA, type: "page_view", path: "/" });
+    expect(okErr).toBeNull();
+    const { error: badType } = await anon
+      .from("analytics_events")
+      .insert({ portfolio_id: portfolioA, type: "self_xss", path: "/" });
+    expect(badType).not.toBeNull();
+  });
+});
