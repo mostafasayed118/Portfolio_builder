@@ -155,7 +155,7 @@ export const env = {
   // Supabase
   get SUPABASE_URL() { return require_("SUPABASE_URL"); },
   get SUPABASE_SERVICE_ROLE_KEY() { return require_("SUPABASE_SERVICE_ROLE_KEY"); },
-  get SUPABASE_ANON_KEY() { return optional("SUPABASE_ANON_KEY"); },
+  get SUPABASE_ANON_KEY() { return require_("SUPABASE_ANON_KEY"); },
 
   // Auth
   get CLERK_SECRET_KEY() { return optional("CLERK_SECRET_KEY"); },
@@ -238,7 +238,7 @@ export const env = {
 
   /** Verify all required env vars are present. Call at startup. */
   validate(): { ok: true; missing: string[] } {
-    const required = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "CSRF_SECRET"];
+    const required = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_ANON_KEY", "CSRF_SECRET"];
     const missing = required.filter((k) => !get(k));
     if (missing.length > 0 && !this.IS_TEST) {
       console.error(`[env] Missing required environment variables: ${missing.join(", ")}`);

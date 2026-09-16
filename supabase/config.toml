@@ -356,9 +356,13 @@ enabled = false
 
 # Use Clerk as a third-party provider alongside Supabase Auth.
 [auth.third_party.clerk]
-enabled = false
-# Obtain from https://clerk.com/setup/supabase
-# domain = "example.clerk.accounts.dev"
+enabled = true
+# Production: exact host of the Clerk instance backing ADMIN_EMAILS users.
+# Read CLERK_ISSUER from the root .env (e.g. https://clerk.<app>.accounts.dev)
+# and set domain to the host without the scheme. Local dev relies on the
+# stack's own JWTs (RLS test suite signs with the local JWT secret); Clerk
+# tokens are only exercised against production/staging.
+domain = "nearby-koi-38.clerk.accounts.dev"
 
 # OAuth server configuration
 [auth.oauth_server]

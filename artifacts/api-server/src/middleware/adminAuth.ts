@@ -20,6 +20,8 @@ function isApiKeyValid(key: string | undefined): key is string {
 export interface AuthenticatedRequest extends Request {
   adminEmail?: string;
   user?: { id: string; email: string; role: string };
+  /** Raw verified Clerk JWT (Bearer path only) — feeds the JWT-scoped client. */
+  clerkToken?: string;
 }
 
 // Cache of clerkId → verified email for tokens that lack an inline email
@@ -157,6 +159,7 @@ export async function adminAuth(req: AuthenticatedRequest, res: Response, next: 
     const verified = await verifyClerkJWT(clerkToken);
     if (verified && ADMIN_EMAILS.includes(verified.email)) {
       req.adminEmail = verified.email;
+      req.clerkToken = clerkToken;
 
       // Sync user from Clerk and attach to request
       const user = await syncUserFromClerk(verified.clerkId, verified.email);
