@@ -189,3 +189,49 @@ d("rls: tenanted table isolation (066)", () => {
     expect(badType).not.toBeNull();
   });
 });
+
+d("rls: storage tenancy (067)", () => {
+  it("prefixes existing storage objects with the tenant portfolio id", async () => {
+    const svc = serviceClient();
+    const { data: pf1 } = await svc.from("portfolios").select("id").eq("slug", "mustafa").single();
+    const { data: cvRow } = await svc.from("cv_settings").select("object_path").limit(1);
+    if ((cvRow ?? []).length > 0) {
+      expect(cvRow?.[0]?.object_path).toMatch(new RegExp(`^${pf1?.id}/`));
+    }
+  });
+
+  it("lets owners write only under their own prefix", async () => {
+    const { portfolioA } = await ensureSchema();
+    const ownerA = clientFor({ sub: "user_test_ownerA" });
+    const { error: okErr } = await ownerA.storage
+      .from("project_images")
+      .upload(`${portfolioA}/test.png`, new Uint8Array([1, 2, 3]), {
+        contentType: "image/png",
+        upsert: true,
+      });
+    expect(okErr).toBeNull();
+
+    const { data: pfC } = await serviceClient()
+      .from("portfolios")
+      .select("id")
+      .eq("slug", "rls-test-c")
+      .single();
+    const otherId = pfC?.id;
+    if (otherId === undefined) throw new Error("seed did not create portfolio C");
+    const { error: crossErr } = await ownerA.storage
+      .from("project_images")
+      .upload(`${otherId}/steal.png`, new Uint8Array([1]), { contentType: "image/png" });
+    expect(crossErr).not.toBeNull();
+
+    await ownerA.storage.from("project_images").remove([`${portfolioA}/test.png`]);
+  });
+
+  it("anon cannot write to any bucket", async () => {
+    const { portfolioA } = await ensureSchema();
+    const anon = anonClient();
+    const { error } = await anon.storage
+      .from("project_images")
+      .upload(`${portfolioA}/anon.png`, new Uint8Array([1]), { contentType: "image/png" });
+    expect(error).not.toBeNull();
+  });
+});
