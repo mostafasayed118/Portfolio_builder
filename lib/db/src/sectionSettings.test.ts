@@ -35,10 +35,10 @@ describe("listSectionSettings", () => {
 });
 
 describe("updateSectionSetting", () => {
-  it("updates setting with updated_at timestamp", async () => {
-    supabase.eq.mockResolvedValue({ error: null });
+  it("updates setting with updated_at timestamp and returns the matched row count", async () => {
+    supabase.select.mockResolvedValue({ data: [{ id: "sec-1" }], error: null });
 
-    await updateSectionSetting(supabase as any, "sec-1", { is_visible: false });
+    const matched = await updateSectionSetting(supabase as any, "sec-1", { is_visible: false });
 
     expect(supabase.from).toHaveBeenCalledWith("section_settings");
     expect(supabase.update).toHaveBeenCalledWith(
@@ -48,10 +48,21 @@ describe("updateSectionSetting", () => {
       }),
     );
     expect(supabase.eq).toHaveBeenCalledWith("id", "sec-1");
+    expect(supabase.select).toHaveBeenCalledWith("id");
+    expect(matched).toBe(1);
+  });
+
+  it("returns 0 matched rows when the id does not exist", async () => {
+    supabase.select.mockResolvedValue({ data: [], error: null });
+
+    const matched = await updateSectionSetting(supabase as any, "missing", { is_visible: true });
+
+    expect(supabase.select).toHaveBeenCalledWith("id");
+    expect(matched).toBe(0);
   });
 
   it("throws on error", async () => {
-    supabase.eq.mockResolvedValue({ error: new Error("not found") });
+    supabase.select.mockResolvedValue({ data: null, error: new Error("not found") });
 
     await expect(
       updateSectionSetting(supabase as any, "bad", { is_visible: true }),
@@ -60,8 +71,8 @@ describe("updateSectionSetting", () => {
 });
 
 describe("reorderSectionSettings", () => {
-  it("updates sort_order for each item sequentially", async () => {
-    supabase.eq.mockResolvedValue({ error: null });
+  it("calls the reorder_sections RPC once with parallel id and sort_order arrays", async () => {
+    supabase.rpc.mockResolvedValue({ data: null, error: null });
 
     const items = [
       { id: "sec-1", sort_order: 2 },
@@ -71,59 +82,39 @@ describe("reorderSectionSettings", () => {
 
     await reorderSectionSettings(supabase as any, items);
 
-    // from() called once per item
-    expect(supabase.from).toHaveBeenCalledTimes(3);
-    expect(supabase.from).toHaveBeenCalledWith("section_settings");
-    // update() called once per item with sort_order and updated_at
-    expect(supabase.update).toHaveBeenCalledTimes(3);
-    expect(supabase.update).toHaveBeenCalledWith(
-      expect.objectContaining({ sort_order: 2, updated_at: expect.any(String) }),
-    );
-    expect(supabase.update).toHaveBeenCalledWith(
-      expect.objectContaining({ sort_order: 1, updated_at: expect.any(String) }),
-    );
-    expect(supabase.update).toHaveBeenCalledWith(
-      expect.objectContaining({ sort_order: 3, updated_at: expect.any(String) }),
-    );
-    // eq() called once per item
-    expect(supabase.eq).toHaveBeenCalledTimes(3);
-    expect(supabase.eq).toHaveBeenCalledWith("id", "sec-1");
-    expect(supabase.eq).toHaveBeenCalledWith("id", "sec-2");
-    expect(supabase.eq).toHaveBeenCalledWith("id", "sec-3");
+    expect(supabase.rpc).toHaveBeenCalledTimes(1);
+    expect(supabase.rpc).toHaveBeenCalledWith("reorder_sections", {
+      section_ids: ["sec-1", "sec-2", "sec-3"],
+      sort_orders: [2, 1, 3],
+    });
+    // Atomic RPC — no per-row UPDATE fan-out.
+    expect(supabase.from).not.toHaveBeenCalled();
+    expect(supabase.update).not.toHaveBeenCalled();
   });
 
-  it("throws aggregated error on partial failure", async () => {
-    // First call succeeds, second fails, third succeeds
-    supabase.eq
-      .mockResolvedValueOnce({ error: null })
-      .mockResolvedValueOnce({ error: new Error("timeout") })
-      .mockResolvedValueOnce({ error: null });
+  it("throws on RPC error", async () => {
+    supabase.rpc.mockResolvedValue({
+      data: null,
+      error: { message: "reorder_sections failed" },
+    });
 
     const items = [
       { id: "sec-1", sort_order: 1 },
       { id: "sec-2", sort_order: 2 },
-      { id: "sec-3", sort_order: 3 },
     ];
 
     await expect(reorderSectionSettings(supabase as any, items)).rejects.toThrow(
-      /1 of 3 section order updates failed/,
+      "reorder_sections failed",
     );
   });
 
-  it("throws aggregated error listing all failures", async () => {
-    supabase.eq
-      .mockResolvedValueOnce({ error: new Error("err-a") })
-      .mockResolvedValueOnce({ error: null })
-      .mockResolvedValueOnce({ error: new Error("err-b") });
+  it("propagates synchronous/rejected RPC failures", async () => {
+    supabase.rpc.mockRejectedValue(new Error("network down"));
 
-    const items = [
-      { id: "a", sort_order: 1 },
-      { id: "b", sort_order: 2 },
-      { id: "c", sort_order: 3 },
-    ];
+    const items = [{ id: "sec-1", sort_order: 1 }];
 
     await expect(reorderSectionSettings(supabase as any, items)).rejects.toThrow(
-      /2 of 3 section order updates failed/,
+      "network down",
     );
   });
 });

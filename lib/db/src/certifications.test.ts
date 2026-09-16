@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { createMockSupabase } from "./test-utils";
+import { MAX_LIST_ROWS } from "./query";
 import {
   fetchCertifications,
   listCertifications,
@@ -29,7 +30,7 @@ describe("fetchCertifications", () => {
         created_at: "2024-01-01T00:00:00Z",
       },
     ];
-    supabase.order.mockResolvedValue({ data: dbRows, error: null });
+    supabase.limit.mockResolvedValue({ data: dbRows, error: null });
 
     const result = await fetchCertifications(supabase as any);
 
@@ -39,6 +40,7 @@ describe("fetchCertifications", () => {
     );
     expect(supabase.is).toHaveBeenCalledWith("deleted_at", null);
     expect(supabase.eq).toHaveBeenCalledWith("is_published", true);
+    expect(supabase.limit).toHaveBeenCalledWith(MAX_LIST_ROWS);
     expect(result).toEqual([
       {
         id: "1",
@@ -68,7 +70,7 @@ describe("fetchCertifications", () => {
         created_at: "2024-06-01T00:00:00Z",
       },
     ];
-    supabase.order.mockResolvedValue({ data: dbRows, error: null });
+    supabase.limit.mockResolvedValue({ data: dbRows, error: null });
 
     const result = await fetchCertifications(supabase as any);
 
@@ -79,7 +81,7 @@ describe("fetchCertifications", () => {
   });
 
   it("throws on error", async () => {
-    supabase.order.mockResolvedValue({ data: null, error: new Error("db error") });
+    supabase.limit.mockResolvedValue({ data: null, error: new Error("db error") });
 
     await expect(fetchCertifications(supabase as any)).rejects.toThrow("db error");
   });
@@ -100,7 +102,7 @@ describe("listCertifications", () => {
         created_at: "2024-01-01T00:00:00Z",
       },
     ];
-    supabase.order.mockResolvedValue({ data: dbRows, error: null });
+    supabase.limit.mockResolvedValue({ data: dbRows, error: null });
 
     const result = await listCertifications(supabase as any);
 
@@ -110,7 +112,7 @@ describe("listCertifications", () => {
 });
 
 describe("listCertificationRows", () => {
-  it("returns raw DB rows without mapping", async () => {
+  it("returns raw DB rows without mapping, capped at MAX_LIST_ROWS", async () => {
     const dbRows = [
       {
         id: "1",
@@ -120,17 +122,18 @@ describe("listCertificationRows", () => {
         issuer_logo: "https://logo.com",
       },
     ];
-    supabase.order.mockResolvedValue({ data: dbRows, error: null });
+    supabase.limit.mockResolvedValue({ data: dbRows, error: null });
 
     const result = await listCertificationRows(supabase as any);
 
     // Raw rows preserve original DB column names
     expect(result[0]).toHaveProperty("credential_url", "https://example.com");
     expect(result[0]).toHaveProperty("issuer_logo", "https://logo.com");
+    expect(supabase.limit).toHaveBeenCalledWith(MAX_LIST_ROWS);
   });
 
   it("throws on error", async () => {
-    supabase.order.mockResolvedValue({ data: null, error: new Error("fail") });
+    supabase.limit.mockResolvedValue({ data: null, error: new Error("fail") });
 
     await expect(listCertificationRows(supabase as any)).rejects.toThrow("fail");
   });

@@ -32,7 +32,7 @@ export default defineConfig({
     // can't follow it for the `react/jsx-dev-runtime` subpath. Without these
     // aliases, every test file that imports from `@workspace/ui` fails to
     // load with `Failed to resolve import "react/jsx-dev-runtime"`.
-    // See docs/TESTING_GUIDE.md → "Vitest config gotcha".
+    // See docs/testing.md → "Vitest config gotcha".
     alias: reactAliases,
   },
   esbuild: {

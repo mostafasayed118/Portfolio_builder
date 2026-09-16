@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Experience as DbExperience } from "@workspace/supabase/types";
-import { queryOrThrow } from "./query";
+import { MAX_LIST_ROWS, queryOrThrow } from "./query";
 
 export type Experience = DbExperience;
 
@@ -31,7 +31,8 @@ export async function listExperience(
       .select(EXPERIENCE_LIST_COLUMNS)
       .is("deleted_at", null)
       .eq("is_published", true)
-      .order("sort_order", { ascending: true }),
+      .order("sort_order", { ascending: true })
+      .limit(MAX_LIST_ROWS),
     { table: "experience", operation: "listExperience" },
   );
 }

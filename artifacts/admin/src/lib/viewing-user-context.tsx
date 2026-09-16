@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 
 interface ViewingUserContextValue {
   viewingUserId: string | null;
@@ -12,9 +12,10 @@ const ViewingUserContext = createContext<ViewingUserContextValue>({
 
 export function ViewingUserProvider({ children }: { children: ReactNode }) {
   const [viewingUserId, setViewingUserId] = useState<string | null>(null);
+  const value = useMemo(() => ({ viewingUserId, setViewingUserId }), [viewingUserId]);
 
   return (
-    <ViewingUserContext.Provider value={{ viewingUserId, setViewingUserId }}>
+    <ViewingUserContext.Provider value={value}>
       {children}
     </ViewingUserContext.Provider>
   );

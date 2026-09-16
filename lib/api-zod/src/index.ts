@@ -8,6 +8,12 @@ export type { ThemePresetInput } from "./theme-presets";
 export { cvSettingsUpdateSchema } from "./cv";
 export type { CvSettingsUpdateInput } from "./cv";
 export {
+  adminListImagesQuerySchema,
+  imageEntityTypeSchema,
+  IMAGE_ENTITY_TYPES,
+} from "./images";
+export type { AdminListImagesQuery } from "./images";
+export {
   heroSchema,
   aboutSchema,
   skillSchema,

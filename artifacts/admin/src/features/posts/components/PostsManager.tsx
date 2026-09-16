@@ -1,24 +1,20 @@
 import { useState, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, Plus, NotebookPen, CalendarCheck2, Image as ImageIcon } from "lucide-react";
+import { Plus, NotebookPen } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { useDeepLinkEditor } from "@/hooks/useDeepLinkEditor";
 import { formatDate } from "@/lib/format-date";
-import {
-  Button, Card, CardContent, Input, Textarea, Badge, Switch,
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
-} from "@workspace/ui";
+import { Button, Card, CardContent, Input, Badge } from "@workspace/ui";
 import { useToast } from "@workspace/ui";
 import { SmartConfirmDialog } from "@/components/SmartConfirmDialog";
 import { SmartEmptyState } from "@/components/SmartEmptyState";
 import { AdminErrorState } from "@/components/AdminErrorState";
 import { AdminLoadingState } from "@/components/AdminLoadingState";
-import ImageUploader, { type UploadedImage } from "@/components/ImageUploader";
-import MarkdownEditor from "../components/MarkdownEditor";
 import { useEntityQuery } from "@/lib/use-entity-query";
+import PostDialog, { type PostDraft } from "./PostDialog";
 import type { BlogPost } from "@workspace/supabase/types";
 
-const BLANK_POST: Partial<BlogPost> & { id?: string } = {
+const BLANK_POST: PostDraft = {
   title: "",
   slug: "",
   excerpt: "",
@@ -28,13 +24,6 @@ const BLANK_POST: Partial<BlogPost> & { id?: string } = {
   is_published: false,
 };
 
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
 export default function PostsManager() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -42,10 +31,10 @@ export default function PostsManager() {
     "posts",
     (uid) => api.posts.list(uid ?? undefined),
   );
-  const posts = data as BlogPost[] | undefined;
+  const posts = data;
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<Partial<BlogPost> & { id?: string }>(BLANK_POST);
+  const [editing, setEditing] = useState<PostDraft>(BLANK_POST);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "published" | "draft">("all");
@@ -85,39 +74,6 @@ export default function PostsManager() {
     onNew: openNew,
     onEdit: openEdit,
   });
-
-  const handleTitleChange = (value: string) => {
-    setEditing((prev) => {
-      const next = { ...prev, title: value };
-      // Auto-generate slug on create (or while slug is empty) from the title.
-      if (!prev.id && (!prev.slug || prev.slug === slugify(prev.title ?? ""))) {
-        next.slug = slugify(value);
-      }
-      return next;
-    });
-  };
-
-  const addTag = (raw: string) => {
-    const tag = raw.trim().replace(/^#/, "");
-    if (!tag) return;
-    setEditing((prev) => ({
-      ...prev,
-      tags: prev.tags?.includes(tag) ? prev.tags : [...(prev.tags ?? []), tag],
-    }));
-  };
-
-  const removeTag = (tag: string) => {
-    setEditing((prev) => ({ ...prev, tags: (prev.tags ?? []).filter((t) => t !== tag) }));
-  };
-
-  const handleCoverUpload = (images: UploadedImage[]) => {
-    const image = images.at(-1);
-    const coverUrl = image?.variants.find((variant) => variant.type === "social")?.url
-      ?? image?.variants.find((variant) => variant.type === "medium")?.url
-      ?? image?.url
-      ?? null;
-    setEditing((prev) => ({ ...prev, cover_image_url: coverUrl }));
-  };
 
   const handleSave = async () => {
     const payload = editing;
@@ -268,80 +224,15 @@ export default function PostsManager() {
         )}
       </div>
 
-      <Dialog open={dialogOpen} onOpenChange={(open) => !open && !saving && setDialogOpen(false)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editing.id ? "Edit Post" : "New Post"}</DialogTitle>
-            <DialogDescription>Write Markdown content and (optionally) publish it.</DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Title *</label>
-                <Input value={editing.title} onChange={(e) => handleTitleChange(e.target.value)} placeholder="My first post" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Slug *</label>
-                <Input value={editing.slug ?? ""} onChange={(e) => setEditing((p) => ({ ...p, slug: e.target.value }))} placeholder="my-first-post" />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Excerpt</label>
-              <Textarea value={editing.excerpt ?? ""} onChange={(e) => setEditing((p) => ({ ...p, excerpt: e.target.value }))} rows={2} maxLength={500} />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                <ImageIcon className="h-3.5 w-3.5" /> Cover image
-              </label>
-              <Input value={editing.cover_image_url ?? ""} onChange={(e) => setEditing((p) => ({ ...p, cover_image_url: e.target.value || null }))} placeholder="https://…" />
-              <ImageUploader
-                entityType="content"
-                maxFiles={1}
-                onUploadComplete={handleCoverUpload}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Content (Markdown) *</label>
-              <MarkdownEditor
-                value={editing.content ?? ""}
-                onChange={(content) => setEditing((p) => ({ ...p, content }))}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Tags (Enter to add)</label>
-              <TagChips tags={editing.tags ?? []} onAdd={addTag} onRemove={removeTag} />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={editing.is_published === true}
-                  onCheckedChange={(checked) => setEditing((p) => ({ ...p, is_published: checked }))}
-                  aria-label="Published"
-                />
-                <span className="text-sm text-muted-foreground">{editing.is_published ? "Published" : "Draft"}</span>
-              </div>
-              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                <CalendarCheck2 className="h-3.5 w-3.5" />
-                Published on publishing.
-              </span>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>Cancel</Button>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-              {saving ? "Saving…" : "Save Post"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <PostDialog
+        open={dialogOpen}
+        saving={saving}
+        post={editing}
+        onPostChange={setEditing}
+        onOpenChange={(open) => !open && !saving && setDialogOpen(false)}
+        onCancel={() => setDialogOpen(false)}
+        onSave={handleSave}
+      />
 
       <SmartConfirmDialog
         state={{
@@ -355,30 +246,5 @@ export default function PostsManager() {
         onCancel={() => setDeleteTarget(null)}
       />
     </>
-  );
-}
-
-function TagChips({ tags, onAdd, onRemove }: { tags: string[]; onAdd: (t: string) => void; onRemove: (t: string) => void }) {
-  const [value, setValue] = useState("");
-  return (
-    <div>
-      <div className="flex flex-wrap gap-2 mb-2">
-        {tags.map((tag) => (
-          <span key={tag} className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-muted/60 px-2.5 py-1 rounded-full border border-border/60">
-            {tag}
-            <button type="button" onClick={() => onRemove(tag)} className="hover:text-destructive" aria-label={`Remove ${tag}`}>×</button>
-          </span>
-        ))}
-      </div>
-      <input
-        className="w-full rounded-lg px-3 py-2 text-sm bg-background border border-border focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-        placeholder="Add a tag and press Enter"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") { e.preventDefault(); onAdd(value); setValue(""); }
-        }}
-      />
-    </div>
   );
 }

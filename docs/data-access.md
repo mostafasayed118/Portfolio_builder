@@ -1,12 +1,38 @@
 # Data Access Layer
 
-Location: `lib/db/src/` — 14 modules, one per entity.
+## Two Data Access Paths
+
+The project uses two distinct data access paths:
+
+### Path 1: Supabase Direct (Portfolio + Legacy Admin)
+
+Location: `lib/db/src/` — one module per entity, plus shared helpers (`query.ts`, `storage.ts`, `reorder.ts`, `test-utils.ts`).
 
 All functions accept `SupabaseClient` as the first parameter:
 
-- **portfolio** passes the anon-key client from `@workspace/supabase/client`
-- **admin** passes the service-role client from `@workspace/supabase/admin`
+- **portfolio** passes the anon-key client from `@workspace/supabase/client` (respects RLS)
+- **admin** passes the anon-key client from `@workspace/supabase/client` (respects RLS); service-role writes go through the API server (Path 2)
 - **api-server** creates its own service-role client inline
+
+### Path 2: API Server Proxy (Admin — current)
+
+Most admin operations now go through the API server instead of directly calling Supabase:
+
+- **admin frontend** calls `@/lib/api-client` which sends HTTP requests to `/api/v1/admin/*`
+- **api-server** (`@workspace/api-server`) processes the request, applies middleware (adminAuth, CSRF, rate limit), then uses the service-role Supabase client to execute database operations
+- This path is used for: all CRUD operations (hero, about, skills, projects, experience, certifications, messages, settings), image uploads, AI assistant, CV management, audit log, seed operations
+
+The API server path adds: authentication (Clerk JWT verification), CSRF protection, rate limiting, input validation, and centralized error handling.
+
+### Which path is used where
+
+| Operation                       | Data Path                                                      |
+| ------------------------------- | -------------------------------------------------------------- |
+| Public portfolio content        | `@workspace/db` + anon-key client (Path 1)                     |
+| Admin CRUD (hero, skills, etc.) | `@/lib/api-client` → api-server → service-role client (Path 2) |
+| Image uploads                   | `@/lib/api-client` → api-server → Supabase Storage (Path 2)    |
+| CV download                     | api-server → Supabase Storage (Path 2)                         |
+| Seed data import                | api-server → service-role client (Path 2)                      |
 
 ## Module Reference
 
@@ -56,12 +82,20 @@ All functions accept `SupabaseClient` as the first parameter:
 
 ### `certifications.ts`
 
-| Function                                  | Returns           | Description               |
-| ----------------------------------------- | ----------------- | ------------------------- |
-| `listCertifications(supabase)`            | `Certification[]` | All ordered by sort_order |
-| `createCertification(supabase, args)`     | `string` (id)     | Insert                    |
-| `updateCertification(supabase, id, args)` | `void`            | Partial update            |
-| `deleteCertification(supabase, id)`       | `void`            | Delete by id              |
+Two surfaces: app-shape functions return the mapped `Certification` type
+(`cert_url`/`image_url`); Row-variant functions return raw DB rows
+(`CertificationRow`, the Supabase `certifications` row with `credential_url`/`issuer_logo`).
+
+| Function                                     | Returns                  | Description                                                                   |
+| -------------------------------------------- | ------------------------ | ----------------------------------------------------------------------------- |
+| `listCertifications(supabase)`               | `Certification[]`        | Published, non-deleted rows ordered by sort_order (mapped shape, capped)      |
+| `fetchCertifications(supabase)`              | `Certification[]`        | Underlying fetch behind `listCertifications`                                  |
+| `createCertification(supabase, args)`        | `Certification`          | Insert; sanitizes URLs; returns the mapped row                                |
+| `updateCertification(supabase, id, args)`    | `Certification`          | Partial update; sanitizes URLs; returns the mapped row                        |
+| `deleteCertification(supabase, id)`          | `void`                   | Soft delete (sets `deleted_at`)                                               |
+| `listCertificationRows(supabase)`            | `CertificationListRow[]` | Same query as `listCertifications`, but returns raw DB rows (columns intact)  |
+| `createCertificationRow(supabase, args)`     | `CertificationRow`       | Row-variant insert; accepts raw DB fields (`sort_order`, `is_published`, ...) |
+| `updateCertificationRow(supabase, id, args)` | `CertificationRow`       | Row-variant partial update on raw DB fields                                   |
 
 ### `messages.ts`
 
@@ -99,5 +133,6 @@ Each follows the same singleton pattern:
 
 ## Type Safety
 
-All update functions use `Omit<Partial<InsertT>, 'id' | 'created_at'>` to prevent
-accidental primary key or timestamp overwrites at compile time.
+Update functions generally use `Omit<Partial<InsertT>, 'id' | 'created_at'>` to prevent
+accidental primary key or timestamp overwrites at compile time. Row-variant APIs
+(e.g. `updateCertificationRow`) instead accept the raw DB row type (`Partial<CertificationRow>`).

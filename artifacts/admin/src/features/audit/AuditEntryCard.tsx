@@ -1,15 +1,7 @@
 import { Clock } from "lucide-react";
 import { Badge, Card, CardContent } from "@workspace/ui";
+import { formatDateTime } from "@/lib/format-date";
 import type { AuditEntry } from "@workspace/api-client-react";
-
-function formatTime(ts: string): string {
-  return new Date(ts).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 interface AuditEntryCardProps {
   entry: AuditEntry;
@@ -41,7 +33,7 @@ export function AuditEntryCard({ entry }: AuditEntryCardProps) {
             )}
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
-              {formatTime(entry.created_at)}
+              {formatDateTime(entry.created_at)}
             </span>
           </div>
         </div>

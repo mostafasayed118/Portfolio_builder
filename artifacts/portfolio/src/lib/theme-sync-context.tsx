@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from "react";
 import type { Theme } from "./theme-types";
 
 interface ThemeSyncState {
@@ -37,8 +37,13 @@ export function ThemeSyncProvider({ children }: { children: ReactNode }) {
     setPreviousTheme(prevTheme);
   }, []);
 
+  const value = useMemo(
+    () => ({ isSynced, mode, previousTheme, acknowledge, recordSync }),
+    [isSynced, mode, previousTheme, acknowledge, recordSync],
+  );
+
   return (
-    <ThemeSyncContext.Provider value={{ isSynced, mode, previousTheme, acknowledge, recordSync }}>
+    <ThemeSyncContext.Provider value={value}>
       {children}
     </ThemeSyncContext.Provider>
   );

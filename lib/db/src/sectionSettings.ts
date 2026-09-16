@@ -17,29 +17,34 @@ export async function updateSectionSetting(
   supabase: SupabaseClient,
   id: string,
   args: Omit<Partial<InsertSectionSetting>, 'id' | 'created_at'>,
-): Promise<void> {
-  await queryOrThrow(
-    supabase.from(TABLE).update({ ...args, updated_at: new Date().toISOString() }).eq("id", id),
+): Promise<number> {
+  const data = await queryOrThrow<{ id: string }[] | null>(
+    supabase
+      .from(TABLE)
+      .update({ ...args, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .select("id"),
     { table: TABLE, operation: "updateSectionSetting" },
   );
+  return data?.length ?? 0;
 }
 
+/**
+ * Reorders section settings atomically via the reorder_sections RPC
+ * (mirrors api-server's admin section-settings route). Args match the RPC
+ * signature in lib/supabase/src/types.ts: parallel `section_ids` and
+ * `sort_orders` arrays. Any RPC error is re-thrown with the usual
+ * [table.operation] prefix.
+ */
 export async function reorderSectionSettings(
   supabase: SupabaseClient,
   items: { id: string; sort_order: number }[],
 ): Promise<void> {
-  const now = new Date().toISOString();
-  const results = await Promise.allSettled(
-    items.map(({ id, sort_order }) =>
-      queryOrThrow(
-        supabase.from("section_settings").update({ sort_order, updated_at: now }).eq("id", id),
-        { table: "section_settings", operation: "reorderSectionSettings.update" },
-      ),
-    ),
+  await queryOrThrow(
+    supabase.rpc("reorder_sections", {
+      section_ids: items.map((item) => item.id),
+      sort_orders: items.map((item) => item.sort_order),
+    }),
+    { table: TABLE, operation: "reorderSectionSettings.reorder_sections" },
   );
-const failures = results.filter((r): r is PromiseRejectedResult => r.status === "rejected");
-  if (failures.length > 0) {
-    const summary = failures.map((f, i) => `${items[i].id}: ${f.reason?.message ?? "Unknown error"}`).join("; ");
-    throw new Error(`${failures.length} of ${items.length} section order updates failed: ${summary}`);
-  }
 }

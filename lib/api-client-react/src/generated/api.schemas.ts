@@ -289,6 +289,8 @@ export interface BlogPost {
   slug: string;
   excerpt: string | null;
   content: string;
+  /** Stored generated column (migration 063): max(1, ceil(words/200)). Read-only - ignored on insert/update. */
+  reading_minutes: number;
   cover_image_url: string | null;
   tags: string[];
   is_published: boolean | null;
@@ -304,6 +306,7 @@ export interface BlogPostSummary {
   title?: string;
   slug?: string;
   excerpt?: string | null;
+  reading_minutes?: number;
   cover_image_url?: string | null;
   tags?: string[];
   published_at?: string | null;
@@ -573,6 +576,31 @@ export interface ImageMetadata {
   entity_type?: string;
   entity_id?: string | null;
   created_at?: string;
+}
+
+export interface AdminImage {
+  id: string;
+  url: string;
+}
+
+export type ArabicTranslationStatusProjects = {
+  filled: number;
+};
+
+export type ArabicTranslationStatusExperience = {
+  filled: number;
+};
+
+export type ArabicTranslationStatusCertifications = {
+  filled: number;
+};
+
+export interface ArabicTranslationStatus {
+  hero: boolean;
+  about: boolean;
+  projects: ArabicTranslationStatusProjects;
+  experience: ArabicTranslationStatusExperience;
+  certifications: ArabicTranslationStatusCertifications;
 }
 
 export interface PaginatedSkills {
@@ -1013,7 +1041,13 @@ export interface ContactSubmissionInput {
 }
 
 export interface CvSettingsInput {
+  /** @pattern ^cv-\d+\.pdf$ */
   objectPath: string;
+  /**
+     * @minLength 1
+     * @maxLength 255
+     * @pattern \.pdf$
+     */
   fileName: string;
 }
 
@@ -1057,6 +1091,30 @@ export type ReorderImagesBody = {
 export type ReorderImages200 = SuccessEnvelope & ({
   data?: { [key: string]: unknown } | null;
 }) | ApiError;
+
+export type ListAdminImagesParams = {
+entity_type: ListAdminImagesEntityType;
+entity_id: string;
+};
+
+export type ListAdminImagesEntityType = typeof ListAdminImagesEntityType[keyof typeof ListAdminImagesEntityType];
+
+
+export const ListAdminImagesEntityType = {
+  projects: 'projects',
+  about: 'about',
+  hero: 'hero',
+  avatar: 'avatar',
+  certifications: 'certifications',
+  skills: 'skills',
+  experience: 'experience',
+  branding: 'branding',
+  content: 'content',
+} as const;
+
+export type ListAdminImages200 = SuccessEnvelope & {
+  data?: AdminImage[];
+} | ApiError;
 
 export type GetHero200 = SuccessEnvelope & {
   data?: HeroContent;
@@ -1410,6 +1468,10 @@ days?: number;
 
 export type GetAnalytics200 = SuccessEnvelope & {
   data?: AnalyticsStats;
+} | ApiError;
+
+export type GetArabicStatus200 = SuccessEnvelope & {
+  data?: ArabicTranslationStatus;
 } | ApiError;
 
 export type ChatConfig200 = SuccessEnvelope & {

@@ -10,12 +10,13 @@ import {
 import { ProjectEditor } from "@/features/projects/components/ProjectEditor";
 import { SkillsManager } from "@/features/skills";
 
-const { mockAiGenerate, mockAiImprove, mockSkillsList, mockSkillsCreate, mockToast } =
+const { mockAiGenerate, mockAiImprove, mockSkillsList, mockSkillsCreate, mockImagesList, mockToast } =
   vi.hoisted(() => ({
     mockAiGenerate: vi.fn(),
     mockAiImprove: vi.fn(),
     mockSkillsList: vi.fn(),
     mockSkillsCreate: vi.fn(),
+    mockImagesList: vi.fn(),
     mockToast: vi.fn(),
   }));
 
@@ -23,15 +24,13 @@ vi.mock("@/lib/api-client", () => ({
   api: {
     ai: { generate: mockAiGenerate, improve: mockAiImprove },
     skills: { list: mockSkillsList, create: mockSkillsCreate, update: vi.fn(), delete: vi.fn() },
-    images: { delete: vi.fn(), reorder: vi.fn() },
+    images: { list: mockImagesList, delete: vi.fn(), reorder: vi.fn() },
   },
 }));
 
 vi.mock("@/lib/logger", () => ({ logError: vi.fn(), logInfo: vi.fn(), logWarn: vi.fn() }));
 
 vi.mock("@/lib/supabase", () => ({ getSupabase: vi.fn(() => ({})), isSupabaseConfigured: true }));
-
-vi.mock("@workspace/db/images", () => ({ listEntityImages: vi.fn(async () => []) }));
 
 vi.mock("@workspace/ui", (importOriginal) => stubUseToast(importOriginal, mockToast));
 
@@ -42,6 +41,7 @@ vi.mock("@/components/SmartEmptyState", () => smartEmptyStateMock("No skills add
 describe("Inline AI integrations", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockImagesList.mockResolvedValue({ success: true, data: [] });
   });
 
   describe("ProjectEditor · ✨ AI text button", () => {

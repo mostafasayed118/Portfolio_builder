@@ -1,5 +1,6 @@
 export interface Project {
-  id: number;
+  /** DB rows carry their uuid; static fallback items keep numeric ids. */
+  id: string | number;
   slug: string;
   title: string;
   shortDescription: string;

@@ -46,11 +46,24 @@ describe("GET /api/healthz — liveness check", () => {
     expect(res2.body.status).toBe("ok");
   });
 
-  it("reports the configured environment", async () => {
+  it("returns ONLY { status: 'ok' } in production (no uptime/environment disclosure)", async () => {
     _setOverride("NODE_ENV", "production");
     const res = await request(app).get("/api/healthz");
     expect(res.status).toBe(200);
-    expect(res.body.environment).toBe("production");
+    expect(res.body).toEqual({ status: "ok" });
+  });
+
+  it("includes uptime and environment outside production", async () => {
+    _setOverride("NODE_ENV", "development");
+    const res = await request(app).get("/api/healthz");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        status: "ok",
+        uptime: expect.any(Number),
+        environment: "development",
+      }),
+    );
   });
 
   it("does NOT require any Authorization header", async () => {
@@ -109,6 +122,10 @@ describe("HEAD /api/healthz — liveness check (used by Docker / k8s / load bala
 });
 
 describe("/api/v1/healthz — documented deployment health check (alias of /api/healthz)", () => {
+  afterEach(() => {
+    _resetOverrides();
+  });
+
   it("returns 200 with the same spec response shape", async () => {
     const res = await request(app).get("/api/v1/healthz");
     expect(res.status).toBe(200);
@@ -120,6 +137,13 @@ describe("/api/v1/healthz — documented deployment health check (alias of /api/
         environment: expect.any(String),
       }),
     );
+  });
+
+  it("returns ONLY { status: 'ok' } in production", async () => {
+    _setOverride("NODE_ENV", "production");
+    const res = await request(app).get("/api/v1/healthz");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ status: "ok" });
   });
 
   it("supports HEAD with no body (Docker / k8s / load balancers)", async () => {

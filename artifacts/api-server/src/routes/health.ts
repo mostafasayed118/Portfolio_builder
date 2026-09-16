@@ -26,6 +26,12 @@ import { env } from "../lib/env";
 const router: IRouter = Router();
 
 function buildHealthPayload() {
+  // In production the endpoint is unauthenticated, so it must not disclose
+  // process internals (uptime enables uptime-probe fingerprinting; the
+  // environment name aids recon). Monitoring only needs the status.
+  if (env.NODE_ENV === "production") {
+    return { status: "ok" };
+  }
   return {
     status: "ok",
     timestamp: new Date().toISOString(),

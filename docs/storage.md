@@ -6,15 +6,15 @@ Portfolio-Fixer uses **Supabase Storage** for all file storage. There are 7 stor
 
 ## Storage Buckets
 
-| Bucket | Public | Created In | Purpose |
-|--------|--------|------------|---------|
-| `cv` | No | 001_init.sql | CV PDF files |
-| `project_images` | Yes | 004_images.sql | Project screenshots |
-| `image_variants` | No | 004_images.sql | Processed image variants |
-| `avatars` | Yes | 004_images.sql | Profile/avatar images |
-| `projects` | Yes | 009_storage_buckets.sql | Project screenshots (newer) |
-| `certifications` | Yes | 009_storage_buckets.sql | Certification badge images |
-| `documents` | No | 009_storage_buckets.sql | General documents |
+| Bucket           | Public | Created In              | Purpose                     |
+| ---------------- | ------ | ----------------------- | --------------------------- |
+| `cv`             | No     | 001_init.sql            | CV PDF files                |
+| `project_images` | Yes    | 004_images.sql          | Project screenshots         |
+| `image_variants` | No     | 004_images.sql          | Processed image variants    |
+| `avatars`        | Yes    | 004_images.sql          | Profile/avatar images       |
+| `projects`       | Yes    | 009_storage_buckets.sql | Project screenshots (newer) |
+| `certifications` | Yes    | 009_storage_buckets.sql | Certification badge images  |
+| `documents`      | No     | 009_storage_buckets.sql | General documents           |
 
 ## CV Upload Flow
 
@@ -27,7 +27,7 @@ Portfolio-Fixer uses **Supabase Storage** for all file storage. There are 7 stor
 5. On success, frontend calls API server:
    PUT /api/v1/cv/settings with { objectPath, fileName }
 6. API server validates body (cvSettingsUpdateSchema):
-   - objectPath: string, 1-500 chars
+   - objectPath: string, must match `cv-<unix-ms>.pdf` (e.g. `cv-1700000000000.pdf`)
    - fileName: string, 1-255 chars, must end in .pdf
 7. API server upserts cv_settings table via @workspace/db
 8. cv_settings now has the path to the uploaded file
@@ -65,37 +65,38 @@ Portfolio-Fixer uses **Supabase Storage** for all file storage. There are 7 stor
 
 ### CV Bucket (private)
 
-| Policy | Operation | Rule |
-|--------|-----------|------|
-| `admin_upload_cv` | INSERT | `bucket_id = 'cv' AND auth.role() = 'authenticated'` |
-| `public_download_cv` | SELECT | `bucket_id = 'cv'` (anyone can download) |
-| `admin_update_cv` | UPDATE | `bucket_id = 'cv' AND auth.role() = 'authenticated'` |
-| `admin_delete_cv` | DELETE | `bucket_id = 'cv' AND auth.role() = 'authenticated'` |
+| Policy               | Operation | Rule                                                 |
+| -------------------- | --------- | ---------------------------------------------------- |
+| `admin_upload_cv`    | INSERT    | `bucket_id = 'cv' AND auth.role() = 'authenticated'` |
+| `public_download_cv` | SELECT    | `bucket_id = 'cv'` (anyone can download)             |
+| `admin_update_cv`    | UPDATE    | `bucket_id = 'cv' AND auth.role() = 'authenticated'` |
+| `admin_delete_cv`    | DELETE    | `bucket_id = 'cv' AND auth.role() = 'authenticated'` |
 
 ### Public Buckets (project_images, avatars, projects, certifications)
 
-| Policy | Operation | Rule |
-|--------|-----------|------|
-| `public_read_*` | SELECT | Anyone can read |
-| `admin_all_images` | ALL | `bucket_id IN ('project_images', 'image_variants', 'avatars')` |
-| `auth_upload_all` | INSERT | `auth.role() = 'authenticated'` |
-| `auth_update_own` | UPDATE | `auth.role() = 'authenticated'` |
-| `auth_delete_own` | DELETE | `auth.role() = 'authenticated'` |
+| Policy             | Operation | Rule                                                           |
+| ------------------ | --------- | -------------------------------------------------------------- |
+| `public_read_*`    | SELECT    | Anyone can read                                                |
+| `admin_all_images` | ALL       | `bucket_id IN ('project_images', 'image_variants', 'avatars')` |
+| `auth_upload_all`  | INSERT    | `auth.role() = 'authenticated'`                                |
+| `auth_update_own`  | UPDATE    | `auth.role() = 'authenticated'`                                |
+| `auth_delete_own`  | DELETE    | `auth.role() = 'authenticated'`                                |
 
 ## File Constraints
 
-| Bucket | Max Size | Allowed Types | Notes |
-|--------|----------|---------------|-------|
-| `cv` | 10 MB | PDF only | Enforced by DB CHECK constraint on file_name |
-| `project_images` | 10 MB | image/* | |
-| `avatars` | 5 MB | image/* | |
-| `certifications` | 5 MB | image/* | |
+| Bucket           | Max Size | Allowed Types | Notes                                        |
+| ---------------- | -------- | ------------- | -------------------------------------------- |
+| `cv`             | 10 MB    | PDF only      | Enforced by DB CHECK constraint on file_name |
+| `project_images` | 10 MB    | image/\*      |                                              |
+| `avatars`        | 5 MB     | image/\*      |                                              |
+| `certifications` | 5 MB     | image/\*      |                                              |
 
 The API server uses `express.json({ limit: "1mb" })` for request body size. File uploads via `multer` handle larger payloads.
 
 ## Deleting Files
 
 When an image is deleted via `DELETE /api/v1/images/:id`:
+
 1. API server looks up the image_metadata record
 2. Deletes the file from Supabase Storage
 3. Deletes the image_metadata record (cascades to image_variants via FK)

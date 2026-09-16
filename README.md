@@ -21,18 +21,18 @@ pnpm dev
 
 ## Scripts
 
-| Script                    | Description                                         |
-| ------------------------- | --------------------------------------------------- |
-| `pnpm dev`                | Start portfolio, admin, and API server in parallel  |
-| `pnpm dev:portfolio`      | Start portfolio only (port 5173)                    |
-| `pnpm dev:admin`          | Start admin only (port 5174)                        |
-| `pnpm dev:api`            | Start API server only (port 3001)                   |
-| `pnpm build`              | Typecheck + build all artifacts                     |
-| `pnpm typecheck`          | Run TypeScript type checking                        |
-| `pnpm test`               | Run all tests (Vitest — 415+ tests across 77 files) |
-| `pnpm test:e2e`           | Run E2E tests (Playwright)                          |
-| `pnpm lint`               | Run ESLint                                          |
-| `pnpm run typecheck:libs` | Typecheck shared libs only (fast)                   |
+| Script                    | Description                                             |
+| ------------------------- | ------------------------------------------------------- |
+| `pnpm dev`                | Start portfolio, admin, and API server in parallel      |
+| `pnpm dev:portfolio`      | Start portfolio only (port 5173)                        |
+| `pnpm dev:admin`          | Start admin only (port 5174)                            |
+| `pnpm dev:api`            | Start API server only (port 3001)                       |
+| `pnpm build`              | Typecheck + build all artifacts                         |
+| `pnpm typecheck`          | Run TypeScript type checking                            |
+| `pnpm test`               | Run all tests (Vitest — 1,500+ tests across ~195 files) |
+| `pnpm test:e2e`           | Run E2E tests (Playwright)                              |
+| `pnpm lint`               | Run ESLint                                              |
+| `pnpm run typecheck:libs` | Typecheck shared libs only (fast)                       |
 
 ## Apps
 
@@ -49,22 +49,24 @@ pnpm dev
 Portfolio-Fixer/
 ├── artifacts/
 │   ├── portfolio/       # Public portfolio SPA (Vite + React 19)
-│   │   └── src/features/  # Feature-based: hero/, skills/, projects/, contact/, about/, navbar/
+│   │   └── src/features/  # Feature-based: hero/, skills/, projects/, contact/, about/ (navbar lives in src/components/navbar/)
 │   ├── admin/           # Admin CMS dashboard (Vite + React 19)
 │   │   └── src/features/  # Feature-based: auth/, hero-content/, skills/, projects/, etc.
 │   ├── api-server/      # Express 5 REST API
-│   └── mockup-sandbox/  # Dev tool for mockup components
 ├── lib/
 │   ├── db/              # Supabase query modules
-│   ├── supabase/        # Supabase clients + generated types
-│   ├── validation/      # Zod validation schemas
+│   ├── supabase/        # Supabase client + hand-maintained types
+│   ├── validation/      # Zod-based client form schemas (drift-tested against lib/api-zod)
 │   ├── auth/            # Auth context providers
 │   ├── ui/              # 55+ shadcn-style UI components
+│   ├── api-spec/        # OpenAPI 3.1 spec (source of truth for API clients)
 │   ├── api-client-react/ # Generated React Query hooks
 │   ├── api-zod/         # Generated Zod schemas
-│   └── logging/         # Shared logging utility
+│   ├── logging/         # Shared logging utility
+│   ├── app-infra/       # Shared SPA infra (logger, CSRF handshake)
+│   └── test-utils/      # Shared test helpers
 ├── supabase/
-│   └── migrations/      # 46 SQL migration files
+│   └── migrations/      # 61 SQL migration files
 ├── scripts/             # Workspace scripts
 ├── docs/                # Extended documentation
 ├── package.json         # Root workspace
@@ -96,18 +98,16 @@ Portfolio-Fixer/
 
 ## Documentation
 
-- [Technical Debt Report](./TECHNICAL_DEBT_REPORT.md)
-- [Backend Audit Report](./BACKEND_AUDIT_REPORT.md)
-- [Feature Inventory](./FEATURE_INVENTORY.md)
 - [Memory Bank](./MEMORY_BANK.md)
 - [Changelog](./docs/changelog.md)
 - [API Reference](./docs/api.md)
 - [API Server README](./artifacts/api-server/README.md) — architecture, env, conventions, test instructions
 - [Replit Deployment Guide](./replit.md)
 - [Contributing Guide](./docs/contributing.md) — conventions, pre-commit hooks, TypeScript rules
-- [Testing Guide](./docs/TESTING_GUIDE.md) — Vitest, Playwright, mock conventions
+- [Testing Guide](./docs/testing.md) — Vitest, Playwright, mock conventions
 - [Validation System](./docs/validation.md) — 4-layer defense-in-depth
 - [Architecture Overview](./docs/ARCHITECTURE.md) — data flow, RLS, package deps
-- [Changelog](./docs/changelog.md)
+
+Superseded point-in-time reports ([Technical Debt](./docs/archive/TECHNICAL_DEBT_REPORT.md), [Backend Audit](./docs/archive/BACKEND_AUDIT_REPORT.md), [Feature Inventory](./docs/archive/FEATURE_INVENTORY.md)) live in `docs/archive/`.
 
 See [docs/README.md](./docs/README.md) for the full documentation index.

@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
+import * as zod from "zod";
 import { invalidCsrfTokenError } from "./csrf";
 import { forbidden, badRequest, serverError } from "../lib/api-response";
 import { logger } from "../lib/logger";
@@ -25,8 +26,18 @@ export function errorHandler(
     return;
   }
 
-  if (err.name === "ValidationError") {
-    badRequest(res, { _form: [err.message] });
+  // Real Zod errors are safe to map: their messages come from our own
+  // schema definitions, never from library internals. Field issues map to
+  // per-field arrays (same shape as the route-level safeParse handlers);
+  // form-level issues (no path) land under "_form".
+  if (err instanceof zod.ZodError) {
+    const flat = err.flatten();
+    const errors: Record<string, string[]> = {};
+    for (const [field, messages] of Object.entries(flat.fieldErrors)) {
+      if (messages) errors[field] = messages;
+    }
+    if (flat.formErrors.length > 0) errors._form = flat.formErrors;
+    badRequest(res, errors);
     return;
   }
 

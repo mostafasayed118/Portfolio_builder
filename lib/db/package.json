@@ -18,6 +18,8 @@
     "./theme-settings": "./src/themeSettings.ts",
     "./typography-settings": "./src/typographySettings.ts",
     "./seo-settings": "./src/seoSettings.ts",
+    "./singleton-upsert": "./src/singleton-upsert.ts",
+    "./collection": "./src/collection.ts",
     "./section-settings": "./src/sectionSettings.ts",
     "./site-settings": "./src/siteSettings.ts",
     "./cv-settings": "./src/cvSettings.ts",
@@ -25,10 +27,13 @@
     "./analytics": "./src/analytics.ts",
     "./posts": "./src/posts.ts",
     "./images": "./src/images.ts",
-    "./reorder": "./src/reorder.ts"
+    "./arabic-status": "./src/arabic-status.ts",
+    "./reorder": "./src/reorder.ts",
+    "./users": "./src/users.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2",
+    "@workspace/logging": "workspace:*",
     "@workspace/supabase": "workspace:*"
   }
 }

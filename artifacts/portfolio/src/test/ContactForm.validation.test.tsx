@@ -101,8 +101,8 @@ describe("ContactForm — 4-layer validation (vanilla rules via useFormValidatio
 
     await waitFor(() => {
       expect(screen.getByText("Name is required")).toBeInTheDocument();
-      expect(screen.getByText("Email is required")).toBeInTheDocument();
-      expect(screen.getByText("Message is required")).toBeInTheDocument();
+      expect(screen.getByText("Valid email is required")).toBeInTheDocument();
+      expect(screen.getByText("Message must be at least 10 characters")).toBeInTheDocument();
     });
     expect(mockGetCsrfToken).not.toHaveBeenCalled();
   });
@@ -334,7 +334,7 @@ describe("ContactForm — 4-layer validation (vanilla rules via useFormValidatio
     await user.click(screen.getByTestId("btn-send-message"));
 
     await waitFor(() => {
-      expect(screen.getByText("Message is required")).toBeInTheDocument();
+      expect(screen.getByText("Message must be at least 10 characters")).toBeInTheDocument();
     });
     const contactCalls = fetchMock.mock.calls.filter(([url]) =>
       String(url).includes("/api/v1/contact"),

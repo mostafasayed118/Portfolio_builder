@@ -15,6 +15,7 @@ import { ok, serverError, notFound, badRequest } from "./api-response";
 import { safeErrorMessage } from "./safe-error";
 import { getSupabaseClient } from "./supabase-client";
 import { logSupabaseError } from "./collection-query";
+import { collectionMutate } from "@workspace/db/collection";
 
 /**
  * Update a row by id, optionally scoped to `user_id` (admins who are
@@ -41,16 +42,29 @@ export async function updateByIdAndUser(
 ): Promise<void> {
   const supabase = getSupabaseClient() as SupabaseClient<Database>;
   const isSuperadmin = req.user?.role === "superadmin";
-  let query = supabase.from(table).update(patch as never).eq("id", id);
-  if (!isSuperadmin) {
-    query = query.eq("user_id", req.user?.id ?? "");
-  }
-  // Supabase leaves `count` null on `.update().select()`, so the number of
-  // matched rows must be read from the returned `data` array — checking
-  // `count` made every successful PATCH report a false 404 (the write
-  // applied, but the client was told the row didn't exist).
-  const { error, data: updated } = await query.select("id");
-  if (error) {
+  try {
+    // Supabase leaves `count` null on `.update().select()`, so the number of
+    // matched rows must be read from the returned `data` array — checking
+    // `count` made every successful PATCH report a false 404 (the write
+    // applied, but the client was told the row didn't exist).
+    const updated = await collectionMutate(supabase, table, {
+      action: "update",
+      id,
+      patch,
+      // Superadmins mutate across all users; everyone else is pinned to
+      // their own rows (empty string matches nothing when unauthenticated).
+      userId: isSuperadmin ? undefined : (req.user?.id ?? ""),
+    });
+    if (!updated || updated.length === 0) {
+      const name = entityName ?? table.replace(/s$/, "");
+      notFound(res, `${name.charAt(0).toUpperCase() + name.slice(1)} not found`);
+      return;
+    }
+    ok(res, null);
+  } catch (error) {
+    // queryOrThrow always rethrows an Error (with message/code preserved);
+    // the fallback keeps non-Error throws loggable rather than lost.
+    const errInfo = error instanceof Error ? error : { message: String(error) };
     logSupabaseError(req, {
       route: `${req.method} /${table}/${id}`,
       method: req.method,
@@ -58,16 +72,9 @@ export async function updateByIdAndUser(
       adminEmail: req.adminEmail,
       targetTable: table,
       targetId: id,
-    }, error);
+    }, errInfo);
     serverError(res, safeErrorMessage(error));
-    return;
   }
-  if (!updated || updated.length === 0) {
-    const name = entityName ?? table.replace(/s$/, "");
-    notFound(res, `${name.charAt(0).toUpperCase() + name.slice(1)} not found`);
-    return;
-  }
-  ok(res, null);
 }
 
 /**

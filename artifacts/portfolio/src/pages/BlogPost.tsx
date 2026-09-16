@@ -10,7 +10,7 @@ import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
 import { getSiteUrl } from "@/lib/env";
 import { trackEvent } from "@workspace/db/analytics";
 import { logWarn } from "@/lib/logger";
-import { BlogPostCard, formatPostDate, getReadingTime } from "@/features/blog";
+import { BlogPostCard, formatPostDate } from "@/features/blog";
 
 function BlogPostSkeleton() {
   return (
@@ -159,7 +159,7 @@ export default function BlogPostPage({ slug }: BlogPostPageProps) {
                 </span>
                 <span className="inline-flex items-center gap-2">
                   <Clock className="h-4 w-4" />
-                  {getReadingTime(post.content)} min read
+                  {post.reading_minutes} min read
                 </span>
                 <button
                   type="button"

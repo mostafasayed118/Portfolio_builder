@@ -202,6 +202,7 @@ describe("CV Generator", () => {
     }));
 
     const { generateCvPdf } = await import("../../utils/cv-generator");
+    const { logger } = await import("../../lib/logger");
     const result = await generateCvPdf(mockSupabaseClient as any, "https://my-portfolio.com");
 
     // Should still generate PDF without QR
@@ -209,6 +210,11 @@ describe("CV Generator", () => {
     expect(result.length).toBeGreaterThan(0);
     // addImage should NOT have been called for QR since it failed
     // (addImage might be called for other reasons in future, so we just check the PDF is generated)
+    // Failure must be observable in logs, not silently swallowed.
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({ err: expect.anything() }),
+      "QR generation failed; CV generated without QR",
+    );
   });
 
   it("generates PDF with experience and skills sections", async () => {

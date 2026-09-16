@@ -8,6 +8,7 @@ import CertFilters, { getFilters } from "./CertFilters";
 import CertStats from "./CertStats";
 import { CERTIFICATIONS, type Certificate } from "@/data/portfolio";
 import { useCertifications } from "@/hooks/usePortfolioData";
+import { formatMonthYear } from "@/lib/format-date";
 
 const VALID_CATEGORIES = new Set([
   "python",
@@ -73,8 +74,8 @@ export default function CertificationsSection() {
     certsData && certsData.length > 0
       ? [...certsData]
           .sort((a, b) => b.date.localeCompare(a.date))
-          .map((c, i) => ({
-            id: i + 1,
+          .map((c) => ({
+            id: c.id,
             title: c.title,
             issuer: c.issuer,
             issuerLogo: c.image_url ?? "\uD83C\uDF93",
@@ -105,16 +106,7 @@ export default function CertificationsSection() {
     b.localeCompare(a),
   );
 
-  const monthLabel = (key: string) => {
-    if (/^\d{4}-\d{2}/.test(key)) {
-      const [y, m] = key.split("-");
-      const date = new Date(Number(y), Number(m) - 1);
-      if (!isNaN(date.getTime())) {
-        return date.toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US", { month: "long", year: "numeric" });
-      }
-    }
-    return key;
-  };
+  const monthLabel = (key: string) => formatMonthYear(key, lang);
 
   return (
     <section

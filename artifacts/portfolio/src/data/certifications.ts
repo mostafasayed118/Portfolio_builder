@@ -1,5 +1,6 @@
 export interface Certificate {
-  id: number;
+  /** DB rows carry their uuid; static fallback items keep numeric ids. */
+  id: string | number;
   title: string;
   issuer: string;
   issuerLogo: string;

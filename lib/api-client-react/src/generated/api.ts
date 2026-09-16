@@ -61,6 +61,7 @@ import type {
   GetAbout200,
   GetAnalytics200,
   GetAnalyticsParams,
+  GetArabicStatus200,
   GetContactInfo200,
   GetCurrentUser200,
   GetCvSettings200,
@@ -75,6 +76,8 @@ import type {
   HealthStatus,
   HeroInput,
   LanguageInput,
+  ListAdminImages200,
+  ListAdminImagesParams,
   ListAudit200,
   ListAuditParams,
   ListCertifications200,
@@ -924,6 +927,90 @@ export const useReorderImages = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getReorderImagesMutationOptions(options));
     }
+
+export const getListAdminImagesUrl = (params: ListAdminImagesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/admin/images?${stringifiedParams}` : `/api/v1/admin/images`
+}
+
+/**
+ * @summary List images attached to an entity (admin only)
+ */
+export const listAdminImages = async (params: ListAdminImagesParams, options?: Parameters<typeof customFetch>[1]): Promise<ListAdminImages200> => {
+
+  return customFetch<ListAdminImages200>(getListAdminImagesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminImagesQueryKey = (params?: ListAdminImagesParams,) => {
+    return [
+    `/api/v1/admin/images`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListAdminImagesQueryOptions = <TData = Awaited<ReturnType<typeof listAdminImages>>, TError = ErrorType<ApiError>>(params: ListAdminImagesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminImages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminImagesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminImages>>> = ({ signal }) => listAdminImages(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminImages>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminImagesQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminImages>>>
+export type ListAdminImagesQueryError = ErrorType<ApiError>
+
+
+/**
+ * @summary List images attached to an entity (admin only)
+ */
+
+export function useListAdminImages<TData = Awaited<ReturnType<typeof listAdminImages>>, TError = ErrorType<ApiError>>(
+ params: ListAdminImagesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminImages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminImagesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetHeroUrl = () => {
 
@@ -5825,6 +5912,83 @@ export function useGetAnalytics<TData = Awaited<ReturnType<typeof getAnalytics>>
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetAnalyticsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetArabicStatusUrl = () => {
+
+
+
+
+  return `/api/v1/admin/arabic-status`
+}
+
+/**
+ * @summary Arabic translation coverage per content table
+ */
+export const getArabicStatus = async ( options?: Parameters<typeof customFetch>[1]): Promise<GetArabicStatus200> => {
+
+  return customFetch<GetArabicStatus200>(getGetArabicStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetArabicStatusQueryKey = () => {
+    return [
+    `/api/v1/admin/arabic-status`
+    ] as const;
+    }
+
+
+export const getGetArabicStatusQueryOptions = <TData = Awaited<ReturnType<typeof getArabicStatus>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getArabicStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetArabicStatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getArabicStatus>>> = ({ signal }) => getArabicStatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getArabicStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetArabicStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getArabicStatus>>>
+export type GetArabicStatusQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Arabic translation coverage per content table
+ */
+
+export function useGetArabicStatus<TData = Awaited<ReturnType<typeof getArabicStatus>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getArabicStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetArabicStatusQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

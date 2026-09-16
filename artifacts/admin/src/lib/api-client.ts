@@ -78,6 +78,8 @@ import {
   deleteCvSettings,
   listAudit,
   getAnalytics,
+  getArabicStatus,
+  listAdminImages,
   previewEntity,
   seedData,
   submitContactForm,
@@ -86,6 +88,8 @@ import {
   adminAiGenerate,
   adminAiImprove,
 } from "@workspace/api-client-react";
+
+import type { MessagePreset, MessageStatusFilter } from "./use-entity-query";
 
 /** Map an optional viewing-user id to the generated `{ userId }` query param. */
 function userIdParam(userId?: string): { userId: string } | undefined {
@@ -148,10 +152,10 @@ export const api = {
      */
     list: (
       userId?: string,
-      status?: "unread" | "read" | "archived" | "spam" | "all",
+      status?: MessageStatusFilter,
       limit?: number,
       offset?: number,
-      preset?: "unread_today" | "unread_or_archived" | "needs_reply",
+      preset?: MessagePreset,
     ) =>
       listMessages({
         ...userIdParam(userId),
@@ -190,6 +194,8 @@ export const api = {
     submit: (data: Parameters<typeof submitContactForm>[0]) => submitContactForm(data),
   },
   images: {
+    list: (entityType: Parameters<typeof listAdminImages>[0]["entity_type"], entityId: string) =>
+      listAdminImages({ entity_type: entityType, entity_id: entityId }),
     delete: (id: string) => deleteImage(id),
     reorder: (orderedIds: string[]) => reorderImages({ ordered_ids: orderedIds }),
   },
@@ -242,6 +248,9 @@ export const api = {
   },
   analytics: {
     stats: (days?: number) => getAnalytics(days ? { days } : undefined),
+  },
+  arabicStatus: {
+    get: () => getArabicStatus(),
   },
   ai: {
     generate: (data: Parameters<typeof adminAiGenerate>[0]) => adminAiGenerate(data),

@@ -1,7 +1,7 @@
 # Portfolio-Fixer — Memory Bank
 
 > **Generated:** 2026-05-16
-> **Last updated:** 2026-06-04 (post session 16 — form tests fixed, audit log, preview, Sentry)
+> **Last updated:** 2026-09-15 (audit remediation rounds 2–5 — see docs/changelog.md for detail)
 > **Project Type:** Full-stack Portfolio CMS — pnpm monorepo
 > **Primary User:** Mustafa Sayed (Data Engineer, Cairo, Egypt)
 > **Architecture:** Supabase (DB) + Express 5 (API) + React 19 (SPA)
@@ -41,21 +41,19 @@ The monorepo uses **pnpm workspaces** with shared libraries under `lib/` and thr
 │                                                          │
 │  artifacts/api-server/  → Express 5 REST API             │
 │    Port: 3001                                            │
-│    Routes: /api/healthz, /api/images, /api/cv,            │
-│            /api/contact, /api-docs (OpenAPI)              │
-│    Security: helmet, cors, rate-limit, csrf               │
+│    Routes: /api/healthz, /api/v1/** (public + admin),     │
+│            /api-docs (OpenAPI)                            │
+│    Security: helmet, cors, rate-limit (Redis-backed), csrf│
 │                                                          │
 ├─────────────────────────────────────────────────────────┤
 │                    Shared Libraries                       │
 │                                                          │
-│  lib/db/         → 21 Supabase query files                │
+│  lib/db/         → 27 Supabase query modules              │
 │    @workspace/db/hero, ./about, ./skills, ./projects,     │
 │    ./experience, ./certifications, ./messages, ...        │
 │                                                          │
 │  lib/supabase/   → Supabase clients + generated types    │
 │    @workspace/supabase/client   (browser anon client)     │
-│    @workspace/supabase/server   (server service-role)     │
-│    @workspace/supabase/admin    (admin service-role)      │
 │    @workspace/supabase/types    (Database type defs)      │
 │                                                          │
 │  lib/validation/ → Zod schemas for all entities           │
@@ -68,8 +66,8 @@ The monorepo uses **pnpm workspaces** with shared libraries under `lib/` and thr
 ├─────────────────────────────────────────────────────────┤
 │                    Database                               │
 │                                                          │
-│  supabase/migrations/  → 30 SQL migration files           │
-│    (001_init through 030_add_soft_delete)                │
+│  supabase/migrations/  → 61 SQL migration files           │
+│    (001_init through 061_analytics_stats_rpc)             │
 │  Tables: hero_content, about_content, projects, skills,   │
 │    experience, certifications, contact_messages,           │
 │    analytics_events, image_metadata, content_snapshots,   │
@@ -108,13 +106,13 @@ The monorepo uses **pnpm workspaces** with shared libraries under `lib/` and thr
 | **PDF generation**   | jspdf + qrcode                              | ^4 / ^1.5 | CV download                             |
 | **Security**         | helmet, cors, csrf-csrf, express-rate-limit | latest    | API server                              |
 | **TypeScript**       | TypeScript                                  | ~5.9.2    | Strict mode                             |
-| **Node version**     | Node.js                                     | 24 (LTS)  |                                         |
+| **Node version**     | Node.js                                     | 22 (CI)   | Replit runtime runs Node 24             |
 
 ---
 
 ## 4. Database Tables
 
-All tables live in the Supabase PostgreSQL database. 30 migration files in `supabase/migrations/`.
+All tables live in the Supabase PostgreSQL database. 61 migration files in `supabase/migrations/`. Admin analytics aggregation runs as Postgres RPCs (migration 061); the `analytics_events` hot path has a composite `(type, created_at DESC)` index (migration 060).
 
 | #   | Table                    | Key Columns                                                                                                                                                                                                                              | Used By                            |
 | --- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
@@ -234,6 +232,7 @@ Tests can override values via `_setOverride()` without touching `process.env`.
 | `VERCEL_URL`                       | No       | Auto-added CORS origin on Vercel                                                   |
 | `PORT`                             | No       | HTTP port (default 3001)                                                           |
 | `LOG_LEVEL`                        | No       | pino log level (default `info`)                                                    |
+| `REDIS_URL`                        | No       | Redis connection for shared rate-limit stores (in-memory fallback when unset)      |
 | `DISABLE_RATE_LIMIT`               | No       | `true` disables all rate limiters (dev only)                                       |
 
 ---
@@ -282,7 +281,7 @@ pnpm run build
 
 ## 8. Known Issues & Technical Debt
 
-See full report in [TECHNICAL_DEBT_REPORT.md](./TECHNICAL_DEBT_REPORT.md) — overall score: **0/10** (post 2026-06-01 batch plan + 2026-06-01 session 2 follow-ups).
+See the archived report in [docs/archive/TECHNICAL_DEBT_REPORT.md](./docs/archive/TECHNICAL_DEBT_REPORT.md). Its scores predate the 2026-09 audit remediation rounds — check [docs/changelog.md](./docs/changelog.md) for current state.
 
 ### Critical Issues (Resolved)
 
@@ -315,6 +314,13 @@ See full report in [TECHNICAL_DEBT_REPORT.md](./TECHNICAL_DEBT_REPORT.md) — ov
 ---
 
 ## 9. Recent Changes Log
+
+### 2026-09-15 sessions (audit remediation rounds 2–5)
+
+1. **Rounds 2–3 (committed 2026-09-14)** — envelope/pagination standardization, user-scoped image mutations, RLS/index hardening, server-only `ADMIN_EMAILS`, Redis-backed rate-limit stores with per-limiter `rl:*` prefixes, query caps (`MAX_LIST_ROWS`/`MAX_STAT_ROWS`), 250-line file cap + lint rules, admin component decomposition, migration 059 (anon-write lockdown).
+2. **Round 4 (in working tree)** — Postgres RPC analytics aggregation (migrations 060–061), unified images contract in `lib/api-zod/src/images.ts`, adminAuth/env hardening.
+3. **Round 5 (in progress)** — admin route data access migrated to lib/db (`users.ts`, `arabic-status.ts`), frontend decomposition batch (ThemeManager, ThemePresets, PostsManager, ProjectEditor, ImageUploader); pending: `reading_minutes` generated column, image-metadata RLS tightening (062), error-handler/healthz hardening, `lib/validation` Zod rebuild. Full detail in [docs/changelog.md](./docs/changelog.md).
+4. **Infrastructure (2026-09-14)** — Supabase project re-provisioned: new ref `njibfrkovexikcwzycan` (eu-west-1) after the old project was paused/deleted; migrations renumbered (047→057, 048→058); API deployed at `https://portfolio-builder-api-six.vercel.app`.
 
 ### 2026-08-15 session
 
@@ -373,12 +379,15 @@ See full report in [TECHNICAL_DEBT_REPORT.md](./TECHNICAL_DEBT_REPORT.md) — ov
 
 ### Image Uploads
 
-- Entity type is validated against an allowlist before storage path construction
-- Supported types: `projects`, `skills`, `experience`, `certs`, `about`, `hero`, `avatar`, `logo`, `favicon`
+- Entity type is validated against the shared allowlist in `lib/api-zod/src/images.ts` before storage path construction
+- Supported types: `projects`, `about`, `hero`, `avatar`, `certifications`, `skills`, `experience`, `branding`, `content`
 
 ### Rate Limiting
 
 - General API: 100 requests per 15 minutes
-- Contact form: 5 requests per hour per IP
-- Auth endpoints: 10 requests per 15 minutes
-- Rate limiting is disabled in development (NODE_ENV !== production)
+- Admin routes: 200 requests per 15 minutes
+- Image metadata list: 60/minute; image uploads: 10/minute
+- Contact form and AI chat: env-configured (`CONTACT_RATE_LIMIT_*`, `AI_CHAT_RATE_LIMIT_*`)
+- API-key auth: 50 requests per 15 minutes
+- Stores: Redis-backed when `REDIS_URL` is set (one shared ioredis client, per-limiter key prefixes `rl:*`); in-memory fallback otherwise
+- `DISABLE_RATE_LIMIT=true` disables limiters in non-production only (logged as ignored in production)

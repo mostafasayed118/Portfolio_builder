@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { createMockSupabase } from "./test-utils";
+import { MAX_LIST_ROWS } from "./query";
 import {
   listExperience,
   createExperience,
@@ -13,12 +14,13 @@ beforeEach(() => {
 });
 
 describe("listExperience", () => {
-  it("selects non-deleted experience ordered by sort_order", async () => {
+  it("selects non-deleted experience ordered by sort_order, capped at MAX_LIST_ROWS", async () => {
     const rows = [
       { id: "1", title: "Dev", company: "Acme", sort_order: 1 },
       { id: "2", title: "Lead", company: "Beta", sort_order: 2 },
     ];
-    supabase.order.mockResolvedValue({ data: rows, error: null });
+    // Terminal method in the chain is .limit() — override to resolve
+    supabase.limit.mockResolvedValue({ data: rows, error: null });
 
     const result = await listExperience(supabase as any);
 
@@ -29,11 +31,12 @@ describe("listExperience", () => {
     expect(supabase.is).toHaveBeenCalledWith("deleted_at", null);
     expect(supabase.eq).toHaveBeenCalledWith("is_published", true);
     expect(supabase.order).toHaveBeenCalledWith("sort_order", { ascending: true });
+    expect(supabase.limit).toHaveBeenCalledWith(MAX_LIST_ROWS);
     expect(result).toEqual(rows);
   });
 
   it("throws on error", async () => {
-    supabase.order.mockResolvedValue({ data: null, error: new Error("db error") });
+    supabase.limit.mockResolvedValue({ data: null, error: new Error("db error") });
 
     await expect(listExperience(supabase as any)).rejects.toThrow("db error");
   });

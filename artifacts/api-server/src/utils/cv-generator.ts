@@ -1,5 +1,6 @@
 import { jsPDF } from "jspdf";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { logger } from "../lib/logger";
 import { generateQRCode } from "./qrcode";
 import { fetchCvData } from "./cv-data";
 
@@ -16,8 +17,8 @@ export async function generateCvPdf(
       darkColor: "#1a1a2e",
       lightColor: "#ffffff",
     });
-  } catch {
-    // QR generation failure — generate CV without QR
+  } catch (err) {
+    logger.warn({ err }, "QR generation failed; CV generated without QR");
   }
 
   const doc = new jsPDF({ format: "a4", unit: "mm" });

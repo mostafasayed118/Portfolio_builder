@@ -22,6 +22,8 @@ import auditRouter from "./audit";
 import previewRouter from "./preview";
 import cvRouter from "./cv";
 import analyticsRouter from "./analytics";
+import arabicStatusRouter from "./arabic-status";
+import imagesRouter from "./images";
 
 const router: IRouter = Router();
 
@@ -50,5 +52,7 @@ router.use("/users", usersRouter);
 router.use("/audit", auditRouter);
 router.use("/preview", previewRouter);
 router.use("/analytics", analyticsRouter);
+router.use("/arabic-status", arabicStatusRouter);
+router.use("/images", imagesRouter);
 
 export default router;

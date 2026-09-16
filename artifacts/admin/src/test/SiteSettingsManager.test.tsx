@@ -4,14 +4,14 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SiteSettingsManager } from "@/features/settings";
 
-const { mockSettingsGet, mockSettingsUpdate, mockSettingsUpdateLanguage, mockToastSuccess } = vi.hoisted(
-  () => ({
+const { mockSettingsGet, mockSettingsUpdate, mockSettingsUpdateLanguage, mockArabicStatusGet, mockToastSuccess } =
+  vi.hoisted(() => ({
     mockSettingsGet: vi.fn(),
     mockSettingsUpdate: vi.fn(),
     mockSettingsUpdateLanguage: vi.fn(),
+    mockArabicStatusGet: vi.fn(),
     mockToastSuccess: vi.fn(),
-  }),
-);
+  }));
 
 vi.mock("@/lib/api-client", () => ({
   api: {
@@ -20,15 +20,14 @@ vi.mock("@/lib/api-client", () => ({
       update: mockSettingsUpdate,
       updateLanguage: mockSettingsUpdateLanguage,
     },
+    arabicStatus: {
+      get: mockArabicStatusGet,
+    },
   },
 }));
 
 vi.mock("@/lib/supabase", () => ({
-  getSupabase: vi.fn(() => ({
-    from: () => ({
-      select: () => ({ not: () => ({ maybeSingle: () => ({ data: null }) }) }),
-    }),
-  })),
+  getSupabase: vi.fn(() => null),
   isSupabaseConfigured: true,
 }));
 
@@ -68,6 +67,16 @@ describe("SiteSettingsManager", () => {
     mockSettingsGet.mockResolvedValue({ success: true, data: mockSiteData });
     mockSettingsUpdate.mockResolvedValue({ success: true });
     mockSettingsUpdateLanguage.mockResolvedValue({ success: true });
+    mockArabicStatusGet.mockResolvedValue({
+      success: true,
+      data: {
+        hero: false,
+        about: false,
+        projects: { filled: 0 },
+        experience: { filled: 0 },
+        certifications: { filled: 0 },
+      },
+    });
   });
 
   it("renders form fields correctly", async () => {

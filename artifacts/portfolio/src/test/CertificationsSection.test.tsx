@@ -9,8 +9,8 @@ vi.mock("@/hooks/usePortfolioData", () => ({
 vi.mock("@/hooks/useReveal", () => mockUseReveal());
 
 vi.mock("@/components/CertCard", () => ({
-  CertCard: ({ cert }: { cert: { title: string; issuer: string } }) => (
-    <div data-testid="cert-card">
+  CertCard: ({ cert }: { cert: { title: string; issuer: string; id: string | number } }) => (
+    <div data-testid={`cert-card-${cert.id}`}>
       <span>{cert.title}</span>
       <span>{cert.issuer}</span>
     </div>
@@ -56,6 +56,7 @@ describe("CertificationsSection", () => {
     vi.mocked(useCertifications).mockReturnValue({
       data: [
         {
+          id: "cert-db-1",
           title: "AWS Data Engineer",
           issuer: "Amazon",
           date: "2024-01",
@@ -64,6 +65,7 @@ describe("CertificationsSection", () => {
           cert_url: "https://example.com",
         },
         {
+          id: "cert-db-2",
           title: "Python Professional",
           issuer: "Python Institute",
           date: "2023-06",
@@ -76,9 +78,30 @@ describe("CertificationsSection", () => {
     } as any);
 
     renderWithProviders(<CertificationsSection />);
-    expect(screen.getAllByTestId("cert-card")).toHaveLength(2);
+    expect(screen.getAllByTestId(/^cert-card-/)).toHaveLength(2);
     expect(screen.getByText("AWS Data Engineer")).toBeInTheDocument();
     expect(screen.getByText("Python Professional")).toBeInTheDocument();
+  });
+
+  it("keeps the database row's real id on rendered cards instead of a derived index", () => {
+    vi.mocked(useCertifications).mockReturnValue({
+      data: [
+        {
+          id: "cert-db-9",
+          title: "AWS Data Engineer",
+          issuer: "Amazon",
+          date: "2024-01",
+          category: "cloud",
+          image_url: null,
+          cert_url: "https://example.com",
+        },
+      ],
+      isLoading: false,
+    } as any);
+
+    renderWithProviders(<CertificationsSection />);
+    expect(screen.getByTestId("cert-card-cert-db-9")).toBeInTheDocument();
+    expect(screen.queryByTestId("cert-card-1")).not.toBeInTheDocument();
   });
 
   it("renders fallback CERTIFICATIONS data when hook returns empty array", () => {
@@ -89,7 +112,9 @@ describe("CertificationsSection", () => {
 
     renderWithProviders(<CertificationsSection />);
     // Component falls back to static CERTIFICATIONS data when hook returns empty
-    const cards = screen.getAllByTestId("cert-card");
+    const cards = screen.getAllByTestId(/^cert-card-/);
     expect(cards.length).toBeGreaterThan(0);
+    // Static fallback items keep their stable hardcoded ids.
+    expect(screen.getByTestId("cert-card-1")).toBeInTheDocument();
   });
 });

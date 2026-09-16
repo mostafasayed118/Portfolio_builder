@@ -17,7 +17,7 @@ describe("ImageUploader", () => {
   });
 
   it("renders upload area", () => {
-    render(<ImageUploader entityType="project" />);
+    render(<ImageUploader entityType="projects" />);
 
     expect(screen.getByText("Drop images here or click to browse")).toBeInTheDocument();
     expect(screen.getByText("Drop images here or click to browse")).toBeInTheDocument();
@@ -30,7 +30,7 @@ describe("ImageUploader", () => {
       { id: "img2", url: "https://example.com/img2.jpg" },
     ];
 
-    render(<ImageUploader entityType="project" existingImages={existing} />);
+    render(<ImageUploader entityType="projects" existingImages={existing} />);
 
     const images = screen.getAllByRole("presentation");
     expect(images.length).toBe(2);
@@ -39,7 +39,7 @@ describe("ImageUploader", () => {
   it("validates accepted file types", () => {
     render(
       <ImageUploader
-        entityType="project"
+        entityType="projects"
         acceptedTypes={["image/jpeg", "image/png"]}
       />,
     );

@@ -11,23 +11,46 @@
  * when it bubbles to the route layer's logSupabaseError().
  */
 
+/**
+ * Defensive cap for unpaginated list queries. Every current table is
+ * personal-portfolio scale (hundreds of rows at most); the limit keeps a
+ * runaway table from ever being fully loaded into memory in one query.
+ */
+export const MAX_LIST_ROWS = 500;
+
 export interface QueryContext {
   table?: string;
   operation?: string;
 }
 
-function enrichError(err: unknown, ctx?: QueryContext): Error {
-  if (err instanceof Error) {
-    const prefix = ctx?.table ? `[${ctx.table}${ctx.operation ? `.${ctx.operation}` : ""}] ` : "";
-    if (prefix && !err.message.startsWith(prefix)) {
-      // Preserve the original error but annotate it for log triage
-      const wrapped = new Error(`${prefix}${err.message}`);
-      wrapped.cause = err;
-      return wrapped;
-    }
-    return err;
+/**
+ * supabase-js surfaces PostgrestError as a plain object ({ message, code,
+ * details, hint }), not an Error instance — extract the message from either
+ * shape so real DB error text survives the wrap.
+ */
+function extractErrorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === "object" && err !== null && "message" in err) {
+    const msg = (err as { message?: unknown }).message;
+    if (typeof msg === "string" && msg.length > 0) return msg;
   }
-  return new Error(typeof err === "string" ? err : "Unknown Supabase error");
+  if (typeof err === "string") return err;
+  return "Unknown Supabase error";
+}
+
+function enrichError(err: unknown, ctx?: QueryContext): Error {
+  const message = extractErrorMessage(err);
+  const prefix = ctx?.table ? `[${ctx.table}${ctx.operation ? `.${ctx.operation}` : ""}] ` : "";
+  const fullMessage = prefix && !message.startsWith(prefix) ? `${prefix}${message}` : message;
+  const wrapped = new Error(fullMessage);
+  wrapped.cause = err;
+  // PostgrestError carries a SQLSTATE-style `code`; surface it so callers
+  // (e.g. safeErrorMessage) can map known codes without unwrapping cause.
+  if (typeof err === "object" && err !== null && "code" in err) {
+    const code = (err as { code?: unknown }).code;
+    if (typeof code === "string") (wrapped as { code?: string }).code = code;
+  }
+  return wrapped;
 }
 
 /**

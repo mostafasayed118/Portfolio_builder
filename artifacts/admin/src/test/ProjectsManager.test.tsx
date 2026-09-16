@@ -3,12 +3,13 @@ import userEvent from "@testing-library/user-event";
 import { renderWithProviders, stubUseToast } from "./helpers";
 import { ProjectsManager } from "@/features/projects";
 
-const { mockListProjects, mockCreateProject, mockUpdateProject, mockDeleteProject } =
+const { mockListProjects, mockCreateProject, mockUpdateProject, mockDeleteProject, mockImagesList } =
   vi.hoisted(() => ({
     mockListProjects: vi.fn(),
     mockCreateProject: vi.fn(),
     mockUpdateProject: vi.fn(),
     mockDeleteProject: vi.fn(),
+    mockImagesList: vi.fn(),
   }));
 
 vi.mock("@/lib/supabase", () => ({
@@ -23,6 +24,9 @@ vi.mock("@/lib/api-client", () => ({
       create: mockCreateProject,
       update: mockUpdateProject,
       delete: mockDeleteProject,
+    },
+    images: {
+      list: mockImagesList,
     },
   },
 }));
@@ -69,6 +73,7 @@ describe("ProjectsManager", () => {
     mockCreateProject.mockResolvedValue({ success: true });
     mockUpdateProject.mockResolvedValue({ success: true });
     mockDeleteProject.mockResolvedValue({ success: true });
+    mockImagesList.mockResolvedValue({ success: true, data: [] });
   });
 
   afterEach(() => {

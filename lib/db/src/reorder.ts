@@ -1,12 +1,27 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { MAX_LIST_ROWS } from "./query";
 
 type ReorderTable = "projects" | "skills" | "experience" | "certifications";
 
+/**
+ * Reorders rows by fanning out one UPDATE per item. Deliberate fan-out: no
+ * single RPC exists for these tables (only reorder_sections covers
+ * section_settings), and the tables are personal-portfolio scale — a
+ * handful of rows per call. Inputs above MAX_LIST_ROWS are rejected up
+ * front instead of being issued as 500+ parallel UPDATEs.
+ */
 export async function reorderItems(
   supabase: SupabaseClient,
   table: ReorderTable,
   orderedIds: string[],
 ): Promise<{ success: boolean; error?: string }> {
+  if (orderedIds.length > MAX_LIST_ROWS) {
+    return {
+      success: false,
+      error: `reorderItems: ${orderedIds.length} ids exceeds the per-request limit of ${MAX_LIST_ROWS}`,
+    };
+  }
+
   try {
     const now = new Date().toISOString();
     const results = await Promise.all(

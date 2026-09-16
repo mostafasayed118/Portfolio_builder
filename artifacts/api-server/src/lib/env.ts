@@ -246,7 +246,24 @@ export const env = {
       process.exit(1);
     }
     this.checkAdminApiKeyStrength();
+    this.checkRedisConfig();
     return { ok: true, missing };
+  },
+
+  /**
+   * REDIS_URL must be configured in production: without it every rate
+   * limiter falls back to a per-instance MemoryStore, so effective limits
+   * are multiplied by the number of serverless instances (brute-force and
+   * abuse protections become unreliable). Fail fast at startup.
+   */
+  checkRedisConfig(): void {
+    if (!this.IS_PRODUCTION || this.IS_TEST) return;
+    if (get("REDIS_URL")) return;
+    console.error(
+      "[env] REDIS_URL is required in production — without it, rate limits degrade to per-instance " +
+        "memory stores and can be diluted across serverless instances. Configure a shared Redis (REDIS_URL).",
+    );
+    process.exit(1);
   },
 
   /**

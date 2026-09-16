@@ -18,6 +18,7 @@ describe("lib/ai/client", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
   it("isAiConfigured reflects AI_API_KEY presence", () => {
@@ -72,5 +73,50 @@ describe("lib/ai/client", () => {
     vi.stubGlobal("fetch", stubFetch({ choices: [{ message: { content: "not json" } }] }));
     await expect(generateJson<{ a: number }>({ messages: [{ role: "user", content: "x" }] }))
       .rejects.toBeInstanceOf(AiError);
+  });
+
+  it("generateJson waits ~400ms before retrying invalid_json", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ choices: [{ message: { content: "still not json" } }] }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ choices: [{ message: { content: "{\"a\":1}" } }] }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const pending = generateJson<{ a: number }>({ messages: [{ role: "user", content: "x" }] });
+
+    await vi.advanceTimersByTimeAsync(399);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(1);
+    await expect(pending).resolves.toEqual({ a: 1 });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("generateJson does NOT retry or delay on http errors", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 429, json: async () => ({}) });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(generateJson<{ a: number }>({ messages: [{ role: "user", content: "x" }] }))
+      .rejects.toMatchObject({ code: "http", status: 429 });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("generateJson does NOT retry or delay on network errors", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockRejectedValue(new Error("connection reset"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(generateJson<{ a: number }>({ messages: [{ role: "user", content: "x" }] }))
+      .rejects.toMatchObject({ code: "network" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

@@ -130,7 +130,7 @@ router.post("/:id/unarchive", doubleCsrfProtection, validateParamId, async (req:
  * the same user scoping: superadmins mark everything, regular admins only
  * their own rows (or rows with no owner). Returns how many were marked.
  */
-router.post("/mark-all-read", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
+router.post("/mark-all-read", validateQueryUserId, doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
   const supabase = getSupabaseClient();
   const scope = <T extends { or(f: string): T; eq(c: string, v: unknown): T }>(q: T): T =>
     scopeMessagesQuery(q, req, { includeOrphans: true });

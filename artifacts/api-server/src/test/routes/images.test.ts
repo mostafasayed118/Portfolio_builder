@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
-import { mockAdminKey, mockSupabaseClient, resetSupabaseClient } from "../helpers";
 import app from "../../app";
 
 const mockImageMetadata = {
@@ -13,8 +12,52 @@ const mockImageMetadata = {
   entity_id: null,
 };
 
+// Self-contained mocks (same pattern as admin-images-list.test.ts): helpers.ts
+// registers its own hoisted vi.mock for adminAuth, which would win over a
+// file-level mock, so this file must not import helpers.
+const mockAdminKey = "test-admin-key";
+
+const { mockSupabaseClient, adminAuthMock } = vi.hoisted(() => {
+  const chain = () => {
+    const client: Record<string, any> = {
+      from: vi.fn(),
+      select: vi.fn(),
+      insert: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      eq: vi.fn(),
+      in: vi.fn(),
+      single: vi.fn(),
+      maybeSingle: vi.fn(),
+      limit: vi.fn(),
+      order: vi.fn(),
+    };
+    client.from.mockReturnValue(client);
+    client.select.mockReturnValue(client);
+    client.insert.mockReturnValue(client);
+    client.update.mockReturnValue(client);
+    client.delete.mockReturnValue(client);
+    client.eq.mockReturnValue(client);
+    client.limit.mockReturnValue(client);
+    client.order.mockReturnValue(client);
+    client.single.mockResolvedValue({ data: null, error: null });
+    client.maybeSingle.mockResolvedValue({ data: null, error: null });
+    client.in.mockResolvedValue({ data: [], error: null });
+    return client;
+  };
+  const client = chain();
+  const storage: Record<string, any> = { from: vi.fn(() => storage) };
+  for (const name of ["upload", "download", "remove", "getPublicUrl"]) storage[name] = vi.fn();
+  client.storage = storage;
+  return { mockSupabaseClient: client, adminAuthMock: vi.fn() };
+});
+
 vi.mock("../../lib/supabase-client", () => ({
   getSupabaseClient: vi.fn(() => mockSupabaseClient),
+}));
+
+vi.mock("../../middleware/adminAuth", () => ({
+  adminAuth: adminAuthMock,
 }));
 
 /** Minimal valid magic-byte prefix for each format. */
@@ -23,12 +66,37 @@ const PNG_HEADER = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
 const WEBP_HEADER = Buffer.from([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50]);
 
 beforeEach(() => {
-  resetSupabaseClient(mockSupabaseClient);
+  // Re-wire chains and reset terminal queues.
+  mockSupabaseClient.from.mockReturnValue(mockSupabaseClient);
+  mockSupabaseClient.select.mockReturnValue(mockSupabaseClient);
+  mockSupabaseClient.insert.mockReturnValue(mockSupabaseClient);
+  mockSupabaseClient.update.mockReturnValue(mockSupabaseClient);
+  mockSupabaseClient.delete.mockReturnValue(mockSupabaseClient);
+  mockSupabaseClient.eq.mockReturnValue(mockSupabaseClient);
+  mockSupabaseClient.limit.mockReturnValue(mockSupabaseClient);
+  mockSupabaseClient.order.mockReturnValue(mockSupabaseClient);
+  mockSupabaseClient.single.mockReset();
+  mockSupabaseClient.single.mockResolvedValue({ data: null, error: null });
+  mockSupabaseClient.maybeSingle.mockReset();
+  mockSupabaseClient.maybeSingle.mockResolvedValue({ data: null, error: null });
+  mockSupabaseClient.in.mockReset();
+  mockSupabaseClient.in.mockResolvedValue({ data: [], error: null });
   mockSupabaseClient.storage.upload.mockReset();
   mockSupabaseClient.storage.upload.mockResolvedValue({ data: { path: "test-path" }, error: null });
+  mockSupabaseClient.storage.download.mockReset();
   mockSupabaseClient.storage.remove.mockReset();
   mockSupabaseClient.storage.remove.mockResolvedValue({ data: null, error: null });
+  mockSupabaseClient.storage.getPublicUrl.mockReset();
   mockSupabaseClient.storage.getPublicUrl.mockReturnValue({ data: { publicUrl: "https://example.com/image.jpg" } });
+  adminAuthMock.mockReset();
+  adminAuthMock.mockImplementation((req: { headers: Record<string, unknown>; adminEmail?: string; user?: { id: string; email: string; role: string } }, res: { status: (n: number) => { json: (b: unknown) => void } }, next: () => void) => {
+    if (req.headers["x-admin-key"] === mockAdminKey) {
+      req.adminEmail = "owner@x.y";
+      req.user = { id: "user-owner", email: "owner@x.y", role: "superadmin" };
+      return next();
+    }
+    return res.status(401).json({ success: false, message: "Unauthorized" });
+  });
 });
 
 describe("Images API", () => {
@@ -187,9 +255,16 @@ describe("Images API", () => {
   });
 
   describe("GET /api/v1/images/:id/metadata", () => {
+    it("returns 401 without auth", async () => {
+      const res = await request(app).get("/api/v1/images/00000000-0000-0000-0000-000000000001/metadata");
+      expect([401, 403]).toContain(res.status);
+    });
+
     it("returns 404 for non-existent image", async () => {
       // default mock returns { data: null, error: null } → route returns 404
-      const res = await request(app).get("/api/v1/images/00000000-0000-0000-0000-000000000099/metadata");
+      const res = await request(app)
+        .get("/api/v1/images/00000000-0000-0000-0000-000000000099/metadata")
+        .set("x-admin-key", mockAdminKey);
       expect(res.status).toBe(404);
       expect(res.body.message).toMatch(/not found/i);
     });
@@ -200,7 +275,9 @@ describe("Images API", () => {
         error: null,
       });
 
-      const res = await request(app).get("/api/v1/images/00000000-0000-0000-0000-000000000001/metadata");
+      const res = await request(app)
+        .get("/api/v1/images/00000000-0000-0000-0000-000000000001/metadata")
+        .set("x-admin-key", mockAdminKey);
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.data.id).toBe(mockImageMetadata.id);
@@ -233,6 +310,11 @@ describe("Images API", () => {
     });
 
     it("returns 200 and assigns sort_order by array position", async () => {
+      mockSupabaseClient.in.mockResolvedValueOnce({
+        data: IDS.map((id) => ({ id, user_id: "user-owner" })),
+        error: null,
+      });
+
       const res = await request(app)
         .post("/api/v1/images/reorder")
         .set("x-admin-key", mockAdminKey)
@@ -245,8 +327,51 @@ describe("Images API", () => {
       expect(mockSupabaseClient.eq).toHaveBeenCalledWith("id", IDS[2]);
     });
 
+    it("returns 404 when an image belongs to another user", async () => {
+      // Auth resolves a NON-superadmin user; the ownership lookup returns a
+      // foreign user_id → fail-closed 404 (no existence oracle). The default
+      // adminAuth impl is replaced here and restored by beforeEach.
+      adminAuthMock.mockImplementation((req: { headers: Record<string, unknown>; adminEmail?: string; user?: { id: string; email: string; role: string } }, res: { status: (n: number) => { json: (b: unknown) => void } }, next: () => void) => {
+        if (req.headers["x-admin-key"] === mockAdminKey) {
+          req.adminEmail = "editor@x.y";
+          req.user = { id: "user-editor", email: "editor@x.y", role: "user" };
+          return next();
+        }
+        return res.status(401).json({ success: false, message: "Unauthorized" });
+      });
+      mockSupabaseClient.in.mockResolvedValueOnce({
+        data: [{ id: IDS[0], user_id: "someone-else" }],
+        error: null,
+      });
+
+      const res = await request(app)
+        .post("/api/v1/images/reorder")
+        .set("x-admin-key", mockAdminKey)
+        .send({ ordered_ids: IDS.slice(0, 1) });
+      expect(res.status).toBe(404);
+      expect(res.body.success).toBe(false);
+    });
+
+    it("returns 404 when an ordered id does not exist", async () => {
+      mockSupabaseClient.in.mockResolvedValueOnce({
+        data: [{ id: IDS[0], user_id: "user-owner" }],
+        error: null,
+      });
+
+      const res = await request(app)
+        .post("/api/v1/images/reorder")
+        .set("x-admin-key", mockAdminKey)
+        .send({ ordered_ids: IDS.slice(0, 2) });
+      expect(res.status).toBe(404);
+      expect(res.body.success).toBe(false);
+    });
+
     it("returns 500 when an update fails", async () => {
       // First update's chain resolves to an error → Promise.all finds it.
+      mockSupabaseClient.in.mockResolvedValueOnce({
+        data: IDS.slice(0, 1).map((id) => ({ id, user_id: "user-owner" })),
+        error: null,
+      });
       mockSupabaseClient.eq.mockResolvedValueOnce({ data: null, error: { message: "boom" } });
 
       const res = await request(app)

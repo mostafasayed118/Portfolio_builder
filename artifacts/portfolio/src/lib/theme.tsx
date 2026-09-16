@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 type Theme = "light" | "dark";
 
@@ -8,10 +8,14 @@ const ThemeContext = createContext<{
   setTheme: (t: Theme) => void;
 }>({ theme: "light", toggle: () => {}, setTheme: () => {} });
 
+function parseStoredTheme(stored: string | null): Theme | null {
+  return stored === "light" || stored === "dark" ? stored : null;
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window === "undefined") return "light";
-    const stored = localStorage.getItem("theme") as Theme | null;
+    const stored = parseStoredTheme(localStorage.getItem("theme"));
     if (stored) return stored;
     if (window.matchMedia("(prefers-color-scheme: dark)").matches) return "dark";
     return "light";
@@ -23,10 +27,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("theme", theme);
   }, [theme]);
 
-  const toggle = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
+  const value = useMemo(
+    () => ({
+      theme,
+      toggle: () => setTheme((t) => (t === "dark" ? "light" : "dark")),
+      setTheme,
+    }),
+    [theme],
+  );
 
   return (
-    <ThemeContext.Provider value={{ theme, toggle, setTheme }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   );

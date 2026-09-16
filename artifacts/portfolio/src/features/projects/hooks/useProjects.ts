@@ -8,12 +8,12 @@ export function useProjects() {
 }
 
 export function mapDbProject(
-  p: { slug?: string | null; title: string; description: string; full_description?: string | null; tech_stack?: string[]; category?: string | null; featured?: boolean | null; github_url?: string | null; live_url?: string | null; metrics?: string[]; completed_at?: string | null; created_at?: string; sort_order?: number | null; is_published?: boolean | null },
+  p: { id?: string | null; slug?: string | null; title: string; description: string; full_description?: string | null; tech_stack?: string[]; category?: string | null; featured?: boolean | null; github_url?: string | null; live_url?: string | null; metrics?: string[]; completed_at?: string | null; created_at?: string; sort_order?: number | null; is_published?: boolean | null },
   index: number,
   cover?: { url: string; variants?: ImageVariant[] },
 ): Project {
   return {
-    id: index + 1,
+    id: p.id ?? `static-${index}`,
     slug: p.slug ?? p.title.toLowerCase().replace(/\s+/g, "-"),
     title: p.title,
     shortDescription: p.description,
@@ -31,11 +31,11 @@ export function mapDbProject(
 }
 
 export function mapDbProjectDetail(
-  dbProject: { slug?: string | null; title: string; description: string; full_description?: string | null; challenges?: string | null; outcome?: string | null; tech_stack?: string[]; category?: string | null; featured?: boolean | null; github_url?: string | null; live_url?: string | null; metrics?: string[]; completed_at?: string | null; created_at?: string },
+  dbProject: { id?: string | null; slug?: string | null; title: string; description: string; full_description?: string | null; challenges?: string | null; outcome?: string | null; tech_stack?: string[]; category?: string | null; featured?: boolean | null; github_url?: string | null; live_url?: string | null; metrics?: string[]; completed_at?: string | null; created_at?: string },
   slug: string,
 ): Project {
   return {
-    id: 0,
+    id: dbProject.id ?? `detail-${slug}`,
     slug: dbProject.slug ?? slug,
     title: dbProject.title,
     shortDescription: dbProject.description,

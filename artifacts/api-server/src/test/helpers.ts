@@ -23,6 +23,8 @@ export function makeMockSupabase() {
     update: vi.fn().mockReturnThis(),
     delete: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
+    in: vi.fn().mockResolvedValue({ data: [], error: null }),
+    is: vi.fn().mockReturnThis(),
     limit: vi.fn().mockReturnThis(),
     maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
     single: vi.fn().mockResolvedValue({ data: null, error: null }),
@@ -72,6 +74,8 @@ export function makeMockSupabaseClient(storage?: Record<string, any>) {
     update: vi.fn(),
     delete: vi.fn(),
     eq: vi.fn(),
+    is: vi.fn(),
+    in: vi.fn(),
     single: vi.fn(),
     maybeSingle: vi.fn(),
     limit: vi.fn(),
@@ -89,8 +93,13 @@ export function resetSupabaseClient(client: Record<string, any>) {
   client.update.mockReturnValue(client);
   client.delete.mockReturnValue(client);
   client.eq.mockReturnValue(client);
+  client.is.mockReturnValue(client);
   client.limit.mockReturnValue(client);
   client.order.mockReturnValue(client);
+  // `in` is terminal in route usage (select(...).in(...)) — reset to a
+  // fail-closed empty result rather than chaining.
+  client.in.mockReset();
+  client.in.mockResolvedValue({ data: [], error: null });
   // Reset terminal methods completely (clears mockResolvedValueOnce queue).
   client.single.mockReset();
   client.single.mockResolvedValue({ data: null, error: null });

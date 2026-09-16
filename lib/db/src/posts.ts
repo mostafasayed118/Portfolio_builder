@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { BlogPost, InsertBlogPost } from "@workspace/supabase/types";
-import { queryOrThrow } from "./query";
+import { MAX_LIST_ROWS, queryOrThrow } from "./query";
 
 export type Post = BlogPost;
 
@@ -17,13 +17,13 @@ export interface NewPostInput {
 }
 
 /**
- * List-view columns. `content` stays included: the blog cards render a
- * reading-time estimate (getReadingTime) and the table is personal-blog
- * scale, so the payload cost is negligible and this keeps list and
- * detail shapes identical for consumers.
+ * List-view columns. `content` is excluded: reading time comes from the
+ * `reading_minutes` stored generated column (migration 063 computes
+ * max(1, ceil(words/200)) on every write), so cards never need the full
+ * body. Detail views keep select("*").
  */
 const LIST_COLUMNS =
-  "id,slug,title,excerpt,content,cover_image_url,tags,is_published,published_at,created_at,updated_at";
+  "id,slug,title,excerpt,reading_minutes,cover_image_url,tags,is_published,published_at,created_at,updated_at";
 
 export type PostListItem = Pick<
   Post,
@@ -31,7 +31,7 @@ export type PostListItem = Pick<
   | "slug"
   | "title"
   | "excerpt"
-  | "content"
+  | "reading_minutes"
   | "cover_image_url"
   | "tags"
   | "is_published"
@@ -49,7 +49,8 @@ export async function listPublishedPosts(supabase: SupabaseClient): Promise<Post
       .eq("is_published", true)
       .is("deleted_at", null)
       .order("published_at", { ascending: false, nullsFirst: false })
-      .order("created_at", { ascending: false }),
+      .order("created_at", { ascending: false })
+      .limit(MAX_LIST_ROWS),
     { table: TABLE, operation: "listPublishedPosts" },
   );
 }
@@ -61,7 +62,8 @@ export async function listAllPosts(supabase: SupabaseClient): Promise<PostListIt
       .from(TABLE)
       .select(LIST_COLUMNS)
       .is("deleted_at", null)
-      .order("updated_at", { ascending: false }),
+      .order("updated_at", { ascending: false })
+      .limit(MAX_LIST_ROWS),
     { table: TABLE, operation: "listAllPosts" },
   );
 }
@@ -89,6 +91,32 @@ export async function getPostById(supabase: SupabaseClient, id: string): Promise
   return queryOrThrow<Post | null>(
     supabase.from(TABLE).select("*").eq("id", id).is("deleted_at", null).maybeSingle(),
     { table: TABLE, operation: "getPostById" },
+  );
+}
+
+export interface PostPublishState {
+  is_published: boolean | null;
+  published_at: string | null;
+}
+
+/**
+ * Admin: fetch just the publish state of a post, optionally scoped to a
+ * user id (superadmin user-switching). Unlike getPostById this does NOT
+ * filter soft-deleted rows — the caller only needs the pre-update publish
+ * stamps to decide whether to stamp published_at.
+ */
+export async function getPostPublishState(
+  supabase: SupabaseClient,
+  id: string,
+  userId?: string | null,
+): Promise<PostPublishState | null> {
+  let query = supabase.from(TABLE).select("is_published, published_at").eq("id", id);
+  if (userId) {
+    query = query.eq("user_id", userId);
+  }
+  return queryOrThrow<PostPublishState | null>(
+    query.limit(1).maybeSingle(),
+    { table: TABLE, operation: "getPostPublishState" },
   );
 }
 

@@ -93,6 +93,16 @@ function stripFences(raw: string): string {
   return text;
 }
 
+export const JSON_RETRY_DELAY_MS = 400;
+
+// Injectable-in-effect via fake timers (vi.useFakeTimers intercepts
+// setTimeout); kept module-private so callers cannot disable the backoff.
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
 export async function generateJson<T>(options: GenerateJsonOptions<T>): Promise<T> {
   const retries = options.retries ?? 1;
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -113,6 +123,11 @@ export async function generateJson<T>(options: GenerateJsonOptions<T>): Promise<
     } catch (err) {
       const retryable = err instanceof AiError && err.code === "invalid_json" && attempt < retries;
       if (!retryable) throw err;
+      // Backoff before re-prompting: an immediate retry of an
+      // invalid-JSON response tends to reproduce the same malformed
+      // output. HTTP/network failures never reach this line — they
+      // throw above without retry or delay.
+      await delay(JSON_RETRY_DELAY_MS);
     }
   }
   throw new AiError("invalid_json", "model did not return valid JSON");

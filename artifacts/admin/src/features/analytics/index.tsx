@@ -74,15 +74,29 @@ function EmptyChart({ message }: { message: string }) {
   );
 }
 
+function isAnalyticsStats(value: unknown): value is AnalyticsStats {
+  if (typeof value !== "object" || value === null) return false;
+  return (
+    "days" in value && typeof value.days === "number" &&
+    "pageViews" in value && Array.isArray(value.pageViews) &&
+    "topProjects" in value && Array.isArray(value.topProjects) &&
+    "topPosts" in value && Array.isArray(value.topPosts) &&
+    "messages" in value && Array.isArray(value.messages) &&
+    "cvDownloads" in value && typeof value.cvDownloads === "number" &&
+    "contactClicks" in value && typeof value.contactClicks === "number" &&
+    "totalViews" in value && typeof value.totalViews === "number"
+  );
+}
+
 export default function AnalyticsPage() {
   const [days, setDays] = useState("30");
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["analytics", days],
-    queryFn: async () => {
+    queryFn: async (): Promise<AnalyticsStats> => {
       const res = await api.analytics.stats(Number(days));
       if (!res.success) throw new Error(res.message);
-      if (!res.data) throw new Error("Analytics response is missing data");
+      if (!isAnalyticsStats(res.data)) throw new Error("Analytics response shape unexpected");
       return res.data;
     },
   });
@@ -122,10 +136,12 @@ export default function AnalyticsPage() {
   if (isError) {
     return <AdminErrorState title="Failed to load analytics" message={error?.message} onRetry={() => refetch()} />;
   }
+  if (!data) {
+    return null;
+  }
 
-  const stats = data as AnalyticsStats;
-  const topPosts = stats.topPosts ?? [];
-  const messageSeries = stats.messages.map((m) => ({
+  const topPosts = data.topPosts ?? [];
+  const messageSeries = data.messages.map((m) => ({
     date: formatDateKey(m.date),
     Total: m.total,
     Unread: m.unread,
@@ -153,23 +169,23 @@ export default function AnalyticsPage() {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <MetricCard icon={Eye} label="Page views" value={stats.totalViews} />
-        <MetricCard icon={Download} label="CV downloads" value={stats.cvDownloads} />
-        <MetricCard icon={MousePointerClick} label="Contact clicks" value={stats.contactClicks} />
+        <MetricCard icon={Eye} label="Page views" value={data.totalViews} />
+        <MetricCard icon={Download} label="CV downloads" value={data.cvDownloads} />
+        <MetricCard icon={MousePointerClick} label="Contact clicks" value={data.contactClicks} />
         <MetricCard
           icon={MessageSquare}
           label="Messages"
-          value={stats.messages.reduce((sum, m) => sum + m.total, 0)}
+          value={data.messages.reduce((sum, m) => sum + m.total, 0)}
         />
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
         <StatCard title="Page views over time">
-          {stats.pageViews.length === 0 ? (
+          {data.pageViews.length === 0 ? (
             <EmptyChart message="No page views recorded in this range yet." />
           ) : (
             <ResponsiveContainer width="100%" height={224}>
-              <LineChart data={stats.pageViews.map((p) => ({ date: formatDateKey(p.date), Views: p.count }))}>
+              <LineChart data={data.pageViews.map((p) => ({ date: formatDateKey(p.date), Views: p.count }))}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
                 <YAxis allowDecimals={false} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} width={32} />
@@ -203,11 +219,11 @@ export default function AnalyticsPage() {
       </div>
 
       <StatCard title="Top projects by views">
-        {stats.topProjects.length === 0 ? (
+        {data.topProjects.length === 0 ? (
           <EmptyChart message="No project views recorded in this range yet." />
         ) : (
-          <ResponsiveContainer width="100%" height={Math.max(160, stats.topProjects.length * 34)}>
-            <BarChart data={stats.topProjects} layout="vertical" margin={{ left: 8 }}>
+          <ResponsiveContainer width="100%" height={Math.max(160, data.topProjects.length * 34)}>
+            <BarChart data={data.topProjects} layout="vertical" margin={{ left: 8 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
               <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
               <YAxis
@@ -222,7 +238,7 @@ export default function AnalyticsPage() {
                 contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 10, fontSize: 12 }}
               />
               <Bar dataKey="views" radius={[0, 4, 4, 0]}>
-                {stats.topProjects.map((_, i) => (
+                {data.topProjects.map((_, i) => (
                   <Cell key={i} fill={PROJECT_COLORS[i % PROJECT_COLORS.length]} />
                 ))}
               </Bar>

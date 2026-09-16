@@ -70,7 +70,7 @@ describe("ImageUploader — file validation + upload contract", () => {
   });
 
   it("rejects a non-image file with a destructive toast and never calls the API", () => {
-    renderAdmin(<ImageUploader entityType="project" />);
+    renderAdmin(<ImageUploader entityType="projects" />);
     const input = document.querySelector("input[type=file]") as HTMLInputElement;
     const file = new File(["hello"], "doc.pdf", { type: "application/pdf" });
     fireEvent.change(input, { target: { files: [file] } });
@@ -80,7 +80,7 @@ describe("ImageUploader — file validation + upload contract", () => {
   });
 
   it("rejects a file larger than maxFileSizeMB with a destructive toast", () => {
-    renderAdmin(<ImageUploader entityType="project" maxFileSizeMB={1} />);
+    renderAdmin(<ImageUploader entityType="projects" maxFileSizeMB={1} />);
     const input = document.querySelector("input[type=file]") as HTMLInputElement;
     const big = new File([new Uint8Array(2 * 1024 * 1024)], "huge.png", { type: "image/png" });
     fireEvent.change(input, { target: { files: [big] } });
@@ -99,7 +99,7 @@ describe("ImageUploader — file validation + upload contract", () => {
     });
 
     const onComplete = vi.fn();
-    renderAdmin(<ImageUploader entityType="project" onUploadComplete={onComplete} />);
+    renderAdmin(<ImageUploader entityType="projects" onUploadComplete={onComplete} />);
     const input = document.querySelector("input[type=file]") as HTMLInputElement;
     const file = new File([new Uint8Array(1024)], "pic.png", { type: "image/png" });
     fireEvent.change(input, { target: { files: [file] } });
@@ -117,7 +117,7 @@ describe("ImageUploader — file validation + upload contract", () => {
   it("upload error triggers a destructive toast", async () => {
     installFakeXhr({ status: 500, responseText: JSON.stringify({ error: "boom" }) });
 
-    renderAdmin(<ImageUploader entityType="project" />);
+    renderAdmin(<ImageUploader entityType="projects" />);
     const input = document.querySelector("input[type=file]") as HTMLInputElement;
     const file = new File([new Uint8Array(1024)], "pic.png", { type: "image/png" });
     fireEvent.change(input, { target: { files: [file] } });

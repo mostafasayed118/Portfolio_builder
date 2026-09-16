@@ -89,7 +89,7 @@ function App() {
                     <AdminLayout>
                       <Switch>
                         <Route path="/" component={() => <Redirect to="/overview" />} />
-                        <Route path="/overview" component={Overview} />
+                        <Route path="/overview"><Suspense fallback={<PageFallback />}><Overview /></Suspense></Route>
                         <Route path="/hero"><Suspense fallback={<PageFallback />}><HeroEditor /></Suspense></Route>
                         <Route path="/about"><Suspense fallback={<PageFallback />}><AboutEditor /></Suspense></Route>
                         <Route path="/projects"><Suspense fallback={<PageFallback />}><ProjectsManager /></Suspense></Route>
@@ -107,7 +107,7 @@ function App() {
                         <Route path="/settings"><Suspense fallback={<PageFallback />}><SiteSettingsManager /></Suspense></Route>
                         <Route path="/analytics"><Suspense fallback={<PageFallback />}><Analytics /></Suspense></Route>
                         <Route path="/audit"><Suspense fallback={<PageFallback />}><AuditLog /></Suspense></Route>
-                        <Route component={NotFound} />
+                        <Route component={() => <Suspense fallback={<PageFallback />}><NotFound /></Suspense>} />
                       </Switch>
                     </AdminLayout>
                   </ProtectedRoute>

@@ -8,6 +8,7 @@ import { getSupabaseClient } from "./supabase-client";
 import { created, badRequest, serverError, conflict } from "./api-response";
 import { safeErrorMessage } from "./safe-error";
 import { runCollectionQuery, updateByIdAndUser, softDeleteByIdAndUser } from "./route-helpers";
+import { collectionMutate, isUniqueViolationError } from "@workspace/db/collection";
 
 /** Structured conflict signal returned by the `findDuplicate` hook. */
 export interface DuplicateMatch {
@@ -84,11 +85,12 @@ export function createCollectionRouter(opts: CollectionRouterOptions): IRouter {
       user_id: req.user?.id,
       ...(insertDefaults ? insertDefaults(data) : {}),
     };
-    const { error } = await supabase.from(table).insert(insertData as never);
-    if (error) {
+    try {
+      await collectionMutate(supabase, table, { action: "insert", row: insertData });
+    } catch (error) {
       // Race backstop: a concurrent insert beat us to the same name. Report
       // it as the same 409 conflict the pre-insert check would have caught.
-      if (error.code === "23505" && opts.findDuplicate) {
+      if (isUniqueViolationError(error) && opts.findDuplicate) {
         return conflict(res, "An item with this name already exists", {
           code: "DUPLICATE_NAME",
         });

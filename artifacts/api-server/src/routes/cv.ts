@@ -66,6 +66,9 @@ router.get("/cv", async (req: Request, res: Response) => {
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
     res.setHeader("Content-Length", pdfBytes.length.toString());
+    // Public content with server-side PDF caching — let the CDN take a 5-min
+    // slice of the load and revalidate in the background afterwards.
+    res.setHeader("Cache-Control", "public, s-maxage=300, stale-while-revalidate=600");
     res.status(200);
     res.end(Buffer.from(pdfBytes));
     return;

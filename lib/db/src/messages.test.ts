@@ -6,6 +6,7 @@ import {
   markMessageRead,
   markAllMessagesRead,
   deleteMessage,
+  createMessage,
 } from "./messages";
 
 let supabase: ReturnType<typeof createMockSupabase>;
@@ -29,6 +30,39 @@ describe("listMessages", () => {
     expect(supabase.order).toHaveBeenCalledWith("created_at", { ascending: false });
     expect(supabase.limit).toHaveBeenCalledWith(100);
     expect(result).toEqual(rows);
+  });
+
+  describe("createMessage", () => {
+    it("inserts a new unread message and returns its id", async () => {
+      supabase.single.mockResolvedValue({ data: { id: "m1" }, error: null });
+
+      const result = await createMessage(supabase as any, {
+        name: "Alice",
+        email: "a@b.com",
+        message: "Hi there",
+      });
+
+      expect(supabase.from).toHaveBeenCalledWith("messages");
+      expect(supabase.insert).toHaveBeenCalledWith({
+        name: "Alice",
+        email: "a@b.com",
+        message: "Hi there",
+        status: "unread",
+      });
+      expect(supabase.select).toHaveBeenCalledWith("id");
+      expect(result).toEqual({ id: "m1" });
+    });
+
+    it("throws with a [messages.createMessage] context tag on error", async () => {
+      supabase.single.mockResolvedValue({
+        data: null,
+        error: new Error("Rate limit exceeded: too many messages from this email"),
+      });
+
+      await expect(
+        createMessage(supabase as any, { name: "Bob", email: "b@c.com", message: "Hey" }),
+      ).rejects.toThrow("[messages.createMessage] Rate limit exceeded");
+    });
   });
 
   it("forwards an explicit limit to the query builder", async () => {

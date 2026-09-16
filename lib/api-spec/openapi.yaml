@@ -33,6 +33,7 @@ tags:
   - name: admin.audit
   - name: admin.preview
   - name: admin.analytics
+  - name: admin.arabic-status
   - name: admin.ai
   - name: chat
 
@@ -277,6 +278,44 @@ paths:
                         properties:
                           data: { type: object, nullable: true }
                   - $ref: "#/components/schemas/ApiError"
+
+  /v1/admin/images:
+    get:
+      operationId: listAdminImages
+      tags: [images]
+      summary: List images attached to an entity (admin only)
+      security: [{ adminAuth: [] }]
+      parameters:
+        - name: entity_type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [projects, about, hero, avatar, certifications, skills, experience, branding, content]
+        - name: entity_id
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Images attached to the entity, ordered by sort_order
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data:
+                            type: array
+                            items: { $ref: "#/components/schemas/AdminImage" }
+                  - $ref: "#/components/schemas/ApiError"
+        "400":
+          description: Invalid entity_type or entity_id
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
 
   # ─────────────────────────────────────────────────────────────────────
   # Admin: hero (singleton)
@@ -2000,6 +2039,28 @@ paths:
                           data: { $ref: "#/components/schemas/AnalyticsStats" }
                   - $ref: "#/components/schemas/ApiError"
 
+  # Admin: arabic translation status
+  # ─────────────────────────────────────────────────────────────────────
+  /v1/admin/arabic-status:
+    get:
+      operationId: getArabicStatus
+      tags: [admin.arabic-status]
+      summary: Arabic translation coverage per content table
+      security: [{ adminAuth: [] }]
+      responses:
+        "200":
+          description: Arabic translation status
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - allOf:
+                      - $ref: "#/components/schemas/SuccessEnvelope"
+                      - type: object
+                        properties:
+                          data: { $ref: "#/components/schemas/ArabicTranslationStatus" }
+                  - $ref: "#/components/schemas/ApiError"
+
   /v1/chat/config:
     get:
       operationId: chatConfig
@@ -2404,13 +2465,18 @@ components:
 
     BlogPost:
       type: object
-      required: [id, title, slug, excerpt, content, cover_image_url, tags, is_published, published_at, user_id, deleted_at, created_at, updated_at]
+      required: [id, title, slug, excerpt, content, reading_minutes, cover_image_url, tags, is_published, published_at, user_id, deleted_at, created_at, updated_at]
       properties:
         id: { type: string }
         title: { type: string }
         slug: { type: string }
         excerpt: { type: string, nullable: true }
         content: { type: string }
+        reading_minutes:
+          type: integer
+          description: >-
+            Stored generated column (migration 063): max(1, ceil(words/200)).
+            Read-only - ignored on insert/update.
         cover_image_url: { type: string, nullable: true }
         tags: { type: array, items: { type: string } }
         is_published: { type: boolean, nullable: true }
@@ -2427,6 +2493,7 @@ components:
         title: { type: string }
         slug: { type: string }
         excerpt: { type: string, nullable: true }
+        reading_minutes: { type: integer }
         cover_image_url: { type: string, nullable: true }
         tags: { type: array, items: { type: string } }
         published_at: { type: string, nullable: true }
@@ -2684,6 +2751,35 @@ components:
         entity_type: { type: string }
         entity_id: { type: string, nullable: true }
         created_at: { type: string }
+
+    AdminImage:
+      type: object
+      required: [id, url]
+      properties:
+        id: { type: string }
+        url: { type: string }
+
+    ArabicTranslationStatus:
+      type: object
+      required: [hero, about, projects, experience, certifications]
+      properties:
+        hero: { type: boolean }
+        about: { type: boolean }
+        projects:
+          type: object
+          required: [filled]
+          properties:
+            filled: { type: integer }
+        experience:
+          type: object
+          required: [filled]
+          properties:
+            filled: { type: integer }
+        certifications:
+          type: object
+          required: [filled]
+          properties:
+            filled: { type: integer }
 
     # ── Paginated response wrappers ────────────────────────────────────
     PaginatedSkills:
@@ -3064,8 +3160,8 @@ components:
       type: object
       required: [objectPath, fileName]
       properties:
-        objectPath: { type: string }
-        fileName: { type: string }
+        objectPath: { type: string, pattern: '^cv-\d+\.pdf$' }
+        fileName: { type: string, minLength: 1, maxLength: 255, pattern: '\.pdf$' }
 
   securitySchemes:
     adminAuth:

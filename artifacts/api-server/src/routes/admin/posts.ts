@@ -4,9 +4,10 @@ import type { AuthenticatedRequest } from "../../middleware/adminAuth";
 import { validateQueryUserId, validateParamId } from "../../middleware/validateUuid";
 import type { Response } from "express";
 import { postSchema } from "@workspace/api-zod";
+import { createPost, getPostPublishState } from "@workspace/db/posts";
+import { isUniqueViolationError } from "@workspace/db/singleton-upsert";
 import { getSupabaseClient } from "../../lib/supabase-client";
 import { created, badRequest, serverError } from "../../lib/api-response";
-import { safeErrorMessage } from "../../lib/safe-error";
 import { runCollectionQuery, updateByIdAndUser, softDeleteByIdAndUser, parseBody } from "../../lib/route-helpers";
 
 const router: IRouter = Router();
@@ -20,40 +21,24 @@ router.get("/", validateQueryUserId, async (req: AuthenticatedRequest, res: Resp
 });
 
 router.post("/", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
-  const supabase = getSupabaseClient();
-  const result = postSchema.safeParse(req.body);
-  if (!result.success) {
-    return badRequest(res, result.error.flatten().fieldErrors);
-  }
+  const body = parseBody(res, postSchema, req.body);
+  if (!body) return;
 
-  const now = new Date().toISOString();
-  const body = result.data;
-  const insertData = {
-    title: body.title,
-    slug: body.slug,
-    excerpt: body.excerpt ?? null,
-    content: body.content,
-    cover_image_url: body.cover_image_url ?? null,
-    tags: body.tags ?? [],
-    is_published: body.is_published ?? false,
-    published_at: body.is_published ? now : null,
-    user_id: req.user?.id,
-    created_at: now,
-    updated_at: now,
-  };
-
-  const { error } = await supabase.from("blog_posts").insert(insertData);
-  if (error) {
-    if (error.code === "23505") {
+  try {
+    await createPost(getSupabaseClient(), {
+      ...body,
+      user_id: req.user?.id ?? null,
+    });
+    return created(res);
+  } catch (err: unknown) {
+    if (isUniqueViolationError(err)) {
       return badRequest(res, { slug: ["Slug already in use"] });
     }
-    return serverError(res, safeErrorMessage(error));
+    return serverError(res, err instanceof Error ? err.message : String(err));
   }
-  return created(res);
 });
 
 router.put("/:id", doubleCsrfProtection, validateParamId, async (req: AuthenticatedRequest, res: Response) => {
-  const supabase = getSupabaseClient();
   const patch = parseBody(res, postSchema.partial(), req.body);
   if (!patch) return;
 
@@ -61,18 +46,17 @@ router.put("/:id", doubleCsrfProtection, validateParamId, async (req: Authentica
 
   // Toggle publish → stamp published_at on first publish.
   if (patch.is_published === true) {
-    const userId = req.user?.role === "superadmin" && req.query.userId
-      ? (req.query.userId as string)
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const userId = req.user?.role === "superadmin" && typeof req.query.userId === "string"
+      ? req.query.userId
       : req.user?.id;
-    let query = supabase
-      .from("blog_posts")
-      .select("id, is_published, published_at")
-      .eq("id", req.params.id as string);
-    if (userId) query = query.eq("user_id", userId);
-    const { data, error } = await query.maybeSingle();
-    if (error) return serverError(res, safeErrorMessage(error));
-    if (data && data.is_published !== true && !data.published_at) {
-      updateData.published_at = new Date().toISOString();
+    try {
+      const state = await getPostPublishState(getSupabaseClient(), id, userId);
+      if (state && state.is_published !== true && !state.published_at) {
+        updateData.published_at = new Date().toISOString();
+      }
+    } catch (err: unknown) {
+      return serverError(res, err instanceof Error ? err.message : String(err));
     }
   }
 
@@ -80,8 +64,8 @@ router.put("/:id", doubleCsrfProtection, validateParamId, async (req: Authentica
     req,
     res,
     "blog_posts",
-    req.params.id as string,
-    updateData as Parameters<typeof updateByIdAndUser>[4],
+    Array.isArray(req.params.id) ? req.params.id[0] : req.params.id,
+    updateData,
     "Post",
   );
 });

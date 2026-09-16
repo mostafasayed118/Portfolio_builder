@@ -2,10 +2,8 @@ import { useState, useEffect } from "react";
 import { X, Image as ImageIcon, Plus } from "lucide-react";
 import { Badge, Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label, Switch, Textarea, useToast } from "@workspace/ui";
 import ImageUploader from "@/components/ImageUploader";
-import { getSupabase } from "@/lib/supabase";
 import { api } from "@/lib/api-client";
 import { logError } from "@/lib/logger";
-import { listEntityImages } from "@workspace/db/images";
 import { AiTextButton } from "@/features/ai";
 import type { Project } from "../types";
 
@@ -34,18 +32,11 @@ export function ProjectEditor({ editing, isNew, saving, onEdit, onSaved }: Proje
       setProjectImages([]);
       return;
     }
-    const sb = getSupabase();
-    if (!sb) {
-      setProjectImages([]);
-      return;
-    }
-    listEntityImages(sb, "projects", id)
-      .then((rows) => {
+    api.images
+      .list("projects", id)
+      .then((res) => {
         if (cancelled) return;
-        setProjectImages(rows.map((row) => ({
-          id: row.id,
-          url: sb.storage.from("project_images").getPublicUrl(row.storage_path).data.publicUrl,
-        })));
+        setProjectImages(res.success ? (res.data ?? []) : []);
       })
       .catch(() => {
         if (!cancelled) setProjectImages([]);

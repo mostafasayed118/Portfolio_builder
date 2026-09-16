@@ -1,21 +1,9 @@
 /**
  * App-level logger entry point.
  *
- * Internally re-exports `@workspace/logging` after wiring up the
- * Vite-specific `import.meta.env.DEV` check. This lets the shared
- * lib stay framework-agnostic while the app gets a simple
- * `import { logError } from "@/lib/logger"` API that just works.
- *
- * Usage in routes / components:
- *   import { logError, logWarn, logInfo } from "@/lib/logger";
- *   logError("Failed to fetch skills", err, "SkillsManager");
- *
- * In DEV (`pnpm dev`), the output is pretty and coloured.
- * In PROD (`pnpm build`), the output is single-line JSON for log
- * aggregation (Loki, CloudWatch, etc.).
+ * One-line shim over the shared implementation in
+ * `@workspace/app-infra/logger` (byte-identical in admin and portfolio
+ * before the extraction; now maintained in one place). Apps keep importing
+ * `@/lib/logger` — downstream imports never change.
  */
-import { configureLogger, logError, logInfo, logWarn } from "@workspace/logging";
-
-configureLogger(() => ({ dev: import.meta.env.DEV }));
-
-export { logError, logInfo, logWarn };
+export { logError, logInfo, logWarn } from "@workspace/app-infra/logger";

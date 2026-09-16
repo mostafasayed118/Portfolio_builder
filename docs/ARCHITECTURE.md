@@ -53,7 +53,7 @@ Browser → React Query → @workspace/db → @workspace/supabase/client → Sup
 ### Admin CMS
 
 ```
-Browser → Clerk Auth → React Query → @workspace/db → @workspace/supabase/admin → Supabase REST API
+Browser → Clerk Auth → React Query → @/lib/api-client → API server → @workspace/db → Supabase REST API
                                                                                     │
                                                                               Service role key
                                                                               bypasses all RLS

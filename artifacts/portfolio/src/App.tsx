@@ -8,8 +8,6 @@ import { DynamicFavicon } from "@/components/DynamicFavicon";
 import SupabaseThemeSync from "@/components/SupabaseThemeSync";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { WhatsAppFloat } from "@/features/contact";
-import { ChatWidget } from "@/features/chat";
 import Home from "@/pages/Home";
 import NotFound from "@/pages/not-found";
 import SEO from "@/components/SEO";
@@ -20,6 +18,14 @@ import { Loader2 } from "lucide-react";
 const ProjectDetail = lazy(() => import("@/pages/ProjectDetail"));
 const Blog = lazy(() => import("@/pages/Blog"));
 const BlogPost = lazy(() => import("@/pages/BlogPost"));
+// Floating widgets are below-the-fold enhancements — keep them out of the
+// main bundle and let them pop in when their chunks arrive.
+const WhatsAppFloat = lazy(() =>
+  import("@/features/contact").then((m) => ({ default: m.WhatsAppFloat })),
+);
+const ChatWidget = lazy(() =>
+  import("@/features/chat").then((m) => ({ default: m.ChatWidget })),
+);
 
 function SuspenseWrapper({ children }: { children: React.ReactNode }) {
   return <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>{children}</Suspense>;
@@ -61,8 +67,10 @@ function App() {
                 <Route component={NotFound} />
               </Switch>
               <Footer />
-              <WhatsAppFloat />
-              <ChatWidget />
+              <Suspense fallback={null}>
+                <WhatsAppFloat />
+                <ChatWidget />
+              </Suspense>
               <ApiHealthCheck
                 apiUrl={getApiUrl()}
                 title="API Unreachable"

@@ -57,31 +57,33 @@ export function viewSpec(status?: MessageStatus, preset?: MessagePreset): ViewSp
   return { softDelete: true };
 }
 
+/** Structural filter-builder contract shared by select and update chains. */
+interface FilterChain {
+  eq(c: string, v: unknown): FilterChain;
+  gte(c: string, v: string): FilterChain;
+  is(c: string, v: null): FilterChain;
+  not(c: string, op: string, v: unknown): FilterChain;
+  or(f: string): FilterChain;
+}
+
 /**
  * Apply a ViewSpec's predicates to a supabase query chain (list or update).
- * The concrete builder type is preserved through the generic — the internal
- * structural access is only for chaining the filter methods.
+ * The concrete builder type is preserved through the generic — it only needs
+ * the structural FilterChain methods above, so no casts appear mid-chain.
  */
-export function applyViewSpec<Q>(q: Q, spec: ViewSpec): Q {
-  const chain = q as unknown as {
-    eq(c: string, v: unknown): unknown;
-    gte(c: string, v: string): unknown;
-    is(c: string, v: null): unknown;
-    not(c: string, op: string, v: unknown): unknown;
-    or(f: string): unknown;
-  };
-  let cur: unknown = chain;
-  if (spec.softDelete === "only") cur = (cur as typeof chain).not("deleted_at", "is", null);
-  else if (spec.softDelete) cur = (cur as typeof chain).is("deleted_at", null);
+export function applyViewSpec<Q extends FilterChain>(q: Q, spec: ViewSpec): Q {
+  let cur: FilterChain = q;
+  if (spec.softDelete === "only") cur = cur.not("deleted_at", "is", null);
+  else if (spec.softDelete) cur = cur.is("deleted_at", null);
   for (const [column, value] of Object.entries(spec.eq ?? {})) {
-    cur = (cur as typeof chain).eq(column, value);
+    cur = cur.eq(column, value);
   }
   for (const [column, value] of Object.entries(spec.gte ?? {})) {
-    cur = (cur as typeof chain).gte(column, value);
+    cur = cur.gte(column, value);
   }
   for (const column of spec.isNull ?? []) {
-    cur = (cur as typeof chain).is(column, null);
+    cur = cur.is(column, null);
   }
-  if (spec.or) cur = (cur as typeof chain).or(spec.or);
+  if (spec.or) cur = cur.or(spec.or);
   return cur as Q;
 }

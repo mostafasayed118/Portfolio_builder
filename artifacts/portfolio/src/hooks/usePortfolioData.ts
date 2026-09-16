@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
 import { getHeroContent } from "@workspace/db/hero-content";
 import { getAboutContent } from "@workspace/db/about-content";
-import { listSkills } from "@workspace/db/skills";
+import { listVisibleSkills } from "@workspace/db/skills";
 import type { SkillListItem } from "@workspace/db/skills";
 import { listPublishedProjects } from "@workspace/db/projects";
 import { listExperience } from "@workspace/db/experience";
@@ -69,7 +69,7 @@ export function useAboutContent() {
 export function useSkills() {
   return useQuery({
     queryKey: ["skills"],
-    queryFn: () => fetchWithSupabase(listSkills),
+    queryFn: () => fetchWithSupabase(listVisibleSkills),
     ...POLL_OPTIONS,
     retry: 2,
     enabled: isSupabaseConfigured,
@@ -116,10 +116,6 @@ export function useProjectBySlug(slug: string | undefined) {
   });
 }
 
-/**
- * Gallery images for a project, fetched from `image_metadata` (public RLS)
- * and resolved to public storage URLs in the `project_images` bucket.
- */
 /**
  * Cover images (first gallery image by sort_order) for a set of projects,
  * keyed by project id — one query for the whole projects grid.

@@ -145,7 +145,7 @@ useEffect(() => {
 
 1. **Auth architecture is bulletproof.** 7-layer defense: setAuthReady gate, debounce, kill switch, bfcache, JWT template, server-401 detection, no client-side expiry check. Every layer has tests and diagnostic logging.
 
-2. **Test culture is exceptional.** 287 unit tests covering every admin manager, middleware, hook, plus 32 api-server tests and 35 portfolio tests. The auth-token module alone has 23 tests. TESTING_GUIDE.md is specific and enforceable.
+2. **Test culture is exceptional.** 287 unit tests covering every admin manager, middleware, hook, plus 32 api-server tests and 35 portfolio tests. The auth-token module alone has 23 tests. `docs/testing.md` is specific and enforceable.
 
 3. **Input validation is defense-in-depth.** 4-layer system (DB constraints → API Zod schemas → RLS policies → frontend forms) properly implemented. Every API endpoint validates its body. Every form validates before submission.
 

@@ -4,12 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "lint": "eslint src --max-warnings=0"
+    "lint": "eslint src --max-warnings=0",
+    "gen:types": "supabase gen types typescript --linked > src/types.ts"
   },
   "exports": {
     "./client": "./src/client.ts",
-    "./server": "./src/serverSupabaseClient.ts",
-    "./admin": "./src/serverSupabaseClient.ts",
     "./types": "./src/types.ts"
   },
   "dependencies": {

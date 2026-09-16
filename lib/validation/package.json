@@ -11,5 +11,11 @@
     "./rules": "./src/rules.ts",
     "./validate": "./src/validate.ts",
     "./schemas": "./src/schemas.ts"
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@workspace/api-zod": "workspace:*"
   }
 }

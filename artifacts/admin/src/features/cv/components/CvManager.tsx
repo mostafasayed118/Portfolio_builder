@@ -12,6 +12,9 @@ import { CvUploadZone } from "../components/CvUploadZone";
 import { AdminErrorState } from "@/components/AdminErrorState";
 import { AdminLoadingState } from "@/components/AdminLoadingState";
 
+const CV_MIME_TYPE = "application/pdf";
+const CV_MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+
 export default function CvManager() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -32,18 +35,23 @@ export default function CvManager() {
   });
 
   const uploadFile = async (file: File) => {
-    if (!file.type.includes("pdf")) {
-      toast({ title: "Only PDF files are supported", variant: "destructive" }); return;
+    if (file.type !== CV_MIME_TYPE) {
+      toast({ title: "Only PDF files are supported", variant: "destructive" });
+      return;
     }
-    if (file.size > 10 * 1024 * 1024) {
-      toast({ title: "File too large", description: "Maximum file size is 10MB", variant: "destructive" }); return;
+    if (file.size > CV_MAX_FILE_SIZE_BYTES) {
+      toast({ title: "File too large", description: "Maximum file size is 10MB", variant: "destructive" });
+      return;
     }
-    setUploading(true); setProgress(0);
+    setUploading(true);
+    setProgress(0);
     try {
       const supabase = getSupabase();
       if (!supabase) throw new Error("Supabase is not configured — cannot upload CV");
       const objectPath = `cv-${Date.now()}.pdf`;
-      const { error: uploadError } = await supabase.storage.from("cv").upload(objectPath, file, { contentType: "application/pdf", upsert: true });
+      const { error: uploadError } = await supabase.storage
+        .from("cv")
+        .upload(objectPath, file, { contentType: CV_MIME_TYPE, upsert: true });
       if (uploadError) throw new Error(uploadError.message);
       setProgress(100);
       const saveResult = await api.cv.updateSettings({ objectPath, fileName: file.name });
@@ -55,13 +63,24 @@ export default function CvManager() {
       toast({ title: "CV uploaded successfully", description: `${file.name} is now live.` });
     } catch (err) {
       toast({ title: "Upload failed", description: err instanceof Error ? err.message : "Unknown error", variant: "destructive" });
-    } finally { setUploading(false); setProgress(0); }
+    } finally {
+      setUploading(false);
+      setProgress(0);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]; if (file) uploadFile(file); e.target.value = "";
+    const file = e.target.files?.[0];
+    if (file) uploadFile(file);
+    e.target.value = "";
   };
-  const handleDrop = (e: React.DragEvent) => { e.preventDefault(); setDragging(false); const file = e.dataTransfer.files?.[0]; if (file) uploadFile(file); };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) uploadFile(file);
+  };
 
   const handleRemove = async () => {
     try {

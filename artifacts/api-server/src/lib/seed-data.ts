@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { singletonUpsert } from "./singleton-upsert";
+import { singletonUpsert } from "@workspace/db/singleton-upsert";
 import { safeErrorMessage } from "./safe-error";
 import { logger } from "./logger";
 

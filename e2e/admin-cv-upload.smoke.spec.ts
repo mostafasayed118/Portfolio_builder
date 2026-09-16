@@ -1,4 +1,4 @@
-import { test, expect, type Route } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 import { resolve } from "path";
 import { hasRealAdminSession } from "./lib/session-mode";
 
@@ -62,7 +62,9 @@ test.describe("Admin CV upload — critical-path smoke (Browser → API → Supa
         "Content-Type": "application/json",
       },
       data: {
-        objectPath: "cv-smoke-test.pdf",
+        // Must match the API schema's writer format (cv-<unix-ms>.pdf),
+        // the only shape PUT /api/v1/admin/cv/settings accepts.
+        objectPath: "cv-1700000000000.pdf",
         fileName: "smoke-resume.pdf",
       },
     });
@@ -94,7 +96,8 @@ test.describe("Admin CV upload — critical-path smoke (Browser → API → Supa
 
     const response = await page.goto("/cv", { waitUntil: "domcontentloaded" });
     expect(response, "navigation must produce a response").not.toBeNull();
-    expect(response!.status()).toBeLessThan(500);
+    if (response === null) throw new Error("navigation produced no response");
+    expect(response.status()).toBeLessThan(500);
 
     // Three valid terminal states when Clerk auth is unavailable in the test env:
     //  1. "Loading…" while ClerkAuthBridge waits on isLoaded (the page never returns isLoaded in a sandbox)

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { reorderItems } from "./reorder";
+import { MAX_LIST_ROWS } from "./query";
 
 function createMockChain() {
   return {
@@ -61,5 +62,26 @@ describe("reorderItems", () => {
     const result = await reorderItems(supabase as any, "projects", ["1"]);
 
     expect(result).toEqual({ success: false, error: "connection refused" });
+  });
+
+  it("rejects oversized input with a clear error and issues no queries", async () => {
+    const ids = Array.from({ length: MAX_LIST_ROWS + 1 }, (_, i) => `id-${i}`);
+
+    const result = await reorderItems(supabase as any, "projects", ids);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe(
+      `reorderItems: ${ids.length} ids exceeds the per-request limit of ${MAX_LIST_ROWS}`,
+    );
+    expect(supabase.from).not.toHaveBeenCalled();
+  });
+
+  it("caps at exactly MAX_LIST_ROWS without triggering the guard", async () => {
+    const ids = Array.from({ length: MAX_LIST_ROWS }, (_, i) => `id-${i}`);
+
+    const result = await reorderItems(supabase as any, "skills", ids);
+
+    expect(result).toEqual({ success: true });
+    expect(supabase.from).toHaveBeenCalledTimes(MAX_LIST_ROWS);
   });
 });

@@ -400,7 +400,7 @@ Validation: `title` 1–200, `issuer` required, `credential_url` valid URL or nu
 | PUT    | `/admin/cv/settings` | Update CV metadata (validated) |
 | DELETE | `/admin/cv/settings` | Remove CV settings             |
 
-**PUT validation:** `objectPath` 1–500 chars, `fileName` 1–255 chars ending in `.pdf`.
+**PUT validation:** `objectPath` must match `cv-<unix-ms>.pdf` (e.g. `cv-1700000000000.pdf`), `fileName` 1–255 chars ending in `.pdf`.
 
 ### Seed
 

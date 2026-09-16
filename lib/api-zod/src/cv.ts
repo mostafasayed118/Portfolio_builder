@@ -7,8 +7,16 @@ import { z } from "zod";
 const CV_EXT = ".pdf";
 const cvFileExtPattern = new RegExp(`${CV_EXT.replace(".", "\\.")}$`, "i");
 
+// Only writer of CV storage objects is CvManager (artifacts/admin/
+// src/features/cv/components/CvManager.tsx), which uploads to
+// `cv-${Date.now()}.pdf`. Pinning objectPath to that shape (kept as a local
+// pattern, dependency-free) blocks arbitrary-key/path writes through the
+// settings endpoint.
+const CV_OBJECT_PATH_PATTERN = /^cv-\d+\.pdf$/;
+const CV_OBJECT_PATH_MESSAGE = "objectPath must be a CV storage path (cv-<unix-ms>.pdf)";
+
 export const cvSettingsUpdateSchema = z.object({
-  objectPath: z.string().min(1).max(500),
+  objectPath: z.string().regex(CV_OBJECT_PATH_PATTERN, CV_OBJECT_PATH_MESSAGE),
   fileName: z.string().min(1).max(255).regex(cvFileExtPattern, `File name must end with ${CV_EXT}`),
 });
 

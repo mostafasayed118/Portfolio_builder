@@ -88,6 +88,16 @@ export default defineConfig({
       },
       {
         test: {
+          name: "app-infra",
+          root: path.resolve(dirname, "lib/app-infra"),
+          environment: "node",
+          include: ["src/**/*.test.ts"],
+          globals: true,
+          testTimeout: 15_000,
+        },
+      },
+      {
+        test: {
           name: "validation",
           root: path.resolve(dirname, "lib/validation"),
           environment: "node",

@@ -43,6 +43,29 @@ function cleanCache() {
   }
 }
 
+/**
+ * Structural shape of the Clerk profile fields we need — keeps the helper
+ * testable and decoupled from the full @clerk/backend SDK types.
+ */
+interface ClerkEmailLike {
+  emailAddress: string;
+  verification?: { status?: string } | null;
+}
+
+/**
+ * Only a VERIFIED email may drive the ADMIN_EMAILS allowlist decision.
+ * An allowlisted-but-unverified address must not grant admin access.
+ */
+function pickVerifiedEmail(user: {
+  primaryEmailAddress?: ClerkEmailLike | null;
+  emailAddresses?: ClerkEmailLike[] | null;
+}): string | null {
+  const primary = user.primaryEmailAddress;
+  if (primary?.verification?.status === "verified") return primary.emailAddress;
+  const verified = user.emailAddresses?.find((e) => e.verification?.status === "verified");
+  return verified?.emailAddress ?? null;
+}
+
 async function verifyClerkJWT(token: string): Promise<{ email: string; clerkId: string } | null> {
   if (!env.CLERK_SECRET_KEY) {
     logger.info("AUTH: Clerk auth skipped — CLERK_SECRET_KEY not set");
@@ -60,20 +83,30 @@ async function verifyClerkJWT(token: string): Promise<{ email: string; clerkId: 
     });
     const clerkId = payload.sub;
     if (!clerkId) return null;
-    const emailFromToken = ((payload as { email?: string; emailAddress?: string })?.email ??
-      (payload as { email?: string; emailAddress?: string })?.emailAddress ?? "") as string;
-    if (emailFromToken) return { email: emailFromToken.toLowerCase(), clerkId };
+    const emailFromToken = (((payload as { email?: string })?.email ??
+      (payload as { emailAddress?: string })?.emailAddress) ?? "") as string;
     if (clerkId.startsWith("user_") && clerkClient) {
       const cached = emailCache.get(clerkId);
       if (cached && Date.now() - cached.ts < CACHE_TTL) return { email: cached.email, clerkId };
-      const user = await clerkClient.users.getUser(clerkId);
-      const email = user.primaryEmailAddress?.emailAddress ?? user.emailAddresses?.[0]?.emailAddress;
-      if (email) {
-        emailCache.set(clerkId, { email: email.toLowerCase(), ts: Date.now() });
-        return { email: email.toLowerCase(), clerkId };
+      // The server-fetched Clerk profile is the authoritative source for the
+      // allowlist decision: an inline token claim could carry a secondary or
+      // unverified address. Only when the profile fetch is unavailable do we
+      // fall back to the claim — the token itself is still JWKS-verified.
+      try {
+        const user = await clerkClient.users.getUser(clerkId);
+        const email = user ? pickVerifiedEmail(user) : null;
+        if (email) {
+          emailCache.set(clerkId, { email: email.toLowerCase(), ts: Date.now() });
+          return { email: email.toLowerCase(), clerkId };
+        }
+      } catch (err) {
+        logger.warn(
+          { err: err instanceof Error ? err.message : String(err), clerkId },
+          "AUTH: Clerk profile fetch failed — falling back to verified token email claim",
+        );
       }
     }
-    return null;
+    return emailFromToken ? { email: emailFromToken.toLowerCase(), clerkId } : null;
   } catch (err) {
     logger.info({ err: err instanceof Error ? err.message : String(err) }, "AUTH: Clerk JWT verification failed");
     return null;

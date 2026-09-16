@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Project as DbProject } from "@workspace/supabase/types";
 import { sanitizeUrl } from "./utils";
-import { queryOrThrow } from "./query";
+import { MAX_LIST_ROWS, queryOrThrow } from "./query";
 
 export type Project = DbProject;
 
@@ -40,7 +40,7 @@ export async function listProjects(
   supabase: SupabaseClient,
 ): Promise<ProjectListItem[]> {
   return queryOrThrow<ProjectListItem[]>(
-    supabase.from(PROJECT_TABLE).select(PROJECT_LIST_COLUMNS).is("deleted_at", null).order("sort_order", { ascending: true }),
+    supabase.from(PROJECT_TABLE).select(PROJECT_LIST_COLUMNS).is("deleted_at", null).order("sort_order", { ascending: true }).limit(MAX_LIST_ROWS),
     { table: PROJECT_TABLE, operation: "listProjects" },
   );
 }
@@ -49,7 +49,7 @@ export async function listPublishedProjects(
   supabase: SupabaseClient,
 ): Promise<ProjectListItem[]> {
   return queryOrThrow<ProjectListItem[]>(
-    supabase.from(PROJECT_TABLE).select(PROJECT_LIST_COLUMNS).eq("is_published", true).is("deleted_at", null).order("sort_order", { ascending: true }),
+    supabase.from(PROJECT_TABLE).select(PROJECT_LIST_COLUMNS).eq("is_published", true).is("deleted_at", null).order("sort_order", { ascending: true }).limit(MAX_LIST_ROWS),
     { table: PROJECT_TABLE, operation: "listPublishedProjects" },
   );
 }

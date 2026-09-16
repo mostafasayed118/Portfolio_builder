@@ -20,13 +20,17 @@ export function createMockSupabase() {
     eq: vi.fn().mockReturnThis(),
     is: vi.fn().mockReturnThis(),
     neq: vi.fn().mockReturnThis(),
+    not: vi.fn().mockReturnThis(),
     in: vi.fn().mockReturnThis(),
+    returns: vi.fn().mockReturnThis(),
+    or: vi.fn().mockReturnThis(),
     gte: vi.fn().mockReturnThis(),
     order: vi.fn().mockReturnThis(),
     limit: vi.fn().mockReturnThis(),
     range: vi.fn().mockReturnThis(),
     maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
     single: vi.fn().mockResolvedValue({ data: null, error: null }),
+    rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
   };
   return chain;
 }

@@ -9,7 +9,9 @@ const HeroSection = lazy(() => import("@/features/hero").then((m) => ({ default:
 // Lazy: BackToTop pulls framer-motion (~100KB gzip) — keep it out of the
 // initial chunk; the button is invisible until the user scrolls anyway.
 const BackToTop = lazy(() => import("@/components/BackToTop"));
-import { SyncDebug } from "@/components/SyncDebug";
+// Lazy: the realtime debug widget is dev-only; dynamic import keeps it out
+// of the Home chunk entirely in production builds.
+const SyncDebug = lazy(() => import("@/components/SyncDebug").then((m) => ({ default: m.SyncDebug })));
 
 const AboutSection = lazy(() => import("@/features/about").then((m) => ({ default: m.AboutSection })));
 const SkillsSection = lazy(() => import("@/features/skills").then((m) => ({ default: m.SkillsSection })));
@@ -91,7 +93,9 @@ export default function Home() {
       <Suspense fallback={null}>
         <BackToTop />
       </Suspense>
-      <SyncDebug />
+      <Suspense fallback={null}>
+        <SyncDebug />
+      </Suspense>
     </main>
     </>
   );

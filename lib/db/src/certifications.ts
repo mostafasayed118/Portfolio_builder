@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Certification as DbCertification, InsertCertification } from "@workspace/supabase/types";
 import { sanitizeUrl } from "./utils";
-import { queryOrThrow } from "./query";
+import { MAX_LIST_ROWS, queryOrThrow } from "./query";
 
 export type Certification = {
   id: string;
@@ -63,7 +63,8 @@ export async function listCertificationRows(
       .select(CERT_LIST_COLUMNS)
       .is("deleted_at", null)
       .eq("is_published", true)
-      .order("sort_order", { ascending: true }),
+      .order("sort_order", { ascending: true })
+      .limit(MAX_LIST_ROWS),
     { table: "certifications", operation: "listCertificationRows" },
   );
 }
@@ -77,7 +78,8 @@ export async function fetchCertifications(
       .select(CERT_LIST_COLUMNS)
       .is("deleted_at", null)
       .eq("is_published", true)
-      .order("sort_order", { ascending: true }),
+      .order("sort_order", { ascending: true })
+      .limit(MAX_LIST_ROWS),
     { table: "certifications", operation: "fetchCertifications" },
   );
   return data.map(mapDbToCertification);

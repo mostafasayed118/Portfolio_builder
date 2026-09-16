@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { createMockSupabase } from "./test-utils";
+import { MAX_LIST_ROWS } from "./query";
 import {
   listProjects,
   listPublishedProjects,
@@ -16,12 +17,13 @@ beforeEach(() => {
 });
 
 describe("listProjects", () => {
-  it("selects non-deleted projects ordered by sort_order", async () => {
+  it("selects non-deleted projects ordered by sort_order, capped at MAX_LIST_ROWS", async () => {
     const rows = [
       { id: "1", title: "A", slug: "a", sort_order: 1 },
       { id: "2", title: "B", slug: "b", sort_order: 2 },
     ];
-    supabase.order.mockResolvedValue({ data: rows, error: null });
+    // Terminal method in the chain is .limit() — override to resolve
+    supabase.limit.mockResolvedValue({ data: rows, error: null });
 
     const result = await listProjects(supabase as any);
 
@@ -31,30 +33,32 @@ describe("listProjects", () => {
     );
     expect(supabase.is).toHaveBeenCalledWith("deleted_at", null);
     expect(supabase.order).toHaveBeenCalledWith("sort_order", { ascending: true });
+    expect(supabase.limit).toHaveBeenCalledWith(MAX_LIST_ROWS);
     expect(result).toEqual(rows);
   });
 
   it("throws on error", async () => {
-    supabase.order.mockResolvedValue({ data: null, error: new Error("db error") });
+    supabase.limit.mockResolvedValue({ data: null, error: new Error("db error") });
 
     await expect(listProjects(supabase as any)).rejects.toThrow("db error");
   });
 });
 
 describe("listPublishedProjects", () => {
-  it("filters to published and non-deleted projects", async () => {
+  it("filters to published and non-deleted projects, capped at MAX_LIST_ROWS", async () => {
     const rows = [{ id: "1", title: "Published", is_published: true }];
-    supabase.order.mockResolvedValue({ data: rows, error: null });
+    supabase.limit.mockResolvedValue({ data: rows, error: null });
 
     const result = await listPublishedProjects(supabase as any);
 
     expect(supabase.eq).toHaveBeenCalledWith("is_published", true);
     expect(supabase.is).toHaveBeenCalledWith("deleted_at", null);
+    expect(supabase.limit).toHaveBeenCalledWith(MAX_LIST_ROWS);
     expect(result).toEqual(rows);
   });
 
   it("throws on error", async () => {
-    supabase.order.mockResolvedValue({ data: null, error: new Error("fail") });
+    supabase.limit.mockResolvedValue({ data: null, error: new Error("fail") });
 
     await expect(listPublishedProjects(supabase as any)).rejects.toThrow("fail");
   });

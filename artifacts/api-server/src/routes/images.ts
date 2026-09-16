@@ -2,10 +2,18 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import multer from "multer";
 import { createHash } from "crypto";
 import { z } from "zod";
+import { IMAGE_ENTITY_TYPES, imageEntityTypeSchema } from "@workspace/api-zod";
 import { doubleCsrfProtection } from "../middleware/csrf";
 import { adminAuth, type AuthenticatedRequest } from "../middleware/adminAuth";
 import { imageMetadataLimiter, imageUploadLimiter } from "../middleware/rateLimiter";
 import { getSupabaseClient } from "../lib/supabase-client";
+import {
+  listImageOwnership,
+  setImageSortOrder,
+  getImageMetadataById,
+  getImageDeleteTarget,
+  deleteImageMetadata,
+} from "@workspace/db/images";
 import { env } from "../lib/env";
 import { ok, badRequest, notFound, serverError } from "../lib/api-response";
 
@@ -33,17 +41,6 @@ function sanitizeOriginalFilename(name: string): string {
   // eslint-disable-next-line no-control-regex -- intentional control-character strip
   return name.replace(/[\x00-\x1f\x7f]/g, "").slice(0, 255);
 }
-const ALLOWED_ENTITY_TYPES = [
-  "projects",
-  "about",
-  "hero",
-  "avatar",
-  "certifications",
-  "skills",
-  "experience",
-  "branding",
-  "content",
-];
 
 /**
  * Magic-byte signatures for the formats we accept. The HTTP `Content-Type`
@@ -105,8 +102,8 @@ router.post(
   async (req: AuthenticatedRequest, res: Response) => {
   try {
     const supabase = getSupabaseClient();
-    const entityType = req.body.entityType as string;
-    const entityId = req.body.entityId as string | undefined;
+    const parsedEntityType = imageEntityTypeSchema.safeParse(req.body.entityType);
+    const entityId = typeof req.body.entityId === "string" ? req.body.entityId : undefined;
     const file = req.file as Express.Multer.File | undefined;
 
     if (!file) {
@@ -125,13 +122,10 @@ router.post(
       return badRequest(res, { file: [`File contents do not match declared type "${file.mimetype}". Upload rejected as a safety check.`] });
     }
 
-    if (!ALLOWED_ENTITY_TYPES.includes(entityType)) {
-      return badRequest(res, { entityType: [`Invalid entity type. Allowed: ${ALLOWED_ENTITY_TYPES.join(", ")}`] });
+    if (!parsedEntityType.success) {
+      return badRequest(res, { entityType: [`Invalid entity type. Allowed: ${IMAGE_ENTITY_TYPES.join(", ")}`] });
     }
-
-    if (entityId && typeof entityId !== "string") {
-      return badRequest(res, { entityId: ["Invalid entityId"] });
-    }
+    const entityType = parsedEntityType.data;
 
     if (entityId && !z.string().uuid().safeParse(entityId).success) {
       return badRequest(res, { entityId: ["entityId must be a valid UUID"] });
@@ -195,21 +189,36 @@ const imageReorderSchema = z.object({
 });
 
 // POST /api/images/reorder — persist gallery image order (admin only)
-router.post("/images/reorder", adminAuth, doubleCsrfProtection, async (req: Request, res: Response) => {
+router.post("/images/reorder", adminAuth, doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
   const result = imageReorderSchema.safeParse(req.body);
   if (!result.success) {
     return badRequest(res, result.error.flatten().fieldErrors as Record<string, string[]>);
   }
   try {
     const supabase = getSupabaseClient();
+    // Ownership pre-check mirroring the DELETE route: non-superadmins may
+    // only reorder their own uploads. Rows that predate user_id ownership
+    // (user_id IS NULL) are fail-closed to authenticated non-superadmins;
+    // identity-less API-key requests keep the historical allow behavior.
+    // Answered 404 (not 403) to avoid an existence oracle.
+    const ownershipRows = await listImageOwnership(supabase, result.data.ordered_ids);
+    const ownership = new Map(
+      ownershipRows.map((row) => [String(row.id), row.user_id === null ? null : String(row.user_id)]),
+    );
+    const foreignOrMissing = result.data.ordered_ids.some((id) => {
+      if (!ownership.has(id)) return true;
+      if (!req.user || req.user.role === "superadmin") return false;
+      return ownership.get(id) !== req.user.id;
+    });
+    if (foreignOrMissing) {
+      return notFound(res, "Image not found");
+    }
     // sort_order is 0-based and matches the array position of each id.
-    const updates = await Promise.all(
+    await Promise.all(
       result.data.ordered_ids.map((id, index) =>
-        supabase.from("image_metadata").update({ sort_order: index }).eq("id", id),
+        setImageSortOrder(supabase, id, index),
       ),
     );
-    const failed = updates.find((u) => u.error);
-    if (failed?.error) throw new Error(failed.error.message);
     return ok(res, undefined);
   } catch (err) {
     req.log.error({ err }, "Image reorder failed");
@@ -217,25 +226,26 @@ router.post("/images/reorder", adminAuth, doubleCsrfProtection, async (req: Requ
   }
 });
 
-// GET /api/images/:id/metadata — get image metadata
-router.get("/images/:id/metadata", imageMetadataLimiter, async (req: Request, res: Response) => {
+// GET /api/images/:id/metadata — get image metadata (admin only: the
+// response exposes the original filename and acts as an ID existence oracle)
+router.get("/images/:id/metadata", adminAuth, imageMetadataLimiter, async (req: Request, res: Response) => {
   const imageId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   if (!z.string().uuid().safeParse(imageId).success) {
     return badRequest(res, { id: ["Invalid image ID"] });
   }
 
   const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from("image_metadata")
-    .select("id, original_filename, mime_type, file_size_bytes, entity_type, entity_id, created_at")
-    .eq("id", imageId)
-    .single();
-
-  if (error || !data) {
+  try {
+    const data = await getImageMetadataById(supabase, imageId);
+    if (!data) {
+      return notFound(res, "Image not found");
+    }
+    return ok(res, data);
+  } catch {
+    // Mirrors the previous behavior: any lookup failure (missing row or DB
+    // error) answers 404 to avoid an existence oracle.
     return notFound(res, "Image not found");
   }
-
-  return ok(res, data);
 });
 
 // DELETE /api/images/:id — delete image (admin only, scoped by owner)
@@ -247,13 +257,15 @@ router.delete("/images/:id", adminAuth, doubleCsrfProtection, async (req: Authen
 
   try {
     const supabase = getSupabaseClient();
-    const { data: meta, error: metaError } = await supabase
-      .from("image_metadata")
-      .select("storage_path, id, user_id")
-      .eq("id", imageId)
-      .single();
-
-    if (metaError || !meta) {
+    let meta: Awaited<ReturnType<typeof getImageDeleteTarget>>;
+    try {
+      meta = await getImageDeleteTarget(supabase, imageId);
+    } catch {
+      // Mirrors the previous behavior: any lookup failure answers 404 to
+      // avoid an existence oracle.
+      return notFound(res, "Image not found");
+    }
+    if (!meta) {
       return notFound(res, "Image not found");
     }
 
@@ -268,7 +280,7 @@ router.delete("/images/:id", adminAuth, doubleCsrfProtection, async (req: Authen
     }
 
     await supabase.storage.from("project_images").remove([meta.storage_path]);
-    await supabase.from("image_metadata").delete().eq("id", meta.id);
+    await deleteImageMetadata(supabase, meta.id);
 
     return ok(res, undefined);
   } catch (err) {

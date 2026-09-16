@@ -38,6 +38,15 @@ afterEach(() => {
 
 describe("CV API", () => {
   describe("GET /api/v1/cv", () => {
+    it("sets public CDN caching headers (s-maxage + stale-while-revalidate)", async () => {
+      mockGenerateCvPdf.mockResolvedValueOnce(Buffer.from("%PDF-1.4 cache headers"));
+
+      const res = await request(app).get("/api/v1/cv");
+
+      expect(res.status).toBe(200);
+      expect(res.headers["cache-control"]).toBe("public, s-maxage=300, stale-while-revalidate=600");
+    });
+
     it("returns PDF with correct headers when generateCvPdf succeeds", async () => {
       const fakePdf = Buffer.from("%PDF-1.4 generated cv");
       mockGenerateCvPdf.mockResolvedValueOnce(fakePdf);
@@ -262,7 +271,7 @@ describe("CV API", () => {
     it("returns 401 without auth", async () => {
       const res = await request(app)
         .put("/api/v1/admin/cv/settings")
-        .send({ objectPath: "/path/to/file", fileName: "resume.pdf" });
+        .send({ objectPath: "cv-1700000000000.pdf", fileName: "resume.pdf" });
       expect([400, 401]).toContain(res.status);
     });
 
@@ -270,7 +279,7 @@ describe("CV API", () => {
       const res = await request(app)
         .put("/api/v1/admin/cv/settings")
         .set("x-admin-key", mockAdminKey)
-        .send({ objectPath: "/path/to/file", fileName: "resume.docx" });
+        .send({ objectPath: "cv-1700000000000.pdf", fileName: "resume.docx" });
       expect(res.status).toBe(400);
       expect(res.body.errors).toBeDefined();
     });
@@ -288,7 +297,7 @@ describe("CV API", () => {
       const res = await request(app)
         .put("/api/v1/admin/cv/settings")
         .set("x-admin-key", mockAdminKey)
-        .send({ objectPath: "/cv/resume.pdf" });
+        .send({ objectPath: "cv-1700000000000.pdf" });
       expect(res.status).toBe(400);
       expect(res.body.errors).toBeDefined();
     });
@@ -302,7 +311,7 @@ describe("CV API", () => {
       const res = await request(app)
         .put("/api/v1/admin/cv/settings")
         .set("x-admin-key", mockAdminKey)
-        .send({ objectPath: "/cv/resume.pdf", fileName: "resume.pdf" });
+        .send({ objectPath: "cv-1700000000000.pdf", fileName: "resume.pdf" });
       expect(res.status).toBe(200);
       expect(res.body.data.id).toBe("existing-id-123");
     });
@@ -320,7 +329,7 @@ describe("CV API", () => {
       const res = await request(app)
         .put("/api/v1/admin/cv/settings")
         .set("x-admin-key", mockAdminKey)
-        .send({ objectPath: "/cv/resume.pdf", fileName: "resume.pdf" });
+        .send({ objectPath: "cv-1700000000000.pdf", fileName: "resume.pdf" });
       expect(res.status).toBe(200);
       expect(res.body.data.id).toBe("new-id-456");
     });
@@ -329,7 +338,7 @@ describe("CV API", () => {
       const res = await request(app)
         .put("/api/v1/admin/cv/settings")
         .set("x-admin-key", mockAdminKey)
-        .send({ objectPath: "/path/to/file", fileName: "resume.exe" });
+        .send({ objectPath: "cv-1700000000000.pdf", fileName: "resume.exe" });
       expect(res.status).toBe(400);
     });
   });

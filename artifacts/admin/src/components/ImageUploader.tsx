@@ -1,17 +1,17 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Upload, X, CheckCircle, AlertCircle, Loader2, ArrowUp, ArrowDown } from "lucide-react";
+import { Upload, AlertCircle, Loader2 } from "lucide-react";
 import { useToast } from "@workspace/ui";
+import type { IMAGE_ENTITY_TYPES } from "@workspace/api-zod";
 
 
 import { getCsrfToken } from "@/lib/api-client";
 import { getClerkToken } from "@/lib/auth-token";
 import { getApiUrl } from "@/lib/env";
+import type { UploadedImage } from "./uploaded-image";
+import { UploadedImagesGrid } from "./UploadedImagesGrid";
+import { ExistingImagesGrid } from "./ExistingImagesGrid";
 
-export interface UploadedImage {
-  id: string;
-  url: string;
-  variants: { type: string; url: string }[];
-}
+export type { UploadedImage };
 
 interface UploadResponse {
   success?: boolean;
@@ -21,7 +21,8 @@ interface UploadResponse {
 }
 
 interface ImageUploaderProps {
-  entityType: "project" | "projects" | "hero" | "about" | "certification" | "certifications" | "avatar" | "content";
+  /** Derived from the shared allowlist in @workspace/api-zod — no local drift. */
+  entityType: (typeof IMAGE_ENTITY_TYPES)[number];
   entityId?: string;
   maxFiles?: number;
   maxFileSizeMB?: number;
@@ -196,16 +197,6 @@ export default function ImageUploader({
     onUploadComplete?.(newUploaded);
   };
 
-  /** Move an existing image one step up/down and report the new order. */
-  const moveExisting = (index: number, dir: -1 | 1) => {
-    if (!existingImages || !onReorderExisting) return;
-    const next = [...existingImages];
-    const j = index + dir;
-    if (j < 0 || j >= next.length) return;
-    [next[index], next[j]] = [next[j], next[index]];
-    onReorderExisting(next.map((img) => img.id));
-  };
-
   const atLimit = currentCount >= maxFiles;
 
   return (
@@ -255,66 +246,16 @@ export default function ImageUploader({
 
       {/* Uploaded images */}
       {uploaded.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-          {uploaded.map((img, i) => (
-            <div key={img.id} className="relative group aspect-square rounded-lg overflow-hidden border bg-muted">
-              <img src={img.url} alt="" className="w-full h-full object-cover" />
-              <button
-                onClick={() => removeUploaded(i)}
-                className="absolute top-1 right-1 h-8 w-8 rounded-full bg-background/90 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                aria-label="Remove image"
-              >
-                <X size={14} />
-              </button>
-              <div className="absolute bottom-1 left-1">
-                <CheckCircle size={14} className="text-success" />
-              </div>
-            </div>
-          ))}
-        </div>
+        <UploadedImagesGrid uploaded={uploaded} onRemove={removeUploaded} />
       )}
 
       {/* Existing images — deletable and reorderable (up/down) */}
       {existingImages && existingImages.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-          {existingImages.map((img, idx) => (
-            <div key={img.id} className="relative group aspect-square rounded-lg overflow-hidden border bg-muted">
-              <img src={img.url} alt="" className="w-full h-full object-cover" />
-              <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-                {onReorderExisting && idx > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => moveExisting(idx, -1)}
-                    aria-label="Move image up"
-                    className="h-7 w-7 rounded-md bg-background/90 border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <ArrowUp size={13} />
-                  </button>
-                )}
-                {onReorderExisting && idx < existingImages.length - 1 && (
-                  <button
-                    type="button"
-                    onClick={() => moveExisting(idx, 1)}
-                    aria-label="Move image down"
-                    className="h-7 w-7 rounded-md bg-background/90 border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <ArrowDown size={13} />
-                  </button>
-                )}
-                {onDeleteExisting && (
-                  <button
-                    type="button"
-                    onClick={() => onDeleteExisting(img.id)}
-                    aria-label="Delete image"
-                    className="h-7 w-7 rounded-md bg-background/90 border border-border flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                  >
-                    <X size={13} />
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+        <ExistingImagesGrid
+          existingImages={existingImages}
+          onDeleteExisting={onDeleteExisting}
+          onReorderExisting={onReorderExisting}
+        />
       )}
     </div>
   );

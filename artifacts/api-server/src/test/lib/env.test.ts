@@ -174,3 +174,56 @@ describe("env.checkAdminApiKeyStrength", () => {
     expect(warn).toHaveBeenCalledWith(expect.stringMatching(/too weak/));
   });
 });
+
+/**
+ * REDIS_URL production gate — without a shared Redis, rate limits fall back
+ * to per-instance MemoryStore and are diluted across serverless instances.
+ * Production must fail fast at startup; other environments boot without it.
+ */
+describe("env.checkRedisConfig", () => {
+  beforeEach(() => {
+    _resetOverrides();
+  });
+  afterEach(() => {
+    _resetOverrides();
+    vi.restoreAllMocks();
+    vi.unstubAllEnvs();
+  });
+
+  it("does not exit outside production when REDIS_URL is missing", () => {
+    _setOverride("NODE_ENV", "development");
+    _setOverride("REDIS_URL", undefined);
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    env.checkRedisConfig();
+
+    expect(error).not.toHaveBeenCalled();
+  });
+
+  it("does not exit in production when REDIS_URL is configured", () => {
+    _setOverride("NODE_ENV", "production");
+    _setOverride("REDIS_URL", "redis://localhost:6379");
+    vi.stubEnv("VITEST", "false");
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    env.checkRedisConfig();
+
+    expect(error).not.toHaveBeenCalled();
+  });
+
+  it("exits in production when REDIS_URL is missing", () => {
+    _setOverride("NODE_ENV", "production");
+    _setOverride("REDIS_URL", undefined);
+    vi.stubEnv("VITEST", "false");
+    const exit = vi
+      .spyOn(process, "exit")
+      .mockImplementation(((code?: number) => {
+        throw new Error(`process.exit(${code})`);
+      }) as never);
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    expect(() => env.checkRedisConfig()).toThrow(/process\.exit\(1\)/);
+    expect(exit).toHaveBeenCalledWith(1);
+    expect(error).toHaveBeenCalledWith(expect.stringContaining("REDIS_URL"));
+  });
+});

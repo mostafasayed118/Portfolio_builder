@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { contactLimiter } from "../../middleware/rateLimiter";
 import type { Request, Response } from "express";
 import { contactSubmissionSchema } from "@workspace/api-zod";
+import { createMessage } from "@workspace/db/messages";
 import { getSupabaseClient } from "../../lib/supabase-client";
 import { ok, badRequest, serverError, forbidden, rateLimited } from "../../lib/api-response";
 import { logger } from "../../lib/logger";
@@ -126,27 +127,22 @@ router.post("/", contactLimiter, async (req: Request, res: Response) => {
 
   // Strip honeypot + time-trap fields before insert
   const { name, email, message } = result.data;
-  const supabase = getSupabaseClient();
-  const { data: inserted, error } = await supabase
-    .from("messages")
-    .insert({
-      name,
-      email,
-      message,
-      status: "unread",
-    })
-    .select("id")
-    .single();
+  try {
+    const inserted = await createMessage(getSupabaseClient(), { name, email, message });
 
-  if (error) {
+    // Fire-and-forget AI spam scoring (opt-in via AI_SPAM_ENABLED). Never
+    // awaited on the request path; on any error the message stays unread.
+    if (isAiConfigured() && env.AI_SPAM_ENABLED) {
+      flagSpamIfNeeded({ id: inserted.id, name, email, message }).catch(() => {});
+    }
+  } catch (err) {
     // Distinguish the DB-level per-email spam guard (migration
     // 044_contact_spam_guard.sql raises "Rate limit exceeded: too many
     // messages from this email") from genuine insert failures. That rejection
     // is expected anti-abuse behavior, not a server fault — return a friendly
     // 429 so the UI can tell the user to slow down.
-    const isPerEmailRateLimit =
-      typeof error.message === "string" &&
-      /rate limit exceeded|too many messages/i.test(error.message);
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    const isPerEmailRateLimit = /rate limit exceeded|too many messages/i.test(errorMessage);
 
     if (isPerEmailRateLimit) {
       logger.info(
@@ -162,7 +158,7 @@ router.post("/", contactLimiter, async (req: Request, res: Response) => {
 
     logger.error(
       {
-        err: error.message,
+        err: errorMessage,
         ip: req.ip,
         // Do NOT log message content (PII) — only metadata
         email_domain: email.split("@")[1] ?? null,
@@ -184,12 +180,6 @@ router.post("/", contactLimiter, async (req: Request, res: Response) => {
   // Fire-and-forget email notification to the site owner (opt-in).
   // Never awaited/blocked-on; failures are logged by the mailer.
   notifyNewContact({ name, email, message }).catch(() => {});
-
-  // Fire-and-forget AI spam scoring (opt-in via AI_SPAM_ENABLED). Never
-  // awaited on the request path; on any error the message stays unread.
-  if (isAiConfigured() && env.AI_SPAM_ENABLED && inserted?.id) {
-    flagSpamIfNeeded({ id: inserted.id, name, email, message }).catch(() => {});
-  }
 
   return ok(res, undefined);
 });

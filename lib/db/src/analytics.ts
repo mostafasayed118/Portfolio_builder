@@ -1,6 +1,38 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { logError } from "@workspace/logging";
+import { queryOrThrow } from "./query";
 
 type EventType = "page_view" | "project_view" | "cv_download" | "contact_click";
+
+/**
+ * How many top items (projects, posts) the stats RPCs return. Named
+ * replacement for the former magic `slice(0, 10)` in the JS aggregation.
+ */
+export const TOP_N = 10;
+
+/**
+ * Legacy scan cap from the JS-side stats era. Aggregation now happens
+ * inside Postgres (see supabase/migrations/061_analytics_stats_rpc.sql),
+ * so no row cap is needed — only aggregated rows cross the wire and the
+ * 50k-row undercount cliff is gone. Kept exported for backward
+ * compatibility with the module's public surface.
+ */
+export const MAX_STAT_ROWS = 50_000;
+
+/** jsonb shape returned by public.analytics_event_stats (migration 061). */
+interface EventStatsRpcPayload {
+  daily: Array<{ day: string; count: number }>;
+  top_projects: Array<{ slug: string; views: number }>;
+  top_posts: Array<{ slug: string; title: string; views: number }>;
+  cv_downloads: number;
+  contact_clicks: number;
+  total_views: number;
+}
+
+/** jsonb shape returned by public.analytics_message_stats (migration 061). */
+interface MessageStatsRpcPayload {
+  daily: Array<{ day: string; total: number; unread: number }>;
+}
 
 export async function trackEvent(
   supabase: SupabaseClient,
@@ -26,6 +58,26 @@ export async function trackEvent(
   }
 }
 
+/**
+ * Shared single-round-trip stats fetch: calls the named Postgres RPC via
+ * the injected client and degrades to `null` on failure (stats routes
+ * must never 500 over a stats hiccup). Errors are logged through
+ * @workspace/logging with the `[table.rpc]` context prefix.
+ */
+async function fetchStatsRpc<T>(
+  supabase: SupabaseClient,
+  table: "analytics_events" | "messages",
+  fn: string,
+  args: Record<string, unknown>,
+): Promise<T | null> {
+  try {
+    return await queryOrThrow<T>(supabase.rpc(fn, args), { table, operation: "rpc" });
+  } catch (err) {
+    logError("analytics stats rpc failed", err, `[${table}.rpc]`);
+    return null;
+  }
+}
+
 export async function fetchEventStats(
   supabase: SupabaseClient,
   days: number = 30,
@@ -40,85 +92,26 @@ export async function fetchEventStats(
   const since = new Date();
   since.setDate(since.getDate() - days);
 
-  const { data: pageViewRows, error: pvError } = await supabase
-    .from("analytics_events")
-    .select("created_at, path")
-    .eq("type", "page_view")
-    .gte("created_at", since.toISOString())
-    .order("created_at", { ascending: true });
-  if (pvError) console.error("[analytics] page_view query failed:", pvError.message);
-
-  const pageViews = aggregateByDate(pageViewRows ?? []);
-
-  const { data: projectViewRows, error: projError } = await supabase
-    .from("analytics_events")
-    .select("preset_id, project_id, path")
-    .eq("type", "project_view")
-    .gte("created_at", since.toISOString());
-  if (projError) console.error("[analytics] project_view query failed:", projError.message);
-
-  const projectCounts = new Map<string, { slug: string; views: number }>();
-  for (const row of projectViewRows ?? []) {
-    const slug = row.preset_id ?? row.project_id ?? row.path?.split("/").pop() ?? "unknown";
-    const existing = projectCounts.get(slug);
-    if (existing) {
-      existing.views++;
-    } else {
-      projectCounts.set(slug, { slug, views: 1 });
-    }
-  }
-  const topProjects = Array.from(projectCounts.values())
-    .sort((a, b) => b.views - a.views)
-    .slice(0, 10)
-    .map((p) => ({ ...p, title: p.slug }));
-
-  const postCounts = new Map<string, number>();
-  for (const row of pageViewRows ?? []) {
-    const match = typeof row.path === "string" ? row.path.match(/^\/blog\/([^/?#]+)/) : null;
-    if (match?.[1]) postCounts.set(match[1], (postCounts.get(match[1]) ?? 0) + 1);
-  }
-  const postSlugs = Array.from(postCounts.keys());
-  let topPosts: Array<{ slug: string; title: string; views: number }> = [];
-  if (postSlugs.length > 0) {
-    const { data: blogPosts, error: blogError } = await supabase
-      .from("blog_posts")
-      .select("slug, title")
-      .in("slug", postSlugs)
-      .eq("is_published", true)
-      .is("deleted_at", null);
-    if (blogError) console.error("[analytics] blog post query failed:", blogError.message);
-    const titles = new Map((blogPosts ?? []).map((post: { slug: string; title: string }) => [post.slug, post.title]));
-    topPosts = postSlugs
-      .map((slug) => ({ slug, title: titles.get(slug) ?? slug, views: postCounts.get(slug) ?? 0 }))
-      .sort((a, b) => b.views - a.views)
-      .slice(0, 10);
-  }
-
-  const [{ count: cvDownloads }, { count: contactClicks }, { count: totalViews }] = await Promise.all([
-    supabase
-      .from("analytics_events")
-      .select("id", { count: "exact", head: true })
-      .eq("type", "cv_download")
-      .gte("created_at", since.toISOString()),
-    supabase
-      .from("analytics_events")
-      .select("id", { count: "exact", head: true })
-      .eq("type", "contact_click")
-      .gte("created_at", since.toISOString()),
-    supabase
-      .from("analytics_events")
-      .select("id", { count: "exact", head: true })
-      .eq("type", "page_view")
-      .gte("created_at", since.toISOString()),
-  ]);
+  const payload = await fetchStatsRpc<EventStatsRpcPayload>(
+    supabase,
+    "analytics_events",
+    "analytics_event_stats",
+    { p_since: since.toISOString(), p_top_n: TOP_N },
+  );
 
   return {
-    pageViews,
-    topProjects,
-    topPosts,
-    cvDownloads: cvDownloads ?? 0,
-    contactClicks: contactClicks ?? 0,
-    totalViews: totalViews ?? 0,
+    // daily rows arrive sorted by day ascending from the RPC (UTC dates)
+    pageViews: (payload?.daily ?? []).map(({ day, count }) => ({ date: day, count })),
+    topProjects: (payload?.top_projects ?? []).map(({ slug, views }) => ({
+      slug,
+      // legacy shape reused the slug as the title for projects
+      title: slug,
+      views,
+    })),
+    topPosts: payload?.top_posts ?? [],
+    cvDownloads: payload?.cv_downloads ?? 0,
+    contactClicks: payload?.contact_clicks ?? 0,
+    totalViews: payload?.total_views ?? 0,
   };
 }
 
@@ -129,39 +122,17 @@ export async function fetchMessageStats(
   const since = new Date();
   since.setDate(since.getDate() - days);
 
-  const { data: allMessages } = await supabase
-    .from("messages")
-    .select("created_at, status")
-    .gte("created_at", since.toISOString())
-    .order("created_at", { ascending: true });
+  const payload = await fetchStatsRpc<MessageStatsRpcPayload>(
+    supabase,
+    "messages",
+    "analytics_message_stats",
+    { p_since: since.toISOString() },
+  );
 
-  const dailyMap = new Map<
-    string,
-    { total: number; unread: number }
-  >();
-
-  for (const msg of allMessages ?? []) {
-    const d = msg.created_at.slice(0, 10);
-    const entry = dailyMap.get(d) ?? { total: 0, unread: 0 };
-    entry.total++;
-    if (msg.status === "unread") entry.unread++;
-    dailyMap.set(d, entry);
-  }
-
-  return Array.from(dailyMap.entries())
-    .map(([date, counts]) => ({ date, ...counts }))
-    .sort((a, b) => a.date.localeCompare(b.date));
-}
-
-function aggregateByDate(
-  rows: Array<{ created_at: string }>,
-): Array<{ date: string; count: number }> {
-  const daily = new Map<string, number>();
-  for (const row of rows) {
-    const d = row.created_at.slice(0, 10);
-    daily.set(d, (daily.get(d) ?? 0) + 1);
-  }
-  return Array.from(daily.entries())
-    .map(([date, count]) => ({ date, count }))
-    .sort((a, b) => a.date.localeCompare(b.date));
+  // daily rows arrive sorted by day ascending from the RPC (UTC dates)
+  return (payload?.daily ?? []).map(({ day, total, unread }) => ({
+    date: day,
+    total,
+    unread,
+  }));
 }

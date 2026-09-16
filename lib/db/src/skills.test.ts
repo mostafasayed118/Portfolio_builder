@@ -1,7 +1,9 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { createMockSupabase } from "./test-utils";
+import { MAX_LIST_ROWS } from "./query";
 import {
   listSkills,
+  listVisibleSkills,
   listSkillsByCategory,
   createSkill,
   updateSkill,
@@ -14,13 +16,13 @@ beforeEach(() => {
 });
 
 describe("listSkills", () => {
-  it("selects non-deleted skills ordered by sort_order", async () => {
+  it("selects non-deleted skills ordered by sort_order, capped at MAX_LIST_ROWS", async () => {
     const rows = [
       { id: "1", name: "TS", category: "frontend", sort_order: 1 },
       { id: "2", name: "Go", category: "backend", sort_order: 2 },
     ];
-    // Terminal method in the chain is .order() — override to resolve
-    supabase.order.mockResolvedValue({ data: rows, error: null });
+    // Terminal method in the chain is .limit() — override to resolve
+    supabase.limit.mockResolvedValue({ data: rows, error: null });
 
     const result = await listSkills(supabase as any);
 
@@ -30,30 +32,57 @@ describe("listSkills", () => {
     );
     expect(supabase.is).toHaveBeenCalledWith("deleted_at", null);
     expect(supabase.order).toHaveBeenCalledWith("sort_order", { ascending: true });
+    expect(supabase.limit).toHaveBeenCalledWith(MAX_LIST_ROWS);
     expect(result).toEqual(rows);
   });
 
   it("throws when supabase returns an error", async () => {
-    supabase.order.mockResolvedValue({ data: null, error: new Error("db down") });
+    supabase.limit.mockResolvedValue({ data: null, error: new Error("db down") });
 
     await expect(listSkills(supabase as any)).rejects.toThrow("db down");
   });
 });
 
+describe("listVisibleSkills", () => {
+  it("filters to visible non-deleted skills ordered by sort_order, capped at MAX_LIST_ROWS", async () => {
+    const rows = [{ id: "1", name: "TS", category: "frontend", sort_order: 1 }];
+    supabase.limit.mockResolvedValue({ data: rows, error: null });
+
+    const result = await listVisibleSkills(supabase as any);
+
+    expect(supabase.from).toHaveBeenCalledWith("skills");
+    expect(supabase.select).toHaveBeenCalledWith(
+      "id,name,category,proficiency,icon,sort_order,is_visible",
+    );
+    expect(supabase.eq).toHaveBeenCalledWith("is_visible", true);
+    expect(supabase.is).toHaveBeenCalledWith("deleted_at", null);
+    expect(supabase.order).toHaveBeenCalledWith("sort_order", { ascending: true });
+    expect(supabase.limit).toHaveBeenCalledWith(MAX_LIST_ROWS);
+    expect(result).toEqual(rows);
+  });
+
+  it("throws when supabase returns an error", async () => {
+    supabase.limit.mockResolvedValue({ data: null, error: new Error("db down") });
+
+    await expect(listVisibleSkills(supabase as any)).rejects.toThrow("db down");
+  });
+});
+
 describe("listSkillsByCategory", () => {
-  it("filters by category in addition to soft-delete check", async () => {
+  it("filters by category in addition to soft-delete check, capped at MAX_LIST_ROWS", async () => {
     const rows = [{ id: "1", name: "React", category: "frontend", sort_order: 1 }];
-    supabase.order.mockResolvedValue({ data: rows, error: null });
+    supabase.limit.mockResolvedValue({ data: rows, error: null });
 
     const result = await listSkillsByCategory(supabase as any, "frontend");
 
     expect(supabase.eq).toHaveBeenCalledWith("category", "frontend");
     expect(supabase.is).toHaveBeenCalledWith("deleted_at", null);
+    expect(supabase.limit).toHaveBeenCalledWith(MAX_LIST_ROWS);
     expect(result).toEqual(rows);
   });
 
   it("throws when supabase returns an error", async () => {
-    supabase.order.mockResolvedValue({ data: null, error: new Error("fail") });
+    supabase.limit.mockResolvedValue({ data: null, error: new Error("fail") });
 
     await expect(listSkillsByCategory(supabase as any, "x")).rejects.toThrow("fail");
   });

@@ -4,10 +4,11 @@ import type { AuthenticatedRequest } from "../../middleware/adminAuth";
 import { requireSuperadmin } from "../../middleware/requireSuperadmin";
 import type { Response } from "express";
 import { updateRoleSchema } from "@workspace/api-zod";
+import { listUsers, updateUserRole } from "@workspace/db/users";
 import { getSupabaseClient } from "../../lib/supabase-client";
 import { parsePagination } from "../../lib/route-helpers";
 import { validateParamId } from "../../middleware/validateUuid";
-import { ok, notFound, badRequest, serverError, unauthorized, paginated } from "../../lib/api-response";
+import { ok, badRequest, serverError, unauthorized, paginated, notFound } from "../../lib/api-response";
 import { safeErrorMessage } from "../../lib/safe-error";
 
 const router: IRouter = Router();
@@ -26,21 +27,19 @@ router.get("/me", async (req: AuthenticatedRequest, res: Response) => {
 
 // GET /api/v1/admin/users — list all users (superadmin only)
 router.get("/", requireSuperadmin, async (req: AuthenticatedRequest, res: Response) => {
-  const supabase = getSupabaseClient();
   const { limit, offset } = parsePagination(req);
-  const { data, error, count } = await supabase
-    .from("users")
-    .select("id, clerk_id, email, name, role, created_at", { count: "exact" })
-    .order("created_at", { ascending: false })
-    .range(offset, offset + limit - 1);
-
-  if (error) return serverError(res, safeErrorMessage(error));
-  return paginated(res, data ?? [], count ?? 0, limit, offset);
+  try {
+    const { rows, count } = await listUsers(getSupabaseClient(), { limit, offset });
+    return paginated(res, rows, count, limit, offset);
+  } catch (err) {
+    return serverError(res, safeErrorMessage(err));
+  }
 });
 
 // PATCH /api/v1/admin/users/:id/role — change user role (superadmin only)
 router.patch("/:id/role", requireSuperadmin, doubleCsrfProtection, validateParamId, async (req: AuthenticatedRequest, res: Response) => {
-  const supabase = getSupabaseClient();
+  // Express 5's ParamsDictionary types param values as string | string[];
+  // validateParamId has already guaranteed a (UUID) string at runtime.
   const id = req.params.id as string;
 
   const result = updateRoleSchema.safeParse(req.body);
@@ -53,16 +52,17 @@ router.patch("/:id/role", requireSuperadmin, doubleCsrfProtection, validateParam
     return badRequest(res, { role: ["Cannot demote yourself"] });
   }
 
-  const { data, error } = await supabase
-    .from("users")
-    .update({ role: result.data.role })
-    .eq("id", id)
-    .select("id, clerk_id, email, name, role, created_at")
-    .single();
-
-  if (error) return serverError(res, safeErrorMessage(error));
-  if (!data) return notFound(res, "User not found");
-  return ok(res, data);
+  try {
+    const rows = await updateUserRole(getSupabaseClient(), id, result.data.role);
+    // Supabase leaves `count` null on update+select, so a missing user shows
+    // up as an empty result array — respond 404, not success-on-nothing.
+    if (!rows || rows.length === 0) {
+      return notFound(res, "User not found");
+    }
+    return ok(res, rows[0]);
+  } catch (err) {
+    return serverError(res, safeErrorMessage(err));
+  }
 });
 
 export default router;

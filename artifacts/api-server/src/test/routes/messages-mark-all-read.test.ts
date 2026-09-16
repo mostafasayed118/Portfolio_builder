@@ -89,6 +89,34 @@ describe("POST /api/v1/admin/messages/mark-all-read", () => {
     expect(res.status).toBe(401);
   });
 
+  it("rejects a non-UUID ?userId with 400 (PostgREST or-filter injection guard)", async () => {
+    const res = await request(app)
+      .post("/api/v1/admin/messages/mark-all-read")
+      .query({ userId: "x),status.neq.read" })
+      .set("x-admin-key", mockAdminKey);
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({
+      success: false,
+      errors: { userId: ["Invalid userId format — must be a valid UUID"] },
+    });
+    // The poisoned value must never reach a query.
+    expect(mockSupabase.from).not.toHaveBeenCalled();
+  });
+
+  it("accepts a valid UUID ?userId for superadmin user switching", async () => {
+    const res = await request(app)
+      .post("/api/v1/admin/messages/mark-all-read")
+      .query({ userId: "00000000-0000-0000-0000-000000000009" })
+      .set("x-admin-key", mockAdminKey);
+
+    expect(res.status).toBe(200);
+    const countChain = mockSupabase.select.mock.results[0].value as Chain;
+    expect(countChain.or).toHaveBeenCalledWith(
+      "user_id.eq.00000000-0000-0000-0000-000000000009,user_id.is.null",
+    );
+  });
+
   it("marks ALL unread non-deleted rows (count + update share the predicate)", async () => {
     const res = await request(app)
       .post("/api/v1/admin/messages/mark-all-read")

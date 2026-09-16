@@ -45,12 +45,10 @@ export function fireAuthMissingFromApiClient(): void {
   fireAuthMissing("server_returned_401");
 }
 
-const AUTH_MISSING_KILL_SWITCH = false;
-
 function fireAuthMissing(reason: string): void {
   if (import.meta.env.DEV) {
     logInfo(
-      `[auth-token] fireAuthMissing(reason="${reason}") — authReady=${_authReady}, handlerSet=${!!_onAuthMissing}, killSwitch=${AUTH_MISSING_KILL_SWITCH}`,
+      `[auth-token] fireAuthMissing(reason="${reason}") — authReady=${_authReady}, handlerSet=${!!_onAuthMissing}`,
       "auth-token",
     );
   }
@@ -60,17 +58,6 @@ function fireAuthMissing(reason: string): void {
       logDebug(
         `[auth-token] fireAuthMissing(reason="${reason}") — SUPPRESSED (auth not ready)`,
         "auth-token",
-      );
-    }
-    return;
-  }
-
-  if (AUTH_MISSING_KILL_SWITCH) {
-    if (import.meta.env.DEV) {
-      logWarn(
-        `[auth-token] fireAuthMissing(reason="${reason}") — KILLED by kill switch`,
-        "auth-token",
-        { reason, authReady: _authReady },
       );
     }
     return;

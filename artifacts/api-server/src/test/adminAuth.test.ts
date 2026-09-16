@@ -116,19 +116,16 @@ describe("adminAuth middleware", () => {
 
   it("returns 401 when Clerk JWT has non-admin email", async () => {
     const { verifyToken } = await import("@clerk/backend");
-    (verifyToken as ReturnType<typeof vi.fn>).mockResolvedValue({ sub: "user_clerk123" });
+    // The token has an email not in ADMIN_EMAILS
+    (verifyToken as ReturnType<typeof vi.fn>).mockResolvedValue({
+      sub: "user_clerk123",
+      email: "hacker@evil.com",
+    });
 
     vi.stubEnv("CLERK_SECRET_KEY", "sk_test_secret");
     vi.stubEnv("ADMIN_EMAILS", "admin@example.com");
     vi.stubEnv("ADMIN_API_KEY", "");
     vi.stubEnv("NODE_ENV", "production");
-
-    // The token has an email not in ADMIN_EMAILS
-    // Mock verifyToken to return email that doesn't match
-    (verifyToken as ReturnType<typeof vi.fn>).mockResolvedValue({
-      sub: "user_clerk123",
-      email: "hacker@evil.com",
-    });
 
     req.headers = { authorization: "Bearer clerk-jwt-token" };
     req.path = "/admin/projects";
@@ -138,6 +135,113 @@ describe("adminAuth middleware", () => {
 
     expect(res.status).toHaveBeenCalledWith(401);
     expect(next).not.toHaveBeenCalled();
+  });
+
+  it("allows access when the Clerk-fetched verified email is allowlisted even without a token email claim", async () => {
+    const { verifyToken, createClerkClient } = await import("@clerk/backend");
+    (verifyToken as ReturnType<typeof vi.fn>).mockResolvedValue({ sub: "user_clerk123" });
+    (createClerkClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      users: {
+        getUser: vi.fn().mockResolvedValue({
+          primaryEmailAddress: { emailAddress: "Admin@Example.com", verification: { status: "verified" } },
+          emailAddresses: [],
+        }),
+      },
+    });
+
+    vi.stubEnv("CLERK_SECRET_KEY", "sk_test_secret");
+    vi.stubEnv("ADMIN_EMAILS", "admin@example.com");
+    vi.stubEnv("ADMIN_API_KEY", "");
+    vi.stubEnv("NODE_ENV", "production");
+
+    req.headers = { authorization: "Bearer clerk-jwt-token" };
+    req.path = "/admin/projects";
+
+    const { adminAuth } = await import("../middleware/adminAuth");
+    await adminAuth(req as Request & Record<string, unknown>, res as Response, next);
+
+    expect(next).toHaveBeenCalled();
+  });
+
+  it("denies when the token claims an allowlisted email but the Clerk profile email is not allowlisted", async () => {
+    const { verifyToken, createClerkClient } = await import("@clerk/backend");
+    (verifyToken as ReturnType<typeof vi.fn>).mockResolvedValue({
+      sub: "user_clerk123",
+      email: "admin@example.com",
+    });
+    (createClerkClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      users: {
+        getUser: vi.fn().mockResolvedValue({
+          primaryEmailAddress: { emailAddress: "hacker@real.com", verification: { status: "verified" } },
+          emailAddresses: [{ emailAddress: "hacker@real.com", verification: { status: "verified" } }],
+        }),
+      },
+    });
+
+    vi.stubEnv("CLERK_SECRET_KEY", "sk_test_secret");
+    vi.stubEnv("ADMIN_EMAILS", "admin@example.com");
+    vi.stubEnv("ADMIN_API_KEY", "");
+    vi.stubEnv("NODE_ENV", "production");
+
+    req.headers = { authorization: "Bearer clerk-jwt-token" };
+    req.path = "/admin/projects";
+
+    const { adminAuth } = await import("../middleware/adminAuth");
+    await adminAuth(req as Request & Record<string, unknown>, res as Response, next);
+
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("denies when the only allowlisted Clerk email is unverified", async () => {
+    const { verifyToken, createClerkClient } = await import("@clerk/backend");
+    (verifyToken as ReturnType<typeof vi.fn>).mockResolvedValue({ sub: "user_clerk123" });
+    (createClerkClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      users: {
+        getUser: vi.fn().mockResolvedValue({
+          primaryEmailAddress: { emailAddress: "admin@example.com", verification: { status: "unverified" } },
+          emailAddresses: [{ emailAddress: "admin@example.com", verification: null }],
+        }),
+      },
+    });
+
+    vi.stubEnv("CLERK_SECRET_KEY", "sk_test_secret");
+    vi.stubEnv("ADMIN_EMAILS", "admin@example.com");
+    vi.stubEnv("ADMIN_API_KEY", "");
+    vi.stubEnv("NODE_ENV", "production");
+
+    req.headers = { authorization: "Bearer clerk-jwt-token" };
+    req.path = "/admin/projects";
+
+    const { adminAuth } = await import("../middleware/adminAuth");
+    await adminAuth(req as Request & Record<string, unknown>, res as Response, next);
+
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the token email claim when the Clerk profile fetch fails", async () => {
+    const { verifyToken, createClerkClient } = await import("@clerk/backend");
+    (verifyToken as ReturnType<typeof vi.fn>).mockResolvedValue({
+      sub: "user_clerk123",
+      email: "admin@example.com",
+    });
+    (createClerkClient as ReturnType<typeof vi.fn>).mockReturnValue({
+      users: { getUser: vi.fn().mockRejectedValue(new Error("clerk outage")) },
+    });
+
+    vi.stubEnv("CLERK_SECRET_KEY", "sk_test_secret");
+    vi.stubEnv("ADMIN_EMAILS", "admin@example.com");
+    vi.stubEnv("ADMIN_API_KEY", "");
+    vi.stubEnv("NODE_ENV", "production");
+
+    req.headers = { authorization: "Bearer clerk-jwt-token" };
+    req.path = "/admin/projects";
+
+    const { adminAuth } = await import("../middleware/adminAuth");
+    await adminAuth(req as Request & Record<string, unknown>, res as Response, next);
+
+    expect(next).toHaveBeenCalled();
   });
 
   it("API key fallback works when JWT verification fails", async () => {

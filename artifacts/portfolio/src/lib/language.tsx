@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
 import { fetchLanguageSettings } from "@workspace/db/site-settings";
@@ -67,19 +67,36 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("portfolio-lang", lang);
   }, [lang, dir]);
 
-  const setLanguage = (newLang: Language) => {
-    if (langSettings?.language_mode === "en_only" && newLang !== "en") return;
-    if (langSettings?.language_mode === "ar_only" && newLang !== "ar") return;
-    setLangState(newLang);
-  };
+  const setLanguage = useCallback(
+    (newLang: Language) => {
+      if (langSettings?.language_mode === "en_only" && newLang !== "en") return;
+      if (langSettings?.language_mode === "ar_only" && newLang !== "ar") return;
+      setLangState(newLang);
+    },
+    [langSettings],
+  );
 
-  const toggleLanguage = () => {
+  const toggleLanguage = useCallback(() => {
     if (langSettings?.language_mode !== "both") return;
     setLangState((l) => (l === "en" ? "ar" : "en"));
-  };
+  }, [langSettings]);
+
+  const value = useMemo<LanguageContextType>(
+    () => ({
+      lang,
+      dir,
+      t,
+      toggleLanguage,
+      setLanguage,
+      isArabic,
+      showToggle,
+      langSettings: langSettings ?? null,
+    }),
+    [lang, dir, t, toggleLanguage, setLanguage, isArabic, showToggle, langSettings],
+  );
 
   return (
-    <LanguageContext.Provider value={{ lang, dir, t, toggleLanguage, setLanguage, isArabic, showToggle, langSettings: langSettings ?? null }}>
+    <LanguageContext.Provider value={value}>
       {children}
     </LanguageContext.Provider>
   );

@@ -130,20 +130,6 @@ describe("rules.range", () => {
   });
 });
 
-// ─── pattern ─────────────────────────────────────────────────────────────────
-
-describe("rules.pattern", () => {
-  const rule = rules.pattern(/^[A-Z]+$/, "Must be uppercase letters only");
-
-  it("returns error when value does not match", () => {
-    expect(rule("abc")).toBe("Must be uppercase letters only");
-  });
-
-  it("returns null when value matches", () => {
-    expect(rule("ABC")).toBeNull();
-  });
-});
-
 // ─── fileType ────────────────────────────────────────────────────────────────
 
 describe("rules.fileType", () => {

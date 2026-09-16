@@ -150,6 +150,50 @@ export default tseslint.config(
     },
   },
   {
+    // API routes must not touch Supabase directly (CLAUDE.md: all DB access
+    // goes through lib/db modules or api-server/src/lib helpers). Route files
+    // obtain the client via ../../lib/supabase-client and delegate queries to
+    // @workspace/db — inline .from()/.rpc()/client creation in a route file is
+    // a violation. Test files are exempt (they stub the client chain).
+    files: ["artifacts/api-server/src/routes/**/*.ts"],
+    ignores: ["**/*.test.*", "**/src/test/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@supabase/supabase-js",
+              message: "Routes must not import Supabase directly. Use lib/db modules or an api-server/src/lib helper.",
+            },
+            {
+              name: "@workspace/supabase",
+              message: "Routes must not create Supabase clients. Use getSupabaseClient from ../../lib/supabase-client and lib/db for queries.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // File-size cap (CLAUDE.md: files ≤250 lines). Blank lines and comments
+    // don't count, so documentation never forces a split. Scoped to app/lib
+    // source; exempted: tests (suite files are intentionally long), the global
+    // test setup dir, generated types, the vendored shadcn primitives, and the
+    // hand-maintained Supabase types.
+    files: ["artifacts/*/src/**/*.{ts,tsx}", "lib/*/src/**/*.{ts,tsx}"],
+    ignores: [
+      "**/*.test.*",
+      "**/src/test/**",
+      "**/generated/**",
+      "lib/ui/src/components/primitives/**",
+      "lib/supabase/src/types.ts",
+    ],
+    rules: {
+      "max-lines": ["error", { max: 250, skipBlankLines: true, skipComments: true }],
+    },
+  },
+  {
     // Node build/deploy scripts (e.g. api-server/build.mjs) run outside the
     // browser, so they must see Node globals (process, console, Buffer, ...).
     // Without this, js.configs.recommended's `no-undef` flags them.

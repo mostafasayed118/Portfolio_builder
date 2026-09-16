@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Skill as DbSkill, InsertSkill } from "@workspace/supabase/types";
-import { queryOrThrow } from "./query";
+import { MAX_LIST_ROWS, queryOrThrow } from "./query";
 
 export type Skill = DbSkill;
 
@@ -24,8 +24,22 @@ export async function listSkills(
   supabase: SupabaseClient,
 ): Promise<SkillListItem[]> {
   return queryOrThrow<SkillListItem[]>(
-    supabase.from(TABLE).select(SKILL_LIST_COLUMNS).is("deleted_at", null).order("sort_order", { ascending: true }),
+    supabase.from(TABLE).select(SKILL_LIST_COLUMNS).is("deleted_at", null).order("sort_order", { ascending: true }).limit(MAX_LIST_ROWS),
     { table: TABLE, operation: "listSkills" },
+  );
+}
+
+/**
+ * Public: same shape/ordering/limit as listSkills but filtered to
+ * `is_visible = true`, so hidden skills never leave the database on
+ * unauthenticated reads. Admin tooling keeps using listSkills.
+ */
+export async function listVisibleSkills(
+  supabase: SupabaseClient,
+): Promise<SkillListItem[]> {
+  return queryOrThrow<SkillListItem[]>(
+    supabase.from(TABLE).select(SKILL_LIST_COLUMNS).eq("is_visible", true).is("deleted_at", null).order("sort_order", { ascending: true }).limit(MAX_LIST_ROWS),
+    { table: TABLE, operation: "listVisibleSkills" },
   );
 }
 
@@ -34,7 +48,7 @@ export async function listSkillsByCategory(
   category: string,
 ): Promise<SkillListItem[]> {
   return queryOrThrow<SkillListItem[]>(
-    supabase.from(TABLE).select(SKILL_LIST_COLUMNS).eq("category", category).is("deleted_at", null).order("sort_order", { ascending: true }),
+    supabase.from(TABLE).select(SKILL_LIST_COLUMNS).eq("category", category).is("deleted_at", null).order("sort_order", { ascending: true }).limit(MAX_LIST_ROWS),
     { table: TABLE, operation: "listSkillsByCategory" },
   );
 }

@@ -1,5 +1,7 @@
 // ============================================================================
-// Supabase Database Types — generated from supabase/migrations/001 through 059
+// Supabase Database Types — hand-maintained; verify against migrations 001-059
+// when editing. `pnpm --filter @workspace/supabase gen:types` can regenerate
+// this file from a linked Supabase project, but it is NOT auto-generated today.
 // ============================================================================
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
@@ -447,6 +449,9 @@ export interface Database {
           slug: string;
           excerpt: string | null;
           content: string;
+          // STORED generated column (migration 063): max(1, ceil(words/200)).
+          // Read-only — never appears in Insert/Update.
+          reading_minutes: number;
           cover_image_url: string | null;
           tags: string[];
           is_published: boolean | null;

@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ImageMetadata } from "@workspace/supabase/types";
-import { queryOrThrow } from "./query";
+import { MAX_LIST_ROWS, queryOrThrow } from "./query";
 
 const IMAGE_TABLE = "image_metadata" as const;
 
@@ -10,6 +10,9 @@ const IMAGE_TABLE = "image_metadata" as const;
  * readable (RLS policy `public_read_image_metadata`), so the portfolio can
  * fetch a project's gallery without any auth. The caller builds public
  * storage URLs from each row's `storage_path`.
+ *
+ * Capped at MAX_LIST_ROWS (500) so a runaway entity cannot return an
+ * unbounded result set.
  */
 export async function listEntityImages(
   supabase: SupabaseClient,
@@ -23,7 +26,8 @@ export async function listEntityImages(
       .eq("entity_type", entityType)
       .eq("entity_id", entityId)
       .order("sort_order", { ascending: true })
-      .order("created_at", { ascending: true }),
+      .order("created_at", { ascending: true })
+      .limit(MAX_LIST_ROWS),
     { table: IMAGE_TABLE, operation: "listEntityImages" },
   );
 }
@@ -34,6 +38,10 @@ export async function listEntityImages(
  * per entity is its cover. Returns exactly one row per entity, keyed by
  * `entity_id`, for entity types where a card grid needs a single thumbnail
  * (e.g. the portfolio projects section).
+ *
+ * Capped at MAX_LIST_ROWS (500) so a runaway entity set cannot return an
+ * unbounded result set; ordering is preserved so the first row per entity
+ * stays deterministic.
  */
 export async function listCoversByEntity(
   supabase: SupabaseClient,
@@ -48,7 +56,8 @@ export async function listCoversByEntity(
       .eq("entity_type", entityType)
       .in("entity_id", entityIds)
       .order("sort_order", { ascending: true })
-      .order("created_at", { ascending: true }),
+      .order("created_at", { ascending: true })
+      .limit(MAX_LIST_ROWS),
     { table: IMAGE_TABLE, operation: "listCoversByEntity" },
   );
   const seen = new Set<string>();
@@ -60,4 +69,82 @@ export async function listCoversByEntity(
     }
   }
   return covers;
+}
+
+export interface ImageOwnershipRow {
+  id: string;
+  user_id: string | null;
+}
+
+/** Admin: ownership pre-check rows for a set of image ids (reorder flow). */
+export async function listImageOwnership(
+  supabase: SupabaseClient,
+  ids: string[],
+): Promise<ImageOwnershipRow[]> {
+  return queryOrThrow<ImageOwnershipRow[]>(
+    supabase.from(IMAGE_TABLE).select("id, user_id").in("id", ids),
+    { table: IMAGE_TABLE, operation: "listImageOwnership" },
+  );
+}
+
+/** Admin: set one image's sort_order (0-based reorder position). */
+export async function setImageSortOrder(
+  supabase: SupabaseClient,
+  id: string,
+  sortOrder: number,
+): Promise<void> {
+  await queryOrThrow(
+    supabase.from(IMAGE_TABLE).update({ sort_order: sortOrder }).eq("id", id),
+    { table: IMAGE_TABLE, operation: "setImageSortOrder" },
+  );
+}
+
+export interface ImageMetadataRow {
+  id: string;
+  original_filename: string;
+  mime_type: string;
+  file_size_bytes: number;
+  entity_type: string;
+  entity_id: string;
+  created_at: string;
+}
+
+/** Admin: the metadata surface exposed by GET /images/:id/metadata. */
+export async function getImageMetadataById(
+  supabase: SupabaseClient,
+  id: string,
+): Promise<ImageMetadataRow | null> {
+  return queryOrThrow<ImageMetadataRow | null>(
+    supabase
+      .from(IMAGE_TABLE)
+      .select("id, original_filename, mime_type, file_size_bytes, entity_type, entity_id, created_at")
+      .eq("id", id)
+      .single(),
+    { table: IMAGE_TABLE, operation: "getImageMetadataById" },
+  );
+}
+
+export interface ImageDeleteTarget {
+  storage_path: string;
+  id: string;
+  user_id: string | null;
+}
+
+/** Admin: the columns the DELETE flow needs (storage path + ownership). */
+export async function getImageDeleteTarget(
+  supabase: SupabaseClient,
+  id: string,
+): Promise<ImageDeleteTarget | null> {
+  return queryOrThrow<ImageDeleteTarget | null>(
+    supabase.from(IMAGE_TABLE).select("storage_path, id, user_id").eq("id", id).single(),
+    { table: IMAGE_TABLE, operation: "getImageDeleteTarget" },
+  );
+}
+
+/** Admin: remove an image's metadata row after its storage object is gone. */
+export async function deleteImageMetadata(supabase: SupabaseClient, id: string): Promise<void> {
+  await queryOrThrow(
+    supabase.from(IMAGE_TABLE).delete().eq("id", id),
+    { table: IMAGE_TABLE, operation: "deleteImageMetadata" },
+  );
 }

@@ -2,7 +2,8 @@
 // Layer 3 — Field + Form level validation
 // ============================================================================
 
-import type { RuleFn } from "./rules";
+/** A single-field validator: returns an error message, or null when valid. */
+export type RuleFn = (value: unknown) => string | null;
 
 /** Validate a single field against multiple rules — returns first error */
 export function validateField(value: unknown, ...ruleFns: RuleFn[]): string | null {

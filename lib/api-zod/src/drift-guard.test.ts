@@ -72,7 +72,10 @@ describe("live_url https", () => {
 
 describe("cv shared consts", () => {
   it("rejects non-pdf fileName with the exact message", () => {
-    const r = cvSettingsUpdateSchema.safeParse({ objectPath: "cv/x", fileName: "resume.docx" });
+    const r = cvSettingsUpdateSchema.safeParse({
+      objectPath: "cv-1700000000000.pdf",
+      fileName: "resume.docx",
+    });
     expect(r.success).toBe(false);
     if (!r.success) {
       expect(r.error.flatten().fieldErrors.fileName).toStrictEqual([
@@ -83,7 +86,8 @@ describe("cv shared consts", () => {
 
   it("accepts a .pdf fileName", () => {
     expect(
-      cvSettingsUpdateSchema.safeParse({ objectPath: "cv/x", fileName: "resume.pdf" }).success,
+      cvSettingsUpdateSchema.safeParse({ objectPath: "cv-1700000000000.pdf", fileName: "resume.pdf" })
+        .success,
     ).toBe(true);
   });
 

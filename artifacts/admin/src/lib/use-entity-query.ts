@@ -1,6 +1,7 @@
 import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
 import { useViewingUser } from "./viewing-user-context";
 import { api } from "./api-client";
+import { logWarn } from "@/lib/logger";
 import type { Certification, Experience, Project, Skill, Message } from "@workspace/supabase/types";
 
 /** The `{ success, data }` envelope the API returns on success. */
@@ -38,7 +39,7 @@ export function useEntityQuery<T>(
   const { viewingUserId } = useViewingUser();
   return useQuery<T, Error, T, readonly unknown[]>({
     queryKey: [entity, viewingUserId, ...keyParts] as readonly unknown[],
-    queryFn: async () => {
+    queryFn: async (): Promise<T> => {
       const res = await fetcher(viewingUserId);
       if (!res.success) throw new Error(res.message);
       // Collection endpoints return { data: [...], pagination } inside
@@ -47,9 +48,19 @@ export function useEntityQuery<T>(
       // "X.filter is not a function".
       const payload = res.data;
       if (payload && Array.isArray(payload.data)) {
-        return payload.data as T;
+        return payload.data;
       }
-      return payload as unknown as T;
+      // Tolerate responses that hand back the rows array directly (no
+      // pagination envelope) — test doubles and older endpoints do this.
+      // The unknown detour plus cast is the only way to return a runtime
+      // array as the hook's array-typed T without leaking `any` upstream.
+      const raw: unknown = payload;
+      if (Array.isArray(raw)) {
+        return raw as T;
+      }
+      throw new Error(
+        `Unexpected ${entity} response — expected a paginated list envelope`,
+      );
     },
     ...options,
   });
@@ -62,9 +73,22 @@ export function useEntityQuery<T>(
  */
 export const MESSAGE_BATCH_SIZE = 200;
 
-export type MessageStatus = "unread" | "read" | "archived" | "spam" | "all";
+/**
+ * Status filter for the messages list endpoint. "unread"/"read"/"archived"
+ * map to the DB `status` column; "spam" filters `is_spam = true` and never
+ * maps to the DB status column; "all" means "no status filter".
+ */
+export type MessageStatusFilter = "unread" | "read" | "archived" | "spam" | "all";
 
 export type MessagePreset = "unread_today" | "unread_or_archived" | "needs_reply";
+
+/**
+ * Hard ceiling on the pagination walk in `fetchAllMessages` — a runaway
+ * filter set can no longer fetch forever. At the 200-row batch size this
+ * caps a single hook run at 2,000 rows; the already-loaded rows stay usable
+ * and one warning is logged.
+ */
+export const MAX_MESSAGE_PAGES = 10;
 
 /**
  * Fetch EVERY message matching a status filter or saved preset, in batches
@@ -72,14 +96,75 @@ export type MessagePreset = "unread_today" | "unread_or_archived" | "needs_reply
  * preset views page over the complete set instead of stopping at the first
  * 50 rows.
  *
- * The collection endpoint paginates at 50 by default — a single fetch would
- * silently truncate every view once more than 50 messages exist. This hook
- * walks the whole filtered set with `limit=200&offset=N` until a short page
- * and returns the concatenated rows; the caller's client-side pagination
- * then pages over the true total (and select-all / counts see every row).
+ * Page one is fetched on its own to learn the filtered set's `total` from
+ * the envelope's pagination block; the remaining pages (bounded by
+ * {@link MAX_MESSAGE_PAGES}) then load concurrently. Rows stay in offset
+ * order because Promise.all preserves result order. Extracted from
+ * `useAllMessages` so the pagination cap is unit-testable without a React
+ * Query harness.
+ */
+export async function fetchAllMessages(
+  viewingUserId: string | null | undefined,
+  status?: MessageStatusFilter,
+  preset?: MessagePreset,
+): Promise<Message[]> {
+  const first = await api.messages.list(
+    viewingUserId ?? undefined,
+    status,
+    MESSAGE_BATCH_SIZE,
+    0,
+    preset,
+  );
+  if (!first.success) throw new Error(first.message);
+  const firstBatch = first.data?.data ?? [];
+  // A page smaller than the batch size means the filtered set is
+  // exhausted — range() past the end yields an empty page, so the
+  // server can never hand back a full page forever.
+  if (firstBatch.length < MESSAGE_BATCH_SIZE) return [...firstBatch];
+
+  const total = first.data?.pagination?.total;
+  const knownPages =
+    typeof total === "number" && total > 0
+      ? Math.ceil(total / MESSAGE_BATCH_SIZE)
+      : MAX_MESSAGE_PAGES;
+  const pageCount = Math.min(knownPages, MAX_MESSAGE_PAGES);
+
+  const rest = await Promise.all(
+    Array.from({ length: pageCount - 1 }, (_, i) =>
+      api.messages.list(
+        viewingUserId ?? undefined,
+        status,
+        MESSAGE_BATCH_SIZE,
+        (i + 1) * MESSAGE_BATCH_SIZE,
+        preset,
+      ),
+    ),
+  );
+
+  const rows = [...firstBatch];
+  for (const res of rest) {
+    if (!res.success) throw new Error(res.message);
+    rows.push(...(res.data?.data ?? []));
+  }
+
+  // Warn when the cap truncated the set: either the envelope carried no
+  // total (unknown size) or the total exceeds what the capped pages hold.
+  if (total === undefined || total > pageCount * MESSAGE_BATCH_SIZE) {
+    logWarn(
+      `useAllMessages: hit the ${MAX_MESSAGE_PAGES}-page cap ` +
+        `(${MAX_MESSAGE_PAGES * MESSAGE_BATCH_SIZE} rows) — further pages not fetched`,
+    );
+  }
+  return rows;
+}
+
+/**
+ * React Query wrapper around {@link fetchAllMessages} — walks the whole
+ * filtered set (capped at {@link MAX_MESSAGE_PAGES} pages) so client-side
+ * pagination and select-all see every row.
  */
 export function useAllMessages(
-  status?: MessageStatus,
+  status?: MessageStatusFilter,
   preset?: MessagePreset,
   options?: Omit<UseQueryOptions<Message[], Error, Message[], readonly unknown[]>, "queryKey" | "queryFn">,
 ) {
@@ -91,28 +176,7 @@ export function useAllMessages(
       status ?? "all",
       preset ?? "default",
     ] as readonly unknown[],
-    queryFn: async () => {
-      const rows: Message[] = [];
-      let offset = 0;
-      for (;;) {
-        const res = await api.messages.list(
-          viewingUserId ?? undefined,
-          status,
-          MESSAGE_BATCH_SIZE,
-          offset,
-          preset,
-        );
-        if (!res.success) throw new Error(res.message);
-        const batch = res.data?.data ?? [];
-        rows.push(...batch);
-        // A page smaller than the batch size means the filtered set is
-        // exhausted — range() past the end yields an empty page, so the
-        // server can never hand back a full page forever.
-        if (batch.length < MESSAGE_BATCH_SIZE) break;
-        offset += MESSAGE_BATCH_SIZE;
-      }
-      return rows;
-    },
+    queryFn: () => fetchAllMessages(viewingUserId, status, preset),
     ...options,
   });
 }
@@ -128,7 +192,7 @@ export function useUnreadCountQuery() {
     queryFn: async () => {
       const res = await api.messages.unreadCount(viewingUserId ?? undefined);
       if (!res.success) throw new Error(res.message);
-      return (res.data ?? 0) as number;
+      return res.data ?? 0;
     },
   });
 }

@@ -1,0 +1,16 @@
+{
+  "name": "@workspace/app-infra",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "eslint src --max-warnings=0"
+  },
+  "exports": {
+    "./logger": "./src/logger.ts",
+    "./csrf": "./src/csrf.ts"
+  },
+  "dependencies": {
+    "@workspace/logging": "workspace:*"
+  }
+}

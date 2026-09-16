@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Check, X, AlertTriangle } from "lucide-react";
-import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
+import { api } from "@/lib/api-client";
 
 function StatusRow({ label, status }: { label: string; status: "complete" | "partial" | "missing" }) {
   const icon = status === "complete" ? <Check className="h-4 w-4 text-success" />
@@ -13,18 +13,10 @@ export function ArabicContentStatus() {
   const { data: stats } = useQuery({
     queryKey: ["arabic-content-status"],
     queryFn: async () => {
-      const supabase = getSupabase();
-      if (!supabase) throw new Error("Supabase not configured");
-      const [heroRes, aboutRes, projectsRes, experienceRes, certsRes] = await Promise.all([
-        supabase.from("hero_content").select("name_ar").not("name_ar", "is", null).maybeSingle(),
-        supabase.from("about_content").select("bio_ar").not("bio_ar", "is", null).maybeSingle(),
-        supabase.from("projects").select("id, title_ar").not("title_ar", "is", null),
-        supabase.from("experience").select("id, title_ar").not("title_ar", "is", null),
-        supabase.from("certifications").select("id, title_ar").not("title_ar", "is", null),
-      ]);
-      return { hero: !!heroRes.data, about: !!aboutRes.data, projects: { filled: projectsRes.data?.length ?? 0 }, experience: { filled: experienceRes.data?.length ?? 0 }, certifications: { filled: certsRes.data?.length ?? 0 } };
+      const res = await api.arabicStatus.get();
+      if (!res.success) throw new Error(res.message);
+      return res.data;
     },
-    enabled: isSupabaseConfigured,
     staleTime: 1000 * 60,
   });
 

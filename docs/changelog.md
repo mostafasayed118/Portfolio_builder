@@ -4,6 +4,39 @@ All notable changes to Portfolio-Fixer are documented here.
 
 ---
 
+## 2026-09-15 — Audit Remediation Rounds 2–5
+
+Four consecutive remediation rounds against the 2026-09-15 five-dimension audit (security, data integrity, performance, frontend quality, docs). Rounds 2–3 are committed; rounds 4–5 live in the working tree, with round 5 still in progress.
+
+### Round 2 — 22-commit remediation sweep (committed)
+
+- **API**: standardized response envelope and pagination shapes across routes; closed api-zod schema coverage gaps; validation bounds aligned for skills, experience, certifications, and messages.
+- **Security**: image reorder/delete scoped by user with fail-closed `userId`; composite indexes, locked RLS, and narrowed hot selects in lib/db; rate-limit env clamping, server-only `ADMIN_EMAILS`, and a request-id gate; leaked tokens untracked; `VITE_ADMIN_EMAILS` references swept in favor of `ADMIN_EMAILS` + `REDIS_URL` documentation.
+- **Frontend**: lazy-loaded BackToTop, removed dead code and 9 unused dependencies.
+
+### Round 3 — hardening + decomposition (committed, 2026-09-14)
+
+- **Rate limiting**: Redis-backed stores via ioredis v5 — one shared client with per-limiter key prefixes (`rl:general`, `rl:contact`, `rl:admin`, `rl:image-meta`, `rl:image-upload`, `rl:apikey`, `rl:chat`); in-memory fallback when `REDIS_URL` is unset.
+- **DB**: list/stat query caps (`MAX_LIST_ROWS`, `MAX_STAT_ROWS`); `listMessages` capped at 100 with dead `replyToMessage` removed; card-critical project columns restored in the projection; migration 059 locked down anon writes.
+- **API**: CV PDF generation deduped behind an in-flight promise; concurrent AI site-context fetches deduped; contact time-trap now requires `_formLoadedAt`; sanitized error responses; CSP/CSRF/upload hardening; multer ≥ 2.3.0 and nodemailer ≥ 9.1.1 bumps.
+- **CV**: objectPath regex locked to `^cv-\d+\.pdf$`.
+- **Frontend/lint**: 250-line file cap with lib/ui exemptions; hook filename convention; feature barrel-import enforcement; relative cross-feature import ban; MessagesManager decomposed into hooks and subcomponents; audit-log pagination via `useInfiniteQuery`; lazy cover images; CSP `img-src` restricted to explicit hosts; envelope-aware CSRF token extraction in portfolio.
+- **Docs**: service-role env guidance purged; stale reports archived; repo aligned to Node 22.
+
+### Round 4 — analytics RPC + images contract (in working tree, uncommitted)
+
+- **Migrations 060–061**: composite index on `analytics_events (type, created_at DESC)`; admin analytics aggregation moved from JS row scans (up to 50,000 rows per query) into Postgres RPCs — `lib/db/src/analytics.ts` became thin RPC mappers with `@workspace/logging` replacing raw `console.error`.
+- **Images contract**: `lib/api-zod/src/images.ts` is now the single source of truth for uploadable entity types (consumed by the upload route and admin ImageUploader); admin images list endpoint added.
+- **Hardening**: adminAuth email-claim trust tightened; `REDIS_URL` validated for production; contact route inserts moved through lib/db; `sanitizeUrl` hardened in lib/db.
+
+### Round 5 — in progress (uncommitted)
+
+- **Admin routes → lib/db**: data access migrated out of route handlers — `lib/db/src/users.ts` (`listUsers`, `updateUserRole`), `lib/db/src/arabic-status.ts`, and the admin images list route now use lib/db modules with `queryOrThrow`.
+- **Frontend quality batch**: decomposed `ThemeManager`, `ThemePresets`, `PostsManager`, `ProjectEditor`, and `ImageUploader` into focused components/hooks (`UploadedImagesGrid`, `ExistingImagesGrid`, `PostDialog`, `TagChips`, settings hooks); new admin test coverage (ArabicStatus, FetchAllMessages, ProjectEditor images).
+- **Still pending per plan**: `reading_minutes` generated column + leaner blog list (migration 063), RLS tightening on image metadata tables (migration 062), error-handler/healthz hardening, `lib/validation` rebuild on Zod, settings/content route migrations.
+
+---
+
 ## 2026-06-06 — JWT Expiration Handling, 401 Auto-Refresh, Phase 2 Refactor
 
 ### Fixed (Critical)
