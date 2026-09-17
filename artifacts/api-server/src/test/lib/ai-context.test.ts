@@ -1,174 +1,173 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { buildSiteContext } from "../../lib/ai/context";
-import { getSupabaseClient } from "../../lib/supabase-client";
 
-vi.mock("../../lib/supabase-client", () => ({ getSupabaseClient: vi.fn() }));
+const { from } = vi.hoisted(() => ({ from: vi.fn() }));
+vi.mock("../../lib/supabase-client", () => ({ getSupabaseClient: () => ({ from }) }));
+vi.mock("../../lib/env", () => ({ env: { AI_CONTEXT_TTL_MS: 60000 } }));
 
-function client() {
+type Row = Record<string, unknown>;
+const tenantTables = ["hero_content", "about_content", "skills", "projects", "experience", "certifications", "contact_info"];
+let rows: Record<string, Row[]>;
+let errors: Set<string>;
+let rejected: Set<string>;
+let buildSiteContext: () => Promise<string>;
+const chains: Record<string, ReturnType<typeof query>> = {};
+
+function query(table: string) {
+  const filters: Array<[string, unknown]> = [];
+  let orderColumn = "";
+  let maxRows = Infinity;
+  let single = false;
+  const result = async () => {
+    if (rejected.has(table)) throw new Error("database unavailable");
+    const data = (rows[table] ?? [])
+      .filter((row) => filters.every(([column, value]) => row[column] === value))
+      .sort((a, b) => String(a[orderColumn]).localeCompare(String(b[orderColumn])))
+      .slice(0, maxRows);
+    return {
+      data: single ? data[0] ?? null : data,
+      error: errors.has(table) ? { message: "query failed" } : null,
+    };
+  };
   const chain = {
     select: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    is: vi.fn().mockReturnThis(),
-    limit: vi.fn().mockReturnThis(),
-    maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    eq: vi.fn((column: string, value: unknown) => { filters.push([column, value]); return chain; }),
+    is: vi.fn((column: string, value: unknown) => { filters.push([column, value]); return chain; }),
+    order: vi.fn((column: string) => { orderColumn = column; return chain; }),
+    limit: vi.fn((limit: number) => { maxRows = limit; return chain; }),
+    maybeSingle: vi.fn(() => { single = true; return result(); }),
+    then: (resolve: (value: Awaited<ReturnType<typeof result>>) => unknown, reject: (error: unknown) => unknown) => result().then(resolve, reject),
   };
-  return { from: vi.fn().mockReturnValue(chain) };
+  return chain;
 }
 
-describe("buildSiteContext", () => {
-  beforeEach(() => {
-    vi.stubEnv("AI_CONTEXT_TTL_MS", "60000");
-    const c = client();
-    // First maybeSingle call is the hero_content query.
-    c.from().maybeSingle.mockResolvedValueOnce({
-      data: {
-        name: "Jane",
-        heading: "Engineer",
-        roles: ["Dev"],
-        description: "Builder",
-        email: "j@x.com",
-        github_url: "https://github.com/j",
-        linkedin_url: "",
-        twitter_url: null,
-        youtube_url: null,
-        facebook_url: null,
-        tagline: null,
-        available: true,
-      },
-      error: null,
-    });
-    vi.mocked(getSupabaseClient).mockReturnValue(c as never);
+beforeEach(async () => {
+  vi.resetModules();
+  vi.useFakeTimers();
+  errors = new Set();
+  rejected = new Set();
+  rows = {
+    public_portfolios: [
+      { id: "b", slug: "beta", is_published: true },
+      { id: "private", slug: "aaa", is_published: false },
+      { id: "a", slug: "alpha", is_published: true },
+    ],
+  };
+  for (const table of tenantTables) {
+    rows[table] = ["b", "private", null, "a"].map((portfolioId) => ({
+      portfolio_id: portfolioId, is_published: true, is_visible: true, deleted_at: null,
+      name: `${portfolioId} name`, bio: `${portfolioId} bio`, title: `${portfolioId} title`,
+      description: `${portfolioId} description`, company: `${portfolioId} company`,
+      issuer: `${portfolioId} issuer`, email: `${portfolioId}@example.com`, roles: ["Developer"],
+    }));
+  }
+  from.mockReset().mockImplementation((table: string) => {
+    const chain = query(table);
+    chains[table] = chain;
+    return chain;
   });
-
-  afterEach(() => {
-    vi.unstubAllEnvs();
-  });
-
-  it("returns a context block containing hero name and roles", async () => {
-    const text = await buildSiteContext();
-    expect(text).toContain("Name: Jane");
-    expect(text).toContain("Roles: Dev");
-  });
-
-  it("caches the context across calls within the TTL", async () => {
-    await buildSiteContext();
-    await buildSiteContext();
-    // Only one maybeSingle resolution per query set was consumed if cached;
-    // a second fetch would try the default mock, still fine — assert the
-    // cached value is stable.
-    const text = await buildSiteContext();
-    expect(text).toContain("Name: Jane");
-  });
+  ({ buildSiteContext } = await import("../../lib/ai/context"));
 });
 
-describe("buildSiteContext concurrent fetches", () => {
-  beforeEach(() => {
-    // TTL 0 disables the cache read path so every call reaches the fetch
-    // layer — this isolates in-flight coalescing from cache hits.
-    vi.stubEnv("AI_CONTEXT_TTL_MS", "0");
+afterEach(() => { vi.useRealTimers(); });
+
+describe("public AI context isolation", () => {
+  it("selects the first published slug and scopes every content query", async () => {
+    const text = await buildSiteContext();
+    expect(text).toContain("Name: a name");
+    expect(text).toContain("Roles: Developer");
+    expect(text).toContain("About: a bio");
+    expect(text).toContain("Skills: a name");
+    expect(text).toContain("Projects: a title");
+    expect(text).toContain("Experience: a title at a company");
+    expect(text).toContain("Certifications: a title (a issuer)");
+    expect(text).toContain("Contact: a@example.com");
+    for (const forbidden of ["b name", "b title", "b bio", "b@example.com", "private", "null"])
+      expect(text).not.toContain(forbidden);
+    expect(chains.public_portfolios.eq).toHaveBeenCalledWith("is_published", true);
+    expect(chains.public_portfolios.order).toHaveBeenCalledWith("slug", { ascending: true });
+    expect(chains.public_portfolios.limit).toHaveBeenCalledWith(1);
+    for (const table of tenantTables)
+      expect(chains[table].eq).toHaveBeenCalledWith("portfolio_id", "a");
   });
 
-  afterEach(() => {
-    vi.unstubAllEnvs();
-  });
-
-  function delayedClient(onQuery: () => void) {
-    const chains: Record<string, ReturnType<typeof makeChain>> = {};
-    function makeChain() {
-      return {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        is: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockReturnThis(),
-        maybeSingle: vi.fn(
-          () =>
-            new Promise((resolve) =>
-              setTimeout(() => resolve({ data: null, error: null }), 5),
-            ),
-        ),
-      };
-    }
-    return {
-      from: vi.fn((table: string) => {
-        onQuery();
-        if (!chains[table]) chains[table] = makeChain();
-        return chains[table];
-      }),
-      chains,
-    };
-  }
-
-  it("coalesces concurrent misses into one fetch", async () => {
-    let calls = 0;
-    const c = delayedClient(() => {
-      calls++;
-    });
-    vi.mocked(getSupabaseClient).mockReturnValue(c as never);
-
-    const [a, b, d] = await Promise.all([
-      buildSiteContext(),
-      buildSiteContext(),
-      buildSiteContext(),
-    ]);
-
-    expect(a).toBe(b);
-    expect(b).toBe(d);
-    // One round of 7 queries, not 3 x 7.
-    expect(calls).toBe(7);
-  });
-
-  it("serves the same stale text to concurrent callers when the fetch rejects", async () => {
-    // Prime a non-empty cache entry via a successful fetch.
-    const ok = client();
-    ok.from().maybeSingle.mockResolvedValueOnce({
-      data: {
-        name: "Stale",
-        heading: "Engineer",
-        roles: ["Dev"],
-        description: "Builder",
-        email: "s@x.com",
-        github_url: "",
-        linkedin_url: "",
-        twitter_url: null,
-        youtube_url: null,
-        facebook_url: null,
-        tagline: null,
-        available: true,
-      },
-      error: null,
-    });
-    vi.mocked(getSupabaseClient).mockReturnValue(ok as never);
+  it("preserves publication, visibility, deletion and list limits", async () => {
     await buildSiteContext();
-
-    // Swap in a client whose queries reject; TTL 0 keeps the cache read
-    // path out of the picture so the concurrent callers reach the failing
-    // fetch and must be served the stale entry from the error path.
-    const failing = {
-      from: vi.fn(() => {
-        throw new Error("supabase down");
-      }),
-    };
-    vi.mocked(getSupabaseClient).mockReturnValue(failing as never);
-
-    const [a, b, d] = await Promise.all([
-      buildSiteContext(),
-      buildSiteContext(),
-      buildSiteContext(),
-    ]);
-
-    expect(a).toContain("Name: Stale");
-    expect(a).toBe(b);
-    expect(b).toBe(d);
-  });
-
-  it("caps list queries with .limit(100)", async () => {
-    const c = delayedClient(() => {});
-    vi.mocked(getSupabaseClient).mockReturnValue(c as never);
-
-    await buildSiteContext();
-
+    for (const table of ["hero_content", "about_content", "projects", "experience", "certifications"])
+      expect(chains[table].eq).toHaveBeenCalledWith("is_published", true);
+    expect(chains.skills.eq).toHaveBeenCalledWith("is_visible", true);
     for (const table of ["skills", "projects", "experience", "certifications"]) {
-      expect(c.chains[table].limit).toHaveBeenCalledWith(100);
+      expect(chains[table].is).toHaveBeenCalledWith("deleted_at", null);
+      expect(chains[table].limit).toHaveBeenCalledWith(100);
     }
+  });
+
+  it("returns no context and skips content queries without a published portfolio", async () => {
+    rows.public_portfolios = [{ id: "private", slug: "aaa", is_published: false }];
+    expect(await buildSiteContext()).toBe("");
+    expect(from.mock.calls).toEqual([["public_portfolios"]]);
+  });
+
+  it.each(["public_portfolios", ...tenantTables])("fails closed on %s query errors even with data", async (table) => {
+    errors.add(table);
+    expect(await buildSiteContext()).toBe("");
+    errors.delete(table);
+    expect(await buildSiteContext()).toContain("Name: a name");
+  });
+
+  it.each(["public_portfolios", "hero_content", "skills"])("fails closed on rejected %s queries", async (table) => {
+    rejected.add(table);
+    expect(await buildSiteContext()).toBe("");
+  });
+
+  it("rechecks publication on cache hits without refetching content", async () => {
+    expect(await buildSiteContext()).toContain("Name: a name");
+    expect(await buildSiteContext()).toContain("Name: a name");
+    expect(from.mock.calls.filter(([table]) => table === "public_portfolios")).toHaveLength(2);
+    expect(from.mock.calls.filter(([table]) => table === "hero_content")).toHaveLength(1);
+  });
+
+  it("does not serve cached context after all portfolios are unpublished", async () => {
+    await buildSiteContext();
+    rows.public_portfolios = [];
+    expect(await buildSiteContext()).toBe("");
+  });
+
+  it("partitions cached context by the currently resolved portfolio", async () => {
+    expect(await buildSiteContext()).toContain("Name: a name");
+    rows.public_portfolios = [{ id: "b", slug: "beta", is_published: true }];
+    const text = await buildSiteContext();
+    expect(text).toContain("Name: b name");
+    expect(text).not.toContain("a name");
+    rows.public_portfolios = [{ id: "a", slug: "alpha", is_published: true }];
+    expect(await buildSiteContext()).toContain("Name: a name");
+  });
+
+  it("does not use a cached context when publication lookup fails", async () => {
+    await buildSiteContext();
+    errors.add("public_portfolios");
+    expect(await buildSiteContext()).toBe("");
+  });
+
+  it("does not serve stale context after refresh failure and permits retry", async () => {
+    await buildSiteContext();
+    vi.advanceTimersByTime(60001);
+    errors.add("skills");
+    expect(await buildSiteContext()).toBe("");
+    errors.delete("skills");
+    rows.hero_content = [{ portfolio_id: "a", is_published: true, name: "Updated" }];
+    expect(await buildSiteContext()).toContain("Name: Updated");
+  });
+
+  it("coalesces concurrent content fetches while checking publication for each call", async () => {
+    const texts = await Promise.all([buildSiteContext(), buildSiteContext(), buildSiteContext()]);
+    for (const text of texts) expect(text).toContain("Name: a name");
+    expect(from.mock.calls.filter(([table]) => table === "public_portfolios")).toHaveLength(3);
+    for (const table of tenantTables)
+      expect(from.mock.calls.filter(([name]) => name === table)).toHaveLength(1);
+  });
+
+  it("caps generated context length", async () => {
+    rows.hero_content = [{ portfolio_id: "a", is_published: true, name: "x".repeat(7000) }];
+    expect(await buildSiteContext()).toHaveLength(6000);
   });
 });

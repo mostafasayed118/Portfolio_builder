@@ -38,12 +38,13 @@ export interface CvData {
 /** Bounds for one PDF render — CVs are single-visitor artifacts, not bulk exports. */
 const CV_ROWS_LIMIT = 100;
 
-export async function fetchCvData(supabase: SupabaseClient): Promise<CvData> {
+export async function fetchCvData(supabase: SupabaseClient, portfolioId: string): Promise<CvData> {
   const [heroResult, aboutResult, expResult, skillsResult, certsResult] =
     await Promise.allSettled([
       supabase
         .from("hero_content")
         .select("name,roles,heading,description,email,github_url,linkedin_url")
+        .eq("portfolio_id", portfolioId)
         .limit(1)
         .maybeSingle(),
       supabase
@@ -51,11 +52,13 @@ export async function fetchCvData(supabase: SupabaseClient): Promise<CvData> {
         .select(
           "location,years_of_experience,bio1,bio2,degree,school,grade,education_years",
         )
+        .eq("portfolio_id", portfolioId)
         .limit(1)
         .maybeSingle(),
       supabase
         .from("experience")
         .select("title,company,period,description,technologies")
+        .eq("portfolio_id", portfolioId)
         .is("deleted_at", null)
         .eq("is_published", true)
         .order("sort_order", { ascending: true })
@@ -63,6 +66,7 @@ export async function fetchCvData(supabase: SupabaseClient): Promise<CvData> {
       supabase
         .from("skills")
         .select("name,proficiency,category")
+        .eq("portfolio_id", portfolioId)
         .is("deleted_at", null)
         .eq("is_visible", true)
         .order("sort_order", { ascending: true })
@@ -70,6 +74,7 @@ export async function fetchCvData(supabase: SupabaseClient): Promise<CvData> {
       supabase
         .from("certifications")
         .select("title,issuer,date")
+        .eq("portfolio_id", portfolioId)
         .is("deleted_at", null)
         .eq("is_published", true)
         .order("sort_order", { ascending: true })

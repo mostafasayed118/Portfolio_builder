@@ -241,9 +241,15 @@ jobs:
       - name: Export local Supabase env
         run: supabase status -o env >> "$GITHUB_ENV"
 
-      - name: Run RLS multi-tenant tests
+      - name: Run real-database regression tests
         working-directory: lib/db
-        run: pnpm vitest run src/rls-multitenant.test.ts
+        run: |
+          : "${SUPABASE_TEST_URL:?Missing local Supabase URL}"
+          : "${SUPABASE_TEST_ANON_KEY:?Missing local anonymous key}"
+          : "${SUPABASE_TEST_SERVICE_KEY:?Missing local service key}"
+          : "${SUPABASE_TEST_JWT_SECRET:?Missing local JWT secret}"
+          pnpm vitest run src/rls*.test.ts src/messages-spam*.test.ts --reporter=default --reporter=json --outputFile=rls-results.json
+          node -e 'const r = require("./rls-results.json"); if (!r.numTotalTests || r.numPendingTests || r.numTodoTests) { console.error("Real-database suites must run without skipped tests"); process.exit(1); }'
         env:
           SUPABASE_TEST_URL: ${{ env.API_URL }}
           SUPABASE_TEST_ANON_KEY: ${{ env.ANON_KEY }}

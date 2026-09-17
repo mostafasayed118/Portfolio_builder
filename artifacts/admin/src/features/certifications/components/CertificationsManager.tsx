@@ -37,7 +37,6 @@ const EMPTY_CERT: Cert = {
   created_at: "",
   updated_at: "",
   skills: [],
-  user_id: null,
   deleted_at: null,
 };
 

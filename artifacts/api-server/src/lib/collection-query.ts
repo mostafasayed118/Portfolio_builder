@@ -51,12 +51,6 @@ export function logSupabaseError(
 /**
  * Run a paginated collection query and send the response.
  *
- * Tenanted collections are scoped by RLS on the JWT-scoped request client
- * (`owner_select_<t>` policies restrict reads to the caller's portfolios),
- * so no `user_id` filter is applied for them — `targetUserId`/`includeOrphans`
- * are ignored. `theme_presets` is the only non-tenanted collection (spec
- * §4.3) and keeps the `user_id` scoping machinery below.
- *
  * Reduces the GET-handler boilerplate from ~25 lines to one call:
  *
  *   const { data, count, error } = await supabase
@@ -90,9 +84,6 @@ export async function runCollectionQuery(
     softDelete?: boolean | "only";
     orderBy?: string;
     orderAsc?: boolean;
-    userColumn?: string; // default: "user_id"
-    targetUserId?: string | null;
-    includeOrphans?: boolean; // also return rows with user_id IS NULL
     /** Extra filters applied after soft-delete, before user scope and ordering. */
     filters?: {
       /** Applied as `.eq(column, value)` for each entry. */
@@ -117,18 +108,15 @@ export async function runCollectionQuery(
     return serverError(res, "Request client not initialized");
   }
   const { limit, offset } = parsePagination(req);
-  const userColumn = options.userColumn ?? "user_id";
-
-  // Only theme_presets is user-scoped; tenanted tables rely on RLS.
-  const isUserScoped = table === "theme_presets" && userColumn === "user_id";
+  const isUserScoped = table === "theme_presets";
 
   // Fail closed: a non-UUID ?userId from a superadmin must never reach the
   // PostgREST .or() filter — map it to a 400 before building the query.
   let targetUserId: string | null = null;
   if (isUserScoped) {
     try {
-      targetUserId = options.targetUserId ?? resolveTargetUserId(req, req.query.userId as string | undefined);
-    } catch (error) {
+      targetUserId = resolveTargetUserId(req, typeof req.query.userId === "string" ? req.query.userId : undefined);
+    } catch (error: unknown) {
       if (error instanceof InvalidTargetUserIdError) {
         return badRequest(res, { userId: [error.message] });
       }
@@ -147,7 +135,6 @@ export async function runCollectionQuery(
     const { data, count } = await collectionQuery(supabase, table, {
       ...options,
       targetUserId: isUserScoped ? targetUserId : null,
-      includeOrphans: isUserScoped && options.includeOrphans,
       limit,
       offset,
     });

@@ -21,6 +21,7 @@ const POST_ROW = {
 
 describe("Public posts API", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     resetSupabaseClient(mockSupabaseClient);
   });
 
@@ -67,9 +68,51 @@ describe("Public posts API", () => {
   });
 });
 
+const PORTFOLIO_ID = "11111111-1111-4111-8111-111111111111";
+
 describe("Admin posts API", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     resetSupabaseClient(mockSupabaseClient);
+    mockSupabaseClient.maybeSingle.mockResolvedValue({ data: { id: PORTFOLIO_ID }, error: null });
+  });
+
+  describe("PUT /api/v1/admin/posts/:id", () => {
+    it.each([
+      { state: { is_published: false, published_at: null }, stamp: true },
+      { state: { is_published: true, published_at: "2026-01-01T00:00:00Z" }, stamp: false },
+    ])("preserves publish stamps according to existing state $stamp", async ({ state, stamp }) => {
+      mockSupabaseClient.maybeSingle.mockResolvedValueOnce({ data: state, error: null });
+      const updateChain = {
+        eq: vi.fn().mockReturnThis(),
+        select: vi.fn().mockResolvedValue({ data: [{ id: POST_ROW.id }], error: null }),
+      };
+      mockSupabaseClient.update.mockReturnValueOnce(updateChain);
+      const res = await request(app).put(`/api/v1/admin/posts/${POST_ROW.id}?userId=legacy-user`)
+        .set("x-admin-key", mockAdminKey).send({ is_published: true });
+      expect(res.status).toBe(200);
+      expect(mockSupabaseClient.eq.mock.calls).toEqual([["id", POST_ROW.id]]);
+      expect(updateChain.eq.mock.calls).toEqual([["id", POST_ROW.id]]);
+      if (stamp) {
+        expect(mockSupabaseClient.update).toHaveBeenCalledWith({ is_published: true, published_at: expect.any(String) });
+      } else {
+        expect(mockSupabaseClient.update).toHaveBeenCalledWith({ is_published: true });
+      }
+    });
+
+    it("returns 404 when the request-client update matches no owned row", async () => {
+      mockSupabaseClient.maybeSingle.mockResolvedValueOnce({ data: null, error: null });
+      const updateChain = {
+        eq: vi.fn().mockReturnThis(),
+        select: vi.fn().mockResolvedValue({ data: [], error: null }),
+      };
+      mockSupabaseClient.update.mockReturnValueOnce(updateChain);
+      const res = await request(app).put(`/api/v1/admin/posts/${POST_ROW.id}`)
+        .set("x-admin-key", mockAdminKey).send({ is_published: true });
+      expect(res.status).toBe(404);
+      expect(res.body).toEqual({ success: false, message: "Post not found" });
+      expect(mockSupabaseClient.update).toHaveBeenCalledWith({ is_published: true });
+    });
   });
 
   describe("POST /api/v1/admin/posts", () => {
@@ -83,6 +126,33 @@ describe("Admin posts API", () => {
 
       expect(res.status).toBe(201);
       expect(res.body.success).toBe(true);
+      expect(mockSupabaseClient.insert).toHaveBeenCalledWith(expect.objectContaining({
+        portfolio_id: PORTFOLIO_ID,
+        title: "Hello World",
+        is_published: true,
+      }));
+      expect(mockSupabaseClient.insert.mock.calls[0]?.[0]).not.toHaveProperty("user_id");
+    });
+
+    it("rejects creation without a portfolio before inserting", async () => {
+      mockSupabaseClient.maybeSingle.mockResolvedValue({ data: null, error: null });
+      const res = await request(app).post("/api/v1/admin/posts")
+        .set("x-admin-key", mockAdminKey).send({ title: "Hello", slug: "hello", content: "body" });
+      expect(res.status).toBe(400);
+      expect(res.body.errors).toEqual({ portfolioId: ["Create a portfolio first"] });
+      expect(mockSupabaseClient.insert).not.toHaveBeenCalled();
+    });
+
+    it("maps a foreign portfolio insert denied by RLS to 404", async () => {
+      mockSupabaseClient.single.mockResolvedValueOnce({
+        data: null, error: { code: "42501", message: "RLS denied" },
+      });
+      const res = await request(app).post(`/api/v1/admin/posts?portfolioId=${PORTFOLIO_ID}`)
+        .set("x-admin-key", mockAdminKey).send({ title: "Hello", slug: "hello", content: "body" });
+      expect(res.status).toBe(404);
+      expect(res.body).toEqual({ success: false, message: "Not found." });
+      expect(mockSupabaseClient.insert.mock.calls[0]?.[0]).not.toHaveProperty("user_id");
+      expect(mockSupabaseClient.insert).toHaveBeenCalledWith(expect.objectContaining({ portfolio_id: PORTFOLIO_ID }));
     });
 
     it("maps a slug unique-violation (23505) to a 400 field error", async () => {

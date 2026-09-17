@@ -1,5 +1,19 @@
-import { describe, it, expect } from "vitest";
-import { groupSkillsByCategory } from "./usePortfolioData";
+import { describe, it, expect, vi } from "vitest";
+import { groupSkillsByCategory, useProjectCovers, useProjectImages } from "./usePortfolioData";
+
+vi.mock("@tanstack/react-query", () => ({ useQuery: (options: unknown) => options }));
+vi.mock("@/lib/supabase-provider", () => ({ getSupabase: () => ({}), isSupabaseConfigured: true }));
+vi.mock("@workspace/db/images", () => ({
+  listEntityImages: async () => [{ id: "image", storage_path: "portfolio/projects/file.png" }],
+  listCoversByEntity: async () => [{ id: "image", entity_id: "project", storage_path: "portfolio/projects/file.png" }],
+}));
+
+it("gallery and cover queries return proxy URLs without public Storage URLs", async () => {
+  const gallery = useProjectImages("project") as unknown as { queryFn: () => Promise<{ url: string }[]> };
+  const covers = useProjectCovers(["project"]) as unknown as { queryFn: () => Promise<Record<string, string>> };
+  expect((await gallery.queryFn())[0].url).toContain("/api/v1/images/serve/");
+  expect((await covers.queryFn()).project).toContain("/api/v1/images/serve/");
+});
 
 // DbSkill type shape for testing
 type TestSkill = {

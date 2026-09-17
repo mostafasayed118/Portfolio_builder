@@ -53,6 +53,23 @@ describe("CvManager", () => {
     });
   });
 
+  it("previews the owned draft through authenticated storage rather than the public CV endpoint", async () => {
+    const path = "11111111-1111-4111-8111-111111111111/cv-123.pdf";
+    mockCvGetSettings.mockResolvedValue({ success: true, data: { objectPath: path, fileName: "draft.pdf" } });
+    const download = vi.fn().mockResolvedValue({ data: new Blob(["%PDF-draft"], { type: "application/pdf" }), error: null });
+    mockGetSupabase.mockReturnValue({ storage: { from: () => ({ download }) } });
+    const createUrl = vi.fn().mockReturnValue("blob:private-preview");
+    vi.stubGlobal("URL", Object.assign(URL, { createObjectURL: createUrl, revokeObjectURL: vi.fn() }));
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    renderWithProviders(<CvManager />);
+    fireEvent.click(await screen.findByRole("button", { name: "Preview" }));
+    await waitFor(() => expect(open).toHaveBeenCalledWith("blob:private-preview", "_blank", "noopener,noreferrer"));
+    expect(download).toHaveBeenCalledWith(path);
+    expect(createUrl).toHaveBeenCalledWith(expect.any(Blob));
+    open.mockRestore();
+    vi.unstubAllGlobals();
+  });
+
   it("uploads and rolls back the exact owned path while saving only the basename", async () => {
     const portfolioId = "11111111-1111-4111-8111-111111111111";
     mockCvGetSettings.mockResolvedValue({ success: true, data: { portfolioId, objectPath: null } });

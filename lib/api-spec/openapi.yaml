@@ -2354,7 +2354,7 @@ components:
 
     Skill:
       type: object
-      required: [portfolio_id, id, name, category, category_ar, proficiency, icon, sort_order, is_visible, user_id, deleted_at, created_at, updated_at]
+      required: [portfolio_id, id, name, category, category_ar, proficiency, icon, sort_order, is_visible, deleted_at, created_at, updated_at]
       properties:
         portfolio_id: { type: string, nullable: true }
         id: { type: string }
@@ -2365,7 +2365,6 @@ components:
         icon: { type: string, nullable: true }
         sort_order: { type: integer, nullable: true }
         is_visible: { type: boolean, nullable: true }
-        user_id: { type: string, nullable: true }
         deleted_at: { type: string, nullable: true }
         created_at: { type: string }
         updated_at: { type: string }
@@ -2386,7 +2385,7 @@ components:
 
     Project:
       type: object
-      required: [portfolio_id, id, title, description, full_description, challenges, outcome, title_ar, description_ar, full_description_ar, challenges_ar, outcome_ar, completed_at, tech_stack, category, featured, github_url, live_url, slug, metrics, sort_order, is_published, image_url, tags, user_id, deleted_at, created_at, updated_at]
+      required: [portfolio_id, id, title, description, full_description, challenges, outcome, title_ar, description_ar, full_description_ar, challenges_ar, outcome_ar, completed_at, tech_stack, category, featured, github_url, live_url, slug, metrics, sort_order, is_published, image_url, tags, deleted_at, created_at, updated_at]
       properties:
         portfolio_id: { type: string, nullable: true }
         id: { type: string }
@@ -2412,14 +2411,13 @@ components:
         is_published: { type: boolean, nullable: true }
         image_url: { type: string, nullable: true }
         tags: { type: array, items: { type: string } }
-        user_id: { type: string, nullable: true }
         deleted_at: { type: string, nullable: true }
         created_at: { type: string }
         updated_at: { type: string }
 
     Experience:
       type: object
-      required: [portfolio_id, id, title, company, location, period, description, technologies, title_ar, company_ar, location_ar, description_ar, type, sort_order, is_published, current, order_num, user_id, deleted_at, created_at, updated_at]
+      required: [portfolio_id, id, title, company, location, period, description, technologies, title_ar, company_ar, location_ar, description_ar, type, sort_order, is_published, current, order_num, deleted_at, created_at, updated_at]
       properties:
         portfolio_id: { type: string, nullable: true }
         id: { type: string }
@@ -2438,14 +2436,13 @@ components:
         is_published: { type: boolean, nullable: true }
         current: { type: boolean, nullable: true }
         order_num: { type: integer, nullable: true }
-        user_id: { type: string, nullable: true }
         deleted_at: { type: string, nullable: true }
         created_at: { type: string }
         updated_at: { type: string }
 
     Certification:
       type: object
-      required: [portfolio_id, id, title, issuer, title_ar, issuer_ar, issuer_logo, date, date_sort, category, credential_url, credential_id, sort_order, is_published, skills, user_id, deleted_at, created_at, updated_at]
+      required: [portfolio_id, id, title, issuer, title_ar, issuer_ar, issuer_logo, date, date_sort, category, credential_url, credential_id, sort_order, is_published, skills, deleted_at, created_at, updated_at]
       properties:
         portfolio_id: { type: string, nullable: true }
         id: { type: string }
@@ -2462,14 +2459,13 @@ components:
         sort_order: { type: integer, nullable: true }
         is_published: { type: boolean, nullable: true }
         skills: { type: array, items: { type: string } }
-        user_id: { type: string, nullable: true }
         deleted_at: { type: string, nullable: true }
         created_at: { type: string }
         updated_at: { type: string }
 
     BlogPost:
       type: object
-      required: [portfolio_id, id, title, slug, excerpt, content, reading_minutes, cover_image_url, tags, is_published, published_at, user_id, deleted_at, created_at, updated_at]
+      required: [portfolio_id, id, title, slug, excerpt, content, reading_minutes, cover_image_url, tags, is_published, published_at, deleted_at, created_at, updated_at]
       properties:
         portfolio_id: { type: string, nullable: true }
         id: { type: string }
@@ -2486,7 +2482,6 @@ components:
         tags: { type: array, items: { type: string } }
         is_published: { type: boolean, nullable: true }
         published_at: { type: string, nullable: true }
-        user_id: { type: string, nullable: true }
         deleted_at: { type: string, nullable: true }
         created_at: { type: string }
         updated_at: { type: string }
@@ -2506,7 +2501,7 @@ components:
 
     Message:
       type: object
-      required: [portfolio_id, id, name, email, subject, message, status, reply_email_draft, replied_at, user_id, deleted_at, created_at, updated_at, spam_score, spam_reason, is_spam]
+      required: [portfolio_id, id, name, email, subject, message, status, reply_email_draft, replied_at, deleted_at, created_at, updated_at, spam_score, spam_reason, is_spam]
       properties:
         portfolio_id: { type: string, nullable: true }
         id: { type: string }
@@ -2517,7 +2512,6 @@ components:
         status: { type: string, enum: [unread, read, archived] }
         reply_email_draft: { type: string, nullable: true }
         replied_at: { type: string, nullable: true }
-        user_id: { type: string, nullable: true }
         deleted_at: { type: string, nullable: true }
         created_at: { type: string }
         updated_at: { type: string }

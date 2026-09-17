@@ -475,7 +475,6 @@ export interface Database {
           tags: string[];
           is_published: boolean | null;
           published_at: string | null;
-          user_id: string | null;
           deleted_at: string | null;
           created_at: string;
           updated_at: string;
@@ -491,7 +490,6 @@ export interface Database {
           tags?: string[];
           is_published?: boolean | null;
           published_at?: string | null;
-          user_id?: string | null;
           deleted_at?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -507,7 +505,6 @@ export interface Database {
           tags?: string[];
           is_published?: boolean | null;
           published_at?: string | null;
-          user_id?: string | null;
           deleted_at?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -648,7 +645,6 @@ export interface Database {
           icon: string | null;
           sort_order: number | null;
           is_visible: boolean | null;
-          user_id: string | null;
           deleted_at: string | null;
           created_at: string;
           updated_at: string;
@@ -663,7 +659,6 @@ export interface Database {
           icon?: string | null;
           sort_order?: number | null;
           is_visible?: boolean | null;
-          user_id?: string | null;
           deleted_at?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -678,7 +673,6 @@ export interface Database {
           icon?: string | null;
           sort_order?: number | null;
           is_visible?: boolean | null;
-          user_id?: string | null;
           deleted_at?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -711,7 +705,6 @@ export interface Database {
           is_published: boolean | null;
           image_url: string | null;
           tags: string[];
-          user_id: string | null;
           deleted_at: string | null;
           created_at: string;
           updated_at: string;
@@ -741,7 +734,6 @@ export interface Database {
           is_published?: boolean | null;
           image_url?: string | null;
           tags?: string[];
-          user_id?: string | null;
           deleted_at?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -771,7 +763,6 @@ export interface Database {
           is_published?: boolean | null;
           image_url?: string | null;
           tags?: string[];
-          user_id?: string | null;
           deleted_at?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -797,7 +788,6 @@ export interface Database {
           is_published: boolean | null;
           current: boolean | null;
           order_num: number | null;
-          user_id: string | null;
           deleted_at: string | null;
           created_at: string;
           updated_at: string;
@@ -820,7 +810,6 @@ export interface Database {
           is_published?: boolean | null;
           current?: boolean | null;
           order_num?: number | null;
-          user_id?: string | null;
           deleted_at?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -843,7 +832,6 @@ export interface Database {
           is_published?: boolean | null;
           current?: boolean | null;
           order_num?: number | null;
-          user_id?: string | null;
           deleted_at?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -867,7 +855,6 @@ export interface Database {
           sort_order: number | null;
           is_published: boolean | null;
           skills: string[];
-          user_id: string | null;
           deleted_at: string | null;
           created_at: string;
           updated_at: string;
@@ -888,7 +875,6 @@ export interface Database {
           sort_order?: number | null;
           is_published?: boolean | null;
           skills?: string[];
-          user_id?: string | null;
           deleted_at?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -909,7 +895,6 @@ export interface Database {
           sort_order?: number | null;
           is_published?: boolean | null;
           skills?: string[];
-          user_id?: string | null;
           deleted_at?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -927,7 +912,6 @@ export interface Database {
           status: MsgStatus;
           reply_email_draft: string | null;
           replied_at: string | null;
-          user_id: string | null;
           deleted_at: string | null;
           created_at: string;
           updated_at: string;
@@ -945,7 +929,6 @@ export interface Database {
           status?: MsgStatus;
           reply_email_draft?: string | null;
           replied_at?: string | null;
-          user_id?: string | null;
           deleted_at?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -963,7 +946,6 @@ export interface Database {
           status?: MsgStatus;
           reply_email_draft?: string | null;
           replied_at?: string | null;
-          user_id?: string | null;
           deleted_at?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -1171,7 +1153,6 @@ export interface Database {
           alt_text: string | null;
           entity_type: string;
           entity_id: string | null;
-          user_id: string | null;
           sort_order: number;
           created_at: string;
           updated_at: string;
@@ -1190,7 +1171,6 @@ export interface Database {
           alt_text?: string | null;
           entity_type: string;
           entity_id?: string | null;
-          user_id?: string | null;
           sort_order?: number;
           created_at?: string;
           updated_at?: string;
@@ -1209,7 +1189,6 @@ export interface Database {
           alt_text?: string | null;
           entity_type?: string;
           entity_id?: string | null;
-          user_id?: string | null;
           sort_order?: number;
           created_at?: string;
           updated_at?: string;

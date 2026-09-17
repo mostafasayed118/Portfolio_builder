@@ -188,6 +188,26 @@ d("rls: tenanted table isolation (066)", () => {
       .insert({ portfolio_id: portfolioA, type: "self_xss", path: "/" });
     expect(badType).not.toBeNull();
   });
+
+  it("admin email without ownership cannot read other tenants' drafts", async () => {
+    const { portfolioA } = await ensureSchema();
+    const svc = serviceClient();
+    const { error: seedErr } = await svc.from("projects").upsert(
+      { portfolio_id: portfolioA, slug: "draft-isolation", title: "Draft isolation", description: "a decent description", is_published: false },
+      { onConflict: "id" },
+    );
+    expect(seedErr).toBeNull();
+    const adminNotOwner = clientFor({ sub: "user_test_admin", email: "owner-a@test.local" });
+    const { data, error } = await adminNotOwner.from("projects").select("title").eq("title", "Draft isolation");
+    expect(error).toBeNull();
+    expect(data).toEqual([]);
+  });
+
+  it("anon analytics inserts require a published portfolio (no NULL branch)", async () => {
+    const anon = anonClient();
+    const { error } = await anon.from("analytics_events").insert({ type: "page_view", path: "/" });
+    expect(error).not.toBeNull();
+  });
 });
 
 d("rls: storage tenancy (067)", () => {

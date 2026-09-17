@@ -8,7 +8,7 @@ import { adminAuth, type AuthenticatedRequest } from "../middleware/adminAuth";
 import { attachRequestSupabase } from "../middleware/requestClient";
 import { imageMetadataLimiter, imageUploadLimiter } from "../middleware/rateLimiter";
 import { asUntypedClient } from "../lib/untyped-client";
-import { resolveActivePortfolioId, NoActivePortfolioError } from "../lib/active-portfolio";
+import { resolveActivePortfolioOr400 } from "../lib/active-portfolio";
 
 import {
   listImageOwnership,
@@ -17,12 +17,37 @@ import {
   getImageDeleteTarget,
   deleteImageMetadata,
 } from "@workspace/db/images";
-import { env } from "../lib/env";
+import imageDeliveryRouter from "./image-delivery";
 import { ok, badRequest, notFound, serverError } from "../lib/api-response";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 const router: IRouter = Router();
+router.use(imageDeliveryRouter);
+
+async function canManageImages(
+  req: AuthenticatedRequest,
+  rows: { portfolio_id: string | null }[],
+): Promise<boolean> {
+  const supabase = req.supabase;
+  if (!supabase) return false;
+  if (!req.clerkToken && (!req.user || req.user.role === "superadmin")) return true;
+  const portfolioIds = rows.map((row) => row.portfolio_id);
+  if (portfolioIds.some((id) => !id)) return false;
+  let ownerSub = req.clerkSub;
+  if (!ownerSub && !req.clerkToken && req.user) {
+    const { data, error } = await supabase.from("users").select("clerk_id").eq("id", req.user.id).maybeSingle();
+    if (error) return false;
+    ownerSub = data?.clerk_id;
+  }
+  if (!ownerSub) return false;
+  const ids = portfolioIds.filter((id): id is string => typeof id === "string");
+  const { data, error } = await supabase.from("portfolios").select("id")
+    .eq("owner_user_id", ownerSub).in("id", ids);
+  if (error || !data) return false;
+  const owned = new Set(data.map((row) => row.id));
+  return ids.every((id) => owned.has(id));
+}
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
@@ -141,15 +166,8 @@ router.post(
     // Tenant scope: storage objects live under <portfolioId>/… and the
     // metadata row carries portfolio_id (RLS enforces the boundary on JWT
     // clients). Without an active portfolio the upload has no home.
-    let activePortfolioId: string;
-    try {
-      activePortfolioId = await resolveActivePortfolioId(req);
-    } catch (error) {
-      if (error instanceof NoActivePortfolioError) {
-        return badRequest(res, { portfolioId: ["Create a portfolio first"] });
-      }
-      throw error;
-    }
+    const activePortfolioId = await resolveActivePortfolioOr400(req, res);
+    if (activePortfolioId === null) return;
 
     const imageId = createHash("sha256").update(file.buffer).digest("hex").slice(0, 16);
     // Derive the storage extension from the VERIFIED MIME type (magic bytes
@@ -168,8 +186,6 @@ router.post(
 
     if (uploadError) throw new Error(`Storage upload failed: ${uploadError.message}`);
 
-    // Save metadata (tenant-stamped; user_id is kept for the service-role
-    // path where RLS is bypassed, so cross-admin deletes stay fail-closed).
     const { data: meta, error: metaError } = await asUntypedClient(supabase)
       .from("image_metadata")
       .insert({
@@ -179,7 +195,6 @@ router.post(
         file_size_bytes: file.size,
         entity_type: entityType,
         entity_id: entityId ?? null,
-        user_id: req.user?.id ?? null,
         portfolio_id: activePortfolioId,
       })
       .select("id")
@@ -188,8 +203,7 @@ router.post(
     if (metaError) throw new Error(`Metadata insert failed: ${metaError.message}`);
 
     // Use Supabase's built-in image transformation via URL params
-    const supabaseUrl = env.SUPABASE_URL;
-    const publicUrl = `${supabaseUrl}/storage/v1/object/public/project_images/${storagePath}`;
+    const publicUrl = `/api/v1/images/serve/project_images/${storagePath.split("/").map(encodeURIComponent).join("/")}`;
 
     return ok(res, {
       id: meta.id,
@@ -199,7 +213,7 @@ router.post(
         url: `${publicUrl}?width=${v.width}${v.height ? `&height=${v.height}` : ""}&resize=${v.fit ?? "inside"}`,
       })),
     });
-  } catch (err) {
+  } catch (err: unknown) {
     req.log.error({ err }, "Image upload failed");
     return serverError(res, "Image upload failed. Please try again.");
   }
@@ -221,21 +235,10 @@ router.post("/images/reorder", adminAuth, attachRequestSupabase, doubleCsrfProte
     if (!supabase) {
       return serverError(res, "Request client not initialized");
     }
-    // Ownership pre-check mirroring the DELETE route: non-superadmins may
-    // only reorder their own uploads. Rows that predate user_id ownership
-    // (user_id IS NULL) are fail-closed to authenticated non-superadmins;
-    // identity-less API-key requests keep the historical allow behavior.
-    // Answered 404 (not 403) to avoid an existence oracle.
     const ownershipRows = await listImageOwnership(supabase, result.data.ordered_ids);
-    const ownership = new Map(
-      ownershipRows.map((row) => [String(row.id), row.user_id === null ? null : String(row.user_id)]),
-    );
-    const foreignOrMissing = result.data.ordered_ids.some((id) => {
-      if (!ownership.has(id)) return true;
-      if (!req.user || req.user.role === "superadmin") return false;
-      return ownership.get(id) !== req.user.id;
-    });
-    if (foreignOrMissing) {
+    const found = new Set(ownershipRows.map((row) => row.id));
+    const missing = result.data.ordered_ids.some((id) => !found.has(id));
+    if (missing || !(await canManageImages(req, ownershipRows))) {
       return notFound(res, "Image not found");
     }
     // sort_order is 0-based and matches the array position of each id.
@@ -245,7 +248,7 @@ router.post("/images/reorder", adminAuth, attachRequestSupabase, doubleCsrfProte
       ),
     );
     return ok(res, undefined);
-  } catch (err) {
+  } catch (err: unknown) {
     req.log.error({ err }, "Image reorder failed");
     return serverError(res, "Failed to reorder images");
   }
@@ -300,13 +303,7 @@ router.delete("/images/:id", adminAuth, attachRequestSupabase, doubleCsrfProtect
       return notFound(res, "Image not found");
     }
 
-    // Per-user scoping: non-superadmins may only delete their own uploads.
-    // Rows that predate user_id ownership (user_id IS NULL) are fail-closed
-    // to non-superadmins. Identity-less requests (API-key auth where the
-    // default admin user could not be resolved) keep the historical allow
-    // behavior — the API key itself is the admin credential. Answered 404
-    // (not 403) to avoid an existence oracle.
-    if (req.user && req.user.role !== "superadmin" && meta.user_id !== req.user.id) {
+    if (!(await canManageImages(req, [meta]))) {
       return notFound(res, "Image not found");
     }
 
@@ -314,7 +311,7 @@ router.delete("/images/:id", adminAuth, attachRequestSupabase, doubleCsrfProtect
     await deleteImageMetadata(supabase, meta.id);
 
     return ok(res, undefined);
-  } catch (err) {
+  } catch (err: unknown) {
     req.log.error({ err }, "Image delete failed");
     return serverError(res, "Failed to delete image");
   }

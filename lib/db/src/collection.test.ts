@@ -1,10 +1,14 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { SupabaseClient } from "@supabase/supabase-js";
 import { createMockSupabase } from "./test-utils";
 import { collectionQuery, collectionMutate, COLLECTION_TABLES } from "./collection";
 
 let supabase: ReturnType<typeof createMockSupabase>;
+let client: SupabaseClient;
 beforeEach(() => {
   supabase = createMockSupabase();
+  client = new SupabaseClient("https://example.com", "test-key");
+  vi.spyOn(client, "from").mockImplementation(supabase.from.mockReturnValue(supabase));
 });
 
 describe("COLLECTION_TABLES", () => {
@@ -25,7 +29,7 @@ describe("COLLECTION_TABLES", () => {
 describe("collectionQuery", () => {
   it("rejects a table outside the allowlist", async () => {
     await expect(
-      collectionQuery(supabase as any, "users", { limit: 10, offset: 0 }),
+      collectionQuery(client, "users", { limit: 10, offset: 0 }),
     ).rejects.toThrow('[collection] table "users" is not in the collection allowlist');
   });
 
@@ -33,7 +37,7 @@ describe("collectionQuery", () => {
     const rows = [{ id: "1" }, { id: "2" }];
     supabase.returns.mockResolvedValueOnce({ data: rows, count: 42, error: null });
 
-    const result = await collectionQuery(supabase as any, "projects", {
+    const result = await collectionQuery(client, "projects", {
       softDelete: true,
       orderBy: "sort_order",
       orderAsc: false,
@@ -49,23 +53,36 @@ describe("collectionQuery", () => {
     expect(result).toEqual({ data: rows, count: 42 });
   });
 
-  it("scopes to the target user with includeOrphans via a single or() filter", async () => {
-    supabase.returns.mockResolvedValueOnce({ data: [], count: 0, error: null });
-
-    await collectionQuery(supabase as any, "messages", {
+  it("uses portfolio filters without legacy user scoping on tenanted tables", async () => {
+    supabase.returns.mockResolvedValueOnce({ data: [{ id: "message-1" }], count: 1, error: null });
+    const options = {
       targetUserId: "user-1",
       includeOrphans: true,
+      filters: { eq: { portfolio_id: "portfolio-1" } },
       limit: 10,
       offset: 0,
-    });
+    };
 
-    expect(supabase.or).toHaveBeenCalledWith("user_id.eq.user-1,user_id.is.null");
+    const result = await collectionQuery(client, "messages", options);
+
+    expect(supabase.eq.mock.calls).toEqual([["portfolio_id", "portfolio-1"]]);
+    expect(supabase.or).not.toHaveBeenCalled();
+    expect(result).toEqual({ data: [{ id: "message-1" }], count: 1 });
+  });
+
+  it("retains user scoping for non-tenanted theme presets", async () => {
+    supabase.returns.mockResolvedValueOnce({ data: [{ id: "theme-1" }], count: 1, error: null });
+    const result = await collectionQuery(client, "theme_presets", {
+      targetUserId: "user-1", limit: 10, offset: 0,
+    });
+    expect(supabase.eq.mock.calls).toEqual([["user_id", "user-1"]]);
+    expect(result).toEqual({ data: [{ id: "theme-1" }], count: 1 });
   });
 
   it("applies the only-soft-delete mode via not(deleted_at, is, null)", async () => {
     supabase.returns.mockResolvedValueOnce({ data: [], count: 0, error: null });
 
-    await collectionQuery(supabase as any, "messages", {
+    await collectionQuery(client, "messages", {
       softDelete: "only",
       limit: 10,
       offset: 0,
@@ -78,7 +95,7 @@ describe("collectionQuery", () => {
     supabase.returns.mockResolvedValueOnce({ data: null, count: null, error: new Error("db down") });
 
     await expect(
-      collectionQuery(supabase as any, "skills", { limit: 10, offset: 0 }),
+      collectionQuery(client, "skills", { limit: 10, offset: 0 }),
     ).rejects.toThrow("db down");
   });
 });
@@ -87,20 +104,20 @@ describe("collectionMutate", () => {
   it("inserts the row and resolves null", async () => {
     supabase.insert.mockResolvedValueOnce({ data: null, error: null });
 
-    const result = await collectionMutate(supabase as any, "skills", {
+    const result = await collectionMutate(client, "skills", {
       action: "insert",
-      row: { name: "React", user_id: "user-1" },
+      row: { name: "React", portfolio_id: "portfolio-1" },
     });
 
     expect(supabase.from).toHaveBeenCalledWith("skills");
-    expect(supabase.insert).toHaveBeenCalledWith({ name: "React", user_id: "user-1" });
+    expect(supabase.insert).toHaveBeenCalledWith({ name: "React", portfolio_id: "portfolio-1" });
     expect(result).toBeNull();
   });
 
   it("updates scoped by id and returns the matched rows", async () => {
     supabase.select.mockResolvedValueOnce({ data: [{ id: "p1" }], error: null });
 
-    const result = await collectionMutate(supabase as any, "projects", {
+    const result = await collectionMutate(client, "projects", {
       action: "update",
       id: "p1",
       patch: { name: "New" },
@@ -116,7 +133,7 @@ describe("collectionMutate", () => {
   it("additionally scopes the update by user when userId is set (theme_presets)", async () => {
     supabase.select.mockResolvedValueOnce({ data: [], error: null });
 
-    const result = await collectionMutate(supabase as any, "theme_presets", {
+    const result = await collectionMutate(client, "theme_presets", {
       action: "update",
       id: "p1",
       patch: { name: "New" },
@@ -129,7 +146,7 @@ describe("collectionMutate", () => {
 
   it("rejects a table outside the allowlist", async () => {
     await expect(
-      collectionMutate(supabase as any, "audit_logs", { action: "insert", row: {} }),
+      collectionMutate(client, "audit_logs", { action: "insert", row: {} }),
     ).rejects.toThrow("not in the collection allowlist");
   });
 
@@ -137,7 +154,7 @@ describe("collectionMutate", () => {
     supabase.insert.mockResolvedValueOnce({ data: null, error: new Error("write failed") });
 
     await expect(
-      collectionMutate(supabase as any, "skills", { action: "insert", row: {} }),
+      collectionMutate(client, "skills", { action: "insert", row: {} }),
     ).rejects.toThrow("write failed");
   });
 });

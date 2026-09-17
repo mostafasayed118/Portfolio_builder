@@ -148,9 +148,10 @@ describe("replyToMessage", () => {
     expect(result).toEqual({ ok: true, sent: false });
   });
 
-  it("fetch is scoped to the requesting admin (regular admin sees own rows only)", async () => {
+  it("fetch and update rely on request-client RLS without retired user filters", async () => {
     const { chain } = makeSupabase();
     await replyToMessage(adminReq("a-1"), "m-1", { reply: "ok" }, sendReply);
-    expect(chain.eq).toHaveBeenCalledWith("user_id", "a-1");
+    expect(chain.eq.mock.calls).toEqual([["id", "m-1"], ["id", "m-1"]]);
+    expect(chain.or).not.toHaveBeenCalled();
   });
 });

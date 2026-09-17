@@ -51,12 +51,7 @@ export interface CollectionQueryOptions {
   softDelete?: boolean | "only";
   orderBy?: string;
   orderAsc?: boolean;
-  /** Column used for user scoping (default: "user_id"). */
-  userColumn?: string;
-  /** When set, rows are scoped to this user id. */
   targetUserId?: string | null;
-  /** Also return rows whose user_id IS NULL (public contact-form messages). */
-  includeOrphans?: boolean;
   filters?: CollectionFilters;
   /**
    * Raw PostgREST `or()` expression, AND-composed with everything else.
@@ -82,7 +77,6 @@ export async function collectionQuery(
   options: CollectionQueryOptions,
 ): Promise<{ data: Record<string, unknown>[]; count: number }> {
   const allowed = assertCollectionTable(table);
-  const userColumn = options.userColumn ?? "user_id";
 
   let query = supabase
     .from(allowed)
@@ -113,16 +107,9 @@ export async function collectionQuery(
     query = query.or(options.or);
   }
 
-  if (options.targetUserId) {
-    if (options.includeOrphans) {
-      // Public contact-form messages carry no user_id; admins must see them
-      // in addition to rows explicitly assigned to themselves.
-      query = query.or(`user_id.eq.${options.targetUserId},user_id.is.null`);
-    } else {
-      query = query.eq(userColumn, options.targetUserId);
-    }
+  if (allowed === "theme_presets" && options.targetUserId) {
+    query = query.eq("user_id", options.targetUserId);
   }
-  // No targetUserId — the caller decided the scope (e.g. superadmin "All users").
 
   if (options.orderBy) {
     query = query.order(options.orderBy, { ascending: options.orderAsc ?? true });
@@ -146,14 +133,7 @@ export type CollectionMutation =
       action: "update";
       id: string;
       patch: Record<string, unknown>;
-      /**
-       * When set, the update is additionally scoped to `.eq(userColumn, userId)`.
-       * Only `theme_presets` (the single non-tenanted collection) passes this —
-       * tenanted tables rely on RLS on the JWT-scoped request client instead.
-       */
       userId?: string;
-      /** Column used for the user scope (default: "user_id"). */
-      userColumn?: string;
     };
 
 /**
@@ -180,8 +160,8 @@ export async function collectionMutate(
   }
 
   let query = supabase.from(allowed).update(mutation.patch).eq("id", mutation.id);
-  if (mutation.userId !== undefined) {
-    query = query.eq(mutation.userColumn ?? "user_id", mutation.userId);
+  if (allowed === "theme_presets" && mutation.userId !== undefined) {
+    query = query.eq("user_id", mutation.userId);
   }
   return queryOrThrow<Record<string, unknown>[] | null>(
     query.select("id"),

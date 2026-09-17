@@ -64,7 +64,6 @@ router.get("/", validateQueryUserId, async (req: AuthenticatedRequest, res: Resp
     softDelete: spec.softDelete,
     orderBy: "created_at",
     orderAsc: false,
-    includeOrphans: true,
     filters: { eq: spec.eq, gte: spec.gte, isNull: spec.isNull },
     or: spec.or,
   });
@@ -76,9 +75,6 @@ router.get("/unread-count", validateQueryUserId, async (req: AuthenticatedReques
     return serverError(res, "Request client not initialized");
   }
 
-  // Same scoping as the list endpoint (includeOrphans): a superadmin without
-  // an explicit ?userId counts ALL rows — matching what "/" returns — so the
-  // badge can never disagree with the inbox it points at.
   const query = scopeMessagesQuery(
     supabase
       .from("messages")
@@ -86,7 +82,6 @@ router.get("/unread-count", validateQueryUserId, async (req: AuthenticatedReques
       .eq("status", "unread")
       .is("deleted_at", null),
     req,
-    { includeOrphans: true },
   );
 
   const { count, error } = await query;
@@ -129,8 +124,6 @@ router.post("/:id/unarchive", doubleCsrfProtection, validateParamId, async (req:
  * endpoint paginates (50/page), so a client-side loop over the fetched page
  * could never reach all unread rows once more than 50 exist. Same predicate
  * as the unread-count endpoint (status='unread' AND not soft-deleted), with
- * the same user scoping: superadmins mark everything, regular admins only
- * their own rows (or rows with no owner). Returns how many were marked.
  */
 router.post("/mark-all-read", validateQueryUserId, doubleCsrfProtection, async (req: AuthenticatedRequest, res: Response) => {
   const supabase = req.supabase;
@@ -138,7 +131,7 @@ router.post("/mark-all-read", validateQueryUserId, doubleCsrfProtection, async (
     return serverError(res, "Request client not initialized");
   }
   const scope = <T extends { or(f: string): T; eq(c: string, v: unknown): T }>(q: T): T =>
-    scopeMessagesQuery(q, req, { includeOrphans: true });
+    scopeMessagesQuery(q, req);
 
   const { count, error: countError } = await scope(
     supabase

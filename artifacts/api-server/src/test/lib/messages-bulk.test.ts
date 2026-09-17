@@ -82,7 +82,7 @@ describe("bulkSoftDeleteHandler", () => {
     expect(res.json).toHaveBeenCalledWith({ success: false, errors: { ids: ["bad"] } });
   });
 
-  it("ids path updates deleted_at for the given ids, scoped to the admin", async () => {
+  it("ids path updates deleted_at using request-client RLS without retired user filters", async () => {
     const chain = makeSupabase();
     const res = makeRes();
     const handler = bulkSoftDeleteHandler(schemaOk({ ids: ["id-1", "id-2"] }), () => "TS");
@@ -90,7 +90,8 @@ describe("bulkSoftDeleteHandler", () => {
 
     expect(chain.update).toHaveBeenCalledWith({ deleted_at: "TS" });
     expect(chain.in).toHaveBeenCalledWith("id", ["id-1", "id-2"]);
-    expect(chain.eq).toHaveBeenCalledWith("user_id", "a-1");
+    expect(chain.eq).not.toHaveBeenCalled();
+    expect(chain.or).not.toHaveBeenCalled();
     expect(res.json).toHaveBeenCalledWith({ success: true, data: undefined });
   });
 

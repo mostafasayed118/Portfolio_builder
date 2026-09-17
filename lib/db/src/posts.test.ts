@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { SupabaseClient } from "@supabase/supabase-js";
 import { createMockSupabase } from "./test-utils";
 import { MAX_LIST_ROWS } from "./query";
 import {
@@ -12,8 +13,11 @@ import {
 } from "./posts";
 
 let supabase: ReturnType<typeof createMockSupabase>;
+let client: SupabaseClient;
 beforeEach(() => {
   supabase = createMockSupabase();
+  client = new SupabaseClient("https://example.com", "test-key");
+  vi.spyOn(client, "from").mockImplementation(supabase.from.mockReturnValue(supabase));
 });
 
 /**
@@ -34,7 +38,7 @@ describe("listPublishedPosts", () => {
     ];
     resolveOnLimit(rows);
 
-    const result = await listPublishedPosts(supabase as any);
+    const result = await listPublishedPosts(client);
 
     expect(supabase.from).toHaveBeenCalledWith("blog_posts");
     expect(supabase.select).toHaveBeenCalledWith(LIST_COLUMNS);
@@ -47,7 +51,7 @@ describe("listPublishedPosts", () => {
   it("orders by published_at desc then created_at desc, capped at MAX_LIST_ROWS", async () => {
     resolveOnLimit([]);
 
-    await listPublishedPosts(supabase as any);
+    await listPublishedPosts(client);
 
     expect(supabase.order).toHaveBeenNthCalledWith(1, "published_at", {
       ascending: false,
@@ -62,7 +66,7 @@ describe("listPublishedPosts", () => {
   it("throws on error", async () => {
     resolveOnLimit(null, new Error("db error"));
 
-    await expect(listPublishedPosts(supabase as any)).rejects.toThrow("db error");
+    await expect(listPublishedPosts(client)).rejects.toThrow("db error");
   });
 });
 
@@ -71,7 +75,7 @@ describe("listAllPosts", () => {
     const rows = [{ id: "1", title: "Draft", is_published: false }];
     resolveOnLimit(rows);
 
-    const result = await listAllPosts(supabase as any);
+    const result = await listAllPosts(client);
 
     expect(supabase.select).toHaveBeenCalledWith(LIST_COLUMNS);
     expect(LIST_COLUMNS).not.toContain("content");
@@ -83,7 +87,7 @@ describe("listAllPosts", () => {
   it("throws on error", async () => {
     resolveOnLimit(null, new Error("fail"));
 
-    await expect(listAllPosts(supabase as any)).rejects.toThrow("fail");
+    await expect(listAllPosts(client)).rejects.toThrow("fail");
   });
 });
 
@@ -92,7 +96,7 @@ describe("getPublishedPostBySlug", () => {
     const row = { id: "1", slug: "a", content: "full markdown" };
     supabase.maybeSingle.mockResolvedValue({ data: row, error: null });
 
-    const result = await getPublishedPostBySlug(supabase as any, "a");
+    const result = await getPublishedPostBySlug(client, "a");
 
     expect(supabase.select).toHaveBeenCalledWith("*");
     expect(supabase.eq).toHaveBeenCalledWith("slug", "a");
@@ -101,18 +105,18 @@ describe("getPublishedPostBySlug", () => {
 });
 
 describe("getPostPublishState", () => {
-  it("selects only the publish stamps, scoped to the given user", async () => {
+  it("reads publish stamps through the request client without a legacy user filter", async () => {
     supabase.maybeSingle.mockResolvedValue({
       data: { is_published: false, published_at: null },
       error: null,
     });
 
-    const state = await getPostPublishState(supabase as any, "p1", "user-9");
+    const state = await getPostPublishState(client, "p1", "user-9");
 
     expect(supabase.from).toHaveBeenCalledWith("blog_posts");
     expect(supabase.select).toHaveBeenCalledWith("is_published, published_at");
     expect(supabase.eq).toHaveBeenNthCalledWith(1, "id", "p1");
-    expect(supabase.eq).toHaveBeenNthCalledWith(2, "user_id", "user-9");
+    expect(supabase.eq).toHaveBeenCalledTimes(1);
     expect(state).toEqual({ is_published: false, published_at: null });
   });
 
@@ -122,7 +126,7 @@ describe("getPostPublishState", () => {
       error: null,
     });
 
-    const state = await getPostPublishState(supabase as any, "p2");
+    const state = await getPostPublishState(client, "p2");
 
     expect(supabase.eq).toHaveBeenCalledTimes(1);
     expect(supabase.eq).toHaveBeenCalledWith("id", "p2");
@@ -132,7 +136,7 @@ describe("getPostPublishState", () => {
   it("returns null when the post does not exist", async () => {
     supabase.maybeSingle.mockResolvedValue({ data: null, error: null });
 
-    const state = await getPostPublishState(supabase as any, "missing");
+    const state = await getPostPublishState(client, "missing");
 
     expect(state).toBeNull();
   });
@@ -140,14 +144,14 @@ describe("getPostPublishState", () => {
   it("throws on error", async () => {
     supabase.maybeSingle.mockResolvedValue({ data: null, error: new Error("db down") });
 
-    await expect(getPostPublishState(supabase as any, "p3")).rejects.toThrow("db down");
+    await expect(getPostPublishState(client, "p3")).rejects.toThrow("db down");
   });
 });
 
 describe("createPost", () => {  it("inserts with defaults and stamps published_at when published", async () => {
     supabase.single.mockResolvedValue({ data: { id: "p1" }, error: null });
 
-    const id = await createPost(supabase as any, {
+    const id = await createPost(client, {
       slug: "hello",
       title: "Hello",
       is_published: true,
@@ -171,7 +175,7 @@ describe("createPost", () => {  it("inserts with defaults and stamps published_a
   it("leaves published_at null for drafts", async () => {
     supabase.single.mockResolvedValue({ data: { id: "p2" }, error: null });
 
-    await createPost(supabase as any, { slug: "draft", title: "Draft" });
+    await createPost(client, { slug: "draft", title: "Draft" });
 
     expect(supabase.insert).toHaveBeenCalledWith(
       expect.objectContaining({ is_published: false, published_at: null }),
@@ -186,7 +190,7 @@ describe("updatePost", () => {
       error: null,
     });
 
-    await updatePost(supabase as any, "1", { is_published: true });
+    await updatePost(client, "1", { is_published: true });
 
     expect(supabase.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -203,19 +207,18 @@ describe("updatePost", () => {
       error: null,
     });
 
-    await updatePost(supabase as any, "1", { is_published: true });
+    await updatePost(client, "1", { is_published: true });
 
     expect(supabase.update).toHaveBeenCalledWith(
       expect.objectContaining({ is_published: true, updated_at: expect.any(String) }),
     );
-    const call = supabase.update.mock.calls[0]?.[0] as Record<string, unknown>;
-    expect(call.published_at).toBeUndefined();
+    expect(supabase.update.mock.calls[0]?.[0]).not.toHaveProperty("published_at");
   });
 });
 
 describe("deletePost", () => {
   it("soft-deletes by stamping deleted_at", async () => {
-    await deletePost(supabase as any, "1");
+    await deletePost(client, "1");
 
     expect(supabase.update).toHaveBeenCalledWith(
       expect.objectContaining({ deleted_at: expect.any(String) }),

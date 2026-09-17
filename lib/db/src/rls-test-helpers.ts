@@ -9,6 +9,9 @@ const LOCAL_SERVICE_KEY =
 const LOCAL_JWT_SECRET = "super-secret-jwt-token-with-at-least-32-characters-long";
 
 const SUPABASE_URL = process.env.SUPABASE_TEST_URL ?? LOCAL_URL;
+if (!["127.0.0.1", "localhost", "[::1]"].includes(new URL(SUPABASE_URL).hostname)) {
+  throw new Error("RLS fixtures require a local Supabase URL");
+}
 const ANON_KEY = process.env.SUPABASE_TEST_ANON_KEY ?? LOCAL_ANON_KEY;
 const SERVICE_KEY = process.env.SUPABASE_TEST_SERVICE_KEY ?? LOCAL_SERVICE_KEY;
 const JWT_SECRET = process.env.SUPABASE_TEST_JWT_SECRET ?? LOCAL_JWT_SECRET;

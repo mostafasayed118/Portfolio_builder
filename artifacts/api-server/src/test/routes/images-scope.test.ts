@@ -123,14 +123,19 @@ async function stubFetch(input: unknown, init?: { method?: string; body?: unknow
   fetchLog.push({ url: raw, method, bodyText });
 
   if (raw.includes("/rest/v1/users")) {
-    return json(scenario.requester);
+    return json({ ...scenario.requester, clerk_id: "user_clerk_a" });
   }
   if (raw.includes("/rest/v1/portfolios")) {
+    const url = new URL(raw);
+    if (url.searchParams.has("owner_user_id")) {
+      return json([{ id: OWNER_A }]);
+    }
     return json({ id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd" });
   }
   if (raw.includes("/rest/v1/image_metadata")) {
     if (method === "GET") {
       if (!scenario.image) return json({ code: "PGRST116", message: "zero rows" }, 406);
+      if (new URL(raw).searchParams.get("id")?.startsWith("in.")) return json([scenario.image]);
       return json(scenario.image);
     }
     if (method === "POST") {
@@ -153,7 +158,7 @@ function imageRow(owner: string | null): Record<string, string | number | null> 
   return {
     id: IMAGE_ID,
     storage_path: "projects/abc123/original.jpg",
-    user_id: owner,
+    portfolio_id: owner,
   };
 }
 
@@ -202,17 +207,42 @@ describe("DELETE /api/v1/images/:id scoping (non-superadmin)", () => {
     expect(res.status).toBe(404);
   });
 
-  it("checks ownership inside the single metadata SELECT (no extra lookup)", async () => {
+  it("checks the selected portfolio against the requester before deleting", async () => {
     fetchLog.length = 0;
     scenario.image = imageRow(OWNER_A);
     const res = await request(app).delete(`/api/v1/images/${IMAGE_ID}`).set("x-admin-key", API_KEY);
     expect(res.status).toBe(200);
     const selects = fetchLog.filter((e) => e.method === "GET" && e.url.includes("/rest/v1/image_metadata"));
     expect(selects).toHaveLength(1);
-    expect(decodeURIComponent(selects[0].url)).toContain("user_id");
+    expect(new URL(selects[0].url).searchParams.get("select")).toBe("storage_path,id,portfolio_id");
+    const ownership = fetchLog.find((entry) => new URL(entry.url).searchParams.has("owner_user_id"));
+    expect(ownership).toBeDefined();
+    if (!ownership) throw new Error("Missing portfolio ownership query");
+    expect(new URL(ownership.url).searchParams.get("owner_user_id")).toBe("eq.user_clerk_a");
+    expect(fetchLog.some((entry) => entry.method === "DELETE" && entry.url.includes("image_metadata"))).toBe(true);
   });
 
-  it("stamps user_id on upload", async () => {
+  it.each([
+    { portfolio: OWNER_A, status: 200 },
+    { portfolio: OWNER_B, status: 404 },
+    { portfolio: null, status: 404 },
+  ])("reorders only owned portfolio images: $status / $portfolio", async ({ portfolio, status }) => {
+    fetchLog.length = 0;
+    scenario.image = imageRow(portfolio);
+    const res = await request(app).post("/api/v1/images/reorder")
+      .set("x-admin-key", API_KEY).send({ ordered_ids: [IMAGE_ID] });
+    expect(res.status).toBe(status);
+    const writes = fetchLog.filter((entry) => entry.method === "PATCH");
+    if (status === 200) {
+      expect(writes).toHaveLength(1);
+      expect(JSON.parse(writes[0].bodyText)).toEqual({ sort_order: 0 });
+      expect(new URL(writes[0].url).searchParams.get("id")).toBe(`eq.${IMAGE_ID}`);
+    } else {
+      expect(writes).toEqual([]);
+    }
+  });
+
+  it("stamps portfolio_id without the retired user_id on upload", async () => {
     fetchLog.length = 0;
     const res = await request(app)
       .post("/api/v1/images/upload")
@@ -225,7 +255,7 @@ describe("DELETE /api/v1/images/:id scoping (non-superadmin)", () => {
     expect(res.status).toBe(200);
     const inserts = fetchLog.filter((e) => e.method === "POST" && e.url.includes("/rest/v1/image_metadata"));
     expect(inserts).toHaveLength(1);
-    expect(inserts[0].bodyText).toContain(`"user_id":"${OWNER_A}"`);
+    expect(JSON.parse(inserts[0].bodyText)).not.toHaveProperty("user_id");
     // Tenant stamping: metadata carries portfolio_id and the storage object
     // lives under <portfolioId>/…
     expect(inserts[0].bodyText).toContain(`"portfolio_id":"dddddddd-dddd-4ddd-8ddd-dddddddddddd"`);

@@ -51,7 +51,7 @@ beforeEach(() => {
   _setOverride("CV_PDF_CACHE_TTL_MS", "0");
   vi.clearAllMocks();
   resetSupabaseClient(mockSupabaseClient);
-  mockSupabaseClient.from.mockImplementation((table: string) => table === "portfolios" ? portfolioQuery : mockSupabaseClient);
+  mockSupabaseClient.from.mockImplementation((table: string) => ["portfolios", "public_portfolios"].includes(table) ? portfolioQuery : mockSupabaseClient);
   portfolioQuery.maybeSingle.mockReset();
   portfolioQuery.maybeSingle.mockResolvedValue({ data: { id: "11111111-1111-4111-8111-111111111111" }, error: null });
   mockSupabaseClient.storage.download.mockReset();
@@ -69,13 +69,30 @@ afterEach(() => {
 
 describe("CV API", () => {
   describe("GET /api/v1/cv", () => {
-    it("sets public CDN caching headers (s-maxage + stale-while-revalidate)", async () => {
+    it("disables downstream caching so unpublishing revokes subsequent downloads", async () => {
       mockGenerateCvPdf.mockResolvedValueOnce(Buffer.from("%PDF-1.4 cache headers"));
 
       const res = await request(app).get("/api/v1/cv");
 
       expect(res.status).toBe(200);
-      expect(res.headers["cache-control"]).toBe("public, s-maxage=300, stale-while-revalidate=600");
+      expect(res.headers["cache-control"]).toBe("private, no-store");
+    });
+
+    it("denies a download after the portfolio is unpublished, even after a successful request", async () => {
+      expect((await request(app).get("/api/v1/cv")).status).toBe(200);
+      _setOverride("CV_PDF_CACHE_TTL_MS", "60000");
+      portfolioQuery.maybeSingle.mockResolvedValue({ data: null, error: null });
+      const response = await request(app).get("/api/v1/cv");
+      expect(response.status).toBe(404);
+      expect(response.headers["cache-control"]).toBe("private, no-store");
+    });
+
+    it("scopes PDF generation to the resolved published portfolio", async () => {
+      const response = await request(app).get("/api/v1/cv");
+      expect(response.status).toBe(200);
+      expect(mockGenerateCvPdf).toHaveBeenCalledWith(
+        mockSupabaseClient, expect.any(String), "11111111-1111-4111-8111-111111111111",
+      );
     });
 
     it("returns PDF with correct headers when generateCvPdf succeeds", async () => {
@@ -104,7 +121,7 @@ describe("CV API", () => {
       mockGenerateCvPdf.mockRejectedValueOnce(new Error("PDF generation failed"));
 
       mockSupabaseClient.maybeSingle.mockResolvedValueOnce({
-        data: { object_path: "cv/resume.pdf", file_name: "My_Resume.pdf" },
+        data: { object_path: "11111111-1111-4111-8111-111111111111/cv-1.pdf", file_name: "My_Resume.pdf" },
         error: null,
       });
 
@@ -143,7 +160,7 @@ describe("CV API", () => {
       expect(res.body.message).toMatch(/failed to fetch cv settings/i);
     });
 
-    it("serves cached PDF on repeat requests within the TTL", async () => {
+    it("regenerates on repeat requests rather than retaining formerly public bytes", async () => {
       // Prime the cache with a known buffer. With TTL 0 the entry is written
       // but never read, so this request always regenerates.
       _setOverride("CV_PDF_CACHE_TTL_MS", "0");
@@ -160,9 +177,9 @@ describe("CV API", () => {
 
       expect(first.status).toBe(200);
       expect(second.status).toBe(200);
-      expect(mockGenerateCvPdf).not.toHaveBeenCalled();
-      expect(first.headers["content-length"]).toBe(String(fakePdf.length));
-      expect(second.headers["content-length"]).toBe(first.headers["content-length"]);
+      expect(mockGenerateCvPdf).toHaveBeenCalledTimes(2);
+      expect(first.headers["cache-control"]).toBe("private, no-store");
+      expect(second.headers["cache-control"]).toBe("private, no-store");
     });
 
     it("coalesces concurrent misses into a single generation", async () => {
@@ -203,7 +220,7 @@ describe("CV API", () => {
           ),
       );
       mockSupabaseClient.maybeSingle.mockResolvedValue({
-        data: { object_path: "cv/fallback.pdf", file_name: "Fallback_CV.pdf" },
+        data: { object_path: "11111111-1111-4111-8111-111111111111/cv-2.pdf", file_name: "Fallback_CV.pdf" },
         error: null,
       });
       mockSupabaseClient.storage.download.mockResolvedValue({

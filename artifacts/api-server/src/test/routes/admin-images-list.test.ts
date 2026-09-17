@@ -115,7 +115,7 @@ describe("Admin images list API", () => {
       expect(res.body.data).toHaveLength(2);
       expect(res.body.data[0]).toEqual({
         id: "00000000-0000-0000-0000-000000000001",
-        url: expect.stringContaining("/storage/v1/object/public/project_images/projects/abc/original.jpg"),
+        url: expect.stringContaining("/api/v1/images/serve/project_images/projects/abc/original.jpg"),
       });
       expect(res.body.data[1].url).toContain("projects/abc/second.png");
       expect(client.from).toHaveBeenCalledWith("image_metadata");

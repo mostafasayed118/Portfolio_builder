@@ -8,6 +8,7 @@ import { createPost, getPostPublishState } from "@workspace/db/posts";
 import { isUniqueViolationError } from "@workspace/db/singleton-upsert";
 import { created, badRequest, serverError } from "../../lib/api-response";
 import { respondDbError } from "../../lib/safe-error";
+import { resolveActivePortfolioOr400 } from "../../lib/active-portfolio";
 import { runCollectionQuery, updateByIdAndUser, softDeleteByIdAndUser, parseBody } from "../../lib/route-helpers";
 
 const router: IRouter = Router();
@@ -29,9 +30,11 @@ router.post("/", doubleCsrfProtection, async (req: AuthenticatedRequest, res: Re
     if (!supabase) {
       return serverError(res, "Request client not initialized");
     }
+    const portfolioId = await resolveActivePortfolioOr400(req, res);
+    if (portfolioId === null) return;
     await createPost(supabase, {
       ...body,
-      user_id: req.user?.id ?? null,
+      portfolio_id: portfolioId,
     });
     return created(res);
   } catch (err: unknown) {
@@ -51,15 +54,12 @@ router.put("/:id", doubleCsrfProtection, validateParamId, async (req: Authentica
   // Toggle publish → stamp published_at on first publish.
   if (patch.is_published === true) {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    const userId = req.user?.role === "superadmin" && typeof req.query.userId === "string"
-      ? req.query.userId
-      : req.user?.id;
     try {
       const supabase = req.supabase;
       if (!supabase) {
         return serverError(res, "Request client not initialized");
       }
-      const state = await getPostPublishState(supabase, id, userId);
+      const state = await getPostPublishState(supabase, id);
       if (state && state.is_published !== true && !state.published_at) {
         updateData.published_at = new Date().toISOString();
       }
@@ -79,7 +79,8 @@ router.put("/:id", doubleCsrfProtection, validateParamId, async (req: Authentica
 });
 
 router.delete("/:id", doubleCsrfProtection, validateParamId, async (req: AuthenticatedRequest, res: Response) => {
-  return softDeleteByIdAndUser(req, res, "blog_posts", req.params.id as string, "Post");
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  return softDeleteByIdAndUser(req, res, "blog_posts", id, "Post");
 });
 
 export default router;

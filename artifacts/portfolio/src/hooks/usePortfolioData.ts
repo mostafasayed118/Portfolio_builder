@@ -11,6 +11,7 @@ import { fetchProjectBySlug } from "@workspace/db/projects";
 import { listEntityImages, listCoversByEntity } from "@workspace/db/images";
 import { listPublishedPosts, getPublishedPostBySlug } from "@workspace/db/posts";
 import { SKILL_CATEGORIES, getSkillLevel, type SkillLevel } from "@/data/skills";
+import { resolveImageUrl } from "@/lib/image-url";
 
 // Realtime sync (useRealtimeSync.ts) handles live updates for the
 // 3 most-active tables. The remaining tables (about, skills,
@@ -129,8 +130,7 @@ export function useProjectCovers(entityIds: string[] | undefined) {
         const map: Record<string, string> = {};
         for (const row of rows) {
           if (row.entity_id) {
-            const { data } = s.storage.from("project_images").getPublicUrl(row.storage_path);
-            map[row.entity_id] = data.publicUrl;
+            map[row.entity_id] = resolveImageUrl(`/api/v1/images/serve/project_images/${row.storage_path}`);
           }
         }
         return map;
@@ -148,8 +148,7 @@ export function useProjectImages(entityId: string | undefined) {
       fetchWithSupabase(async (s) => {
         const rows = await listEntityImages(s, "projects", entityId ?? "");
         return rows.map((row) => {
-          const { data } = s.storage.from("project_images").getPublicUrl(row.storage_path);
-          return { id: row.id, url: data.publicUrl };
+          return { id: row.id, url: resolveImageUrl(`/api/v1/images/serve/project_images/${row.storage_path}`) };
         });
       }),
     ...POLL_OPTIONS,

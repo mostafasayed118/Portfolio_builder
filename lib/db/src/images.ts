@@ -73,7 +73,7 @@ export async function listCoversByEntity(
 
 export interface ImageOwnershipRow {
   id: string;
-  user_id: string | null;
+  portfolio_id: string | null;
 }
 
 /** Admin: ownership pre-check rows for a set of image ids (reorder flow). */
@@ -82,7 +82,7 @@ export async function listImageOwnership(
   ids: string[],
 ): Promise<ImageOwnershipRow[]> {
   return queryOrThrow<ImageOwnershipRow[]>(
-    supabase.from(IMAGE_TABLE).select("id, user_id").in("id", ids),
+    supabase.from(IMAGE_TABLE).select("id, portfolio_id").in("id", ids),
     { table: IMAGE_TABLE, operation: "listImageOwnership" },
   );
 }
@@ -127,7 +127,7 @@ export async function getImageMetadataById(
 export interface ImageDeleteTarget {
   storage_path: string;
   id: string;
-  user_id: string | null;
+  portfolio_id: string | null;
 }
 
 /** Admin: the columns the DELETE flow needs (storage path + ownership). */
@@ -136,7 +136,7 @@ export async function getImageDeleteTarget(
   id: string,
 ): Promise<ImageDeleteTarget | null> {
   return queryOrThrow<ImageDeleteTarget | null>(
-    supabase.from(IMAGE_TABLE).select("storage_path, id, user_id").eq("id", id).single(),
+    supabase.from(IMAGE_TABLE).select("storage_path, id, portfolio_id").eq("id", id).single(),
     { table: IMAGE_TABLE, operation: "getImageDeleteTarget" },
   );
 }

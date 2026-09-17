@@ -193,7 +193,7 @@ describe("Images API", () => {
       // Tenant scoping: the storage object lives under <portfolioId>/…
       const uploadedPath = mockSupabaseClient.storage.upload.mock.calls[0][0] as string;
       expect(uploadedPath.startsWith(`${TEST_PORTFOLIO_ID}/projects/`)).toBe(true);
-      expect(res.body.data.url).toContain(`${TEST_PORTFOLIO_ID}/projects/`);
+      expect(res.body.data.url).toContain(`/api/v1/images/serve/project_images/${TEST_PORTFOLIO_ID}/projects/`);
     });
 
     it("returns 200 with valid PNG file", async () => {

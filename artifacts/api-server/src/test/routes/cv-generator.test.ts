@@ -130,7 +130,7 @@ describe("CV Generator", () => {
     });
 
     const { generateCvPdf } = await import("../../utils/cv-generator");
-    const result = await generateCvPdf(mockSupabaseClient as any, "https://portfolio.example.com");
+    const result = await generateCvPdf(mockSupabaseClient as any, "https://portfolio.example.com", "11111111-1111-4111-8111-111111111111");
 
     expect(result).toBeInstanceOf(Uint8Array);
     expect(result.length).toBeGreaterThan(0);
@@ -159,7 +159,7 @@ describe("CV Generator", () => {
     });
 
     const { generateCvPdf } = await import("../../utils/cv-generator");
-    const result = await generateCvPdf(mockSupabaseClient as any, "https://portfolio.example.com");
+    const result = await generateCvPdf(mockSupabaseClient as any, "https://portfolio.example.com", "11111111-1111-4111-8111-111111111111");
 
     expect(result).toBeInstanceOf(Uint8Array);
     expect(result.length).toBeGreaterThan(0);
@@ -178,7 +178,7 @@ describe("CV Generator", () => {
     }));
 
     const { generateCvPdf } = await import("../../utils/cv-generator");
-    await generateCvPdf(mockSupabaseClient as any, "https://my-portfolio.com");
+    await generateCvPdf(mockSupabaseClient as any, "https://my-portfolio.com", "11111111-1111-4111-8111-111111111111");
 
     expect(generateQRCode).toHaveBeenCalledWith(
       "https://my-portfolio.com",
@@ -203,7 +203,7 @@ describe("CV Generator", () => {
 
     const { generateCvPdf } = await import("../../utils/cv-generator");
     const { logger } = await import("../../lib/logger");
-    const result = await generateCvPdf(mockSupabaseClient as any, "https://my-portfolio.com");
+    const result = await generateCvPdf(mockSupabaseClient as any, "https://my-portfolio.com", "11111111-1111-4111-8111-111111111111");
 
     // Should still generate PDF without QR
     expect(result).toBeInstanceOf(Uint8Array);
@@ -251,7 +251,7 @@ describe("CV Generator", () => {
     });
 
     const { generateCvPdf } = await import("../../utils/cv-generator");
-    const result = await generateCvPdf(mockSupabaseClient as any, "https://portfolio.com");
+    const result = await generateCvPdf(mockSupabaseClient as any, "https://portfolio.com", "11111111-1111-4111-8111-111111111111");
 
     expect(result).toBeInstanceOf(Uint8Array);
     // Verify that experience title was included in PDF text calls
@@ -294,7 +294,7 @@ describe("CV Generator", () => {
     });
 
     const { generateCvPdf } = await import("../../utils/cv-generator");
-    const result = await generateCvPdf(mockSupabaseClient as any, "https://portfolio.com");
+    const result = await generateCvPdf(mockSupabaseClient as any, "https://portfolio.com", "11111111-1111-4111-8111-111111111111");
 
     expect(result).toBeInstanceOf(Uint8Array);
     const textCalls = mockJsPDFInstance.text.mock.calls.map((c: any[]) => c[0]);
@@ -316,7 +316,7 @@ describe("CV Generator", () => {
     }));
 
     const { generateCvPdf } = await import("../../utils/cv-generator");
-    const result = await generateCvPdf(mockSupabaseClient as any, "https://portfolio.com");
+    const result = await generateCvPdf(mockSupabaseClient as any, "https://portfolio.com", "11111111-1111-4111-8111-111111111111");
 
     expect(result).toBeInstanceOf(Uint8Array);
     // First bytes should be PDF header

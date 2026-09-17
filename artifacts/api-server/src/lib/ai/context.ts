@@ -2,50 +2,63 @@ import { env } from "../env";
 import { getSupabaseClient } from "../supabase-client";
 
 const MAX_CONTEXT_CHARS = 6000;
-let cache: { text: string; at: number } | null = null;
-let inflight: Promise<string> | null = null;
+const cache = new Map<string, { text: string; at: number }>();
+const inflight = new Map<string, Promise<string>>();
 
 export async function buildSiteContext(): Promise<string> {
-  const now = Date.now();
-  if (cache && now - cache.at < env.AI_CONTEXT_TTL_MS) return cache.text;
-  if (!inflight) {
-    inflight = fetchContext()
+  try {
+    const { data: portfolio, error } = await getSupabaseClient()
+      .from("public_portfolios")
+      .select("id")
+      .eq("is_published", true)
+      .order("slug", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (error || !portfolio || typeof portfolio.id !== "string" || !portfolio.id) return "";
+
+    const portfolioId = portfolio.id;
+    const cached = cache.get(portfolioId);
+    if (cached && Date.now() - cached.at < env.AI_CONTEXT_TTL_MS) return cached.text;
+    const pending = inflight.get(portfolioId);
+    if (pending) return pending;
+
+    const request = fetchContext(portfolioId)
       .then((text) => {
-        cache = { text, at: Date.now() };
+        cache.set(portfolioId, { text, at: Date.now() });
         return text;
       })
       .catch(() => {
-        // Intentional error backoff: refreshing the stale entry's timestamp
-        // serves the old text as fresh for one more TTL, so a Supabase
-        // outage costs at most one failed fetch per TTL window instead of a
-        // retry storm on every request. The slot is still cleared in
-        // .finally, so the entry is re-fetched once the window lapses.
-        const stale = cache?.text ?? "";
-        if (stale) cache = { text: stale, at: Date.now() };
-        return stale;
+        cache.delete(portfolioId);
+        return "";
       })
       .finally(() => {
-        inflight = null;
+        inflight.delete(portfolioId);
       });
+    inflight.set(portfolioId, request);
+    return request;
+  } catch {
+    return "";
   }
-  return inflight;
 }
 
-async function fetchContext(): Promise<string> {
+async function fetchContext(portfolioId: string): Promise<string> {
   const supabase = getSupabaseClient();
   const [hero, about, skills, projects, experience, certifications, contact] = await Promise.all([
     supabase.from("hero_content")
       .select("name, heading, roles, description, email, github_url, linkedin_url, twitter_url, youtube_url, facebook_url, tagline, available")
-      .eq("is_published", true).maybeSingle(),
+      .eq("portfolio_id", portfolioId).eq("is_published", true).maybeSingle(),
     supabase.from("about_content")
       .select("bio1, bio2, bio, location, years_of_experience, degree, school, education, languages, interests")
-      .eq("is_published", true).maybeSingle(),
-    supabase.from("skills").select("name, category, proficiency").is("deleted_at", null).eq("is_visible", true).limit(100),
-    supabase.from("projects").select("title, description, tech_stack, category, tags").is("deleted_at", null).eq("is_published", true).limit(100),
-    supabase.from("experience").select("title, company, location, period, description, technologies, type").is("deleted_at", null).eq("is_published", true).limit(100),
-    supabase.from("certifications").select("title, issuer, date, skills").is("deleted_at", null).eq("is_published", true).limit(100),
-    supabase.from("contact_info").select("email, phone, location, github, linkedin, youtube, facebook, whatsapp, availability_status, working_hours").limit(1).maybeSingle(),
+      .eq("portfolio_id", portfolioId).eq("is_published", true).maybeSingle(),
+    supabase.from("skills").select("name, category, proficiency").eq("portfolio_id", portfolioId).is("deleted_at", null).eq("is_visible", true).limit(100),
+    supabase.from("projects").select("title, description, tech_stack, category, tags").eq("portfolio_id", portfolioId).is("deleted_at", null).eq("is_published", true).limit(100),
+    supabase.from("experience").select("title, company, location, period, description, technologies, type").eq("portfolio_id", portfolioId).is("deleted_at", null).eq("is_published", true).limit(100),
+    supabase.from("certifications").select("title, issuer, date, skills").eq("portfolio_id", portfolioId).is("deleted_at", null).eq("is_published", true).limit(100),
+    supabase.from("contact_info").select("email, phone, location, github, linkedin, youtube, facebook, whatsapp, availability_status, working_hours").eq("portfolio_id", portfolioId).limit(1).maybeSingle(),
   ]);
+  if ([hero, about, skills, projects, experience, certifications, contact].some((result) => result.error)) {
+    throw new Error("Public AI context query failed");
+  }
 
   const parts: string[] = [];
   const h = hero.data;

@@ -16,16 +16,14 @@ import request from "supertest";
 import app from "../../app";
 
 const mockAdminKey = "test-admin-key-unread";
+let mockRole = "superadmin";
 
 vi.mock("../../middleware/adminAuth", () => ({
   adminAuth: vi.fn((req, res, next) => {
     const adminKey = req.headers["x-admin-key"];
     if (adminKey === mockAdminKey) {
       (req as Record<string, unknown>).adminEmail = "admin@test.com";
-      // Superadmin without ?userId: scopeMessagesQuery is a pass-through, so
-      // the assertions below focus purely on the status/deleted filters.
-      // (Regular-admin orphan scoping is covered by the list-filter tests.)
-      (req as Record<string, unknown>).user = { id: "super-admin-1", role: "superadmin" };
+      (req as Record<string, unknown>).user = { id: "super-admin-1", role: mockRole };
       return next();
     }
     return res.status(401).json({ success: false, message: "Unauthorized" });
@@ -55,6 +53,7 @@ vi.mocked(getSupabaseClient).mockReturnValue(mockSupabase as never);
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockRole = "superadmin";
   // Default: a resolving count-only terminal (head query) so the route's
   // `const { count, error } = await query` receives a real count.
   mockSupabase.from.mockReturnValue(mockSupabase);
@@ -67,6 +66,19 @@ describe("GET /api/v1/admin/messages/unread-count", () => {
   it("returns 401 without auth", async () => {
     const res = await request(app).get("/api/v1/admin/messages/unread-count");
     expect(res.status).toBe(401);
+  });
+
+  it.each(["admin", "superadmin"])("uses request-client RLS for %s despite legacy userId", async (role) => {
+    mockRole = role;
+    const res = await request(app)
+      .get("/api/v1/admin/messages/unread-count")
+      .query({ userId: "00000000-0000-0000-0000-000000000009" })
+      .set("x-admin-key", mockAdminKey);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ success: true, data: 5 });
+    expect(mockSupabase.eq.mock.calls).toEqual([["status", "unread"]]);
+    expect(mockSupabase.or).not.toHaveBeenCalled();
   });
 
   it("counts only status='unread' rows", async () => {

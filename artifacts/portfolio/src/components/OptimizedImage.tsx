@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { resolveImageUrl } from "@/lib/image-url";
 
 interface OptimizedImageProps {
   src: string;
@@ -14,7 +15,7 @@ interface OptimizedImageProps {
 }
 
 export default function OptimizedImage({
-  src,
+  src: source,
   alt,
   width,
   height,
@@ -25,6 +26,7 @@ export default function OptimizedImage({
   priority = false,
   fallback = "/placeholder.svg",
 }: OptimizedImageProps) {
+  const src = resolveImageUrl(source);
   const [imgSrc, setImgSrc] = useState(src);
   const [loaded, setLoaded] = useState(false);
   const [inView, setInView] = useState(priority);

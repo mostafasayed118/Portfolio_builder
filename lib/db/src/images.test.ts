@@ -1,11 +1,15 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { SupabaseClient } from "@supabase/supabase-js";
 import { createMockSupabase } from "./test-utils";
 import { MAX_LIST_ROWS } from "./query";
 import { listEntityImages, listCoversByEntity, listImageOwnership, setImageSortOrder, getImageMetadataById, getImageDeleteTarget, deleteImageMetadata } from "./images";
 
 let supabase: ReturnType<typeof createMockSupabase>;
+let client: SupabaseClient;
 beforeEach(() => {
   supabase = createMockSupabase();
+  client = new SupabaseClient("https://example.com", "test-key");
+  vi.spyOn(client, "from").mockImplementation(supabase.from.mockReturnValue(supabase));
 });
 
 describe("listEntityImages", () => {
@@ -20,7 +24,7 @@ describe("listEntityImages", () => {
       .mockImplementationOnce(() => supabase);
     supabase.limit.mockResolvedValueOnce({ data: rows, error: null });
 
-    const result = await listEntityImages(supabase as any, "projects", "proj-1");
+    const result = await listEntityImages(client, "projects", "proj-1");
 
     expect(supabase.from).toHaveBeenCalledWith("image_metadata");
     expect(supabase.select).toHaveBeenCalledWith("*");
@@ -39,7 +43,7 @@ describe("listEntityImages", () => {
     supabase.limit.mockResolvedValueOnce({ data: null, error: new Error("db down") });
 
     await expect(
-      listEntityImages(supabase as any, "projects", "proj-1"),
+      listEntityImages(client, "projects", "proj-1"),
     ).rejects.toThrow("db down");
   });
 });
@@ -57,7 +61,7 @@ describe("listCoversByEntity", () => {
       .mockImplementationOnce(() => supabase);
     supabase.limit.mockResolvedValueOnce({ data: rows, error: null });
 
-    const result = await listCoversByEntity(supabase as any, "projects", ["proj-a", "proj-b"]);
+    const result = await listCoversByEntity(client, "projects", ["proj-a", "proj-b"]);
 
     expect(supabase.from).toHaveBeenCalledWith("image_metadata");
     expect(supabase.eq).toHaveBeenCalledWith("entity_type", "projects");
@@ -73,7 +77,7 @@ describe("listCoversByEntity", () => {
   });
 
   it("returns [] without querying when no entity ids are given", async () => {
-    const result = await listCoversByEntity(supabase as any, "projects", []);
+    const result = await listCoversByEntity(client, "projects", []);
     expect(result).toEqual([]);
     expect(supabase.from).not.toHaveBeenCalled();
   });
@@ -85,23 +89,23 @@ describe("listCoversByEntity", () => {
     supabase.limit.mockResolvedValueOnce({ data: null, error: new Error("db down") });
 
     await expect(
-      listCoversByEntity(supabase as any, "projects", ["proj-a"]),
+      listCoversByEntity(client, "projects", ["proj-a"]),
     ).rejects.toThrow("db down");
   });
 });
 
 describe("listImageOwnership", () => {
-  it("selects id + user_id for the given ids", async () => {
+  it("selects id + portfolio_id for the given ids", async () => {
     const rows = [
-      { id: "img-1", user_id: "user-1" },
-      { id: "img-2", user_id: null },
+      { id: "img-1", portfolio_id: "user-1" },
+      { id: "img-2", portfolio_id: null },
     ];
     supabase.in.mockResolvedValueOnce({ data: rows, error: null });
 
-    const result = await listImageOwnership(supabase as any, ["img-1", "img-2"]);
+    const result = await listImageOwnership(client, ["img-1", "img-2"]);
 
     expect(supabase.from).toHaveBeenCalledWith("image_metadata");
-    expect(supabase.select).toHaveBeenCalledWith("id, user_id");
+    expect(supabase.select).toHaveBeenCalledWith("id, portfolio_id");
     expect(supabase.in).toHaveBeenCalledWith("id", ["img-1", "img-2"]);
     expect(result).toEqual(rows);
   });
@@ -109,7 +113,7 @@ describe("listImageOwnership", () => {
   it("throws on error", async () => {
     supabase.in.mockResolvedValueOnce({ data: null, error: new Error("db down") });
 
-    await expect(listImageOwnership(supabase as any, ["img-1"])).rejects.toThrow("db down");
+    await expect(listImageOwnership(client, ["img-1"])).rejects.toThrow("db down");
   });
 });
 
@@ -117,7 +121,7 @@ describe("setImageSortOrder", () => {
   it("updates sort_order scoped to the id", async () => {
     supabase.eq.mockResolvedValueOnce({ data: null, error: null });
 
-    await setImageSortOrder(supabase as any, "img-1", 3);
+    await setImageSortOrder(client, "img-1", 3);
 
     expect(supabase.update).toHaveBeenCalledWith({ sort_order: 3 });
     expect(supabase.eq).toHaveBeenCalledWith("id", "img-1");
@@ -126,7 +130,7 @@ describe("setImageSortOrder", () => {
   it("throws on error", async () => {
     supabase.eq.mockResolvedValueOnce({ data: null, error: new Error("write failed") });
 
-    await expect(setImageSortOrder(supabase as any, "img-1", 0)).rejects.toThrow("write failed");
+    await expect(setImageSortOrder(client, "img-1", 0)).rejects.toThrow("write failed");
   });
 });
 
@@ -143,7 +147,7 @@ describe("getImageMetadataById", () => {
     };
     supabase.single.mockResolvedValueOnce({ data: row, error: null });
 
-    const result = await getImageMetadataById(supabase as any, "img-1");
+    const result = await getImageMetadataById(client, "img-1");
 
     expect(supabase.select).toHaveBeenCalledWith(
       "id, original_filename, mime_type, file_size_bytes, entity_type, entity_id, created_at",
@@ -158,18 +162,18 @@ describe("getImageMetadataById", () => {
       error: { message: "JSON object requested, multiple (or no) rows returned" },
     });
 
-    await expect(getImageMetadataById(supabase as any, "missing")).rejects.toThrow();
+    await expect(getImageMetadataById(client, "missing")).rejects.toThrow();
   });
 });
 
 describe("getImageDeleteTarget", () => {
-  it("selects storage_path, id, user_id", async () => {
-    const row = { storage_path: "p/x.png", id: "img-1", user_id: "user-1" };
+  it("selects storage_path, id, portfolio_id", async () => {
+    const row = { storage_path: "p/x.png", id: "img-1", portfolio_id: "user-1" };
     supabase.single.mockResolvedValueOnce({ data: row, error: null });
 
-    const result = await getImageDeleteTarget(supabase as any, "img-1");
+    const result = await getImageDeleteTarget(client, "img-1");
 
-    expect(supabase.select).toHaveBeenCalledWith("storage_path, id, user_id");
+    expect(supabase.select).toHaveBeenCalledWith("storage_path, id, portfolio_id");
     expect(result).toEqual(row);
   });
 });
@@ -178,7 +182,7 @@ describe("deleteImageMetadata", () => {
   it("deletes the row scoped to the id", async () => {
     supabase.eq.mockResolvedValueOnce({ data: null, error: null });
 
-    await deleteImageMetadata(supabase as any, "img-1");
+    await deleteImageMetadata(client, "img-1");
 
     expect(supabase.delete).toHaveBeenCalled();
     expect(supabase.eq).toHaveBeenCalledWith("id", "img-1");
@@ -187,6 +191,6 @@ describe("deleteImageMetadata", () => {
   it("throws on error", async () => {
     supabase.eq.mockResolvedValueOnce({ data: null, error: new Error("fk violation") });
 
-    await expect(deleteImageMetadata(supabase as any, "img-1")).rejects.toThrow("fk violation");
+    await expect(deleteImageMetadata(client, "img-1")).rejects.toThrow("fk violation");
   });
 });

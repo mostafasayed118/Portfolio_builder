@@ -104,7 +104,7 @@ describe("POST /api/v1/admin/messages/mark-all-read", () => {
     expect(mockSupabase.from).not.toHaveBeenCalled();
   });
 
-  it("accepts a valid UUID ?userId for superadmin user switching", async () => {
+  it("ignores valid legacy userId scope in favor of request-client RLS", async () => {
     const res = await request(app)
       .post("/api/v1/admin/messages/mark-all-read")
       .query({ userId: "00000000-0000-0000-0000-000000000009" })
@@ -112,9 +112,8 @@ describe("POST /api/v1/admin/messages/mark-all-read", () => {
 
     expect(res.status).toBe(200);
     const countChain = mockSupabase.select.mock.results[0].value as Chain;
-    expect(countChain.or).toHaveBeenCalledWith(
-      "user_id.eq.00000000-0000-0000-0000-000000000009,user_id.is.null",
-    );
+    expect(countChain.or).not.toHaveBeenCalled();
+    expect(countChain.eq.mock.calls).toEqual([["status", "unread"]]);
   });
 
   it("marks ALL unread non-deleted rows (count + update share the predicate)", async () => {
@@ -156,7 +155,7 @@ describe("POST /api/v1/admin/messages/mark-all-read", () => {
     expect(updateChain.or.mock.calls).toEqual(countChain.or.mock.calls);
   });
 
-  it("scopes to the admin's own rows (or unowned) for non-superadmins", async () => {
+  it("uses request-client RLS for regular admins without orphan predicates", async () => {
     mockRole = "admin";
     const res = await request(app)
       .post("/api/v1/admin/messages/mark-all-read")
@@ -165,8 +164,10 @@ describe("POST /api/v1/admin/messages/mark-all-read", () => {
     expect(res.status).toBe(200);
     const countChain = mockSupabase.select.mock.results[0].value as Chain;
     const updateChain = mockSupabase.update.mock.results[0].value as Chain;
-    expect(countChain.or).toHaveBeenCalledWith("user_id.eq.user-1,user_id.is.null");
-    expect(updateChain.or).toHaveBeenCalledWith("user_id.eq.user-1,user_id.is.null");
+    expect(countChain.or).not.toHaveBeenCalled();
+    expect(updateChain.or).not.toHaveBeenCalled();
+    expect(countChain.eq.mock.calls).toEqual([["status", "unread"]]);
+    expect(updateChain.eq.mock.calls).toEqual([["status", "unread"]]);
   });
 
   it("marks ALL 120 unread rows across pages — no 50-row truncation", async () => {

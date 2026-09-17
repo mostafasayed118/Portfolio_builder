@@ -15,6 +15,12 @@ import { AdminLoadingState } from "@/components/AdminLoadingState";
 const CV_MIME_TYPE = "application/pdf";
 const CV_MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 
+async function openCvPreview(supabase: NonNullable<ReturnType<typeof getSupabase>>, objectPath: string): Promise<void> {
+  const { data, error } = await supabase.storage.from("cv").download(objectPath);
+  if (error !== null || data === null) throw new Error("CV file unavailable.");
+  window.open(URL.createObjectURL(data), "_blank", "noopener,noreferrer");
+}
+
 export default function CvManager() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -129,7 +135,15 @@ export default function CvManager() {
                 <p className="text-xs text-muted-foreground mt-0.5">Last updated {formatDateTime(settings.updatedAt)}</p>
               </div>
               <div className="flex gap-2 shrink-0">
-                <Button size="sm" variant="outline" className="min-h-[44px] gap-1.5 text-xs" onClick={() => window.open("/api/v1/cv", "_blank")}><ExternalLink size={12} />Preview</Button>
+                <Button size="sm" variant="outline" className="min-h-[44px] gap-1.5 text-xs" onClick={async () => {
+                  const supabase = getSupabase();
+                  const objectPath = settings?.objectPath;
+                  if (!supabase || !objectPath) return;
+                  try { await openCvPreview(supabase, objectPath); }
+                  catch (previewError: unknown) {
+                    toast({ title: "Preview failed", description: previewError instanceof Error ? previewError.message : undefined, variant: "destructive" });
+                  }
+                }}><ExternalLink size={12} />Preview</Button>
                 <Button size="sm" variant="ghost" className="min-h-[44px] min-w-[44px] text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setShowRemoveConfirm(true)} aria-label="Remove CV"><Trash2 className="h-4 w-4" /></Button>
               </div>
             </div>

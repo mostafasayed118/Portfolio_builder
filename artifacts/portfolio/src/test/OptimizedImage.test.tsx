@@ -8,6 +8,10 @@ vi.mock("@/hooks/useReveal", () => ({
 import OptimizedImage from "@/components/OptimizedImage";
 
 describe("OptimizedImage", () => {
+  it("resolves relative proxy URLs against the API origin", () => {
+    render(<OptimizedImage src="/api/v1/images/serve/123" alt="Proxy" priority />);
+    expect(screen.getByAltText("Proxy").getAttribute("src")).toMatch(/^https?:\/\/[^/]+\/api\/v1\/images\/serve\/123$/);
+  });
   beforeEach(() => {
     vi.restoreAllMocks();
   });

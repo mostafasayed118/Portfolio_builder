@@ -7,8 +7,9 @@ import { fetchCvData } from "./cv-data";
 export async function generateCvPdf(
   supabase: SupabaseClient,
   portfolioUrl: string,
+  portfolioId: string,
 ): Promise<Uint8Array> {
-  const data = await fetchCvData(supabase);
+  const data = await fetchCvData(supabase, portfolioId);
 
   let qrDataUrl: string | null = null;
   try {

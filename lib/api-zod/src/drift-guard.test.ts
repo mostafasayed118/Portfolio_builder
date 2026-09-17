@@ -5,6 +5,44 @@ import { cvSettingsUpdateSchema } from "./cv";
 
 const PROFICIENCY_MESSAGE = "Proficiency must be between 1 and 100";
 
+const retiredTables = [
+  "theme_settings", "typography_settings", "site_settings", "seo_settings",
+  "hero_content", "about_content", "contact_info", "cv_settings", "skills",
+  "projects", "experience", "certifications", "messages", "section_settings",
+  "content_snapshots", "section_variants", "analytics_events", "content_health_reports",
+  "image_metadata", "image_variants", "blog_posts",
+];
+
+const databaseTypes = fs.readFileSync(new URL("../../supabase/src/types.ts", import.meta.url), "utf8");
+const openapi = fs.readFileSync(new URL("../../api-spec/openapi.yaml", import.meta.url), "utf8");
+
+function tableContract(table: string) {
+  return databaseTypes.match(new RegExp(`^      ${table}: \\{[\\s\\S]*?^      \\};`, "m"))?.[0];
+}
+
+describe("retired tenant user_id contracts", () => {
+  it.each(retiredTables)("%s keeps portfolio ownership without legacy user fields", (table) => {
+    const contract = tableContract(table);
+    expect(contract).toBeDefined();
+    expect(contract?.match(/portfolio_id\??:/g)).toHaveLength(3);
+    expect(contract).not.toMatch(/\buser_id\??:/);
+  });
+
+  it("only the global ThemePreset OpenAPI schema retains user_id", () => {
+    const schemas = openapi.split(/(?=^ {4}\w+:\r?$)/m);
+    const withUserId = schemas.filter((schema) => /\buser_id\b/.test(schema));
+    expect(withUserId).toHaveLength(1);
+    expect(withUserId[0]).toMatch(/^ {4}ThemePreset:/);
+  });
+
+  it("preserves the global theme_presets and users contracts", () => {
+    expect(tableContract("theme_presets")?.match(/\buser_id\??:/g)).toHaveLength(3);
+    expect(tableContract("theme_presets")).not.toContain("portfolio_id");
+    expect(tableContract("users")).toContain("clerk_id: string");
+    expect(tableContract("users")).not.toContain("portfolio_id");
+  });
+});
+
 describe("skill bounds", () => {
   it("rejects proficiency 0 with the shared range message", () => {
     const r = skillSchema.safeParse({ name: "x", category: "c", proficiency: 0 });

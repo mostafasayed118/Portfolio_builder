@@ -117,7 +117,7 @@ describe("ProjectDetail (smoke)", () => {
         is_published: true,
         sort_order: 1,
         deleted_at: null,
-        user_id: null,
+        portfolio_id: null,
         created_at: "2026-01-01T00:00:00Z",
         updated_at: "2026-01-01T00:00:00Z",
       },

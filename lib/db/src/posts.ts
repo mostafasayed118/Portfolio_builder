@@ -99,21 +99,12 @@ export interface PostPublishState {
   published_at: string | null;
 }
 
-/**
- * Admin: fetch just the publish state of a post, optionally scoped to a
- * user id (superadmin user-switching). Unlike getPostById this does NOT
- * filter soft-deleted rows — the caller only needs the pre-update publish
- * stamps to decide whether to stamp published_at.
- */
 export async function getPostPublishState(
   supabase: SupabaseClient,
   id: string,
-  userId?: string | null,
+  _userId?: string | null,
 ): Promise<PostPublishState | null> {
-  let query = supabase.from(TABLE).select("is_published, published_at").eq("id", id);
-  if (userId) {
-    query = query.eq("user_id", userId);
-  }
+  const query = supabase.from(TABLE).select("is_published, published_at").eq("id", id);
   return queryOrThrow<PostPublishState | null>(
     query.limit(1).maybeSingle(),
     { table: TABLE, operation: "getPostPublishState" },

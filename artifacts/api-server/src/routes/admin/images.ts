@@ -3,19 +3,18 @@ import type { Response } from "express";
 import type { AuthenticatedRequest } from "../../middleware/adminAuth";
 import { adminListImagesQuerySchema } from "@workspace/api-zod";
 import { listEntityImages } from "@workspace/db/images";
-import { env } from "../../lib/env";
 import { ok, badRequest, serverError } from "../../lib/api-response";
 import { respondDbError } from "../../lib/safe-error";
 import { logSupabaseError } from "../../lib/route-helpers";
 
 const router: IRouter = Router();
 
-/** Public bucket every image upload lands in (see routes/images.ts). */
+/** Private bucket every image upload lands in (see routes/images.ts). */
 const IMAGE_BUCKET = "project_images";
 
 /**
  * GET /api/v1/admin/images?entity_type=…&entity_id=… — list the image
- * metadata rows attached to an entity with their public storage URLs.
+ * metadata rows attached to an entity with their proxied delivery URLs.
  * Replaces ProjectEditor's direct anon-key Supabase call; delete/reorder
  * already flow through /api/v1/images.
  *
@@ -26,7 +25,11 @@ const IMAGE_BUCKET = "project_images";
 router.get("/", async (req: AuthenticatedRequest, res: Response) => {
   const parsed = adminListImagesQuerySchema.safeParse(req.query);
   if (!parsed.success) {
-    return badRequest(res, parsed.error.flatten().fieldErrors as Record<string, string[]>);
+    const fieldErrors: Record<string, string[]> = {};
+    for (const [key, value] of Object.entries(parsed.error.flatten().fieldErrors)) {
+      if (value) fieldErrors[key] = value;
+    }
+    return badRequest(res, fieldErrors);
   }
   const { entity_type, entity_id } = parsed.data;
 
@@ -40,7 +43,7 @@ router.get("/", async (req: AuthenticatedRequest, res: Response) => {
       res,
       rows.map((row) => ({
         id: row.id,
-        url: `${env.SUPABASE_URL}/storage/v1/object/public/${IMAGE_BUCKET}/${row.storage_path}`,
+        url: `/api/v1/images/serve/${IMAGE_BUCKET}/${row.storage_path.split("/").map(encodeURIComponent).join("/")}`,
       })),
     );
   } catch (err) {
