@@ -4,6 +4,7 @@ import { useMouseTilt } from "@/hooks/useMouseTilt";
 import { useLanguage } from "@/lib/language";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
 import { trackEvent } from "@workspace/db/analytics";
+import { resolveDefaultPortfolioId } from "@/lib/analytics-portfolio";
 import { logWarn } from "@/lib/logger";
 import { getApiUrl } from "@/lib/env";
 import { HERO } from "@/data/portfolio";
@@ -52,7 +53,9 @@ export function useHero() {
   const trackCvDownload = () => {
     if (isSupabaseConfigured) {
       const sb = getSupabase();
-      if (sb) trackEvent(sb, "cv_download", "/", { source: "hero" }).catch((err) => logWarn("trackEvent failed", err));
+      if (sb) void resolveDefaultPortfolioId().then(async (portfolioId) => {
+        if (portfolioId) await trackEvent(sb, "cv_download", "/", { source: "hero" }, portfolioId);
+      }).catch((err: unknown) => logWarn("trackEvent failed", undefined, { error: err }));
     }
   };
 

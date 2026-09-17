@@ -3,7 +3,7 @@ import { contactLimiter } from "../../middleware/rateLimiter";
 import type { Request, Response } from "express";
 import { contactSubmissionSchema } from "@workspace/api-zod";
 import { createMessage } from "@workspace/db/messages";
-import { getSupabaseClient } from "../../lib/supabase-client";
+import { getAnonSupabaseClient } from "../../lib/supabase-client";
 import { ok, badRequest, serverError, forbidden, rateLimited } from "../../lib/api-response";
 import { logger } from "../../lib/logger";
 import { env } from "../../lib/env";
@@ -59,7 +59,7 @@ router.post("/", contactLimiter, async (req: Request, res: Response) => {
       env.VITE_SITE_URL,
       env.VITE_ADMIN_URL,
       ...(env.IS_PRODUCTION ? [] : ["http://localhost:5173", "http://localhost:5174"]),
-    ].filter(Boolean) as string[];
+    ].filter((u): u is string => typeof u === "string" && u !== "");
     let originAllowed = false;
     try {
       const originUrl = new URL(origin);
@@ -80,7 +80,8 @@ router.post("/", contactLimiter, async (req: Request, res: Response) => {
 
   // 3. Honeypot: silently reject if the hidden "website" field has any value.
   // Return success to avoid tipping off the bot, but do not insert.
-  const body = req.body as Record<string, unknown>;
+  const body: Record<string, unknown> = { ...req.body };
+
   // Honeypot: any non-empty value (string, array, object, number, boolean)
   // signals a bot. A missing field or empty string is a real user.
   const website = body.website;
@@ -113,7 +114,9 @@ router.post("/", contactLimiter, async (req: Request, res: Response) => {
 
   // 4.5 Cloudflare Turnstile (opt-in). When configured, require a valid
   // client token before accepting the message.
-  const turnstileOk = await verifyTurnstileToken(body.cfTurnstileToken as string | undefined);
+  const rawToken: unknown = body.cfTurnstileToken;
+  const turnstileToken = typeof rawToken === "string" ? rawToken : undefined;
+  const turnstileOk = await verifyTurnstileToken(turnstileToken);
   if (!turnstileOk) {
     logAbuse(req, "turnstile_failed");
     return forbidden(res, "CAPTCHA verification failed, please try again");
@@ -127,15 +130,28 @@ router.post("/", contactLimiter, async (req: Request, res: Response) => {
 
   // Strip honeypot + time-trap fields before insert
   const { name, email, message } = result.data;
+  let messageId: string;
   try {
-    const inserted = await createMessage(getSupabaseClient(), { name, email, message });
+    const anon = getAnonSupabaseClient();
+    const { data: portfolio, error } = await anon
+      .from("public_portfolios")
+      .select("id")
+      .eq("is_published", true)
+      .order("slug", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (error !== null || portfolio === null || typeof portfolio.id !== "string") {
+      return serverError(res, "No published portfolio available");
+    }
+    const inserted = await createMessage(anon, { name, email, message, portfolio_id: portfolio.id });
+    messageId = inserted.id;
 
     // Fire-and-forget AI spam scoring (opt-in via AI_SPAM_ENABLED). Never
     // awaited on the request path; on any error the message stays unread.
     if (isAiConfigured() && env.AI_SPAM_ENABLED) {
       flagSpamIfNeeded({ id: inserted.id, name, email, message }).catch(() => {});
     }
-  } catch (err) {
+  } catch (err: unknown) {
     // Distinguish the DB-level per-email spam guard (migration
     // 044_contact_spam_guard.sql raises "Rate limit exceeded: too many
     // messages from this email") from genuine insert failures. That rejection
@@ -181,7 +197,7 @@ router.post("/", contactLimiter, async (req: Request, res: Response) => {
   // Never awaited/blocked-on; failures are logged by the mailer.
   notifyNewContact({ name, email, message }).catch(() => {});
 
-  return ok(res, undefined);
+  return ok(res, { id: messageId });
 });
 
 export default router;

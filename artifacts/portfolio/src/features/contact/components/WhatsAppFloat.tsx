@@ -3,15 +3,10 @@ import { useContact } from "../hooks/useContact";
 import { buildWhatsAppHref } from "../lib/whatsapp";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
 import { trackEvent } from "@workspace/db/analytics";
+import { resolveDefaultPortfolioId } from "@/lib/analytics-portfolio";
 import { logWarn } from "@/lib/logger";
 import { useLanguage } from "@/lib/language";
 
-/**
- * Floating WhatsApp click-to-chat bubble fixed to the bottom-left corner,
- * mounted in the app shell so it's visible on every page (not just the
- * contact section). Renders only when a phone number is configured; fires
- * the same `contact_click` analytics event as the in-section button.
- */
 export default function WhatsAppFloat() {
   const { contact } = useContact();
   const { t } = useLanguage();
@@ -31,7 +26,9 @@ export default function WhatsAppFloat() {
       onClick={() => {
         if (isSupabaseConfigured) {
           const sb = getSupabase();
-          if (sb) trackEvent(sb, "contact_click", "/", { type: "whatsapp", placement: "floating" }).catch((err) => logWarn("trackEvent failed", err));
+          if (sb) void resolveDefaultPortfolioId().then(async (portfolioId) => {
+            if (portfolioId) await trackEvent(sb, "contact_click", "/", { type: "whatsapp", placement: "floating" }, portfolioId);
+          }).catch((err: unknown) => logWarn("trackEvent failed", undefined, { error: err }));
         }
       }}
     >

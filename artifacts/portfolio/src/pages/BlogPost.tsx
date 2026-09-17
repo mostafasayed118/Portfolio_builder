@@ -9,6 +9,7 @@ import { usePostBySlug, usePosts } from "@/hooks/usePortfolioData";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
 import { getSiteUrl } from "@/lib/env";
 import { trackEvent } from "@workspace/db/analytics";
+import { resolveDefaultPortfolioId } from "@/lib/analytics-portfolio";
 import { logWarn } from "@/lib/logger";
 import { BlogPostCard, formatPostDate } from "@/features/blog";
 
@@ -50,8 +51,9 @@ export default function BlogPostPage({ slug }: BlogPostPageProps) {
     if (post?.slug && isSupabaseConfigured) {
       const sb = getSupabase();
       if (sb) {
-        trackEvent(sb, "page_view", `/blog/${post.slug}`, { content_type: "blog_post" })
-          .catch((err) => logWarn("trackEvent failed", err));
+        void resolveDefaultPortfolioId().then(async (portfolioId) => {
+          if (portfolioId) await trackEvent(sb, "page_view", `/blog/${post.slug}`, { content_type: "blog_post" }, portfolioId);
+        }).catch((err: unknown) => logWarn("trackEvent failed", undefined, { error: err }));
       }
     }
   }, [post?.slug]);
@@ -82,7 +84,7 @@ export default function BlogPostPage({ slug }: BlogPostPageProps) {
         window.setTimeout(() => setCopied(false), 2000);
       }
     } catch {
-      // Sharing can be cancelled by the user; no error state is needed.
+      return;
     }
   };
 

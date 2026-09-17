@@ -39,10 +39,12 @@ export async function trackEvent(
   eventType: EventType,
   page: string,
   metadata?: Record<string, string>,
+  portfolioId?: string | null,
 ): Promise<void> {
   try {
     await supabase.from("analytics_events").insert({
       type: eventType,
+      portfolio_id: portfolioId ?? null,
       path: page,
       section_key: metadata?.section ?? null,
       // project_id is a UUID FK — only pass real UUIDs. String identifiers

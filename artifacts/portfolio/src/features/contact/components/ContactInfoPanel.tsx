@@ -1,6 +1,7 @@
 import { Mail, Phone, MapPin, Github, Linkedin, Youtube, Facebook, MessageCircle } from "lucide-react";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
 import { trackEvent } from "@workspace/db/analytics";
+import { resolveDefaultPortfolioId } from "@/lib/analytics-portfolio";
 import { logWarn } from "@/lib/logger";
 import { useLanguage } from "@/lib/language";
 import { buildWhatsAppHref } from "../lib/whatsapp";
@@ -30,7 +31,7 @@ function buildItems(c: Contact, labels: { email: string; phone: string; location
   return [
     { key: "email", Icon: ICONS.Email, label: labels.email, value: c.email, href: `mailto:${c.email}` },
     { key: "phone", Icon: ICONS.Phone, label: labels.phone, value: c.phone, href: `tel:${(c.phone ?? "").replace(/\s/g, "")}` },
-    { key: "location", Icon: ICONS.Location, label: labels.location, value: c.location, href: null as string | null },
+    { key: "location", Icon: ICONS.Location, label: labels.location, value: c.location, href: null },
     { key: "github", Icon: ICONS.GitHub, label: labels.github, value: c.github?.replace("https://", ""), href: c.github },
     { key: "linkedin", Icon: ICONS.LinkedIn, label: labels.linkedin, value: c.linkedin?.replace("https://", ""), href: c.linkedin },
     { key: "youtube", Icon: ICONS.YouTube, label: labels.youtube, value: c.youtube?.replace("https://", ""), href: c.youtube },
@@ -42,7 +43,6 @@ export default function ContactInfoPanel({ contact }: { contact: Contact }) {
   const { t } = useLanguage();
   const items = buildItems(contact, t.contact.labels);
 
-  // WhatsApp click-to-chat: https://wa.me/<digits>?text=<prefilled message>
   const waHref = buildWhatsAppHref(contact.whatsapp, t.contact.whatsappPrefill);
 
   return (
@@ -65,7 +65,9 @@ export default function ContactInfoPanel({ contact }: { contact: Contact }) {
                   onClick={() => {
                     if (isSupabaseConfigured && (key === "email" || key === "github" || key === "linkedin" || key === "youtube" || key === "facebook")) {
                       const sb = getSupabase();
-                      if (sb) trackEvent(sb, "contact_click", "/", { type: key }).catch((err) => logWarn("trackEvent failed", err));
+                      if (sb) void resolveDefaultPortfolioId().then(async (portfolioId) => {
+                        if (portfolioId) await trackEvent(sb, "contact_click", "/", { type: key }, portfolioId);
+                      }).catch((err: unknown) => logWarn("trackEvent failed", undefined, { error: err }));
                     }
                   }}
                 >
@@ -88,7 +90,9 @@ export default function ContactInfoPanel({ contact }: { contact: Contact }) {
             onClick={() => {
               if (isSupabaseConfigured) {
                 const sb = getSupabase();
-                if (sb) trackEvent(sb, "contact_click", "/", { type: "whatsapp" }).catch((err) => logWarn("trackEvent failed", err));
+                if (sb) void resolveDefaultPortfolioId().then(async (portfolioId) => {
+                  if (portfolioId) await trackEvent(sb, "contact_click", "/", { type: "whatsapp" }, portfolioId);
+                }).catch((err: unknown) => logWarn("trackEvent failed", undefined, { error: err }));
               }
             }}
           >

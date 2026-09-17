@@ -1,16 +1,13 @@
 import { lazy, Suspense, useEffect } from "react";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
 import { trackEvent } from "@workspace/db/analytics";
+import { resolveDefaultPortfolioId } from "@/lib/analytics-portfolio";
 import { logWarn } from "@/lib/logger";
 import { useToast } from "@workspace/ui";
 import { useLanguage } from "@/lib/language";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 const HeroSection = lazy(() => import("@/features/hero").then((m) => ({ default: m.HeroSection })));
-// Lazy: BackToTop pulls framer-motion (~100KB gzip) — keep it out of the
-// initial chunk; the button is invisible until the user scrolls anyway.
 const BackToTop = lazy(() => import("@/components/BackToTop"));
-// Lazy: the realtime debug widget is dev-only; dynamic import keeps it out
-// of the Home chunk entirely in production builds.
 const SyncDebug = lazy(() => import("@/components/SyncDebug").then((m) => ({ default: m.SyncDebug })));
 
 const AboutSection = lazy(() => import("@/features/about").then((m) => ({ default: m.AboutSection })));
@@ -45,7 +42,9 @@ export default function Home() {
     if (isSupabaseConfigured) {
       const supabase = getSupabase();
       if (supabase) {
-        trackEvent(supabase, "page_view", "/").catch((err) => logWarn("trackEvent failed", err));
+        void resolveDefaultPortfolioId().then(async (portfolioId) => {
+          if (portfolioId) await trackEvent(supabase, "page_view", "/", undefined, portfolioId);
+        }).catch((err: unknown) => logWarn("trackEvent failed", undefined, { error: err }));
       }
     }
   }, []);

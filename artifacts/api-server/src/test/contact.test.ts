@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
 import app from "../app";
-import { getSupabaseClient } from "../lib/supabase-client";
+import { getAnonSupabaseClient, getSupabaseClient } from "../lib/supabase-client";
+
+const { anonFactory, serviceFactory } = vi.hoisted(() => ({
+  anonFactory: vi.fn(), serviceFactory: vi.fn(),
+}));
+const portfolioId = "11111111-1111-4111-8111-111111111111";
 import { flagSpamIfNeeded } from "../lib/ai/spam";
 
 // Bypass the express rate limiters for these route-level unit tests — the
@@ -24,44 +29,42 @@ vi.mock("../middleware/rateLimiter", () => {
 // Controllable Supabase client so tests can exercise the insert error paths
 // (the shared setup mock always resolves insert with a null error).
 vi.mock("../lib/supabase-client", () => ({
-  getSupabaseClient: vi.fn(),
+  getSupabaseClient: serviceFactory,
+  getAnonSupabaseClient: anonFactory,
 }));
 
 vi.mock("../lib/ai/spam", () => ({
   flagSpamIfNeeded: vi.fn().mockResolvedValue(undefined),
 }));
 
-/** Build a minimal supabase client whose `.from().insert()` resolves to the given value. */
-function clientWithInsertResult(insertResult: unknown) {
-  return {
-    from: vi.fn().mockReturnValue({
-      insert: vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          single: vi.fn().mockResolvedValue(insertResult),
-        }),
-      }),
-    }),
-  } as never;
+function clientWithInsertSpy(insertResult: unknown) {
+  const single = vi.fn().mockResolvedValue(insertResult);
+  const selectInserted = vi.fn().mockReturnValue({ single });
+  const insert = vi.fn().mockReturnValue({
+    ...Promise.resolve(insertResult),
+    then: Promise.resolve(insertResult).then.bind(Promise.resolve(insertResult)),
+    select: selectInserted,
+  });
+  const maybeSingle = vi.fn().mockResolvedValue({ data: { id: portfolioId }, error: null });
+  const limit = vi.fn().mockReturnValue({ maybeSingle });
+  const order = vi.fn().mockReturnValue({ limit });
+  const eq = vi.fn().mockReturnValue({ order });
+  const select = vi.fn().mockReturnValue({ eq });
+  const client = { from: vi.fn((table: string) => table === "public_portfolios" ? { select } : { insert }) };
+  return { client, insert, selectInserted, order, eq, limit, maybeSingle };
 }
 
-/** Same as clientWithInsertResult but also returns the insert mock so tests
- * can assert that no row was written. */
-function clientWithInsertSpy(insertResult: unknown) {
-  const insert = vi.fn().mockReturnValue({
-    select: vi.fn().mockReturnValue({
-      single: vi.fn().mockResolvedValue(insertResult),
-    }),
-  });
-  const client = { from: vi.fn().mockReturnValue({ insert }) } as never;
-  return { client, insert };
+function clientWithInsertResult(insertResult: unknown) {
+  return clientWithInsertSpy(insertResult).client;
 }
 
 describe("POST /api/v1/contact", () => {
   beforeEach(() => {
     vi.stubEnv("SUPABASE_URL", "https://test.supabase.co");
     vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-key");
-    // Default: insert succeeds.
-    vi.mocked(getSupabaseClient).mockReturnValue(
+    serviceFactory.mockReturnValue(clientWithInsertResult({ data: { id: "msg-1" }, error: null }));
+    anonFactory.mockClear();
+    anonFactory.mockReturnValue(
       clientWithInsertResult({ data: { id: "msg-1" }, error: null }),
     );
   });
@@ -89,17 +92,53 @@ describe("POST /api/v1/contact", () => {
   });
 
   it("accepts valid contact submission", async () => {
+    const mock = clientWithInsertSpy({ data: null, error: null });
+    anonFactory.mockReturnValue(mock.client);
+    serviceFactory.mockClear();
     const res = await request(app)
       .post("/api/v1/contact")
       .send({ name: "Test User", email: "test@example.com", message: "This is a valid message with enough content", _formLoadedAt: Date.now() - 5000 });
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
+    expect(getAnonSupabaseClient).toHaveBeenCalled();
+    expect(getSupabaseClient).not.toHaveBeenCalled();
+    expect(mock.client.from).toHaveBeenCalledWith("public_portfolios");
+    expect(mock.eq).toHaveBeenCalledWith("is_published", true);
+    expect(mock.order).toHaveBeenCalledWith("slug", { ascending: true });
+    expect(mock.limit).toHaveBeenCalledWith(1);
+    expect(res.body.data.id).toMatch(/^[0-9a-f-]{36}$/);
+    expect(mock.insert).toHaveBeenCalledWith(expect.objectContaining({
+      id: res.body.data.id, portfolio_id: portfolioId, status: "unread",
+    }));
+    expect(mock.selectInserted).not.toHaveBeenCalled();
+  });
+
+  it.each([null, { id: 123 }])("rejects an unavailable portfolio %s", async (data) => {
+    const mock = clientWithInsertSpy({ data: null, error: null });
+    mock.maybeSingle.mockResolvedValue({ data, error: null });
+    anonFactory.mockReturnValue(mock.client);
+    const res = await request(app).post("/api/v1/contact").send({
+      name: "Visitor", email: "visitor@example.com", message: "A valid contact message", _formLoadedAt: Date.now() - 5000,
+    });
+    expect(res.status).toBe(500);
+    expect(mock.insert).not.toHaveBeenCalled();
+  });
+
+  it("skips insertion when portfolio lookup fails", async () => {
+    const mock = clientWithInsertSpy({ data: null, error: null });
+    mock.maybeSingle.mockResolvedValue({ data: { id: portfolioId }, error: { message: "offline" } });
+    anonFactory.mockReturnValue(mock.client);
+    const res = await request(app).post("/api/v1/contact").send({
+      name: "Visitor", email: "visitor@example.com", message: "A valid contact message", _formLoadedAt: Date.now() - 5000,
+    });
+    expect(res.status).toBe(500);
+    expect(mock.insert).not.toHaveBeenCalled();
   });
 
   it("silently drops submissions missing _formLoadedAt", async () => {
     // Real clients (ContactForm) always send this; absence signals a bot.
     const { client, insert } = clientWithInsertSpy({ data: { id: "msg-1" }, error: null });
-    vi.mocked(getSupabaseClient).mockReturnValue(client);
+    anonFactory.mockReturnValue(client);
 
     const res = await request(app)
       .post("/api/v1/contact")
@@ -111,7 +150,7 @@ describe("POST /api/v1/contact", () => {
 
   it("silently drops submissions with non-numeric _formLoadedAt", async () => {
     const { client, insert } = clientWithInsertSpy({ data: { id: "msg-1" }, error: null });
-    vi.mocked(getSupabaseClient).mockReturnValue(client);
+    anonFactory.mockReturnValue(client);
 
     const res = await request(app)
       .post("/api/v1/contact")
@@ -131,14 +170,14 @@ describe("POST /api/v1/contact", () => {
       .send({ name: "Test User", email: "test@example.com", message: "This is a valid message with enough content", _formLoadedAt: Date.now() - 5000 });
     expect(res.status).toBe(200);
     expect(flagSpamIfNeeded).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "msg-1", email: "test@example.com" }),
+      expect.objectContaining({ id: res.body.data.id, email: "test@example.com" }),
     );
   });
 
   it("returns 429 with a friendly message when the DB per-email spam guard rejects the insert", async () => {
     // The trigger in migration 044_contact_spam_guard.sql raises exactly this
     // message once an email exceeds 5 messages in an hour.
-    vi.mocked(getSupabaseClient).mockReturnValue(
+    anonFactory.mockReturnValue(
       clientWithInsertResult({
         data: null,
         error: { message: "Rate limit exceeded: too many messages from this email" },
@@ -153,7 +192,7 @@ describe("POST /api/v1/contact", () => {
   });
 
   it("still returns 500 for genuine insert failures", async () => {
-    vi.mocked(getSupabaseClient).mockReturnValue(
+    anonFactory.mockReturnValue(
       clientWithInsertResult({ data: null, error: { message: "connection refused" } }),
     );
 

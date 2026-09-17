@@ -9,19 +9,17 @@ import { useProjectBySlug, useProjectImages } from "@/hooks/usePortfolioData";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase-provider";
 import { getSiteUrl } from "@/lib/env";
 import { trackEvent } from "@workspace/db/analytics";
+import { resolveDefaultPortfolioId } from "@/lib/analytics-portfolio";
 import { logWarn } from "@/lib/logger";
-
 interface ProjectDetailProps {
   slug: string;
 }
-
 export default function ProjectDetail({ slug }: ProjectDetailProps) {
   const [, navigate] = useLocation();
   const { t } = useLanguage();
   const { data: dbProject, isLoading } = useProjectBySlug(slug);
   const { data: projectImages, isLoading: galleryLoading } = useProjectImages(dbProject?.id);
   const backTimer = useRef<number | null>(null);
-
   const backToProjects = () => {
     navigate("/");
     if (backTimer.current !== null) return;
@@ -30,36 +28,32 @@ export default function ProjectDetail({ slug }: ProjectDetailProps) {
       backTimer.current = null;
     }, 150);
   };
-
   const project = useMemo(() => {
     if (dbProject) return mapDbProjectDetail(dbProject, slug);
     return PROJECTS.find((p) => p.slug === slug) ?? null;
   }, [dbProject, slug]);
-
   useEffect(() => {
     if (!isLoading && !project) {
       navigate("/not-found", { replace: true });
     }
   }, [isLoading, project, navigate]);
-
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [slug]);
-
   useEffect(() => {
     if (project?.slug && isSupabaseConfigured) {
       const sb = getSupabase();
-      if (sb) trackEvent(sb, "project_view", `/projects/${project.slug}`, {
-        project_slug: project.slug,
-        title: project.title,
-      }).catch((err) => logWarn("trackEvent failed", err));
+      if (sb) void resolveDefaultPortfolioId().then(async (portfolioId) => {
+        if (portfolioId) await trackEvent(sb, "project_view", `/projects/${project.slug}`, {
+          project_slug: project.slug,
+          title: project.title,
+        }, portfolioId);
+      }).catch((err: unknown) => logWarn("trackEvent failed", undefined, { error: err }));
     }
   }, [project]);
-
   if (isLoading) {
     return <ProjectDetailSkeleton />;
   }
-
   if (!project) {
     return (
       <main className="min-h-screen pt-20">
@@ -80,11 +74,9 @@ export default function ProjectDetail({ slug }: ProjectDetailProps) {
       </main>
     );
   }
-
   const relatedProjects = PROJECTS.filter(
     (p) => p.category === project.category && p.slug !== project.slug
   ).slice(0, 3);
-
   return (
     <>
       <SEO
@@ -94,7 +86,7 @@ export default function ProjectDetail({ slug }: ProjectDetailProps) {
         type="article"
         publishedTime={project.completedAt}
         tags={project.techStack}
-        schemas={[generateProjectSchema(slug)].filter(Boolean) as Record<string, unknown>[]}
+        schemas={[generateProjectSchema(slug)].filter((schema) => schema !== null)}
       />
       <main className="min-h-screen pt-20 relative overflow-hidden">
         <div aria-hidden="true" className="absolute inset-0 pointer-events-none">
@@ -113,7 +105,6 @@ export default function ProjectDetail({ slug }: ProjectDetailProps) {
             <ArrowLeft className="h-4 w-4" />
             {t.projects.backToProjects}
           </Link>
-
           <article className="space-y-8">
             <header className="space-y-4">
               <div className="flex items-center gap-3 flex-wrap">
@@ -131,7 +122,6 @@ export default function ProjectDetail({ slug }: ProjectDetailProps) {
                   {project.completedAt}
                 </span>
               </div>
-
               {galleryLoading ? (
                 <GalleryPlaceholder />
               ) : (projectImages && projectImages.length > 0) || dbProject?.image_url ? (
@@ -146,15 +136,12 @@ export default function ProjectDetail({ slug }: ProjectDetailProps) {
                   hint={t.projects.galleryEmptyHint}
                 />
               )}
-
               <h1 className="text-4xl md:text-5xl font-display font-bold text-foreground">
                 {project.title}
               </h1>
-
               <p className="text-lg text-muted-foreground max-w-2xl">
                 {project.shortDescription}
               </p>
-
               <div className="flex flex-wrap gap-3">
                 {project.liveUrl && (
                   <a
@@ -178,7 +165,6 @@ export default function ProjectDetail({ slug }: ProjectDetailProps) {
                 </a>
               </div>
             </header>
-
             <div className="glass rounded-2xl border border-border/60 p-6 md:p-8">
               <h2 className="text-xl font-display font-semibold text-foreground mb-4">About This Project</h2>
               <div className="prose prose-sm md:prose prose-muted max-w-none">
@@ -189,7 +175,6 @@ export default function ProjectDetail({ slug }: ProjectDetailProps) {
                 ))}
               </div>
             </div>
-
             {(project.challenges || project.outcome) && (
               <div className="grid md:grid-cols-2 gap-6">
                 {project.challenges && (
@@ -206,7 +191,6 @@ export default function ProjectDetail({ slug }: ProjectDetailProps) {
                 )}
               </div>
             )}
-
             <div className="glass rounded-2xl border border-border/60 p-6">
               <h2 className="text-xl font-display font-semibold text-foreground mb-4">{t.projects.techStack}</h2>
               <div className="flex flex-wrap gap-2">
@@ -220,7 +204,6 @@ export default function ProjectDetail({ slug }: ProjectDetailProps) {
                 ))}
               </div>
             </div>
-
             {project.metrics && project.metrics.length > 0 && (
               <div className="glass rounded-2xl border border-border/60 p-6">
                 <h2 className="text-xl font-display font-semibold text-foreground mb-4">Key Metrics</h2>
@@ -237,7 +220,6 @@ export default function ProjectDetail({ slug }: ProjectDetailProps) {
               </div>
             )}
           </article>
-
           {relatedProjects.length > 0 && (
             <section className="mt-16">
               <h2 className="text-xl font-display font-bold text-foreground mb-8">{t.projects.relatedProjects}</h2>

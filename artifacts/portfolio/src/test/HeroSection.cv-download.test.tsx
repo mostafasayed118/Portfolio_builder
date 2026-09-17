@@ -13,6 +13,10 @@ const { mockGetSupabase, mockIsSupabaseConfigured, mockTrackEvent } = vi.hoisted
   }),
 );
 
+vi.mock("@/lib/analytics-portfolio", () => ({
+  resolveDefaultPortfolioId: vi.fn().mockResolvedValue("published-portfolio"),
+}));
+
 vi.mock("@/lib/supabase-provider", () => ({
   getSupabase: mockGetSupabase,
   isSupabaseConfigured: mockIsSupabaseConfigured,
@@ -139,6 +143,7 @@ describe("HeroSection — CV download flow", () => {
       "cv_download",
       "/",
       expect.objectContaining({ source: "hero" }),
+      "published-portfolio",
     );
   });
 

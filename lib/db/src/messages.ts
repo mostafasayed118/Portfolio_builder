@@ -17,20 +17,19 @@ export interface CreateMessageInput {
   name: string;
   email: string;
   message: string;
+  portfolio_id: string;
 }
 
 export async function createMessage(
   supabase: SupabaseClient,
   input: CreateMessageInput,
 ): Promise<{ id: string }> {
-  return queryOrThrow<{ id: string }>(
-    supabase
-      .from("messages")
-      .insert({ ...input, status: "unread" })
-      .select("id")
-      .single(),
+  const id = crypto.randomUUID();
+  await queryOrThrow(
+    supabase.from("messages").insert({ ...input, id, status: "unread" }),
     { table: "messages", operation: "createMessage" },
   );
+  return { id };
 }
 
 export async function unreadCount(

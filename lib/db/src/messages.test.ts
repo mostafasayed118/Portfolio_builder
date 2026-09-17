@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createMockSupabase } from "./test-utils";
+import { createClient } from "@supabase/supabase-js";
 import {
   listMessages,
   unreadCount,
@@ -9,9 +10,12 @@ import {
   createMessage,
 } from "./messages";
 
-let supabase: ReturnType<typeof createMockSupabase>;
+function mockClient() {
+  return Object.assign(createClient("http://localhost:54321", "test-key"), createMockSupabase());
+}
+let supabase: ReturnType<typeof mockClient>;
 beforeEach(() => {
-  supabase = createMockSupabase();
+  supabase = mockClient();
 });
 
 describe("listMessages", () => {
@@ -22,7 +26,7 @@ describe("listMessages", () => {
     ];
     supabase.limit.mockResolvedValue({ data: rows, error: null });
 
-    const result = await listMessages(supabase as any);
+    const result = await listMessages(supabase);
 
     expect(supabase.from).toHaveBeenCalledWith("messages");
     expect(supabase.select).toHaveBeenCalledWith("*");
@@ -36,10 +40,14 @@ describe("listMessages", () => {
     it("inserts a new unread message and returns its id", async () => {
       supabase.single.mockResolvedValue({ data: { id: "m1" }, error: null });
 
-      const result = await createMessage(supabase as any, {
+      supabase.insert.mockReturnValue(Object.assign(Promise.resolve({ data: null, error: null }), {
+        select: supabase.select.mockReturnValue({ single: supabase.single }),
+      }));
+      const result = await createMessage(supabase, {
         name: "Alice",
         email: "a@b.com",
         message: "Hi there",
+        portfolio_id: "11111111-1111-4111-8111-111111111111",
       });
 
       expect(supabase.from).toHaveBeenCalledWith("messages");
@@ -48,19 +56,21 @@ describe("listMessages", () => {
         email: "a@b.com",
         message: "Hi there",
         status: "unread",
+        portfolio_id: "11111111-1111-4111-8111-111111111111",
+        id: result.id,
       });
-      expect(supabase.select).toHaveBeenCalledWith("id");
-      expect(result).toEqual({ id: "m1" });
+      expect(supabase.select).not.toHaveBeenCalled();
+      expect(supabase.single).not.toHaveBeenCalled();
+      expect(result.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
     });
 
     it("throws with a [messages.createMessage] context tag on error", async () => {
-      supabase.single.mockResolvedValue({
-        data: null,
-        error: new Error("Rate limit exceeded: too many messages from this email"),
-      });
+      const failure = { data: null, error: new Error("Rate limit exceeded: too many messages from this email") };
+      supabase.single.mockResolvedValue(failure);
+      supabase.insert.mockReturnValue(Object.assign(Promise.resolve(failure), { select: supabase.select.mockReturnValue({ single: supabase.single }) }));
 
       await expect(
-        createMessage(supabase as any, { name: "Bob", email: "b@c.com", message: "Hey" }),
+        createMessage(supabase, { name: "Bob", email: "b@c.com", message: "Hey", portfolio_id: "portfolio-1" }),
       ).rejects.toThrow("[messages.createMessage] Rate limit exceeded");
     });
   });
@@ -68,7 +78,7 @@ describe("listMessages", () => {
   it("forwards an explicit limit to the query builder", async () => {
     supabase.limit.mockResolvedValue({ data: [], error: null });
 
-    await listMessages(supabase as any, 25);
+    await listMessages(supabase, 25);
 
     expect(supabase.limit).toHaveBeenCalledWith(25);
   });
@@ -76,7 +86,7 @@ describe("listMessages", () => {
   it("throws on error", async () => {
     supabase.limit.mockResolvedValue({ data: null, error: new Error("db error") });
 
-    await expect(listMessages(supabase as any)).rejects.toThrow("db error");
+    await expect(listMessages(supabase)).rejects.toThrow("db error");
   });
 });
 
@@ -85,7 +95,7 @@ describe("unreadCount", () => {
     // unreadCount chain ends at .is() — override to return count
     supabase.is.mockResolvedValue({ count: 7, error: null });
 
-    const count = await unreadCount(supabase as any);
+    const count = await unreadCount(supabase);
 
     expect(supabase.from).toHaveBeenCalledWith("messages");
     expect(supabase.select).toHaveBeenCalledWith("*", { count: "exact", head: true });
@@ -97,7 +107,7 @@ describe("unreadCount", () => {
   it("returns 0 when count is null", async () => {
     supabase.is.mockResolvedValue({ count: null, error: null });
 
-    const count = await unreadCount(supabase as any);
+    const count = await unreadCount(supabase);
 
     expect(count).toBe(0);
   });
@@ -105,7 +115,7 @@ describe("unreadCount", () => {
   it("throws on error", async () => {
     supabase.is.mockResolvedValue({ count: null, error: new Error("fail") });
 
-    await expect(unreadCount(supabase as any)).rejects.toThrow("fail");
+    await expect(unreadCount(supabase)).rejects.toThrow("fail");
   });
 });
 
@@ -113,7 +123,7 @@ describe("markMessageRead", () => {
   it("updates message status to 'read'", async () => {
     supabase.eq.mockResolvedValue({ error: null });
 
-    await markMessageRead(supabase as any, "msg-1");
+    await markMessageRead(supabase, "msg-1");
 
     expect(supabase.from).toHaveBeenCalledWith("messages");
     expect(supabase.update).toHaveBeenCalledWith({ status: "read" });
@@ -123,7 +133,7 @@ describe("markMessageRead", () => {
   it("throws on error", async () => {
     supabase.eq.mockResolvedValue({ error: new Error("not found") });
 
-    await expect(markMessageRead(supabase as any, "bad")).rejects.toThrow("not found");
+    await expect(markMessageRead(supabase, "bad")).rejects.toThrow("not found");
   });
 });
 
@@ -136,7 +146,7 @@ describe("markAllMessagesRead", () => {
       .mockReturnValueOnce({ ...supabase, eq: secondEq })
       .mockReturnValueOnce({ error: null });
 
-    await markAllMessagesRead(supabase as any);
+    await markAllMessagesRead(supabase);
 
     expect(supabase.from).toHaveBeenCalledWith("messages");
     expect(supabase.update).toHaveBeenCalledWith({ status: "read" });
@@ -147,7 +157,7 @@ describe("markAllMessagesRead", () => {
   it("throws on error", async () => {
     supabase.eq.mockResolvedValue({ error: new Error("batch fail") });
 
-    await expect(markAllMessagesRead(supabase as any)).rejects.toThrow("batch fail");
+    await expect(markAllMessagesRead(supabase)).rejects.toThrow("batch fail");
   });
 });
 
@@ -155,7 +165,7 @@ describe("deleteMessage", () => {
   it("soft-deletes by setting deleted_at", async () => {
     supabase.eq.mockResolvedValue({ error: null });
 
-    await deleteMessage(supabase as any, "msg-1");
+    await deleteMessage(supabase, "msg-1");
 
     expect(supabase.from).toHaveBeenCalledWith("messages");
     expect(supabase.update).toHaveBeenCalledWith(
@@ -167,6 +177,6 @@ describe("deleteMessage", () => {
   it("throws on error", async () => {
     supabase.eq.mockResolvedValue({ error: new Error("fail") });
 
-    await expect(deleteMessage(supabase as any, "x")).rejects.toThrow("fail");
+    await expect(deleteMessage(supabase, "x")).rejects.toThrow("fail");
   });
 });
